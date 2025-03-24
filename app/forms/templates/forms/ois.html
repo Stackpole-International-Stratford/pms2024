@@ -267,7 +267,9 @@
                                             {% for i in item.input_range %}
                                                 <input type="text" name="answer_{{ item.question.id }}_{{ i }}" 
                                                        class="form-control mb-2" 
-                                                       placeholder="Answer {{ i|add:1 }}">
+                                                       placeholder="Answer {{ i|add:1 }}"
+                                                       data-min="{{ item.question.question.specifications.min }}"
+                                                       data-max="{{ item.question.question.specifications.max }}">
                                             {% endfor %}
                                         {% endif %}
                                     </div>
@@ -530,6 +532,91 @@
         
         
     </script>
+
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const form = document.getElementById('ois-form');
+        
+            // Create the modal if it doesn't exist
+            let modalDiv = document.getElementById('outOfSpecModal');
+            if (!modalDiv) {
+                modalDiv = document.createElement('div');
+                modalDiv.innerHTML = `
+                <div class="modal fade" id="outOfSpecModal" tabindex="-1" aria-labelledby="outOfSpecModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="outOfSpecModalLabel">Out-of-Spec Answers</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>The following answers are out of spec:</p>
+                        <ul id="outOfSpecList"></ul>
+                        <p>Do you want to submit anyway?</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" id="cancelSubmit" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" id="confirmSubmit" class="btn btn-warning">Submit Anyway</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                `;
+                document.body.appendChild(modalDiv);
+            }
+        
+            // Initialize the Bootstrap modal
+            const outOfSpecModal = new bootstrap.Modal(document.getElementById('outOfSpecModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+        
+            form.addEventListener('submit', function(e) {
+                let outOfSpecWarnings = [];
+                // Loop through all text inputs within .input-cell
+                const inputs = document.querySelectorAll('.input-cell input[type="text"]');
+                inputs.forEach(function(input) {
+                    const value = input.value.trim();
+                    if (value !== "") {
+                        const numericValue = parseFloat(value);
+                        const min = input.getAttribute('data-min');
+                        const max = input.getAttribute('data-max');
+        
+                        if (min !== null && !isNaN(parseFloat(min)) && numericValue < parseFloat(min)) {
+                            outOfSpecWarnings.push(`"${value}" is below the minimum (${min}) for ${input.getAttribute('placeholder')}`);
+                        }
+                        if (max !== null && !isNaN(parseFloat(max)) && numericValue > parseFloat(max)) {
+                            outOfSpecWarnings.push(`"${value}" is above the maximum (${max}) for ${input.getAttribute('placeholder')}`);
+                        }
+                    }
+                });
+        
+                if (outOfSpecWarnings.length > 0) {
+                    e.preventDefault(); // Prevent form submission
+                    // Populate the modal's list with warnings
+                    const listEl = document.getElementById('outOfSpecList');
+                    listEl.innerHTML = "";
+                    outOfSpecWarnings.forEach(function(msg) {
+                        const li = document.createElement('li');
+                        li.textContent = msg;
+                        listEl.appendChild(li);
+                    });
+        
+                    // Show the modal
+                    outOfSpecModal.show();
+        
+                    // When confirmed, submit the form programmatically
+                    document.getElementById('confirmSubmit').onclick = function() {
+                        outOfSpecModal.hide();
+                        form.submit();
+                    };
+                }
+            });
+        });
+        </script>
+        
 
 </body>
 </html>
