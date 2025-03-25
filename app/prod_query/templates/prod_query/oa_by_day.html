@@ -200,44 +200,50 @@
                           <!-- Updated Container for PR Downtime Entries as a Table -->
                           <div class="pr-downtime-entries" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                             <h6 class="mt-3">PR Downtime Entries:</h6>
-                            <table class="table table-sm pr-downtime-table">
-                              <thead>
-                                <tr>
-                                  <th>Id</th>
-                                  <th>Problem</th>
-                                  <th>Called</th>
-                                  <th>Completed</th>
-                                  <th>Minutes Down</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td colspan="5">Loading...</td>
-                                </tr>
-                              </tbody>
-                            </table>
+                            <div class="table-responsive">
+                              <table class="table table-sm pr-downtime-table">
+                                <thead>
+                                  <tr>
+                                    <th>Id</th>
+                                    <th>Problem</th>
+                                    <th>Called</th>
+                                    <th>Completed</th>
+                                    <th>Minutes Down</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td colspan="5">Loading...</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
+
 
                           <!-- Downtime Events Container -->
                           <div class="downtime-events" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
-                          <h6 class="mt-3">Downtime Events:</h6>
-                          <table class="table table-sm downtime-events-table">
-                            <thead>
-                              <tr>
-                                <th>Start</th>
-                                <th>End</th>
-                                <th>Minutes Down</th>
-                                <th>Overlap</th>
-                                <th>PR Id</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td colspan="3">Loading...</td>
-                              </tr>
-                            </tbody>
-                          </table>
+                            <h6 class="mt-3">Downtime Events:</h6>
+                            <div class="table-responsive">
+                              <table class="table table-sm downtime-events-table">
+                                <thead>
+                                  <tr>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Minutes Down</th>
+                                    <th>Overlap</th>
+                                    <th>PR Id</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td colspan="3">Loading...</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
+
 
                         </div>
                       </div>
