@@ -6455,6 +6455,7 @@ def fetch_oa_by_day_production_data(request):
                 pr_downtime_entries = []
                 for entry in pr_downtime_entries_raw:
                     pr_id = entry[0]
+                    problem = entry[1]
                     called = entry[2]
                     completed = entry[3] if len(entry) > 3 else None
 
@@ -6477,6 +6478,7 @@ def fetch_oa_by_day_production_data(request):
                     # Store the datetime objects for overlap computation.
                     pr_entry = {
                         "idnumber": pr_id,
+                        "problem": problem,
                         "start_time": dt_called,  # keep as datetime for computations
                         "end_time": dt_completed, # keep as datetime for computations
                         "minutes_down": minutes_down,
