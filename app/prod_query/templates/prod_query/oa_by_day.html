@@ -118,6 +118,8 @@
             </div>
             <div class="card-body">
               <p class="mb-0"><strong>Overall Downtime:</strong> <span id="overall-downtime">Loading...</span></p>
+              <p class="mb-0"><strong>Overall Planned Downtime:</strong> <span id="overall-planned-downtime">Loading...</span></p>
+              <p class="mb-0"><strong>Overall Unplanned Downtime:</strong> <span id="overall-unplanned-downtime">Loading...</span></p>
             </div>
           </div>
   
@@ -136,6 +138,12 @@
   
           <!-- Downtime Totals by Line -->
           <div id="downtime-totals-by-line" class="mb-4"></div>
+  
+          <!-- Planned Downtime Totals by Line -->
+          <div id="planned-downtime-by-line" class="mb-4"></div>
+  
+          <!-- Unplanned Downtime Totals by Line -->
+          <div id="unplanned-downtime-by-line" class="mb-4"></div>
   
           <!-- Potential Minutes by Line -->
           <div id="potential-minutes-by-line" class="mb-4"></div>
@@ -196,13 +204,13 @@
                     <span class="planned-downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
-                  </p>       
+                  </p>
                   <p class="mb-2">
                     <strong>Unplanned Downtime:</strong>
                     <span class="unplanned-downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
-                  </p>           
+                  </p>
                   <!-- Detailed Downtime Button -->
                   <button type="button" class="btn btn-warning detailed-downtime-btn" data-line="{{ line.line }}" data-machine="{{ machine.number }}" data-bs-toggle="modal" data-bs-target="#downtimeModal">
                     Detailed Downtime
@@ -226,7 +234,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="downtimeModalLabel">Detailed Downtime</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <!-- PR Downtime Entries -->
@@ -335,7 +343,7 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         });
 
-        // Update target values with the adjusted target from the JSON response.
+        // Update target values.
         document.querySelectorAll('.target').forEach(function(elem) {
           var lineName = elem.getAttribute('data-line');
           var machineNumber = elem.getAttribute('data-machine');
@@ -380,7 +388,6 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         });
 
-
         // Update overall totals.
         if (data.overall_totals) {
           document.getElementById('overall-produced').innerText = data.overall_totals.total_produced;
@@ -389,6 +396,10 @@ document.addEventListener("DOMContentLoaded", function() {
         if (data.overall_downtime) {
           var overallDowntimeMinutes = parseFloat(data.overall_downtime.downtime_minutes);
           document.getElementById('overall-downtime').innerText = overallDowntimeMinutes + " min";
+          var overallPlanned = parseFloat(data.overall_downtime.planned_downtime_minutes);
+          document.getElementById('overall-planned-downtime').innerText = overallPlanned + " min";
+          var overallUnplanned = parseFloat(data.overall_downtime.unplanned_downtime_minutes);
+          document.getElementById('overall-unplanned-downtime').innerText = overallUnplanned + " min";
         }
         if (data.overall_potential_minutes !== undefined) {
           document.getElementById('overall-potential-minutes').innerText = data.overall_potential_minutes;
@@ -416,6 +427,30 @@ document.addEventListener("DOMContentLoaded", function() {
             var p = document.createElement('p');
             p.innerHTML = '<strong>Line ' + line + ':</strong> Downtime: ' + dtTotalMinutes + ' min';
             dtContentDiv.appendChild(p);
+          }
+        }
+        // Planned downtime totals by line.
+        if (data.planned_downtime_totals_by_line) {
+          var plannedByLineDiv = document.getElementById('planned-downtime-by-line');
+          plannedByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Planned Downtime by Line</h2></div><div class="card-body" id="planned-line-totals-content"></div></div>';
+          var plannedContentDiv = document.getElementById('planned-line-totals-content');
+          for (var line in data.planned_downtime_totals_by_line) {
+            var plannedMinutes = data.planned_downtime_totals_by_line[line];
+            var p = document.createElement('p');
+            p.innerHTML = '<strong>Line ' + line + ':</strong> Planned Downtime: ' + plannedMinutes + ' min';
+            plannedContentDiv.appendChild(p);
+          }
+        }
+        // Unplanned downtime totals by line.
+        if (data.unplanned_downtime_totals_by_line) {
+          var unplannedByLineDiv = document.getElementById('unplanned-downtime-by-line');
+          unplannedByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Unplanned Downtime by Line</h2></div><div class="card-body" id="unplanned-line-totals-content"></div></div>';
+          var unplannedContentDiv = document.getElementById('unplanned-line-totals-content');
+          for (var line in data.unplanned_downtime_totals_by_line) {
+            var unplannedMinutes = data.unplanned_downtime_totals_by_line[line];
+            var p = document.createElement('p');
+            p.innerHTML = '<strong>Line ' + line + ':</strong> Unplanned Downtime: ' + unplannedMinutes + ' min';
+            unplannedContentDiv.appendChild(p);
           }
         }
         // Potential minutes by line.

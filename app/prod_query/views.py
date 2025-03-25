@@ -6594,12 +6594,21 @@ def fetch_oa_by_day_production_data(request):
     production_data = {}
     downtime_totals_by_line = {}
 
+    # NEW: Initialize accumulators for planned and unplanned downtime.
+    planned_downtime_totals_by_line = {}
+    unplanned_downtime_totals_by_line = {}
+    overall_planned_downtime_minutes = 0
+    overall_unplanned_downtime_minutes = 0
+
     # Loop over each line, operation, and machine.
     # Assume "lines" is a global variable holding the line/operation/machine structure.
     for line in lines:
         line_name = line["line"]
         production_data.setdefault(line_name, {})
         downtime_totals_by_line.setdefault(line_name, 0)
+        # NEW: Initialize per-line accumulators.
+        planned_downtime_totals_by_line.setdefault(line_name, 0)
+        unplanned_downtime_totals_by_line.setdefault(line_name, 0)
 
         for operation in line["operations"]:
             op = operation["op"]
@@ -6623,12 +6632,9 @@ def fetch_oa_by_day_production_data(request):
 
                 # Annotate each downtime event with overlap info.
                 for event in downtime_events:
-                    # Convert event start/end strings to datetime objects.
                     detail_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
                     detail_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
-                    # Call the overlap function.
                     overlap_info = compute_overlap_label(detail_start, detail_end, pr_downtime_entries)
-                    # Save the overlap label and pr_id into the event.
                     event["overlap"] = overlap_info["overlap"]
                     event["pr_id"] = overlap_info["pr_id"]
 
@@ -6640,6 +6646,12 @@ def fetch_oa_by_day_production_data(request):
                 total_downtime_minutes = production_data[line_name][machine_number]["downtime_minutes"]
                 unplanned_downtime = calculate_unplanned_downtime(total_downtime_minutes, planned_downtime)
                 production_data[line_name][machine_number]["unplanned_downtime_minutes"] = unplanned_downtime
+
+                # Update per-line and overall accumulators.
+                planned_downtime_totals_by_line[line_name] += planned_downtime
+                unplanned_downtime_totals_by_line[line_name] += unplanned_downtime
+                overall_planned_downtime_minutes += planned_downtime
+                overall_unplanned_downtime_minutes += unplanned_downtime
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
@@ -6674,13 +6686,22 @@ def fetch_oa_by_day_production_data(request):
         "totals_by_line": totals_by_line,
         "overall_totals": {"total_produced": overall_total_produced, "total_target": overall_total_target},
         "downtime_totals_by_line": downtime_totals_by_line,
-        "overall_downtime": {"downtime_seconds": overall_downtime_seconds, "downtime_minutes": overall_downtime_minutes},
+        "overall_downtime": {
+            "downtime_seconds": overall_downtime_seconds,
+            "downtime_minutes": overall_downtime_minutes,
+            "planned_downtime_minutes": overall_planned_downtime_minutes,
+            "unplanned_downtime_minutes": overall_unplanned_downtime_minutes,
+        },
         "potential_minutes_by_line": potential_minutes_by_line,
         "overall_potential_minutes": overall_total_potential_minutes,
         "scrap_totals_by_line": scrap_totals_by_line,
         "overall_scrap_total": overall_scrap_total,
         "previous_day": previous_day_str,
     }
+
+    # Include the downtime breakdown per line.
+    response_data["planned_downtime_totals_by_line"] = planned_downtime_totals_by_line
+    response_data["unplanned_downtime_totals_by_line"] = unplanned_downtime_totals_by_line
 
     # Compute the OEE metrics.
     oee_metrics = compute_oee_metrics(
