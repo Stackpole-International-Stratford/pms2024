@@ -6111,6 +6111,95 @@ line_scrap_mapping = {
     "Presses": ["Compact"],
 }
 
+# --- Helper Functions ---
+
+def oa_by_day(request):
+    """
+    Render the production data page with an inline range calendar.
+    The calendar is initialized in range mode so that the user can select a start and end date.
+    These dates are then passed as GET parameters (start_date and end_date) to the backend.
+    If not provided, both default to yesterday.
+    """
+    import datetime
+    from datetime import timedelta
+
+    # Default to yesterday for both start and end if not provided.
+    default_date_str = (datetime.datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+    start_date_str = request.GET.get('start_date', default_date_str)
+    end_date_str = request.GET.get('end_date', default_date_str)
+
+    # Compute previous day from start_date.
+    start_date_obj = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    previous_day_str = (start_date_obj - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # For rendering, pass along the selected dates and computed previous_day.
+    context = {
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'previous_day': previous_day_str,  # Formatted as YYYY-MM-DD
+        'lines': lines  # original structure for initial rendering (will be adjusted by JS if needed)
+    }
+    return render(request, 'prod_query/oa_by_day.html', context)
+
+
+@require_GET
+def oee_metrics_view(request):
+    """
+    API endpoint that returns different values based on query parameters:
+    - `?oee=1` → Returns the OEE number for yesterday.
+    - `?column=1` → Returns the column NUMBER for yesterday.
+    - `?row=1` → Returns the row NUMBER for yesterday.
+    
+    Example responses:
+    - "63"  (if `?oee=1` is passed)
+    - "48"  (if `?column=1` is passed)
+    - "19"  (if `?row=1` is passed)
+    """
+
+    # Always use yesterday's date
+    yesterday_date = datetime.now() - timedelta(days=1)
+    yesterday_day = yesterday_date.strftime('%d')  # Extracts the day number as a string (e.g., "18")
+
+    # Date-to-Cell Mapping (Row, Column)
+    date_to_cell_map = {
+        '1': (13, 56), '2': (15, 44), '3': (15, 46), '4': (15, 48), '5': (15, 50), '6': (15, 52), '7': (15, 54),
+        '8': (15, 56), '9': (17, 44), '10': (17, 46), '11': (17, 48), '12': (17, 50), '13': (17, 52), '14': (17, 54),
+        '15': (17, 56), '16': (19, 44), '17': (19, 46), '18': (19, 48), '19': (19, 50), '20': (19, 52), '21': (19, 54),
+        '22': (19, 56), '23': (21, 44), '24': (21, 46), '25': (21, 48), '26': (21, 50), '27': (21, 52), '28': (21, 54),
+        '29': (21, 56), '30': (23, 44), '31': (23, 46)
+    }
+
+    # Get the correct (row, column) tuple for yesterday
+    cell = date_to_cell_map.get(yesterday_day)
+
+    # Check if the user is requesting 'oee', 'column', or 'row'
+    if 'oee' in request.GET:
+        # Fetch full production JSON
+        full_response = fetch_oa_by_day_production_data(request)
+        data = json.loads(full_response.content.decode('utf-8'))
+
+        # Extract 'overall.OEE' value safely
+        overall_oee = data.get("oee_metrics", {}).get("overall", {}).get("OEE", None)
+
+        if overall_oee is not None:
+            oee_number = round(overall_oee * 100, 2)  # Convert to a number (e.g., 0.63 → 63)
+            return HttpResponse(str(oee_number), content_type="text/plain")
+        else:
+            return HttpResponse("N/A", content_type="text/plain")  # Return "N/A" if no OEE data
+
+    elif 'column' in request.GET:
+        if cell:
+            return HttpResponse(str(cell[1]), content_type="text/plain")  # Return column number
+        return HttpResponse("UNKNOWN", content_type="text/plain")
+
+    elif 'row' in request.GET:
+        if cell:
+            return HttpResponse(str(cell[0]), content_type="text/plain")  # Return row number
+        return HttpResponse("UNKNOWN", content_type="text/plain")
+
+    # If no valid parameter is found, return an error
+    return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)
+
 
 def compute_oee_metrics(totals_by_line, overall_total_produced, overall_total_target,
                         overall_total_potential_minutes, overall_downtime_minutes,
@@ -6158,7 +6247,6 @@ def compute_oee_metrics(totals_by_line, overall_total_produced, overall_total_ta
         oee_by_line[line] = {"A": A, "P": P, "Q": Q, "OEE": OEE}
 
     return {"overall": oee_overall, "by_line": oee_by_line}
-
 
 
 def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
@@ -6239,7 +6327,6 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
 
 
 
-
 def fetch_machine_target(machine_id, line_name, effective_timestamp):
     """
     Fetches the most recent target for a given machine and line from the OAMachineTargets table.
@@ -6256,7 +6343,6 @@ def fetch_machine_target(machine_id, line_name, effective_timestamp):
         .first()
     )
     return target_record.target if target_record else None
-
 
 
 
@@ -6290,9 +6376,6 @@ def fetch_daily_scrap_data(cursor, start_time, end_time):
     return scrap_totals_by_line, overall_scrap_total
 
 
-
-
-# --- Helper Functions ---
 
 def parse_date_range(request):
     import datetime, os, importlib, json
@@ -6479,6 +6562,9 @@ def calculate_planned_downtime(downtime_events, pr_downtime_entries):
     return planned_downtime_minutes
 
 
+
+
+
 # --- Main Function ---
 
 def fetch_oa_by_day_production_data(request):
@@ -6592,98 +6678,4 @@ def fetch_oa_by_day_production_data(request):
 
 
 
-
-
-
-
-
-def oa_by_day(request):
-    """
-    Render the production data page with an inline range calendar.
-    The calendar is initialized in range mode so that the user can select a start and end date.
-    These dates are then passed as GET parameters (start_date and end_date) to the backend.
-    If not provided, both default to yesterday.
-    """
-    import datetime
-    from datetime import timedelta
-
-    # Default to yesterday for both start and end if not provided.
-    default_date_str = (datetime.datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
-    start_date_str = request.GET.get('start_date', default_date_str)
-    end_date_str = request.GET.get('end_date', default_date_str)
-
-    # Compute previous day from start_date.
-    start_date_obj = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-    previous_day_str = (start_date_obj - timedelta(days=1)).strftime('%Y-%m-%d')
-
-    # For rendering, pass along the selected dates and computed previous_day.
-    context = {
-        'start_date': start_date_str,
-        'end_date': end_date_str,
-        'previous_day': previous_day_str,  # Formatted as YYYY-MM-DD
-        'lines': lines  # original structure for initial rendering (will be adjusted by JS if needed)
-    }
-    return render(request, 'prod_query/oa_by_day.html', context)
-
-
-
-
-
-@require_GET
-def oee_metrics_view(request):
-    """
-    API endpoint that returns different values based on query parameters:
-    - `?oee=1` → Returns the OEE number for yesterday.
-    - `?column=1` → Returns the column NUMBER for yesterday.
-    - `?row=1` → Returns the row NUMBER for yesterday.
-    
-    Example responses:
-    - "63"  (if `?oee=1` is passed)
-    - "48"  (if `?column=1` is passed)
-    - "19"  (if `?row=1` is passed)
-    """
-
-    # Always use yesterday's date
-    yesterday_date = datetime.now() - timedelta(days=1)
-    yesterday_day = yesterday_date.strftime('%d')  # Extracts the day number as a string (e.g., "18")
-
-    # Date-to-Cell Mapping (Row, Column)
-    date_to_cell_map = {
-        '1': (13, 56), '2': (15, 44), '3': (15, 46), '4': (15, 48), '5': (15, 50), '6': (15, 52), '7': (15, 54),
-        '8': (15, 56), '9': (17, 44), '10': (17, 46), '11': (17, 48), '12': (17, 50), '13': (17, 52), '14': (17, 54),
-        '15': (17, 56), '16': (19, 44), '17': (19, 46), '18': (19, 48), '19': (19, 50), '20': (19, 52), '21': (19, 54),
-        '22': (19, 56), '23': (21, 44), '24': (21, 46), '25': (21, 48), '26': (21, 50), '27': (21, 52), '28': (21, 54),
-        '29': (21, 56), '30': (23, 44), '31': (23, 46)
-    }
-
-    # Get the correct (row, column) tuple for yesterday
-    cell = date_to_cell_map.get(yesterday_day)
-
-    # Check if the user is requesting 'oee', 'column', or 'row'
-    if 'oee' in request.GET:
-        # Fetch full production JSON
-        full_response = fetch_oa_by_day_production_data(request)
-        data = json.loads(full_response.content.decode('utf-8'))
-
-        # Extract 'overall.OEE' value safely
-        overall_oee = data.get("oee_metrics", {}).get("overall", {}).get("OEE", None)
-
-        if overall_oee is not None:
-            oee_number = round(overall_oee * 100, 2)  # Convert to a number (e.g., 0.63 → 63)
-            return HttpResponse(str(oee_number), content_type="text/plain")
-        else:
-            return HttpResponse("N/A", content_type="text/plain")  # Return "N/A" if no OEE data
-
-    elif 'column' in request.GET:
-        if cell:
-            return HttpResponse(str(cell[1]), content_type="text/plain")  # Return column number
-        return HttpResponse("UNKNOWN", content_type="text/plain")
-
-    elif 'row' in request.GET:
-        if cell:
-            return HttpResponse(str(cell[0]), content_type="text/plain")  # Return row number
-        return HttpResponse("UNKNOWN", content_type="text/plain")
-
-    # If no valid parameter is found, return an error
-    return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)
 
