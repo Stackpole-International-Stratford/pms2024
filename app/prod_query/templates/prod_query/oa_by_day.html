@@ -50,43 +50,43 @@
   </div>
 
   <!-- OEE Notes Accordion -->
-  <div class="accordion mb-4" id="oeeNotesAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingOeeNotes">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                data-bs-target="#collapseOeeNotes" aria-expanded="false"
-                aria-controls="collapseOeeNotes">
-          OEE Calculation Notes
-        </button>
-      </h2>
-      <div id="collapseOeeNotes" class="accordion-collapse collapse"
-           aria-labelledby="headingOeeNotes" data-bs-parent="#oeeNotesAccordion">
-        <div class="accordion-body">
-          <h5>Formula Used for OEE Calculation</h5>
-          <p>We use the following formula to calculate OEE for this page: </p>
-          <ul>
-            <li><strong>Run Time</strong> = Total Potential Minutes - Downtime</li>
-            <li><strong>Availability (A)</strong> = Run Time / Total Potential Minutes</li>
-            <li><strong>Ideal Cycle Time</strong> = Total Potential Minutes / Target Parts</li>
-            <li><strong>Performance (P)</strong> = (Ideal Cycle Time * Produced Parts) / Run Time</li>
-            <li><strong>Quality (Q)</strong> = (Produced Parts - Scrap) / Produced Parts</li>
-            <li><strong>OEE</strong> = A × P × Q</li>
-          </ul>
-          <p>Source: <a href="https://www.oee.com/calculating-oee/" target="_blank">OEE.com</a></p>
+<div class="accordion mb-4" id="oeeNotesAccordion">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingOeeNotes">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseOeeNotes" aria-expanded="false"
+              aria-controls="collapseOeeNotes">
+        OEE Calculation Notes
+      </button>
+    </h2>
+    <div id="collapseOeeNotes" class="accordion-collapse collapse"
+         aria-labelledby="headingOeeNotes" data-bs-parent="#oeeNotesAccordion">
+      <div class="accordion-body">
+        <h5>Formula Used for OEE Calculation</h5>
+        <p>We use the following formulas based on standard OEE methodology, adapted to our available data:</p>
+        <ul>
+          <li><strong>Planned Production Time (PPT)</strong> = Total Potential Minutes − Planned Downtime</li>
+          <li><strong>Run Time</strong> = PPT − (Unplanned Downtime + Planned Downtime)</li>
+          <li><strong>Ideal Cycle Time</strong> = PPT / Target Parts</li>
+          <li><strong>Availability (A)</strong> = Run Time / PPT</li>
+          <li><strong>Performance (P)</strong> = (Ideal Cycle Time × Produced Parts) / Run Time</li>
+          <li><strong>Quality (Q)</strong> = (Produced Parts − Scrap) / Produced Parts</li>
+          <li><strong>OEE</strong> = A × P × Q</li>
+        </ul>
+        <p>Source: <a href="https://www.oee.com/calculating-oee/" target="_blank">OEE.com</a></p>
 
-          <h5>Important Notes</h5>
-          <ul>
-            <li><strong>Performance (P) is often skewed higher</strong> and <strong>Availability (A) is often skewed lower than reality</strong> because we currently do not have the ability to distinguish between planned and unplanned downtime. However, the resulting OEE is still correct (verified).</li>
-            <li><strong>Target values</strong> are currently sourced from the database table <strong>prod_query_oamachinetargets</strong> which is the same table used for all other OEE pages.</li>
-            <li>We use the <strong>targets and planned production time</strong> to deduce an ideal cycle time because we do not have ideal cycle times for every machine like we do for presses.</li>
-            <li>Downtime events are considered as <strong>any gap over 5 minutes</strong> between making parts. This accounts for both long stoppages and microstoppages.</li>
-            <li><strong>Quality (Q) frequently shows as 100%</strong> because the recorded scrap counts are typically less than 1% of total production.</li>
-            <li><strong>Targets are originally based on a 5-day workweek (7200 minutes).</strong> When a user selects a custom date/time range, targets are adjusted proportionally based on the ratio of the selected time range to the original 7200-minute baseline.</li>
-          </ul>
-        </div>
+        <h5>Important Notes</h5>
+        <ul>
+          <li><strong>Planned vs. Unplanned Downtime:</strong> This page distinguishes between planned and unplanned downtime, which improves the accuracy of the underlying Availability and Performance metrics.</li>
+          <li><strong>Ideal Cycle Time</strong> is dynamically calculated using the target part count and available production time</li>
+          <li><strong>Downtime</strong> are gaps over 5 minutes between produced parts allowing us to capture both micro and macro stoppages.</li>
+          <li><strong>Targets</strong> are adjusted to match the selected time range and are based on a 5-day (7200-minute) baseline week from the database table (<code>prod_query_oamachinetargets</code>).</li>
+        </ul>
       </div>
     </div>
   </div>
+</div>
+
 
   <!-- OEE Metrics by Line -->
   <div id="oee-by-line" class="mb-4"></div>
