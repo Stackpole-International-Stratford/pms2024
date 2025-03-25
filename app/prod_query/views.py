@@ -6201,52 +6201,94 @@ def oee_metrics_view(request):
     return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)
 
 
-def compute_oee_metrics(totals_by_line, overall_total_produced, overall_total_target,
-                        overall_total_potential_minutes, overall_downtime_minutes,
-                        overall_scrap_total, scrap_totals_by_line, potential_minutes_by_line,
-                        downtime_totals_by_line):
+
+def compute_oee_metrics(
+    totals_by_line,
+    overall_total_produced,
+    overall_total_target,
+    overall_total_potential_minutes,
+    overall_unplanned_downtime_minutes,
+    overall_planned_downtime_minutes,
+    overall_scrap_total,
+    scrap_totals_by_line,
+    potential_minutes_by_line,
+    planned_downtime_totals_by_line,
+    unplanned_downtime_totals_by_line
+):
     """
-    Computes the OEE metrics overall and per line using:
-      - Run Time = Total potential minutes - downtime (in minutes)
-      - Availability (A) = run time / total potential minutes
-      - Ideal Cycle Time = total potential minutes / target parts
-      - Performance (P) = (ideal cycle time * produced parts) / run time
-      - Quality (Q) = (produced parts - scrap) / produced parts
-      - OEE = A * P * Q
+    Compute OEE metrics overall and by line using the following formulas:
+    
+      1. Planned Production Time (PPT) = total_potential_minutes - planned_downtime
+      2. Run Time = PPT - (unplanned_downtime + planned_downtime)
+      3. ideal_cycle_time = PPT / target_parts  (target_parts is overall_total_target or per-line target)
+      4. Availability = run_time / PPT
+      5. Performance = (ideal_cycle_time * actual_parts) / run_time
+      6. Quality = (total produced - scrap) / total produced
+      7. OEE = Availability * Performance * Quality
     """
-    # Cast overall_scrap_total to float to avoid mixing Decimal and float.
+    # Convert overall parameters to floats to avoid type issues
+    overall_total_produced = float(overall_total_produced)
+    overall_total_target = float(overall_total_target)
+    overall_total_potential_minutes = float(overall_total_potential_minutes)
+    overall_unplanned_downtime_minutes = float(overall_unplanned_downtime_minutes)
+    overall_planned_downtime_minutes = float(overall_planned_downtime_minutes)
     overall_scrap_total = float(overall_scrap_total)
+    
+    # Overall metrics calculations
+    overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
+    overall_run_time = overall_ppt - (overall_planned_downtime_minutes + overall_unplanned_downtime_minutes)
+    overall_ideal_cycle_time = overall_ppt / overall_total_target if overall_total_target > 0 else 0.0
 
-    # Overall calculations
-    overall_run_time = overall_total_potential_minutes - overall_downtime_minutes
-    overall_A = overall_run_time / overall_total_potential_minutes if overall_total_potential_minutes else 0.0
-    ideal_cycle_time_overall = overall_total_potential_minutes / overall_total_target if overall_total_target else 0.0
-    overall_P = (ideal_cycle_time_overall * overall_total_produced) / overall_run_time if overall_run_time else 0.0
-    overall_Q = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced else 0.0
-    overall_OEE = overall_A * overall_P * overall_Q
-    oee_overall = {"A": overall_A, "P": overall_P, "Q": overall_Q, "OEE": overall_OEE}
+    overall_availability = overall_run_time / overall_ppt if overall_ppt > 0 else 0.0
+    overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
+    overall_quality = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced > 0 else 0.0
+    overall_oee = overall_availability * overall_performance * overall_quality
 
-    # Per-line calculations
-    oee_by_line = {}
-    for line in totals_by_line:
-        potential = potential_minutes_by_line.get(line, 0)
-        # Downtime per line is stored in seconds, so convert to minutes:
-        downtime_seconds = downtime_totals_by_line.get(line, 0)
-        downtime_minutes = downtime_seconds / 60.0
-        run_time = potential - downtime_minutes
-        line_totals = totals_by_line[line]
-        total_produced = line_totals.get("total_produced", 0)
-        total_target = line_totals.get("total_target", 0)
-        A = run_time / potential if potential else 0.0
-        ideal_cycle_time = potential / total_target if total_target else 0.0
-        P = (ideal_cycle_time * total_produced) / run_time if run_time else 0.0
-        # Ensure scrap is a float
+    lines_metrics = {}
+    # By-line metrics calculations
+    for line, totals in totals_by_line.items():
+        produced = float(totals.get("total_produced", 0))
+        target = float(totals.get("total_target", 0))
+        potential = float(potential_minutes_by_line.get(line, 0))
+        planned_downtime = float(planned_downtime_totals_by_line.get(line, 0))
+        unplanned_downtime = float(unplanned_downtime_totals_by_line.get(line, 0))
         scrap = float(scrap_totals_by_line.get(line, 0))
-        Q = (total_produced - scrap) / total_produced if total_produced else 0.0
-        OEE = A * P * Q
-        oee_by_line[line] = {"A": A, "P": P, "Q": Q, "OEE": OEE}
+        
+        ppt = potential - planned_downtime
+        run_time = ppt - (planned_downtime + unplanned_downtime)
+        ideal_cycle_time = ppt / target if target > 0 else 0.0
+        
+        availability = run_time / ppt if ppt > 0 else 0.0
+        performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+        quality = (produced - scrap) / produced if produced > 0 else 0.0
+        oee = availability * performance * quality
+        
+        lines_metrics[line] = {
+            "ppt": ppt,
+            "run_time": run_time,
+            "ideal_cycle_time": ideal_cycle_time,
+            "A": availability,
+            "P": performance,
+            "Q": quality,
+            "OEE": oee
+        }
+        
+    overall_metrics = {
+        "ppt": overall_ppt,
+        "run_time": overall_run_time,
+        "ideal_cycle_time": overall_ideal_cycle_time,
+        "A": overall_availability,
+        "P": overall_performance,
+        "Q": overall_quality,
+        "OEE": overall_oee
+    }
+    
+    return {"overall": overall_metrics, "lines": lines_metrics}
 
-    return {"overall": oee_overall, "by_line": oee_by_line}
+
+
+
+
 
 
 def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
@@ -6705,11 +6747,20 @@ def fetch_oa_by_day_production_data(request):
 
     # Compute the OEE metrics.
     oee_metrics = compute_oee_metrics(
-        totals_by_line, overall_total_produced, overall_total_target,
-        overall_total_potential_minutes, overall_downtime_minutes,
-        overall_scrap_total, scrap_totals_by_line, potential_minutes_by_line,
-        downtime_totals_by_line
+        totals_by_line,
+        overall_total_produced,
+        overall_total_target,
+        overall_total_potential_minutes,
+        overall_unplanned_downtime_minutes,
+        overall_planned_downtime_minutes,
+        overall_scrap_total,
+        scrap_totals_by_line,
+        potential_minutes_by_line,
+        planned_downtime_totals_by_line,
+        unplanned_downtime_totals_by_line
     )
+
+
     response_data["oee_metrics"] = oee_metrics
 
     cursor.close()
