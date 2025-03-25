@@ -203,6 +203,7 @@
                             <table class="table table-sm pr-downtime-table">
                               <thead>
                                 <tr>
+                                  <th>Id</th>
                                   <th>Problem</th>
                                   <th>Called</th>
                                   <th>Completed</th>
@@ -211,30 +212,30 @@
                               </thead>
                               <tbody>
                                 <tr>
-                                  <td colspan="3">Loading...</td>
+                                  <td colspan="5">Loading...</td>
                                 </tr>
                               </tbody>
                             </table>
                           </div>
 
                           <!-- Downtime Events Container -->
-<div class="downtime-events" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
-  <h6 class="mt-3">Downtime Events:</h6>
-  <table class="table table-sm downtime-events-table">
-    <thead>
-      <tr>
-        <th>Start</th>
-        <th>End</th>
-        <th>Minutes Down</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="3">Loading...</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+                          <div class="downtime-events" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                          <h6 class="mt-3">Downtime Events:</h6>
+                          <table class="table table-sm downtime-events-table">
+                            <thead>
+                              <tr>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Minutes Down</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td colspan="3">Loading...</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          </div>
 
                         </div>
                       </div>
@@ -318,7 +319,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
 
-
                 // Update PR Downtime Entries for each machine.
                 document.querySelectorAll('.pr-downtime-entries').forEach(function(elem) {
                   var lineName = elem.getAttribute('data-line');
@@ -329,17 +329,18 @@ document.addEventListener("DOMContentLoaded", function() {
                       var prEntries = data.production_data[lineName][machineNumber].pr_downtime_entries;
                       if (prEntries && prEntries.length > 0) {
                           prEntries.forEach(function(entry) {
-                              // Expecting each entry as: [problem, called, completed, minutesDown]
-                              var problem = entry[0];
-                              var called = entry[1];
-                              var completed = entry[2] || "N/A";
-                              var minutesDown = (entry[3] !== null && entry[3] !== undefined) ? entry[3].toFixed(0) + " min" : "N/A";
+                              // Expecting each entry as: [id, problem, called, completed, minutesDown]
+                              var id = entry[0];
+                              var problem = entry[1];
+                              var called = entry[2];
+                              var completed = entry[3] || "N/A";
+                              var minutesDown = (entry[4] !== null && entry[4] !== undefined) ? entry[4].toFixed(0) + " min" : "N/A";
                               var tr = document.createElement('tr');
-                              tr.innerHTML = "<td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td><td>" + minutesDown + "</td>";
+                              tr.innerHTML = "<td>" + id + "</td><td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td><td>" + minutesDown + "</td>";
                               tbody.appendChild(tr);
                           });
                       } else {
-                          tbody.innerHTML = "<tr><td colspan='4'>No PR downtime entries found.</td></tr>";
+                          tbody.innerHTML = "<tr><td colspan='5'>No PR downtime entries found.</td></tr>";
                       }
                   }
                 });
@@ -347,28 +348,28 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-// Update downtime events table for each machine.
-document.querySelectorAll('.downtime-events').forEach(function(elem) {
-  var lineName = elem.getAttribute('data-line');
-  var machineNumber = elem.getAttribute('data-machine');
-  var tbody = elem.querySelector('tbody');
-  tbody.innerHTML = ""; // Clear the "Loading..." state.
-  if (data.production_data[lineName] && data.production_data[lineName][machineNumber] &&
-      data.production_data[lineName][machineNumber].downtime_events) {
-      var events = data.production_data[lineName][machineNumber].downtime_events;
-      if (events && events.length > 0) {
-          events.forEach(function(event) {
-              var tr = document.createElement('tr');
-              tr.innerHTML = "<td>" + event.start + "</td><td>" + event.end + "</td><td>" + event.minutes_down + " min</td>";
-              tbody.appendChild(tr);
-          });
-      } else {
-          tbody.innerHTML = "<tr><td colspan='3'>No downtime events found.</td></tr>";
-      }
-  } else {
-      tbody.innerHTML = "<tr><td colspan='3'>No downtime events found.</td></tr>";
-  }
-});
+                // Update downtime events table for each machine.
+                document.querySelectorAll('.downtime-events').forEach(function(elem) {
+                  var lineName = elem.getAttribute('data-line');
+                  var machineNumber = elem.getAttribute('data-machine');
+                  var tbody = elem.querySelector('tbody');
+                  tbody.innerHTML = ""; // Clear the "Loading..." state.
+                  if (data.production_data[lineName] && data.production_data[lineName][machineNumber] &&
+                      data.production_data[lineName][machineNumber].downtime_events) {
+                      var events = data.production_data[lineName][machineNumber].downtime_events;
+                      if (events && events.length > 0) {
+                          events.forEach(function(event) {
+                              var tr = document.createElement('tr');
+                              tr.innerHTML = "<td>" + event.start + "</td><td>" + event.end + "</td><td>" + event.minutes_down + " min</td>";
+                              tbody.appendChild(tr);
+                          });
+                      } else {
+                          tbody.innerHTML = "<tr><td colspan='3'>No downtime events found.</td></tr>";
+                      }
+                  } else {
+                      tbody.innerHTML = "<tr><td colspan='3'>No downtime events found.</td></tr>";
+                  }
+                });
 
 
 

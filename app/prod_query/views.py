@@ -6161,6 +6161,81 @@ def compute_oee_metrics(totals_by_line, overall_total_produced, overall_total_ta
 
 
 
+def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
+    """
+    A copy of `fetch_prdowntime1_entries` that also fetches the `idnumber` column.
+
+    :param assetnum: The asset number of the machine.
+    :param called4helptime: The start of the time window (ISO 8601 format).
+    :param completedtime: The end of the time window (ISO 8601 format).
+    :return: List of rows matching the criteria, each row shaped like:
+             [idnumber, problem, called4helptime, completedtime].
+    """
+    import datetime, os, importlib
+    from datetime import datetime
+
+    try:
+        # Parse the dates to ensure they are in datetime format
+        called4helptime = datetime.fromisoformat(called4helptime)
+        completedtime = datetime.fromisoformat(completedtime)
+
+        # Dynamically import `get_db_connection` from settings.py
+        settings_path = os.path.join(
+            os.path.dirname(__file__), '../pms/settings.py'
+        )
+        spec = importlib.util.spec_from_file_location("settings", settings_path)
+        settings = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(settings)
+        get_db_connection = settings.get_db_connection
+
+        # Get database connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Raw SQL query to fetch the required data, now including `idnumber`
+        query = """
+        SELECT
+            idnumber,
+            problem,
+            called4helptime,
+            completedtime
+        FROM pr_downtime1
+        WHERE assetnum = %s
+          AND (
+            -- Entries that start before the window and bleed into the window
+            (called4helptime < %s AND (completedtime >= %s OR completedtime IS NULL))
+            -- Entries that start within the window
+            OR (called4helptime >= %s AND called4helptime <= %s)
+            -- Entries that start in the window and bleed out
+            OR (called4helptime >= %s AND called4helptime <= %s AND (completedtime > %s OR completedtime IS NULL))
+            -- Entries that bleed both before and after the window
+            OR (called4helptime < %s AND (completedtime > %s OR completedtime IS NULL))
+          )
+        """
+
+        # Execute the query
+        cursor.execute(query, (
+            assetnum,
+            called4helptime, called4helptime,
+            called4helptime, completedtime,
+            called4helptime, completedtime, completedtime,
+            called4helptime, completedtime
+        ))
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Close the cursor and connection
+        cursor.close()
+        conn.close()
+
+        return rows
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+
 
 def fetch_machine_target(machine_id, line_name, effective_timestamp):
     """
@@ -6370,18 +6445,19 @@ def fetch_oa_by_day_production_data(request):
                 production_data[line_name][machine_number]["downtime_events"] = downtime_events
                 downtime_totals_by_line[line_name] += downtime_seconds
 
-                # --- PR Downtime Entries: Fetch and process entries ---
-                pr_downtime_entries_raw = fetch_prdowntime1_entries(
+               # --- PR Downtime Entries: Fetch and process entries ---
+                pr_downtime_entries_raw = fetch_prdowntime1_entries_with_id(
                     machine_number,
                     start_time.isoformat(),
                     end_time.isoformat()
                 )
                 pr_downtime_entries = []
                 for entry in pr_downtime_entries_raw:
-                    # Each entry is assumed to be structured as: [problem, called, completed]
-                    problem = entry[0]
-                    called = entry[1]
-                    completed = entry[2] if len(entry) > 2 else None
+                    # Each entry is now assumed to be structured as: [id, problem, called, completed]
+                    pr_id = entry[0]
+                    problem = entry[1]
+                    called = entry[2]
+                    completed = entry[3] if len(entry) > 3 else None
 
                     # Convert timestamps to datetime objects and then to ISO strings.
                     try:
@@ -6403,8 +6479,10 @@ def fetch_oa_by_day_production_data(request):
 
                     processed_called = dt_called.isoformat() if dt_called else "N/A"
                     processed_completed = dt_completed.isoformat() if dt_completed else "N/A"
-                    pr_downtime_entries.append([problem, processed_called, processed_completed, minutes_down])
+                    # Prepend the pr_id to the entry
+                    pr_downtime_entries.append([pr_id, problem, processed_called, processed_completed, minutes_down])
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
+
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
@@ -6554,3 +6632,4 @@ def oee_metrics_view(request):
 
     # If no valid parameter is found, return an error
     return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)
+
