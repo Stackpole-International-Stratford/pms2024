@@ -6213,6 +6213,7 @@ def fetch_daily_scrap_data(cursor, start_time, end_time):
 
 
 
+
 def fetch_oa_by_day_production_data(request):
     """
     Combined view that fetches production, downtime, potential minutes,
@@ -6349,14 +6350,51 @@ def fetch_oa_by_day_production_data(request):
                 production_data[line_name][machine_number]["downtime_minutes"] = downtime_minutes
                 downtime_totals_by_line[line_name] += downtime_seconds
 
-                # --- New Code: Fetch PR downtime entries ---
-                # Convert time window to ISO format and fetch entries.
-                pr_downtime_entries = fetch_prdowntime1_entries(
+                # --- New Code: Fetch and process PR downtime entries ---
+                pr_downtime_entries_raw = fetch_prdowntime1_entries(
                     machine_number,
                     start_time.isoformat(),
                     end_time.isoformat()
                 )
-                # Attach the fetched entries to the machine's data.
+                pr_downtime_entries = []
+                for entry in pr_downtime_entries_raw:
+                    # Assume each entry is structured as: [problem, called, completed]
+                    problem = entry[0]
+                    called = entry[1]
+                    completed = entry[2] if len(entry) > 2 else None
+
+                    # Convert 'called' to datetime if needed.
+                    if isinstance(called, str):
+                        try:
+                            dt_called = datetime.datetime.fromisoformat(called)
+                        except Exception:
+                            dt_called = None
+                    else:
+                        dt_called = called
+
+                    # Convert 'completed' to datetime if needed.
+                    if completed and completed != "N/A":
+                        if isinstance(completed, str):
+                            try:
+                                dt_completed = datetime.datetime.fromisoformat(completed)
+                            except Exception:
+                                dt_completed = None
+                        else:
+                            dt_completed = completed
+                    else:
+                        dt_completed = None
+
+                    if dt_called and dt_completed:
+                        try:
+                            minutes_down = (dt_completed - dt_called).total_seconds() / 60
+                            minutes_down = round(minutes_down)
+                        except Exception:
+                            minutes_down = None
+                    else:
+                        minutes_down = None
+
+                    processed_completed = dt_completed if dt_completed else "N/A"
+                    pr_downtime_entries.append([problem, dt_called, processed_completed, minutes_down])
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
                 # --- End New Code ---
 
@@ -6413,6 +6451,7 @@ def fetch_oa_by_day_production_data(request):
     cursor.close()
     conn.close()
     return JsonResponse(response_data)
+
 
 
 

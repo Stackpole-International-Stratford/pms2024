@@ -206,6 +206,7 @@
                                   <th>Problem</th>
                                   <th>Called</th>
                                   <th>Completed</th>
+                                  <th>Minutes Down</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -296,6 +297,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 });
 
+
+
                 // Update PR Downtime Entries for each machine.
                 document.querySelectorAll('.pr-downtime-entries').forEach(function(elem) {
                   var lineName = elem.getAttribute('data-line');
@@ -306,19 +309,21 @@ document.addEventListener("DOMContentLoaded", function() {
                       var prEntries = data.production_data[lineName][machineNumber].pr_downtime_entries;
                       if (prEntries && prEntries.length > 0) {
                           prEntries.forEach(function(entry) {
-                              // Assuming each entry is an array: [problem, called4helptime, completedtime]
-                              var tr = document.createElement('tr');
+                              // Expecting each entry as: [problem, called, completed, minutesDown]
                               var problem = entry[0];
                               var called = entry[1];
                               var completed = entry[2] || "N/A";
-                              tr.innerHTML = "<td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td>";
+                              var minutesDown = (entry[3] !== null && entry[3] !== undefined) ? entry[3].toFixed(2) + " min" : "N/A";
+                              var tr = document.createElement('tr');
+                              tr.innerHTML = "<td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td><td>" + minutesDown + "</td>";
                               tbody.appendChild(tr);
                           });
                       } else {
-                          tbody.innerHTML = "<tr><td colspan='3'>No PR downtime entries found.</td></tr>";
+                          tbody.innerHTML = "<tr><td colspan='4'>No PR downtime entries found.</td></tr>";
                       }
                   }
                 });
+
 
 
 
