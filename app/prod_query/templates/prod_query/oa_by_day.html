@@ -156,58 +156,66 @@
       
 
 
-    <!-- Production Data Cards -->
-    <div class="accordion" id="productionData">
-        {% for line in lines %}
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="heading{{ forloop.counter }}">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
+<!-- Production Data Cards -->
+<div class="accordion" id="productionData">
+  {% for line in lines %}
+  <div class="accordion-item">
+      <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
               {{ line.line }}
-            </button>
-          </h2>
-          <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#productionData">
-            <div class="accordion-body">
+          </button>
+      </h2>
+      <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#productionData">
+          <div class="accordion-body">
               {% for operation in line.operations %}
               <h3 class="h6 mt-3">Operation: {{ operation.op }}</h3>
               <div class="row">
-                {% for machine in operation.machines %}
-                <div class="col-md-4 mb-3">
-                  <div class="card h-100">
-                    <div class="card-body">
-                      <p class="mb-2"><strong>Machine Number:</strong> {{ machine.number }}</p>
-                      <p class="mb-2">
-                        <strong>Target:</strong>
-                        <span class="target" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
-                          {{ machine.target }}
-                        </span>
-                      </p>
-                      {% if machine.part_numbers %}
-                        <p class="mb-2"><strong>Part Numbers:</strong> {{ machine.part_numbers|join:", " }}</p>
-                      {% endif %}
-                      <p class="mb-2">
-                        <strong>Parts:</strong>
-                        <span class="produced" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
-                          Loading...
-                        </span>
-                      </p>
-                      <p class="mb-0">
-                        <strong>Downtime:</strong>
-                        <span class="downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
-                          Loading...
-                        </span>
-                      </p>
-                    </div>
+                  {% for machine in operation.machines %}
+                  <div class="col-md-4 mb-3">
+                      <div class="card h-100">
+                          <div class="card-body">
+                              <p class="mb-2"><strong>Machine Number:</strong> {{ machine.number }}</p>
+                              <p class="mb-2">
+                                  <strong>Target:</strong>
+                                  <span class="target" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                                      {{ machine.target }}
+                                  </span>
+                              </p>
+                              {% if machine.part_numbers %}
+                                  <p class="mb-2"><strong>Part Numbers:</strong> {{ machine.part_numbers|join:", " }}</p>
+                              {% endif %}
+                              <p class="mb-2">
+                                  <strong>Parts:</strong>
+                                  <span class="produced" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                                      Loading...
+                                  </span>
+                              </p>
+                              <p class="mb-2">
+                                  <strong>Downtime:</strong>
+                                  <span class="downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                                      Loading...
+                                  </span>
+                              </p>
+                              <!-- New Container for PR Downtime Entries -->
+                              <div class="pr-downtime-entries" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                                  <h6 class="mt-3">PR Downtime Entries:</h6>
+                                  <ul class="pr-downtime-list">
+                                      <li>Loading...</li>
+                                  </ul>
+                              </div>
+                          </div>
+                      </div>
                   </div>
-                </div>
-                {% endfor %}
+                  {% endfor %}
               </div>
               {% endfor %}
-            </div>
           </div>
-        </div>
-        {% endfor %}
       </div>
-      
+  </div>
+  {% endfor %}
+</div>
+
+    
 </div>
 
 <script>
@@ -274,6 +282,28 @@ document.addEventListener("DOMContentLoaded", function() {
                         elem.innerText = data.production_data[lineName][machineNumber].target;
                     }
                 });
+
+                // Update PR Downtime Entries for each machine.
+                document.querySelectorAll('.pr-downtime-entries').forEach(function(elem) {
+                  var lineName = elem.getAttribute('data-line');
+                  var machineNumber = elem.getAttribute('data-machine');
+                  if (data.production_data[lineName] && data.production_data[lineName][machineNumber]) {
+                      var prEntries = data.production_data[lineName][machineNumber].pr_downtime_entries;
+                      var listEl = elem.querySelector('.pr-downtime-list');
+                      listEl.innerHTML = ""; // Clear the "Loading..." state.
+                      if (prEntries && prEntries.length > 0) {
+                          prEntries.forEach(function(entry) {
+                              // Assuming each entry is an array: [problem, called4helptime, completedtime]
+                              var li = document.createElement('li');
+                              li.textContent = "Problem: " + entry[0] + " | Called: " + entry[1] + " | Completed: " + (entry[2] || "N/A");
+                              listEl.appendChild(li);
+                          });
+                      } else {
+                          listEl.innerHTML = "<li>No PR downtime entries found.</li>";
+                      }
+                  }
+                });
+
 
                 // Update downtime data.
                 document.querySelectorAll('.downtime').forEach(function(elem) {
