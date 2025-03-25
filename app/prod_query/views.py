@@ -6423,11 +6423,11 @@ def fetch_oa_by_day_production_data(request):
                     if gap > 300:
                         downtime_seconds += gap
                         event_minutes = int(gap / 60)
-                        event_start_iso = datetime.datetime.fromtimestamp(previous_ts).isoformat()
-                        event_end_iso = datetime.datetime.fromtimestamp(ts).isoformat()
+                        event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
+                        event_end_str = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
                         downtime_events.append({
-                            "start": event_start_iso,
-                            "end": event_end_iso,
+                            "start": event_start_str,
+                            "end": event_end_str,
                             "minutes_down": event_minutes
                         })
                     previous_ts = ts
@@ -6436,11 +6436,11 @@ def fetch_oa_by_day_production_data(request):
                 if gap > 300:
                     downtime_seconds += gap
                     event_minutes = int(gap / 60)
-                    event_start_iso = datetime.datetime.fromtimestamp(previous_ts).isoformat()
-                    event_end_iso = datetime.datetime.fromtimestamp(end_timestamp).isoformat()
+                    event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
+                    event_end_str = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
                     downtime_events.append({
-                        "start": event_start_iso,
-                        "end": event_end_iso,
+                        "start": event_start_str,
+                        "end": event_end_str,
                         "minutes_down": event_minutes
                     })
 
