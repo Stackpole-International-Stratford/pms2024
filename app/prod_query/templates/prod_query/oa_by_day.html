@@ -313,7 +313,7 @@ document.addEventListener("DOMContentLoaded", function() {
                               var problem = entry[0];
                               var called = entry[1];
                               var completed = entry[2] || "N/A";
-                              var minutesDown = (entry[3] !== null && entry[3] !== undefined) ? entry[3].toFixed(2) + " min" : "N/A";
+                              var minutesDown = (entry[3] !== null && entry[3] !== undefined) ? entry[3].toFixed(0) + " min" : "N/A";
                               var tr = document.createElement('tr');
                               tr.innerHTML = "<td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td><td>" + minutesDown + "</td>";
                               tbody.appendChild(tr);
