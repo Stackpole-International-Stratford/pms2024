@@ -6292,56 +6292,194 @@ def fetch_daily_scrap_data(cursor, start_time, end_time):
 
 
 
-def fetch_oa_by_day_production_data(request):
-    """
-    Combined view that fetches production data, downtime (both quantitative and event-by-event details),
-    potential minutes, scrap data, and PR downtime entries for each machine over a given date range.
-    
-    Expected GET parameters:
-       start_date: (YYYY-MM-DD or YYYY-MM-DD HH:MM) start of range
-       end_date:   (YYYY-MM-DD or YYYY-MM-DD HH:MM) end of range
-       
-    Returns a JSON response that now includes, per machine, a list "downtime_events" with:
-       - "start": ISO formatted start time of the downtime gap,
-       - "end":   ISO formatted end time,
-       - "minutes_down": downtime minutes for that gap.
-    """
-    import datetime, os, importlib, json
-    from django.http import JsonResponse
+# --- Helper Functions ---
 
-    # Default to yesterday if dates are not provided.
+def parse_date_range(request):
+    import datetime, os, importlib, json
+    """Parses start_date and end_date from the request and returns computed values."""
     default_date_str = (datetime.datetime.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     start_date_str = request.GET.get('start_date', default_date_str)
     end_date_str = request.GET.get('end_date', default_date_str)
-
+    
     try:
-        # Try to parse datetime with time included.
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d %H:%M')
         end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d %H:%M')
         auto_subtract = False
     except ValueError:
-        # Fallback to date-only parsing.
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
         end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d')
         auto_subtract = True
 
-    # If no time was provided, default to 11pm.
     if auto_subtract:
         start_date = start_date.replace(hour=23, minute=0, second=0)
         end_date = end_date.replace(hour=23, minute=0, second=0)
-        # For default behavior, subtract one day from the start_date.
         start_time = start_date - datetime.timedelta(days=1)
     else:
-        # Use provided datetimes as-is.
         start_time = start_date
 
     end_time = end_date
-
     start_timestamp = int(start_time.timestamp())
     end_timestamp = int(end_time.timestamp())
     queried_minutes = (end_timestamp - start_timestamp) / 60
+    previous_day_str = (start_date.date() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    return start_time, end_time, start_timestamp, end_timestamp, queried_minutes, previous_day_str
 
-    # Load settings to get a DB connection.
+
+def get_production_data_for_machine(cursor, machine, machine_number, start_timestamp, end_timestamp, op, queried_minutes, line_name):
+    import datetime, os, importlib, json
+    """Fetches production parts data and target for a given machine."""
+    target_val = fetch_machine_target(machine_number, line_name, start_timestamp)
+    target = int(target_val * (queried_minutes / 7200)) if target_val is not None else None
+
+    if machine.get("part_numbers") and isinstance(machine.get("part_numbers"), list) and machine["part_numbers"]:
+        placeholders = ", ".join(["%s"] * len(machine["part_numbers"]))
+        query_str = f"""
+            SELECT Part, COUNT(*)
+            FROM GFxPRoduction
+            WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+            AND Part IN ({placeholders})
+            GROUP BY Part;
+        """
+        params = [machine_number, start_timestamp, end_timestamp] + machine["part_numbers"]
+        cursor.execute(query_str, params)
+        results = cursor.fetchall()
+        produced_parts_by_part = {row[0]: row[1] for row in results}
+        total_produced = sum(produced_parts_by_part.values())
+        production_entry = {
+            "operation": op,
+            "target": target,
+            "produced_parts": total_produced,
+            "produced_parts_by_part": produced_parts_by_part,
+            "part_numbers": machine["part_numbers"],
+        }
+    else:
+        query_str = """
+            SELECT COUNT(*)
+            FROM GFxPRoduction
+            WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s;
+        """
+        cursor.execute(query_str, (machine_number, start_timestamp, end_timestamp))
+        total_produced = cursor.fetchone()[0] or 0
+        production_entry = {
+            "operation": op,
+            "target": target,
+            "produced_parts": total_produced,
+            "part_numbers": None,
+        }
+    return production_entry
+
+
+def calculate_downtime_events(cursor, machine_number, start_timestamp, end_timestamp):
+    import datetime, os, importlib, json
+    """Calculates downtime events (gaps >5 minutes) based on production timestamps."""
+    query_ts = """
+        SELECT TimeStamp
+        FROM GFxPRoduction
+        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+        ORDER BY TimeStamp ASC;
+    """
+    cursor.execute(query_ts, (machine_number, start_timestamp, end_timestamp))
+    ts_rows = cursor.fetchall()
+    timestamps = [row[0] for row in ts_rows]
+
+    downtime_seconds = 0
+    downtime_events = []
+    previous_ts = start_timestamp
+
+    for ts in timestamps:
+        gap = ts - previous_ts
+        if gap > 300:  # Only consider gaps >5 minutes
+            downtime_seconds += gap
+            event_minutes = int(gap / 60)
+            event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
+            event_end_str = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+            downtime_events.append({
+                "start": event_start_str,
+                "end": event_end_str,
+                "minutes_down": event_minutes
+            })
+        previous_ts = ts
+
+    gap = end_timestamp - previous_ts
+    if gap > 300:
+        downtime_seconds += gap
+        event_minutes = int(gap / 60)
+        event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
+        event_end_str = datetime.datetime.fromtimestamp(end_timestamp).strftime("%Y-%m-%d %H:%M")
+        downtime_events.append({
+            "start": event_start_str,
+            "end": event_end_str,
+            "minutes_down": event_minutes
+        })
+    return downtime_seconds, downtime_events
+
+
+def get_pr_downtime_entries(machine_number, start_time, end_time):
+    import datetime, os, importlib, json
+    """Fetches and processes PR downtime entries for a machine."""
+    pr_entries = fetch_prdowntime1_entries_with_id(machine_number, start_time.isoformat(), end_time.isoformat())
+    pr_downtime_entries = []
+    for entry in pr_entries:
+        pr_id = entry[0]
+        problem = entry[1]
+        called = entry[2]
+        completed = entry[3] if len(entry) > 3 else None
+
+        try:
+            dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
+        except Exception:
+            dt_called = None
+        try:
+            dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
+        except Exception:
+            dt_completed = None
+
+        minutes_down = int((dt_completed - dt_called).total_seconds() / 60) if dt_called and dt_completed else "N/A"
+        pr_entry = {
+            "idnumber": pr_id,
+            "problem": problem,
+            "start_time": dt_called,
+            "end_time": dt_completed,
+            "minutes_down": minutes_down,
+        }
+        pr_downtime_entries.append(pr_entry)
+    return pr_downtime_entries
+
+
+def calculate_planned_downtime(downtime_events, pr_downtime_entries):
+    import datetime, os, importlib, json
+    """
+    Calculates planned downtime as the sum of downtime event minutes
+    that do not overlap any PR downtime entry and are longer than 240 minutes.
+    """
+    planned_downtime_minutes = 0
+    pr_intervals = []
+    for pr in pr_downtime_entries:
+        if pr["start_time"] and pr["end_time"]:
+            pr_intervals.append((pr["start_time"], pr["end_time"]))
+    
+    for event in downtime_events:
+        dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
+        dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
+        overlap_found = any(dt_event_start < pr_end and pr_start < dt_event_end for pr_start, pr_end in pr_intervals)
+        if not overlap_found and event["minutes_down"] > 240:
+            planned_downtime_minutes += event["minutes_down"]
+    return planned_downtime_minutes
+
+
+# --- Main Function ---
+
+def fetch_oa_by_day_production_data(request):
+    import datetime, os, importlib, json
+    """
+    Combined view that fetches production data, downtime events,
+    scrap data, and PR downtime entries for each machine over a given date range.
+    """
+    # Parse the date/time range from the request.
+    start_time, end_time, start_timestamp, end_timestamp, queried_minutes, previous_day_str = parse_date_range(request)
+
+    # Set up the DB connection.
     settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
     spec = importlib.util.spec_from_file_location("settings", settings_path)
     settings = importlib.util.module_from_spec(spec)
@@ -6353,209 +6491,36 @@ def fetch_oa_by_day_production_data(request):
     production_data = {}
     downtime_totals_by_line = {}
 
-
     # Loop over each line, operation, and machine.
-    # 'lines' is assumed to be a global variable holding your line/operation/machine structure.
+    # Assume "lines" is a global variable holding the line/operation/machine structure.
     for line in lines:
         line_name = line["line"]
         production_data.setdefault(line_name, {})
-        downtime_totals_by_line.setdefault(line_name, 0)  # Initialize downtime total for this line
+        downtime_totals_by_line.setdefault(line_name, 0)
 
         for operation in line["operations"]:
             op = operation["op"]
-
             for machine in operation["machines"]:
                 machine_number = machine["number"]
 
-                # Fetch the machine target from the database.
-                target_val = fetch_machine_target(machine_number, line_name, start_timestamp)
-                if target_val is not None:
-                    target = int(target_val * (queried_minutes / 7200))
-                else:
-                    target = None
+                # Get production parts data for this machine.
+                prod_data = get_production_data_for_machine(cursor, machine, machine_number, start_timestamp, end_timestamp, op, queried_minutes, line_name)
+                production_data[line_name][machine_number] = prod_data
 
-                # Query for production parts.
-                if machine.get("part_numbers") and isinstance(machine.get("part_numbers"), list) and machine["part_numbers"]:
-                    placeholders = ", ".join(["%s"] * len(machine["part_numbers"]))
-                    query_str = f"""
-                        SELECT Part, COUNT(*)
-                        FROM GFxPRoduction
-                        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
-                        AND Part IN ({placeholders})
-                        GROUP BY Part;
-                    """
-                    params = [machine_number, start_timestamp, end_timestamp] + machine["part_numbers"]
-                    cursor.execute(query_str, params)
-                    results = cursor.fetchall()
-                    produced_parts_by_part = {row[0]: row[1] for row in results}
-                    total_produced = sum(produced_parts_by_part.values())
-                    production_data[line_name][machine_number] = {
-                        "operation": op,
-                        "target": target,
-                        "produced_parts": total_produced,
-                        "produced_parts_by_part": produced_parts_by_part,
-                        "part_numbers": machine["part_numbers"],
-                    }
-                else:
-                    query_str = """
-                        SELECT COUNT(*)
-                        FROM GFxPRoduction
-                        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s;
-                    """
-                    cursor.execute(query_str, (machine_number, start_timestamp, end_timestamp))
-                    total_produced = cursor.fetchone()[0] or 0
-                    production_data[line_name][machine_number] = {
-                        "operation": op,
-                        "target": target,
-                        "produced_parts": total_produced,
-                        "part_numbers": None,
-                    }
-
-                # Downtime calculation: fetch all production timestamps.
-                query_ts = """
-                    SELECT TimeStamp
-                    FROM GFxPRoduction
-                    WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
-                    ORDER BY TimeStamp ASC;
-                """
-                cursor.execute(query_ts, (machine_number, start_timestamp, end_timestamp))
-                ts_rows = cursor.fetchall()
-                timestamps = [row[0] for row in ts_rows]
-
-                downtime_seconds = 0
-                downtime_events = []
-                previous_ts = start_timestamp
-
-                # Loop over each production timestamp to compute downtime gaps.
-                for ts in timestamps:
-                    gap = ts - previous_ts
-                    if gap > 300:  # Only consider gaps over 5 minutes (300 seconds)
-                        downtime_seconds += gap
-                        event_minutes = int(gap / 60)
-                        event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
-                        event_end_str = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
-                        downtime_events.append({
-                            "start": event_start_str,
-                            "end": event_end_str,
-                            "minutes_down": event_minutes
-                        })
-                    previous_ts = ts
-
-                # Check the final gap between the last timestamp and the end of the period.
-                gap = end_timestamp - previous_ts
-                if gap > 300:
-                    downtime_seconds += gap
-                    event_minutes = int(gap / 60)
-                    event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
-                    event_end_str = datetime.datetime.fromtimestamp(end_timestamp).strftime("%Y-%m-%d %H:%M")
-                    downtime_events.append({
-                        "start": event_start_str,
-                        "end": event_end_str,
-                        "minutes_down": event_minutes
-                    })
-
-                # Store downtime data for this machine.
+                # Calculate downtime events.
+                downtime_seconds, downtime_events = calculate_downtime_events(cursor, machine_number, start_timestamp, end_timestamp)
                 production_data[line_name][machine_number]["downtime_seconds"] = downtime_seconds
                 production_data[line_name][machine_number]["downtime_minutes"] = int(downtime_seconds / 60)
                 production_data[line_name][machine_number]["downtime_events"] = downtime_events
-
-                # Add this machine's downtime to the line's overall downtime total.
                 downtime_totals_by_line[line_name] += downtime_seconds
 
-                # --- PR Downtime Entries ---
-                pr_downtime_entries = []
-                pr_entries = fetch_prdowntime1_entries_with_id(
-                    machine_number,
-                    start_time.isoformat(),
-                    end_time.isoformat()
-                )
-                for entry in pr_entries:
-                    pr_id = entry[0]
-                    problem = entry[1]
-                    called = entry[2]
-                    completed = entry[3] if len(entry) > 3 else None
-
-                    try:
-                        dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
-                    except Exception as e:
-                        dt_called = None
-                    try:
-                        dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
-                    except Exception as e:
-                        dt_completed = None
-
-                    if dt_called and dt_completed:
-                        minutes_down = int((dt_completed - dt_called).total_seconds() / 60)
-                    else:
-                        minutes_down = "N/A"
-
-                    pr_entry = {
-                        "idnumber": pr_id,
-                        "problem": problem,
-                        "start_time": dt_called,
-                        "end_time": dt_completed,
-                        "minutes_down": minutes_down,
-                    }
-                    pr_downtime_entries.append(pr_entry)
-
+                # Fetch PR downtime entries.
+                pr_downtime_entries = get_pr_downtime_entries(machine_number, start_time, end_time)
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
 
-                # --- Calculate Planned Downtime for This Machine ---
-                planned_downtime_minutes = 0
-
-                # Build PR downtime intervals using this machine's PR downtime entries.
-                pr_intervals = []
-                for pr in pr_downtime_entries:
-                    if pr["start_time"] and pr["end_time"]:
-                        pr_intervals.append((pr["start_time"], pr["end_time"]))
-
-                # Check each downtime event for overlap with any PR downtime interval.
-                for event in downtime_events:
-                    dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
-                    dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
-                    overlap_found = False
-                    for pr_start, pr_end in pr_intervals:
-                        # Two intervals overlap if event start is before PR end and PR start is before event end.
-                        if dt_event_start < pr_end and pr_start < dt_event_end:
-                            overlap_found = True
-                            break
-                    # If no overlap and the event is longer than 240 minutes, count it as planned downtime.
-                    if not overlap_found and event["minutes_down"] > 240:
-                        planned_downtime_minutes += event["minutes_down"]
-
-                production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime_minutes
-
-
-
-
-    # Calculate Planned Downtime:
-    planned_downtime_minutes = 0
-
-    # Prepare PR downtime intervals as a list of (start, end) datetime tuples.
-    pr_intervals = []
-    for pr in pr_downtime_entries:
-        if pr["start_time"] and pr["end_time"]:
-            pr_intervals.append((pr["start_time"], pr["end_time"]))
-
-    # Check each downtime event for overlap with any PR downtime interval.
-    for event in downtime_events:
-        dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
-        dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
-        overlap_found = False
-        for pr_start, pr_end in pr_intervals:
-            # Two intervals overlap if:
-            # start_event < pr_end AND pr_start < end_event
-            if dt_event_start < pr_end and pr_start < dt_event_end:
-                overlap_found = True
-                break
-        # If no overlap and the event is longer than 240 minutes, add it as planned downtime.
-        if not overlap_found and event["minutes_down"] > 240:
-            planned_downtime_minutes += event["minutes_down"]
-
-    # Now store the planned downtime minutes into the production_data structure:
-    production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime_minutes
-
-
+                # Calculate planned downtime.
+                planned_downtime = calculate_planned_downtime(downtime_events, pr_downtime_entries)
+                production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
@@ -6579,12 +6544,12 @@ def fetch_oa_by_day_production_data(request):
     overall_total_potential_minutes = 0
     for line in lines:
         line_name = line["line"]
-        machine_count = sum(len(operation.get("machines", [])) for operation in line.get("operations", []))
+        machine_count = sum(len(op.get("machines", [])) for op in line.get("operations", []))
         line_potential = machine_count * queried_minutes
         potential_minutes_by_line[line_name] = line_potential
         overall_total_potential_minutes += line_potential
 
-    previous_day_str = (start_date.date() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    # Build the response data.
     response_data = {
         "production_data": production_data,
         "totals_by_line": totals_by_line,
@@ -6610,6 +6575,11 @@ def fetch_oa_by_day_production_data(request):
     cursor.close()
     conn.close()
     return JsonResponse(response_data)
+
+
+
+
+
 
 
 
