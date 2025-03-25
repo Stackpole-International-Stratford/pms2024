@@ -6621,6 +6621,17 @@ def fetch_oa_by_day_production_data(request):
                 pr_downtime_entries = get_pr_downtime_entries(machine_number, start_time, end_time)
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
 
+                # Annotate each downtime event with overlap info.
+                for event in downtime_events:
+                    # Convert event start/end strings to datetime objects.
+                    detail_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
+                    detail_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
+                    # Call the overlap function.
+                    overlap_info = compute_overlap_label(detail_start, detail_end, pr_downtime_entries)
+                    # Save the overlap label and pr_id into the event.
+                    event["overlap"] = overlap_info["overlap"]
+                    event["pr_id"] = overlap_info["pr_id"]
+
                 # Calculate planned downtime.
                 planned_downtime = calculate_planned_downtime(downtime_events, pr_downtime_entries)
                 production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime
