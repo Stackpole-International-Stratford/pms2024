@@ -490,13 +490,13 @@ document.addEventListener("DOMContentLoaded", function() {
           prEntries.forEach(function(entry) {
             var id = entry.idnumber || "N/A";
             var problem = entry.problem || "N/A";
-            var called = entry.start_time || "N/A";
-            var completed = entry.end_time || "N/A";
-            var minutesDown = "N/A";
+            var called = entry.start_time ? new Date(entry.start_time).toISOString() : "N/A";
+            var completed = entry.end_time ? new Date(entry.end_time).toISOString() : "N/A";
+            var minutesDown = entry.minutes_down !== undefined ? entry.minutes_down : "N/A";
             var tr = document.createElement('tr');
             tr.innerHTML = "<td>" + id + "</td><td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td><td>" + minutesDown + "</td>";
             prTbody.appendChild(tr);
-          });
+          });                 
         } else {
           prTbody.innerHTML = "<tr><td colspan='5'>No PR downtime entries found.</td></tr>";
         }

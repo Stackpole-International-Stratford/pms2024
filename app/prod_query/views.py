@@ -6454,30 +6454,36 @@ def fetch_oa_by_day_production_data(request):
                 # print(f"[DEBUG] Machine {machine_number}: Raw PR downtime entries: {pr_downtime_entries_raw}")
                 pr_downtime_entries = []
                 for entry in pr_downtime_entries_raw:
-                    # Each entry is assumed to be structured as: [id, problem, called, completed]
                     pr_id = entry[0]
-                    # Skip problem for overlap computation
                     called = entry[2]
                     completed = entry[3] if len(entry) > 3 else None
 
                     try:
                         dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
                     except Exception as e:
-                        print(f"[DEBUG] Machine {machine_number}: Error converting 'called' for PR entry {pr_id}: {e}")
+                        print(f"[DEBUG] Error converting 'called' for PR entry {pr_id}: {e}")
                         dt_called = None
                     try:
                         dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
                     except Exception as e:
-                        print(f"[DEBUG] Machine {machine_number}: Error converting 'completed' for PR entry {pr_id}: {e}")
+                        print(f"[DEBUG] Error converting 'completed' for PR entry {pr_id}: {e}")
                         dt_completed = None
 
-                    # print(f"[DEBUG] Machine {machine_number}: Processed PR entry {pr_id} - called: {dt_called}, completed: {dt_completed}")
+                    if dt_called and dt_completed:
+                        minutes_down = int((dt_completed - dt_called).total_seconds() / 60)
+                    else:
+                        minutes_down = "N/A"
+
+                    # Store the datetime objects for overlap computation.
                     pr_entry = {
                         "idnumber": pr_id,
-                        "start_time": dt_called,
-                        "end_time": dt_completed
+                        "start_time": dt_called,  # keep as datetime for computations
+                        "end_time": dt_completed, # keep as datetime for computations
+                        "minutes_down": minutes_down,
                     }
                     pr_downtime_entries.append(pr_entry)
+
+
                 # print(f"[DEBUG] Machine {machine_number}: Final processed PR downtime entries: {pr_downtime_entries}")
 
                 # Annotate each downtime event with overlap information based on PR entries
