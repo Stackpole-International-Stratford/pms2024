@@ -227,6 +227,8 @@
                                 <th>Start</th>
                                 <th>End</th>
                                 <th>Minutes Down</th>
+                                <th>Overlap</th>
+                                <th>PR Id</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -319,6 +321,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
 
+                
+
                 // Update PR Downtime Entries for each machine.
                 document.querySelectorAll('.pr-downtime-entries').forEach(function(elem) {
                   var lineName = elem.getAttribute('data-line');
@@ -329,12 +333,14 @@ document.addEventListener("DOMContentLoaded", function() {
                       var prEntries = data.production_data[lineName][machineNumber].pr_downtime_entries;
                       if (prEntries && prEntries.length > 0) {
                           prEntries.forEach(function(entry) {
-                              // Expecting each entry as: [id, problem, called, completed, minutesDown]
-                              var id = entry[0];
-                              var problem = entry[1];
-                              var called = entry[2];
-                              var completed = entry[3] || "N/A";
-                              var minutesDown = (entry[4] !== null && entry[4] !== undefined) ? entry[4].toFixed(0) + " min" : "N/A";
+                              var id = entry.idnumber || "N/A";
+                              // If you want to display the problem, you need to include it in your backend data,
+                              // or you can simply leave it as "N/A".
+                              var problem = entry.problem || "N/A";
+                              var called = entry.start_time || "N/A";
+                              var completed = entry.end_time || "N/A";
+                              // If minutesDown is not computed in backend, show "N/A" or compute it.
+                              var minutesDown = "N/A";
                               var tr = document.createElement('tr');
                               tr.innerHTML = "<td>" + id + "</td><td>" + problem + "</td><td>" + called + "</td><td>" + completed + "</td><td>" + minutesDown + "</td>";
                               tbody.appendChild(tr);
@@ -348,7 +354,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-                // Update downtime events table for each machine.
+
+               // Update downtime events table for each machine.
                 document.querySelectorAll('.downtime-events').forEach(function(elem) {
                   var lineName = elem.getAttribute('data-line');
                   var machineNumber = elem.getAttribute('data-machine');
@@ -360,16 +367,21 @@ document.addEventListener("DOMContentLoaded", function() {
                       if (events && events.length > 0) {
                           events.forEach(function(event) {
                               var tr = document.createElement('tr');
-                              tr.innerHTML = "<td>" + event.start + "</td><td>" + event.end + "</td><td>" + event.minutes_down + " min</td>";
+                              tr.innerHTML = "<td>" + event.start + "</td>" +
+                                            "<td>" + event.end + "</td>" +
+                                            "<td>" + event.minutes_down + " min</td>" +
+                                            "<td>" + (event.overlap || "No Overlap") + "</td>" +
+                                            "<td>" + (event.pr_id ? event.pr_id : "") + "</td>";
                               tbody.appendChild(tr);
                           });
                       } else {
-                          tbody.innerHTML = "<tr><td colspan='3'>No downtime events found.</td></tr>";
+                          tbody.innerHTML = "<tr><td colspan='5'>No downtime events found.</td></tr>";
                       }
                   } else {
-                      tbody.innerHTML = "<tr><td colspan='3'>No downtime events found.</td></tr>";
+                      tbody.innerHTML = "<tr><td colspan='5'>No downtime events found.</td></tr>";
                   }
                 });
+
 
 
 

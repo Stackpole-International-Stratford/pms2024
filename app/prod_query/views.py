@@ -6423,9 +6423,11 @@ def fetch_oa_by_day_production_data(request):
                     if gap > 300:
                         downtime_seconds += gap
                         event_minutes = int(gap / 60)
+                        event_start_iso = datetime.datetime.fromtimestamp(previous_ts).isoformat()
+                        event_end_iso = datetime.datetime.fromtimestamp(ts).isoformat()
                         downtime_events.append({
-                            "start": datetime.datetime.fromtimestamp(previous_ts).isoformat(),
-                            "end": datetime.datetime.fromtimestamp(ts).isoformat(),
+                            "start": event_start_iso,
+                            "end": event_end_iso,
                             "minutes_down": event_minutes
                         })
                     previous_ts = ts
@@ -6434,55 +6436,64 @@ def fetch_oa_by_day_production_data(request):
                 if gap > 300:
                     downtime_seconds += gap
                     event_minutes = int(gap / 60)
+                    event_start_iso = datetime.datetime.fromtimestamp(previous_ts).isoformat()
+                    event_end_iso = datetime.datetime.fromtimestamp(end_timestamp).isoformat()
                     downtime_events.append({
-                        "start": datetime.datetime.fromtimestamp(previous_ts).isoformat(),
-                        "end": datetime.datetime.fromtimestamp(end_timestamp).isoformat(),
+                        "start": event_start_iso,
+                        "end": event_end_iso,
                         "minutes_down": event_minutes
                     })
-                downtime_minutes = int(downtime_seconds / 60)
-                production_data[line_name][machine_number]["downtime_seconds"] = downtime_seconds
-                production_data[line_name][machine_number]["downtime_minutes"] = downtime_minutes
-                production_data[line_name][machine_number]["downtime_events"] = downtime_events
-                downtime_totals_by_line[line_name] += downtime_seconds
 
-               # --- PR Downtime Entries: Fetch and process entries ---
+                # --- PR Downtime Entries: Fetch and process entries ---
+                print(f"[DEBUG] Machine {machine_number}: Fetching PR downtime entries for period {start_time.isoformat()} to {end_time.isoformat()}")
                 pr_downtime_entries_raw = fetch_prdowntime1_entries_with_id(
                     machine_number,
                     start_time.isoformat(),
                     end_time.isoformat()
                 )
+                print(f"[DEBUG] Machine {machine_number}: Raw PR downtime entries: {pr_downtime_entries_raw}")
                 pr_downtime_entries = []
                 for entry in pr_downtime_entries_raw:
-                    # Each entry is now assumed to be structured as: [id, problem, called, completed]
+                    # Each entry is assumed to be structured as: [id, problem, called, completed]
                     pr_id = entry[0]
-                    problem = entry[1]
+                    # Skip problem for overlap computation
                     called = entry[2]
                     completed = entry[3] if len(entry) > 3 else None
 
-                    # Convert timestamps to datetime objects and then to ISO strings.
                     try:
                         dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
-                    except Exception:
+                    except Exception as e:
+                        print(f"[DEBUG] Machine {machine_number}: Error converting 'called' for PR entry {pr_id}: {e}")
                         dt_called = None
                     try:
                         dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
-                    except Exception:
+                    except Exception as e:
+                        print(f"[DEBUG] Machine {machine_number}: Error converting 'completed' for PR entry {pr_id}: {e}")
                         dt_completed = None
 
-                    if dt_called and dt_completed:
-                        try:
-                            minutes_down = round((dt_completed - dt_called).total_seconds() / 60)
-                        except Exception:
-                            minutes_down = None
-                    else:
-                        minutes_down = None
+                    print(f"[DEBUG] Machine {machine_number}: Processed PR entry {pr_id} - called: {dt_called}, completed: {dt_completed}")
+                    pr_entry = {
+                        "idnumber": pr_id,
+                        "start_time": dt_called,
+                        "end_time": dt_completed
+                    }
+                    pr_downtime_entries.append(pr_entry)
+                print(f"[DEBUG] Machine {machine_number}: Final processed PR downtime entries: {pr_downtime_entries}")
 
-                    processed_called = dt_called.isoformat() if dt_called else "N/A"
-                    processed_completed = dt_completed.isoformat() if dt_completed else "N/A"
-                    # Prepend the pr_id to the entry
-                    pr_downtime_entries.append([pr_id, problem, processed_called, processed_completed, minutes_down])
+                # Annotate each downtime event with overlap information based on PR entries
+                for event in downtime_events:
+                    event_start = datetime.datetime.fromisoformat(event["start"])
+                    event_end = datetime.datetime.fromisoformat(event["end"])
+                    overlap_info = compute_overlap_label(event_start, event_end, pr_downtime_entries)
+                    print(f"[DEBUG] Machine {machine_number}: Downtime event from {event['start']} to {event['end']} - Overlap info: {overlap_info}")
+                    event.update(overlap_info)
+
+                production_data[line_name][machine_number]["downtime_seconds"] = downtime_seconds
+                production_data[line_name][machine_number]["downtime_minutes"] = int(downtime_seconds / 60)
+                production_data[line_name][machine_number]["downtime_events"] = downtime_events
+
+                # Optionally store the raw PR downtime entries if needed
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
-
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
