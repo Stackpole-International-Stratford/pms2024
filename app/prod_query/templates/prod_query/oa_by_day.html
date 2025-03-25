@@ -191,6 +191,12 @@
                       Loading...
                     </span>
                   </p>
+                  <p class="mb-2">
+                    <strong>Planned Downtime:</strong>
+                    <span class="planned-downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                      Loading...
+                    </span>
+                  </p>                  
                   <!-- Detailed Downtime Button -->
                   <button type="button" class="btn btn-warning detailed-downtime-btn" data-line="{{ line.line }}" data-machine="{{ machine.number }}" data-bs-toggle="modal" data-bs-target="#downtimeModal">
                     Detailed Downtime
@@ -343,6 +349,19 @@ document.addEventListener("DOMContentLoaded", function() {
             elem.innerText = '0 min';
           }
         });
+
+        // Update planned downtime values.
+        document.querySelectorAll('.planned-downtime').forEach(function(elem) {
+          var lineName = elem.getAttribute('data-line');
+          var machineNumber = elem.getAttribute('data-machine');
+          if (window.productionData[lineName] && window.productionData[lineName][machineNumber] &&
+              window.productionData[lineName][machineNumber].planned_downtime_minutes !== undefined) {
+            elem.innerText = window.productionData[lineName][machineNumber].planned_downtime_minutes + " min";
+          } else {
+            elem.innerText = '0 min';
+          }
+        });
+
 
         // Update overall totals.
         if (data.overall_totals) {

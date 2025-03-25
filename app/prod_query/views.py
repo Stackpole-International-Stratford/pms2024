@@ -6429,7 +6429,7 @@ def fetch_oa_by_day_production_data(request):
                 # Loop over each production timestamp to compute downtime gaps.
                 for ts in timestamps:
                     gap = ts - previous_ts
-                    if gap > 300:  # Only consider gaps over 5 minutes
+                    if gap > 300:  # Only consider gaps over 5 minutes (300 seconds)
                         downtime_seconds += gap
                         event_minutes = int(gap / 60)
                         event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
@@ -6463,13 +6463,13 @@ def fetch_oa_by_day_production_data(request):
                 downtime_totals_by_line[line_name] += downtime_seconds
 
                 # --- PR Downtime Entries ---
-                pr_downtime_entries_raw = fetch_prdowntime1_entries_with_id(
+                pr_downtime_entries = []
+                pr_entries = fetch_prdowntime1_entries_with_id(
                     machine_number,
                     start_time.isoformat(),
                     end_time.isoformat()
                 )
-                pr_downtime_entries = []
-                for entry in pr_downtime_entries_raw:
+                for entry in pr_entries:
                     pr_id = entry[0]
                     problem = entry[1]
                     called = entry[2]
@@ -6500,6 +6500,60 @@ def fetch_oa_by_day_production_data(request):
 
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
 
+                # --- Calculate Planned Downtime for This Machine ---
+                planned_downtime_minutes = 0
+
+                # Build PR downtime intervals using this machine's PR downtime entries.
+                pr_intervals = []
+                for pr in pr_downtime_entries:
+                    if pr["start_time"] and pr["end_time"]:
+                        pr_intervals.append((pr["start_time"], pr["end_time"]))
+
+                # Check each downtime event for overlap with any PR downtime interval.
+                for event in downtime_events:
+                    dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
+                    dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
+                    overlap_found = False
+                    for pr_start, pr_end in pr_intervals:
+                        # Two intervals overlap if event start is before PR end and PR start is before event end.
+                        if dt_event_start < pr_end and pr_start < dt_event_end:
+                            overlap_found = True
+                            break
+                    # If no overlap and the event is longer than 240 minutes, count it as planned downtime.
+                    if not overlap_found and event["minutes_down"] > 240:
+                        planned_downtime_minutes += event["minutes_down"]
+
+                production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime_minutes
+
+
+
+
+    # Calculate Planned Downtime:
+    planned_downtime_minutes = 0
+
+    # Prepare PR downtime intervals as a list of (start, end) datetime tuples.
+    pr_intervals = []
+    for pr in pr_downtime_entries:
+        if pr["start_time"] and pr["end_time"]:
+            pr_intervals.append((pr["start_time"], pr["end_time"]))
+
+    # Check each downtime event for overlap with any PR downtime interval.
+    for event in downtime_events:
+        dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
+        dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
+        overlap_found = False
+        for pr_start, pr_end in pr_intervals:
+            # Two intervals overlap if:
+            # start_event < pr_end AND pr_start < end_event
+            if dt_event_start < pr_end and pr_start < dt_event_end:
+                overlap_found = True
+                break
+        # If no overlap and the event is longer than 240 minutes, add it as planned downtime.
+        if not overlap_found and event["minutes_down"] > 240:
+            planned_downtime_minutes += event["minutes_down"]
+
+    # Now store the planned downtime minutes into the production_data structure:
+    production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime_minutes
 
 
 
