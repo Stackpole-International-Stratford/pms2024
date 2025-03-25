@@ -6216,16 +6216,22 @@ def fetch_daily_scrap_data(cursor, start_time, end_time):
 
 def fetch_oa_by_day_production_data(request):
     """
-    Combined view that fetches production, downtime, potential minutes,
-    scrap data, and PR downtime entries for each machine for a given date range.
-    The GET parameters expected are:
+    Combined view that fetches production data, downtime (both quantitative and event-by-event details),
+    potential minutes, scrap data, and PR downtime entries for each machine over a given date range.
+    
+    Expected GET parameters:
        start_date: (YYYY-MM-DD or YYYY-MM-DD HH:MM) start of range
        end_date:   (YYYY-MM-DD or YYYY-MM-DD HH:MM) end of range
+       
+    Returns a JSON response that now includes, per machine, a list "downtime_events" with:
+       - "start": ISO formatted start time of the downtime gap,
+       - "end":   ISO formatted end time,
+       - "minutes_down": downtime minutes for that gap.
     """
     import datetime, os, importlib, json
     from django.http import JsonResponse
 
-    # Default to yesterday if not provided.
+    # Default to yesterday if dates are not provided.
     default_date_str = (datetime.datetime.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     start_date_str = request.GET.get('start_date', default_date_str)
     end_date_str = request.GET.get('end_date', default_date_str)
@@ -6270,7 +6276,7 @@ def fetch_oa_by_day_production_data(request):
     downtime_totals_by_line = {}
 
     # Loop over each line, operation, and machine.
-    # Assume 'lines' is a global variable containing your line/operation/machine structure.
+    # 'lines' is assumed to be a global variable holding your line/operation/machine structure.
     for line in lines:
         line_name = line["line"]
         production_data.setdefault(line_name, {})
@@ -6287,7 +6293,7 @@ def fetch_oa_by_day_production_data(request):
                 else:
                     target = None
 
-                # Production parts query.
+                # Query for production parts.
                 if machine.get("part_numbers") and isinstance(machine.get("part_numbers"), list) and len(machine.get("part_numbers")) > 0:
                     placeholders = ", ".join(["%s"] * len(machine["part_numbers"]))
                     query_str = f"""
@@ -6324,7 +6330,7 @@ def fetch_oa_by_day_production_data(request):
                         "part_numbers": None,
                     }
 
-                # Downtime calculation: fetch all timestamps.
+                # Downtime calculation: fetch all production timestamps.
                 query_ts = """
                     SELECT TimeStamp
                     FROM GFxPRoduction
@@ -6335,22 +6341,36 @@ def fetch_oa_by_day_production_data(request):
                 ts_rows = cursor.fetchall()
                 timestamps = [row[0] for row in ts_rows]
                 downtime_seconds = 0
+                downtime_events = []
                 previous_ts = start_timestamp
                 for ts in timestamps:
                     gap = ts - previous_ts
                     if gap > 300:
                         downtime_seconds += gap
+                        event_minutes = int(gap / 60)
+                        downtime_events.append({
+                            "start": datetime.datetime.fromtimestamp(previous_ts).isoformat(),
+                            "end": datetime.datetime.fromtimestamp(ts).isoformat(),
+                            "minutes_down": event_minutes
+                        })
                     previous_ts = ts
-                # Check the final gap until end_time.
+                # Check the final gap between the last timestamp and the end of the period.
                 gap = end_timestamp - previous_ts
                 if gap > 300:
                     downtime_seconds += gap
+                    event_minutes = int(gap / 60)
+                    downtime_events.append({
+                        "start": datetime.datetime.fromtimestamp(previous_ts).isoformat(),
+                        "end": datetime.datetime.fromtimestamp(end_timestamp).isoformat(),
+                        "minutes_down": event_minutes
+                    })
                 downtime_minutes = int(downtime_seconds / 60)
                 production_data[line_name][machine_number]["downtime_seconds"] = downtime_seconds
                 production_data[line_name][machine_number]["downtime_minutes"] = downtime_minutes
+                production_data[line_name][machine_number]["downtime_events"] = downtime_events
                 downtime_totals_by_line[line_name] += downtime_seconds
 
-                # --- New Code: Fetch and process PR downtime entries ---
+                # --- PR Downtime Entries: Fetch and process entries ---
                 pr_downtime_entries_raw = fetch_prdowntime1_entries(
                     machine_number,
                     start_time.isoformat(),
@@ -6358,50 +6378,38 @@ def fetch_oa_by_day_production_data(request):
                 )
                 pr_downtime_entries = []
                 for entry in pr_downtime_entries_raw:
-                    # Assume each entry is structured as: [problem, called, completed]
+                    # Each entry is assumed to be structured as: [problem, called, completed]
                     problem = entry[0]
                     called = entry[1]
                     completed = entry[2] if len(entry) > 2 else None
 
-                    # Convert 'called' to datetime if needed.
-                    if isinstance(called, str):
-                        try:
-                            dt_called = datetime.datetime.fromisoformat(called)
-                        except Exception:
-                            dt_called = None
-                    else:
-                        dt_called = called
-
-                    # Convert 'completed' to datetime if needed.
-                    if completed and completed != "N/A":
-                        if isinstance(completed, str):
-                            try:
-                                dt_completed = datetime.datetime.fromisoformat(completed)
-                            except Exception:
-                                dt_completed = None
-                        else:
-                            dt_completed = completed
-                    else:
+                    # Convert timestamps to datetime objects and then to ISO strings.
+                    try:
+                        dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
+                    except Exception:
+                        dt_called = None
+                    try:
+                        dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
+                    except Exception:
                         dt_completed = None
 
                     if dt_called and dt_completed:
                         try:
-                            minutes_down = (dt_completed - dt_called).total_seconds() / 60
-                            minutes_down = round(minutes_down)
+                            minutes_down = round((dt_completed - dt_called).total_seconds() / 60)
                         except Exception:
                             minutes_down = None
                     else:
                         minutes_down = None
 
-                    processed_completed = dt_completed if dt_completed else "N/A"
-                    pr_downtime_entries.append([problem, dt_called, processed_completed, minutes_down])
+                    processed_called = dt_called.isoformat() if dt_called else "N/A"
+                    processed_completed = dt_completed.isoformat() if dt_completed else "N/A"
+                    pr_downtime_entries.append([problem, processed_called, processed_completed, minutes_down])
                 production_data[line_name][machine_number]["pr_downtime_entries"] = pr_downtime_entries
-                # --- End New Code ---
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
 
-    # Aggregation for production totals.
+    # Aggregate production totals per line.
     totals_by_line = {}
     overall_total_produced = 0
     overall_total_target = 0
