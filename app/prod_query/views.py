@@ -6562,6 +6562,12 @@ def calculate_planned_downtime(downtime_events, pr_downtime_entries):
     return planned_downtime_minutes
 
 
+def calculate_unplanned_downtime(total_downtime_minutes, planned_downtime_minutes):
+    """
+    Calculates unplanned downtime as the difference between total downtime
+    and planned downtime.
+    """
+    return total_downtime_minutes - planned_downtime_minutes
 
 
 
@@ -6618,6 +6624,11 @@ def fetch_oa_by_day_production_data(request):
                 # Calculate planned downtime.
                 planned_downtime = calculate_planned_downtime(downtime_events, pr_downtime_entries)
                 production_data[line_name][machine_number]["planned_downtime_minutes"] = planned_downtime
+
+                # Calculate unplanned downtime.
+                total_downtime_minutes = production_data[line_name][machine_number]["downtime_minutes"]
+                unplanned_downtime = calculate_unplanned_downtime(total_downtime_minutes, planned_downtime)
+                production_data[line_name][machine_number]["unplanned_downtime_minutes"] = unplanned_downtime
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
