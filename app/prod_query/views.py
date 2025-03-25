@@ -6164,35 +6164,37 @@ def compute_oee_metrics(totals_by_line, overall_total_produced, overall_total_ta
 def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
     """
     A copy of `fetch_prdowntime1_entries` that also fetches the `idnumber` column.
-
+    
     :param assetnum: The asset number of the machine.
     :param called4helptime: The start of the time window (ISO 8601 format).
     :param completedtime: The end of the time window (ISO 8601 format).
     :return: List of rows matching the criteria, each row shaped like:
              [idnumber, problem, called4helptime, completedtime].
     """
+    import re
     import datetime, os, importlib
     from datetime import datetime
 
     try:
-        # Parse the dates to ensure they are in datetime format
+        # Strip trailing letters from assetnum (e.g., "1703R" or "1703L" becomes "1703")
+        assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
+
+        # Parse the dates to ensure they are in datetime format.
         called4helptime = datetime.fromisoformat(called4helptime)
         completedtime = datetime.fromisoformat(completedtime)
 
-        # Dynamically import `get_db_connection` from settings.py
-        settings_path = os.path.join(
-            os.path.dirname(__file__), '../pms/settings.py'
-        )
+        # Dynamically import `get_db_connection` from settings.py.
+        settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
         spec = importlib.util.spec_from_file_location("settings", settings_path)
         settings = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(settings)
         get_db_connection = settings.get_db_connection
 
-        # Get database connection
+        # Get database connection.
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Raw SQL query to fetch the required data, now including `idnumber`
+        # Raw SQL query to fetch the required data, now including `idnumber`.
         query = """
         SELECT
             idnumber,
@@ -6202,18 +6204,18 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
         FROM pr_downtime1
         WHERE assetnum = %s
           AND (
-            -- Entries that start before the window and bleed into the window
+            -- Entries that start before the window and bleed into the window.
             (called4helptime < %s AND (completedtime >= %s OR completedtime IS NULL))
-            -- Entries that start within the window
+            -- Entries that start within the window.
             OR (called4helptime >= %s AND called4helptime <= %s)
-            -- Entries that start in the window and bleed out
+            -- Entries that start in the window and bleed out.
             OR (called4helptime >= %s AND called4helptime <= %s AND (completedtime > %s OR completedtime IS NULL))
-            -- Entries that bleed both before and after the window
+            -- Entries that bleed both before and after the window.
             OR (called4helptime < %s AND (completedtime > %s OR completedtime IS NULL))
           )
         """
 
-        # Execute the query
+        # Execute the query.
         cursor.execute(query, (
             assetnum,
             called4helptime, called4helptime,
@@ -6222,10 +6224,10 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
             called4helptime, completedtime
         ))
 
-        # Fetch all rows
+        # Fetch all rows.
         rows = cursor.fetchall()
 
-        # Close the cursor and connection
+        # Close the cursor and connection.
         cursor.close()
         conn.close()
 
@@ -6233,6 +6235,7 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
 
     except Exception as e:
         return {"error": str(e)}
+
 
 
 
