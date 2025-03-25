@@ -6327,7 +6327,7 @@ def parse_date_range(request):
 
 
 def get_production_data_for_machine(cursor, machine, machine_number, start_timestamp, end_timestamp, op, queried_minutes, line_name):
-    import datetime, os, importlib, json
+    import datetime
     """Fetches production parts data and target for a given machine."""
     target_val = fetch_machine_target(machine_number, line_name, start_timestamp)
     target = int(target_val * (queried_minutes / 7200)) if target_val is not None else None
@@ -6343,8 +6343,11 @@ def get_production_data_for_machine(cursor, machine, machine_number, start_times
         """
         params = [machine_number, start_timestamp, end_timestamp] + machine["part_numbers"]
         cursor.execute(query_str, params)
-        results = cursor.fetchall()
-        produced_parts_by_part = {row[0]: row[1] for row in results}
+        produced_parts_by_part = {}
+        row = cursor.fetchone()
+        while row is not None:
+            produced_parts_by_part[row[0]] = row[1]
+            row = cursor.fetchone()
         total_produced = sum(produced_parts_by_part.values())
         production_entry = {
             "operation": op,
@@ -6360,7 +6363,9 @@ def get_production_data_for_machine(cursor, machine, machine_number, start_times
             WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s;
         """
         cursor.execute(query_str, (machine_number, start_timestamp, end_timestamp))
-        total_produced = cursor.fetchone()[0] or 0
+        # Process the single result row.
+        row = cursor.fetchone()
+        total_produced = row[0] if row and row[0] is not None else 0
         production_entry = {
             "operation": op,
             "target": target,
@@ -6370,8 +6375,9 @@ def get_production_data_for_machine(cursor, machine, machine_number, start_times
     return production_entry
 
 
+
 def calculate_downtime_events(cursor, machine_number, start_timestamp, end_timestamp):
-    import datetime, os, importlib, json
+    import datetime
     """Calculates downtime events (gaps >5 minutes) based on production timestamps."""
     query_ts = """
         SELECT TimeStamp
@@ -6380,16 +6386,17 @@ def calculate_downtime_events(cursor, machine_number, start_timestamp, end_times
         ORDER BY TimeStamp ASC;
     """
     cursor.execute(query_ts, (machine_number, start_timestamp, end_timestamp))
-    ts_rows = cursor.fetchall()
-    timestamps = [row[0] for row in ts_rows]
-
+    
     downtime_seconds = 0
     downtime_events = []
     previous_ts = start_timestamp
 
-    for ts in timestamps:
+    # Iterate row-by-row using fetchone() to save memory.
+    row = cursor.fetchone()
+    while row is not None:
+        ts = row[0]
         gap = ts - previous_ts
-        if gap > 300:  # Only consider gaps >5 minutes
+        if gap > 300:  # Only consider gaps > 5 minutes
             downtime_seconds += gap
             event_minutes = int(gap / 60)
             event_start_str = datetime.datetime.fromtimestamp(previous_ts).strftime("%Y-%m-%d %H:%M")
@@ -6400,7 +6407,9 @@ def calculate_downtime_events(cursor, machine_number, start_timestamp, end_times
                 "minutes_down": event_minutes
             })
         previous_ts = ts
+        row = cursor.fetchone()
 
+    # Check the final gap between the last timestamp and the end of the period.
     gap = end_timestamp - previous_ts
     if gap > 300:
         downtime_seconds += gap
@@ -6412,7 +6421,9 @@ def calculate_downtime_events(cursor, machine_number, start_timestamp, end_times
             "end": event_end_str,
             "minutes_down": event_minutes
         })
+
     return downtime_seconds, downtime_events
+
 
 
 def get_pr_downtime_entries(machine_number, start_time, end_time):
