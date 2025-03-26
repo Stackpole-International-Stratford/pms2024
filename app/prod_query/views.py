@@ -6124,7 +6124,7 @@ def oa_by_day(request):
     from datetime import timedelta
 
     # Default to yesterday for both start and end if not provided.
-    default_date_str = (datetime.datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+    default_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
     start_date_str = request.GET.get('start_date', default_date_str)
     end_date_str = request.GET.get('end_date', default_date_str)
 
@@ -6422,7 +6422,7 @@ def fetch_daily_scrap_data(cursor, start_time, end_time):
 def parse_date_range(request):
     import datetime, os, importlib, json
     """Parses start_date and end_date from the request and returns computed values."""
-    default_date_str = (datetime.datetime.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    default_date_str = datetime.datetime.today().strftime('%Y-%m-%d')
     start_date_str = request.GET.get('start_date', default_date_str)
     end_date_str = request.GET.get('end_date', default_date_str)
     
@@ -6436,8 +6436,8 @@ def parse_date_range(request):
         auto_subtract = True
 
     if auto_subtract:
-        start_date = start_date.replace(hour=23, minute=0, second=0)
-        end_date = end_date.replace(hour=23, minute=0, second=0)
+        start_date = start_date.replace(hour=7, minute=0, second=0)
+        end_date = end_date.replace(hour=7, minute=0, second=0)
         start_time = start_date - datetime.timedelta(days=1)
     else:
         start_time = start_date

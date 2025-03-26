@@ -7,7 +7,7 @@
   <div class="row mb-4">
     <div class="col-12 text-center">
       <h1 class="display-5">
-        <span id="selected-date-display">11pm {{ previous_day }} to 11pm {{ end_date }}</span>
+        <span id="selected-date-display">7am {{ previous_day }} to 7am {{ end_date }}</span>
       </h1>
     </div>
   </div>
@@ -365,7 +365,7 @@ document.addEventListener("DOMContentLoaded", function() {
     time_24hr: true,          // Use 24-hour time format
     dateFormat: "Y-m-d H:i",  // Include time in the format
     // Default to 11pm for both start and end dates.
-    defaultDate: ["{{ start_date }} 23:00", "{{ end_date }} 23:00"],
+    defaultDate: ["{{ start_date }} 7:00", "{{ end_date }} 7:00"],
   });
 
   // Listen for button clicks.
