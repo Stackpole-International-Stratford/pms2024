@@ -292,6 +292,48 @@
 </div>
 
 <script>
+
+
+    // Function to set loading state for key elements.
+    function showLoadingState() {
+      // Overall metrics
+      document.getElementById('overall-produced').innerText = 'Loading...';
+      document.getElementById('overall-target').innerText = 'Loading...';
+      document.getElementById('overall-downtime').innerText = 'Loading...';
+      document.getElementById('overall-planned-downtime').innerText = 'Loading...';
+      document.getElementById('overall-unplanned-downtime').innerText = 'Loading...';
+      document.getElementById('overall-potential-minutes').innerText = 'Loading...';
+      document.getElementById('overall-A').innerText = 'Loading...';
+      document.getElementById('overall-P').innerText = 'Loading...';
+      document.getElementById('overall-Q').innerText = 'Loading...';
+      document.getElementById('overall-OEE').innerText = 'Loading...';
+  
+      // Reset all machine-related metrics.
+      document.querySelectorAll('.produced, .target, .downtime, .planned-downtime, .unplanned-downtime, .availability, .performance')
+        .forEach(function(elem) {
+          elem.innerText = 'Loading...';
+        });
+  
+      // Optionally, reset the innerHTML of container divs (e.g., totals, charts) if needed.
+      const divIds = [
+        'totals-by-line',
+        'downtime-totals-by-line',
+        'planned-downtime-by-line',
+        'unplanned-downtime-by-line',
+        'potential-minutes-by-line',
+        'scrap-totals-by-line',
+        'overall-scrap-total',
+        'oee-by-line'
+      ];
+      divIds.forEach(function(id) {
+        const div = document.getElementById(id);
+        if(div) {
+          div.innerHTML = 'Loading...';
+        }
+      });
+    }
+
+    
 document.addEventListener("DOMContentLoaded", function() {
   // Initialize flatpickr and store the instance.
   const calendarInstance = flatpickr("#calendar", {
@@ -310,13 +352,14 @@ document.addEventListener("DOMContentLoaded", function() {
     if (selectedDates.length === 2) {
       const startDate = calendarInstance.formatDate(selectedDates[0], "Y-m-d H:i");
       const endDate = calendarInstance.formatDate(selectedDates[1], "Y-m-d H:i");
-      
-      // Optionally compute previous day from the start date (if needed)
       const startDateObj = new Date(selectedDates[0]);
       const previousDay = calendarInstance.formatDate(startDateObj, "Y-m-d H:i");
-      
-      // Update header title.
       document.getElementById("selected-date-display").innerText = previousDay + " to " + endDate;
+
+      // Set the loading state before fetching new data.
+      showLoadingState();
+
+      // Fetch the new production data.
       fetchProductionData(startDate, endDate);
     } else {
       alert("Please select both a start and an end date.");
