@@ -289,6 +289,24 @@
       </div>
     </div>
   </div>
+
+  <style>
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+    
+    .loading {
+      animation: pulse 2.5s infinite ease-in-out;
+    }    
+  </style>
 </div>
 
 <script>
@@ -297,23 +315,26 @@
     // Function to set loading state for key elements.
     function showLoadingState() {
       // Overall metrics
-      document.getElementById('overall-produced').innerText = 'Loading...';
-      document.getElementById('overall-target').innerText = 'Loading...';
-      document.getElementById('overall-downtime').innerText = 'Loading...';
-      document.getElementById('overall-planned-downtime').innerText = 'Loading...';
-      document.getElementById('overall-unplanned-downtime').innerText = 'Loading...';
-      document.getElementById('overall-potential-minutes').innerText = 'Loading...';
-      document.getElementById('overall-A').innerText = 'Loading...';
-      document.getElementById('overall-P').innerText = 'Loading...';
-      document.getElementById('overall-Q').innerText = 'Loading...';
-      document.getElementById('overall-OEE').innerText = 'Loading...';
-  
+      const overallIds = [
+        'overall-produced', 'overall-target', 'overall-downtime', 
+        'overall-planned-downtime', 'overall-unplanned-downtime', 
+        'overall-potential-minutes', 'overall-A', 'overall-P', 'overall-Q', 'overall-OEE'
+      ];
+      overallIds.forEach(function(id) {
+        const elem = document.getElementById(id);
+        if (elem) {
+          elem.innerText = 'Loading...';
+          elem.classList.add('loading');
+        }
+      });
+    
       // Reset all machine-related metrics.
       document.querySelectorAll('.produced, .target, .downtime, .planned-downtime, .unplanned-downtime, .availability, .performance')
         .forEach(function(elem) {
           elem.innerText = 'Loading...';
+          elem.classList.add('loading');
         });
-  
+    
       // Optionally, reset the innerHTML of container divs (e.g., totals, charts) if needed.
       const divIds = [
         'totals-by-line',
@@ -327,12 +348,13 @@
       ];
       divIds.forEach(function(id) {
         const div = document.getElementById(id);
-        if(div) {
+        if (div) {
           div.innerHTML = 'Loading...';
+          div.classList.add('loading');
         }
       });
     }
-
+    
     
 document.addEventListener("DOMContentLoaded", function() {
   // Initialize flatpickr and store the instance.
@@ -390,6 +412,9 @@ document.addEventListener("DOMContentLoaded", function() {
           } else {
             elem.innerText = '0';
           }
+
+          // Remove the loading effect once data is loaded
+          elem.classList.remove('loading');
         });
 
         // Update target values.
@@ -399,6 +424,8 @@ document.addEventListener("DOMContentLoaded", function() {
           if (data.production_data[lineName] && data.production_data[lineName][machineNumber]) {
             elem.innerText = data.production_data[lineName][machineNumber].target;
           }
+          // Remove the loading effect after updating content
+          elem.classList.remove('loading');
         });
 
         // Update downtime values.
@@ -617,6 +644,12 @@ document.addEventListener("DOMContentLoaded", function() {
           
           oeeLineContentDiv.appendChild(table);
         }
+
+        // At the end of the fetch callback, remove any remaining loading classes.
+        document.querySelectorAll('.loading').forEach(function(elem) {
+          elem.classList.remove('loading');
+        });
+
       })
       .catch(error => console.error('Error fetching production data:', error));
   }
