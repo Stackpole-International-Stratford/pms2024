@@ -66,7 +66,7 @@
         <p>We use the following formulas based on standard OEE methodology, adapted to our available data:</p>
         <ul>
           <li><strong>Planned Production Time (PPT)</strong> = Total Potential Minutes − Planned Downtime</li>
-          <li><strong>Run Time</strong> = PPT − (Unplanned Downtime + Planned Downtime)</li>
+          <li><strong>Run Time</strong> = PPT − Unplanned Downtime</li>
           <li><strong>Ideal Cycle Time</strong> = PPT / Target Parts</li>
           <li><strong>Availability (A)</strong> = Run Time / PPT</li>
           <li><strong>Performance (P)</strong> = (Ideal Cycle Time × Produced Parts) / Run Time</li>
@@ -211,6 +211,12 @@
                       Loading...
                     </span>
                   </p>
+                  <p class="mb-2"><strong>Availability:</strong>
+                    <span class="availability" data-line="{{ line.line }}" data-machine="{{ machine.number }}">Loading...</span>
+                  </p>
+                  <p class="mb-2"><strong>Performance:</strong>
+                    <span class="performance" data-line="{{ line.line }}" data-machine="{{ machine.number }}">Loading...</span>
+                  </p>                  
                   <!-- Detailed Downtime Button -->
                   <button type="button" class="btn btn-warning detailed-downtime-btn" data-line="{{ line.line }}" data-machine="{{ machine.number }}" data-bs-toggle="modal" data-bs-target="#downtimeModal">
                     Detailed Downtime
@@ -465,6 +471,32 @@ document.addEventListener("DOMContentLoaded", function() {
             potentialContentDiv.appendChild(p);
           }
         }
+
+        // Update Availability values.
+        document.querySelectorAll('.availability').forEach(function(elem) {
+          var lineName = elem.getAttribute('data-line');
+          var machineNumber = elem.getAttribute('data-machine');
+          if (window.productionData[lineName] && window.productionData[lineName][machineNumber] &&
+              window.productionData[lineName][machineNumber].A !== undefined) {
+            // Multiply by 100 to convert to a percentage.
+            elem.innerText = (window.productionData[lineName][machineNumber].A * 100).toFixed(2) + "%";
+          } else {
+            elem.innerText = "N/A";
+          }
+        });
+
+        // Update Performance values.
+        document.querySelectorAll('.performance').forEach(function(elem) {
+          var lineName = elem.getAttribute('data-line');
+          var machineNumber = elem.getAttribute('data-machine');
+          if (window.productionData[lineName] && window.productionData[lineName][machineNumber] &&
+              window.productionData[lineName][machineNumber].P !== undefined) {
+            elem.innerText = (window.productionData[lineName][machineNumber].P * 100).toFixed(2) + "%";
+          } else {
+            elem.innerText = "N/A";
+          }
+        });
+
         // Scrap totals by line.
         if (data.scrap_totals_by_line) {
           var scrapByLineDiv = document.getElementById('scrap-totals-by-line');
@@ -491,7 +523,7 @@ document.addEventListener("DOMContentLoaded", function() {
           document.getElementById('overall-OEE').innerText = (data.oee_metrics.overall.OEE * 100).toFixed(2) + "%";
         }
         
-        if (data.oee_metrics && data.oee_metrics.by_line) {
+        if (data.oee_metrics && data.oee_metrics.lines) {
           var oeeByLineDiv = document.getElementById('oee-by-line');
           oeeByLineDiv.innerHTML = 
             '<div class="card shadow-sm mb-4">' +
@@ -502,11 +534,11 @@ document.addEventListener("DOMContentLoaded", function() {
             '</div>';
           
           var oeeLineContentDiv = document.getElementById('oee-line-content');
-          var lines = Object.keys(data.oee_metrics.by_line);
+          var lines = Object.keys(data.oee_metrics.lines);
           
           // Sort lines by highest OEE value
           lines.sort(function(a, b) {
-            return data.oee_metrics.by_line[b].OEE - data.oee_metrics.by_line[a].OEE;
+            return data.oee_metrics.lines[b].OEE - data.oee_metrics.lines[a].OEE;
           });
           
           // Create a table to display the metrics nicely.
@@ -528,7 +560,7 @@ document.addEventListener("DOMContentLoaded", function() {
           // Create table body.
           var tbody = document.createElement('tbody');
           lines.forEach(function(line) {
-            var metrics = data.oee_metrics.by_line[line];
+            var metrics = data.oee_metrics.lines[line];
             var row = document.createElement('tr');
             row.innerHTML = 
               '<td>' + line + '</td>' +

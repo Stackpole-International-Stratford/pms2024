@@ -6236,7 +6236,7 @@ def compute_oee_metrics(
     
     # Overall metrics calculations
     overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
-    overall_run_time = overall_ppt - (overall_planned_downtime_minutes + overall_unplanned_downtime_minutes)
+    overall_run_time = overall_ppt - (overall_unplanned_downtime_minutes)
     overall_ideal_cycle_time = overall_ppt / overall_total_target if overall_total_target > 0 else 0.0
 
     overall_availability = overall_run_time / overall_ppt if overall_ppt > 0 else 0.0
@@ -6255,7 +6255,7 @@ def compute_oee_metrics(
         scrap = float(scrap_totals_by_line.get(line, 0))
         
         ppt = potential - planned_downtime
-        run_time = ppt - (planned_downtime + unplanned_downtime)
+        run_time = ppt - (unplanned_downtime)
         ideal_cycle_time = ppt / target if target > 0 else 0.0
         
         availability = run_time / ppt if ppt > 0 else 0.0
@@ -6613,6 +6613,40 @@ def calculate_unplanned_downtime(total_downtime_minutes, planned_downtime_minute
 
 
 
+
+def compute_machine_oee(machine_data, queried_minutes):
+    """
+    Calculate Availability (A) and Performance (P) for a single machine.
+    
+    Assumptions:
+      - Each machine's potential minutes equals the queried_minutes.
+      - Planned downtime and unplanned downtime are provided in minutes.
+    
+    Formulas:
+      PPT (Planned Production Time) = potential_minutes - planned_downtime
+      Run Time = PPT - (planned_downtime + unplanned_downtime)
+      Ideal Cycle Time = PPT / target  (if target > 0)
+      Availability = Run Time / PPT   (if PPT > 0)
+      Performance = (Ideal Cycle Time * produced_parts) / Run Time   (if Run Time > 0)
+    """
+    produced = float(machine_data.get("produced_parts", 0))
+    target = float(machine_data.get("target", 0))
+    planned_downtime = float(machine_data.get("planned_downtime_minutes", 0))
+    unplanned_downtime = float(machine_data.get("unplanned_downtime_minutes", 0))
+    
+    # For each machine, potential minutes is simply the queried minutes.
+    potential = queried_minutes
+    ppt = potential - planned_downtime
+    run_time = ppt - (unplanned_downtime)
+    
+    ideal_cycle_time = ppt / target if target > 0 else 0.0
+    availability = run_time / ppt if ppt > 0 else 0.0
+    performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+    
+    return {"A": availability, "P": performance}
+
+
+
 # --- Main Function ---
 
 def fetch_oa_by_day_production_data(request):
@@ -6694,6 +6728,12 @@ def fetch_oa_by_day_production_data(request):
                 unplanned_downtime_totals_by_line[line_name] += unplanned_downtime
                 overall_planned_downtime_minutes += planned_downtime
                 overall_unplanned_downtime_minutes += unplanned_downtime
+
+
+                # For each machine, compute machine-level OEE metrics.
+                machine_metrics = compute_machine_oee(prod_data, queried_minutes)
+                production_data[line_name][machine_number].update(machine_metrics)
+
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
