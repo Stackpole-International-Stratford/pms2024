@@ -30,7 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['10.5.1.131','pmdsdata12', '10.4.1.234', '127.0.0.1',
                  'localhost', '10.4.1.234', '10.4.1.232', 'pmdsdata9', 
-                 'pmdsdata12.stackpole.ca', 'pmdsdata12.jehl.internal']
+                 'pmdsdata12.stackpole.ca', 'pmdsdata12.jehl.internal', '0.0.0.0']
 ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS')
 if ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS.extend(ALLOWED_HOSTS_ENV.split(','))
