@@ -667,6 +667,7 @@ def format_specifications(spec):
 def populate_answers_with_range_check(questions_dict, answers, date_hour_range, est):
     """
     Populate all answers into the corresponding date-hour slots and check for range-based answers.
+    Also include the inspection_type for each answer.
     """
     for question_key, question_data in questions_dict.items():
         # Filter the answers once per question to avoid redundant checks
@@ -697,9 +698,12 @@ def populate_answers_with_range_check(questions_dict, answers, date_hour_range, 
                 max_value = None
 
         for date_hour in date_hour_range:
-            # Get all answers for the question on this date-hour
+            # Get all answers for the question on this date-hour including inspection_type
             hourly_answers = [
-                answer.answer.get('answer', '')
+                {
+                    'value': answer.answer.get('answer', ''),
+                    'inspection_type': answer.answer.get('inspection_type', 'N/A')
+                }
                 for answer in question_answers
                 if answer.created_at.astimezone(est).strftime('%Y-%m-%d %H:00') == date_hour
             ]
@@ -709,33 +713,38 @@ def populate_answers_with_range_check(questions_dict, answers, date_hour_range, 
             # Only process if it's a range-based question
             if is_range_based and hourly_answers:
                 for ans in hourly_answers:
+                    answer_value = ans['value']
+                    inspection_type = ans['inspection_type']
                     try:
-                        ans_float = float(ans)  # Convert answer to float for comparison
+                        ans_float = float(answer_value)  # Convert answer to float for comparison
                         
                         # Check if the answer is out of range
                         if min_value is not None and ans_float < min_value:
-                            status = "Out of Range (Below Min)"
-                            tagged_answers.append(f'<span class="out-of-range">{ans}</span>')
+                            tagged_answers.append(
+                                f'<span class="out-of-range">{answer_value} ({inspection_type})</span>'
+                            )
                         elif max_value is not None and ans_float > max_value:
-                            status = "Out of Range (Above Max)"
-                            tagged_answers.append(f'<span class="out-of-range">{ans}</span>')
+                            tagged_answers.append(
+                                f'<span class="out-of-range">{answer_value} ({inspection_type})</span>'
+                            )
                         else:
-                            status = "In Range"
-                            tagged_answers.append(ans)
+                            tagged_answers.append(
+                                f'{answer_value} ({inspection_type})'
+                            )
                     
                     except ValueError:
-                        tagged_answers.append(f'<span class="invalid-answer">{ans}</span>')
+                        tagged_answers.append(
+                            f'<span class="invalid-answer">{answer_value} ({inspection_type})</span>'
+                        )
 
             else:
-                # If not range-based or no answers, keep it normal
-                tagged_answers = hourly_answers
+                # If not range-based or no answers, simply include the inspection_type with the answer value
+                tagged_answers = [
+                    f'{ans["value"]} ({ans["inspection_type"]})' for ans in hourly_answers
+                ]
 
             # Format the answers for this date-hour as a comma-separated string
-            if tagged_answers:
-                formatted_answers = ", ".join(tagged_answers)
-            else:
-                formatted_answers = "-"  # Use "-" if no answers for this date-hour
-
+            formatted_answers = ", ".join(tagged_answers) if tagged_answers else "-"
             # Append the formatted string for this date-hour
             question_data['Answers'].append(formatted_answers)
 
