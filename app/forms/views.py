@@ -46,6 +46,7 @@ from collections import OrderedDict
 import pytz
 from django.http import HttpResponse
 from .emailer import send_email  # Import the function from emailer.py
+from django.views.decorators.http import require_GET
 
 
 
@@ -741,29 +742,38 @@ def populate_answers_with_range_check(questions_dict, answers, date_hour_range, 
 
 
 
+@require_GET
+def load_more_answers(request, form_id, offset):
+    form_instance = get_object_or_404(Form, id=form_id)
+    try:
+        offset_days = int(offset)
+    except ValueError:
+        return JsonResponse({"error": "Invalid offset."}, status=400)
+    
+    # Fetch the additional 7-day block with the given offset
+    seven_day_data = seven_day_answers(form_instance, offset_days=offset_days)
+    return JsonResponse(seven_day_data)
+
+
 
 # Main function to get seven day answers
-def seven_day_answers(form_instance):
+def seven_day_answers(form_instance, offset_days=0):
     """
-    Fetch and organize all answers for all questions in this form ID for the last 7 days,
-    with Date and Hour as column headers and Questions as row headers.
-    Newest dates and hours on the left, showing all answers for each hour up until the current hour.
+    Fetch and organize answers for a 7-day period, 
+    starting offset_days ago.
     """
-    # EST timezone setup
     est = pytz.timezone('America/New_York')
-
-    # Get the current time in EST
-    current_time = timezone.now().astimezone(est)
+    # Get the current time in EST and subtract the offset
+    current_time = timezone.now().astimezone(est) - timedelta(days=offset_days)
     current_hour = current_time.replace(minute=0, second=0, microsecond=0)
     
-    # Generate the hourly range for the last 7 days up to the current hour
+    # Generate the hourly range for 7 days prior to current_hour
     date_hour_range = []
     for i in range(7 * 24):
         hour = current_hour - timedelta(hours=i)
         date_hour_range.append(hour.strftime('%Y-%m-%d %H:00'))
-    date_hour_range.sort(reverse=True)  # Newest hour on the left
+    date_hour_range.sort(reverse=True)
 
-    # Fetch all answers for all questions in this form for the last 7 days
     answers = (
         FormAnswer.objects
         .filter(
@@ -774,32 +784,26 @@ def seven_day_answers(form_instance):
         .order_by('created_at')
     )
 
-    # Organize answers by question and date-hour
+    # Organize answers by question and date-hour as before
     questions_dict = OrderedDict()
     for question in form_instance.questions.all():
         key = f"{question.question.get('feature', 'N/A')} - {question.question.get('characteristic', 'N/A')}"
-        sample_size = question.question.get('sample_size', 'N/A')  # Get Sample Size
-        
-        # Format the specifications using the new function
+        sample_size = question.question.get('sample_size', 'N/A')
         formatted_specifications = format_specifications(question.question.get('specifications', 'N/A'))
-
         questions_dict[key] = {
             'Feature': question.question.get('feature', 'N/A'),
             'Characteristic': question.question.get('characteristic', 'N/A'),
-            'Specifications': formatted_specifications,  # Formatted Specifications
+            'Specifications': formatted_specifications,
             'SampleSize': sample_size,
-            'Answers': []  # Store pre-formatted answers as list of strings
+            'Answers': []  # To be filled in below
         }
 
-    # Call the new function to populate answers and check for range-based questions
     populate_answers_with_range_check(questions_dict, answers, date_hour_range, est)
-
-    # Strip the year before sending to the frontend
-    date_hour_range_display = [date_hour[5:] for date_hour in date_hour_range]  # Removes 'YYYY-' part
+    date_hour_range_display = [date_hour[5:] for date_hour in date_hour_range]
 
     return {
-        'date_range': date_hour_range_display,  # Dates and hours for the columns (newest to oldest)
-        'questions_dict': questions_dict        # All questions and their pre-formatted answers
+        'date_range': date_hour_range_display,
+        'questions_dict': questions_dict
     }
 
 

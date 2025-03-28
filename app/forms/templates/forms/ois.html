@@ -28,6 +28,12 @@
             overflow: hidden;
             box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
         }
+        .table thead th {
+            min-width: 100px;
+            white-space: nowrap;
+            background-color: #FF9933;
+            color: #fff;
+        }
         .input-cell {
             width: 100%;
         }
@@ -39,10 +45,6 @@
         }
         .answers-card .card-body {
             overflow-x: auto;
-        }
-        .table thead th {
-            min-width: 100px; /* Adjust as needed */
-            white-space: nowrap;
         }
         .out-of-range {
             color: red;
@@ -58,10 +60,6 @@
             right: 0;
             display: none; /* remains hidden until toggled */
         }
-
-        
-        
-        
     </style>
 </head>
 <body>
@@ -69,119 +67,88 @@
     <div class="container">
         <h2 class="text-center mb-4" id="operation-partnumber">Loading...</h2>
         <title id="page-title">Loading...</title>
+        <!-- Hidden machine and form id values -->
         <input type="hidden" id="machine-number" value="{{ machine }}">
+        <input type="hidden" id="form-id" value="{{ form_instance.id }}">
 
-
-
-<!-- 7 Day Answers Overview Card with Grid Layout and Scroll on Right Column -->
-<div class="answers-card card mb-4" style="position: relative;">
-    <!-- Favorites Icon and Menu -->
-    <div id="favorites-container" style="position: absolute; top: 10px; right: 20px; z-index: 1000;">
-        <span id="favorites-icon" style="cursor: pointer; font-size: 38px; color: #181716;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
-              <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
-            </svg>
-          </span>          
-        <div id="favorites-menu" style="display: none; background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 10px; width: 250px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h5>Favourites</h5>
-            <ul id="favorites-list" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto;"></ul>
-            <hr>
-            <div>
-                <input type="text" id="fav-title" class="form-control mb-2" placeholder="Title">
-                <input type="text" id="fav-url" class="form-control mb-2" placeholder="URL">
-                <button id="add-fav" class="btn btn-warning btn-sm">Add Favourite</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Logo -->
-    <div class="text-center my-3">
-        <img src="{% static 'images/JE_Logo_PNG.png' %}" alt="JE Logo" class="logo mx-auto">
-    </div>
-    <div class="card-body p-4">
-        <!-- Grid with one row and two columns; g-3 adds spacing between columns -->
-        <div class="row g-3 align-items-stretch">
-            <!-- Left Column: Feature, Specifications, Sample Size -->
-            <div class="col-md-6 d-flex flex-column">
-                <div class="h-100">
-                    <table class="table table-striped table-hover mb-0">
-                        <thead style="background-color: #FF9933; color: #fff;">
-                            <tr>
-                                <th>Feature - Characteristic</th>
-                                <th>Specifications</th>
-                                <th>Sample Size</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for question_key, question in seven_day_data.questions_dict.items %}
-                            <tr>
-                                <td>{{ question_key }}</td>
-                                <td>{{ question.Specifications }}</td>
-                                <td>{{ question.SampleSize }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- 7 Day Answers Overview Card with Grid Layout and Scroll on Right Column -->
+        <div class="answers-card card mb-4" style="position: relative;">
+            <!-- Favorites Icon and Menu -->
+            <div id="favorites-container" style="position: absolute; top: 10px; right: 20px; z-index: 1000;">
+                <span id="favorites-icon" style="cursor: pointer; font-size: 38px; color: #181716;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
+                      <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                    </svg>
+                </span>
+                <div id="favorites-menu" style="background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 10px; width: 250px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h5>Favourites</h5>
+                    <ul id="favorites-list" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto;"></ul>
+                    <hr>
+                    <div>
+                        <input type="text" id="fav-title" class="form-control mb-2" placeholder="Title">
+                        <input type="text" id="fav-url" class="form-control mb-2" placeholder="URL">
+                        <button id="add-fav" class="btn btn-warning btn-sm">Add Favourite</button>
+                    </div>
                 </div>
             </div>
-            <!-- Right Column: Date Columns & Answers -->
-            <div class="col-md-6 d-flex flex-column">
-                <div class="h-100" style="overflow-y: auto;">
-                    <table class="table table-striped table-hover mb-0">
-                        <thead style="background-color: #FF9933; color: #fff;">
-                            <tr>
-                                {% for date in seven_day_data.date_range %}
-                                <th>{{ date }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for question_key, question in seven_day_data.questions_dict.items %}
-                            <tr>
-                                {% for answer in question.Answers %}
-                                <td>{{ answer|safe }}</td>
-                                {% endfor %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+
+            <!-- Logo -->
+            <div class="text-center my-3">
+                <img src="{% static 'images/JE_Logo_PNG.png' %}" alt="JE Logo" class="logo mx-auto">
+            </div>
+
+            <div class="card-body p-4">
+                <div class="row g-3 align-items-stretch">
+                    <!-- Left Column: Feature, Specifications, Sample Size -->
+                    <div class="col-md-6 d-flex flex-column">
+                        <div class="h-100">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Feature - Characteristic</th>
+                                        <th>Specifications</th>
+                                        <th>Sample Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for question_key, question in seven_day_data.questions_dict.items %}
+                                    <tr data-question-key="{{ question_key }}">
+                                        <td>{{ question_key }}</td>
+                                        <td>{{ question.Specifications }}</td>
+                                        <td>{{ question.SampleSize }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Right Column: Date Columns & Answers -->
+                    <div class="col-md-6 d-flex flex-column">
+                        <div class="h-100" style="overflow-y: auto;">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr id="answers-header">
+                                        {% for date in seven_day_data.date_range %}
+                                        <th>{{ date }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody id="answers-body">
+                                    {% for question_key, question in seven_day_data.questions_dict.items %}
+                                    <tr data-question-key="{{ question_key }}">
+                                        {% for answer in question.Answers %}
+                                        <td>{{ answer|safe }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            <button id="more-button" class="btn btn-secondary mt-3">More</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-
-<script>
-    function adjustRowHeights() {
-      const leftRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
-      const rightRows = document.querySelectorAll('.col-md-6:last-child table tbody tr');
-  
-      leftRows.forEach((leftRow, index) => {
-        if (rightRows[index]) {
-          // Reset heights in case they were previously set
-          leftRow.style.height = "auto";
-          rightRows[index].style.height = "auto";
-  
-          // Get current heights
-          const leftHeight = leftRow.offsetHeight;
-          const rightHeight = rightRows[index].offsetHeight;
-  
-          // Determine the maximum height
-          const maxHeight = Math.max(leftHeight, rightHeight);
-  
-          // Apply the maximum height to both rows
-          leftRow.style.height = maxHeight + "px";
-          rightRows[index].style.height = maxHeight + "px";
-        }
-      });
-    }
-  
-    document.addEventListener("DOMContentLoaded", adjustRowHeights);
-    window.addEventListener("resize", adjustRowHeights);
-  </script>
-
-
 
         <!-- Form Card -->
         <div class="form-container">
@@ -196,13 +163,9 @@
                 </div>
                 {% endif %}
 
-                
                 <div class="mb-4">
                     <label for="operator_number" class="form-label fw-bold">Operator Number:</label>
-                    <input type="text" id="operator_number" name="operator_number" 
-                           class="form-control" placeholder="Enter operator number" 
-                           required inputmode="numeric" pattern="[0-9]*" 
-                           value="{{ operator_number }}">
+                    <input type="text" id="operator_number" name="operator_number" class="form-control" placeholder="Enter operator number" required inputmode="numeric" pattern="[0-9]*" value="{{ operator_number }}">
                 </div>
 
                 <!-- Inspection Type Selection -->
@@ -265,16 +228,11 @@
                                             </select>
                                         {% else %}
                                             {% for i in item.input_range %}
-                                                <input type="text" name="answer_{{ item.question.id }}_{{ i }}" 
-                                                       class="form-control mb-2" 
-                                                       placeholder="Answer {{ i|add:1 }}"
-                                                       data-min="{{ item.question.question.specifications.min }}"
-                                                       data-max="{{ item.question.question.specifications.max }}">
+                                                <input type="text" name="answer_{{ item.question.id }}_{{ i }}" class="form-control mb-2" placeholder="Answer {{ i|add:1 }}" data-min="{{ item.question.question.specifications.min }}" data-max="{{ item.question.question.specifications.max }}">
                                             {% endfor %}
                                         {% endif %}
                                     </div>
                                 </td>
-                                
                             </tr>
                             {% endfor %}
                         </tbody>                                              
@@ -287,101 +245,137 @@
                 </div>
             </form>
         </div>
-
-        
     </div>
 
-    
+    <!-- Scripts -->
+    <!-- More Button Script -->
+    <script>
+        let offsetDays = 7; // starting with the next 7-day block
+        document.getElementById('more-button').addEventListener('click', function() {
+            const formId = document.getElementById('form-id').value;
+            const url = `/forms/load_more_answers/${formId}/${offsetDays}/`;
+            
+            fetch(url)
+              .then(response => response.json())
+              .then(data => {
+                  // Append new columns to the header
+                  const headerRow = document.getElementById('answers-header');
+                  data.date_range.forEach(date => {
+                      const th = document.createElement('th');
+                      th.textContent = date;
+                      headerRow.appendChild(th);
+                  });
+                  
+                  // Append new cells for each row
+                  const rows = document.querySelectorAll('#answers-body tr');
+                  rows.forEach(row => {
+                      const questionKey = row.getAttribute('data-question-key');
+                      const questionData = data.questions_dict[questionKey];
+                      if (questionData && questionData.Answers) {
+                          questionData.Answers.forEach(answerHTML => {
+                              const td = document.createElement('td');
+                              td.innerHTML = answerHTML;
+                              row.appendChild(td);
+                          });
+                      } else {
+                          // Append placeholder cells if no data exists
+                          data.date_range.forEach(() => {
+                              const td = document.createElement('td');
+                              td.textContent = "-";
+                              row.appendChild(td);
+                          });
+                      }
+                  });
+              })
+              .catch(error => {
+                  console.error('Error fetching more answers:', error);
+              });
+            
+            offsetDays += 7; // Increase offset for next request
+        });
+    </script>
+
+    <!-- Adjust Row Heights -->
+    <script>
+        function adjustRowHeights() {
+            const leftRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
+            const rightRows = document.querySelectorAll('.col-md-6:last-child table tbody tr');
+            leftRows.forEach((leftRow, index) => {
+                if (rightRows[index]) {
+                    leftRow.style.height = "auto";
+                    rightRows[index].style.height = "auto";
+                    const leftHeight = leftRow.offsetHeight;
+                    const rightHeight = rightRows[index].offsetHeight;
+                    const maxHeight = Math.max(leftHeight, rightHeight);
+                    leftRow.style.height = maxHeight + "px";
+                    rightRows[index].style.height = maxHeight + "px";
+                }
+            });
+        }
+        document.addEventListener("DOMContentLoaded", adjustRowHeights);
+        window.addEventListener("resize", adjustRowHeights);
+    </script>
+
+    <!-- Filter Questions by Inspection Type -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const radioButtons = document.querySelectorAll('input[name="inspection_type"]');
             const questionRows = document.querySelectorAll('.question-row');
-
             function filterQuestions() {
                 const selectedType = document.querySelector('input[name="inspection_type"]:checked').value;
-
                 questionRows.forEach(row => {
                     const inspectionType = row.getAttribute('data-inspection-type');
                     row.classList.add('hidden');
-
                     if (selectedType === 'OIS' && inspectionType === 'OIS') {
                         row.classList.remove('hidden');
-                    } else if (selectedType === 'First Off' && 
-                        (inspectionType === 'OIS' || 
-                         inspectionType === 'First Off' || 
-                         inspectionType === 'First Off and Last Off')) {
+                    } else if (selectedType === 'First Off' &&
+                               (inspectionType === 'OIS' || inspectionType === 'First Off' || inspectionType === 'First Off and Last Off')) {
                         row.classList.remove('hidden');
-                    } else if (selectedType === 'Last Off' && 
-                        (inspectionType === 'OIS' || 
-                         inspectionType === 'Last Off' || 
-                         inspectionType === 'First Off and Last Off')) {
+                    } else if (selectedType === 'Last Off' &&
+                               (inspectionType === 'OIS' || inspectionType === 'Last Off' || inspectionType === 'First Off and Last Off')) {
                         row.classList.remove('hidden');
                     }
                 });
             }
-
             radioButtons.forEach(button => {
                 button.addEventListener('change', filterQuestions);
             });
-
             filterQuestions();
         });
     </script>
 
-
+    <!-- Update Title from URL -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const url = new URL(window.location.href);
             const pathParts = url.pathname.split('/');
-        
-            // Extract operation and partnumber
             const partNumber = pathParts[pathParts.length - 2].replace(/_/g, ' ');
             const operation = pathParts[pathParts.length - 3].replace(/_/g, ' ');
-        
-            // Get machine number from the hidden input field
             const machine = document.getElementById('machine-number').value;
-        
-            // Set the title and header
             const titleText = `${operation} | ${partNumber} | Machine: ${machine}`;
             document.getElementById('operation-partnumber').textContent = titleText;
             document.getElementById('page-title').textContent = titleText;
         });
-        
-        
     </script>
-    
-    
+
+    <!-- Form Validation for Multiple Inputs -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('ois-form');
-    
             form.addEventListener('submit', function(event) {
-                // Get all rows in the questions container
                 const rows = document.querySelectorAll('#questions-container tr');
-    
-                // Loop through each row to validate inputs
                 let isValid = true;
-    
                 rows.forEach(row => {
-                    // Get all inputs in the current row
                     const inputs = row.querySelectorAll('.input-cell input');
-    
-                    // Check if the row has more than one input
                     if (inputs.length > 1) {
-                        // Count how many are filled
                         let filledCount = 0;
-    
                         inputs.forEach(input => {
                             if (input.value.trim() !== '') {
                                 filledCount++;
                             }
                         });
-    
-                        // If not all are filled, mark the form as invalid
                         if (filledCount > 0 && filledCount < inputs.length) {
                             isValid = false;
-    
-                            // Highlight the empty fields
                             inputs.forEach(input => {
                                 if (input.value.trim() === '') {
                                     input.classList.add('is-invalid');
@@ -390,15 +384,10 @@
                                 }
                             });
                         } else {
-                            // If all are filled, remove validation errors
-                            inputs.forEach(input => {
-                                input.classList.remove('is-invalid');
-                            });
+                            inputs.forEach(input => input.classList.remove('is-invalid'));
                         }
                     }
                 });
-    
-                // If form is invalid, prevent submission and show alert
                 if (!isValid) {
                     event.preventDefault();
                     alert("Sample Size is more than 1 for some features! Please fill in all required fields for rows with multiple answers.");
@@ -407,13 +396,10 @@
         });
     </script>
 
-
-    <!-- Favorites Functionality Script -->
+    <!-- Favorites Functionality -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var favorites = [];
-            
-            // Load favorites from cookie if available
             var favCookie = getCookie("favorites");
             if (favCookie) {
                 try {
@@ -422,29 +408,25 @@
                     favorites = [];
                 }
             }
-            
             function updateCookie() {
                 setCookie("favorites", JSON.stringify(favorites), 30);
             }
-            
             function renderFavoritesList() {
                 var favList = document.getElementById("favorites-list");
                 favList.innerHTML = "";
                 favorites.forEach(function(fav, index) {
                     var li = document.createElement("li");
                     li.style.position = "relative";
-                    li.style.paddingRight = "20px"; 
+                    li.style.paddingRight = "20px";
                     li.style.marginBottom = "5px";
                     li.style.display = "flex";
                     li.style.alignItems = "center";
-            
                     var link = document.createElement("a");
                     link.href = fav.url;
                     link.textContent = fav.title;
                     link.target = "_blank";
                     link.style.flexGrow = "1";
                     li.appendChild(link);
-            
                     var delBtn = document.createElement("span");
                     delBtn.textContent = "×";
                     delBtn.className = "delete-fav";
@@ -461,15 +443,11 @@
                         renderFavoritesList();
                     });
                     li.appendChild(delBtn);
-            
                     favList.appendChild(li);
                 });
             }
-            
             var favoritesIcon = document.getElementById("favorites-icon");
             var favoritesMenu = document.getElementById("favorites-menu");
-        
-            // Toggle menu when clicking the icon, and prevent the click from propagating
             favoritesIcon.addEventListener("click", function(event) {
                 event.stopPropagation();
                 if (favoritesMenu.style.display === "none" || favoritesMenu.style.display === "") {
@@ -478,17 +456,12 @@
                     favoritesMenu.style.display = "none";
                 }
             });
-        
-            // Prevent clicks inside the menu from closing it
             favoritesMenu.addEventListener("click", function(event) {
                 event.stopPropagation();
             });
-        
-            // Close the favorites menu if clicking anywhere else on the page
             document.addEventListener("click", function() {
                 favoritesMenu.style.display = "none";
             });
-            
             document.getElementById("add-fav").addEventListener("click", function() {
                 var titleInput = document.getElementById("fav-title");
                 var urlInput = document.getElementById("fav-url");
@@ -498,14 +471,12 @@
                     alert("Please enter both a title and URL.");
                     return;
                 }
-            
                 favorites.push({ title: title, url: url });
                 titleInput.value = "";
                 urlInput.value = "";
                 updateCookie();
                 renderFavoritesList();
             });
-            
             function setCookie(name, value, days) {
                 var expires = "";
                 if (days) {
@@ -515,7 +486,6 @@
                 }
                 document.cookie = name + "=" + (value || "")  + expires + "; path=/";
             }
-            
             function getCookie(name) {
                 var nameEQ = name + "=";
                 var ca = document.cookie.split(';');
@@ -526,20 +496,14 @@
                 }
                 return null;
             }
-            
             renderFavoritesList();
         });
-        
-        
     </script>
 
-
-
+    <!-- Out-of-Spec Modal Functionality -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const form = document.getElementById('ois-form');
-        
-            // Create the modal if it doesn't exist
             let modalDiv = document.getElementById('outOfSpecModal');
             if (!modalDiv) {
                 modalDiv = document.createElement('div');
@@ -562,20 +526,12 @@
                       </div>
                     </div>
                   </div>
-                </div>
-                `;
+                </div>`;
                 document.body.appendChild(modalDiv);
             }
-        
-            // Initialize the Bootstrap modal
-            const outOfSpecModal = new bootstrap.Modal(document.getElementById('outOfSpecModal'), {
-                backdrop: 'static',
-                keyboard: false
-            });
-        
+            const outOfSpecModal = new bootstrap.Modal(document.getElementById('outOfSpecModal'), { backdrop: 'static', keyboard: false });
             form.addEventListener('submit', function(e) {
                 let outOfSpecWarnings = [];
-                // Loop through all text inputs within .input-cell
                 const inputs = document.querySelectorAll('.input-cell input[type="text"]');
                 inputs.forEach(function(input) {
                     const value = input.value.trim();
@@ -583,7 +539,6 @@
                         const numericValue = parseFloat(value);
                         const min = input.getAttribute('data-min');
                         const max = input.getAttribute('data-max');
-        
                         if (min !== null && !isNaN(parseFloat(min)) && numericValue < parseFloat(min)) {
                             outOfSpecWarnings.push(`"${value}" is below the minimum (${min}) for ${input.getAttribute('placeholder')}`);
                         }
@@ -592,10 +547,8 @@
                         }
                     }
                 });
-        
                 if (outOfSpecWarnings.length > 0) {
-                    e.preventDefault(); // Prevent form submission
-                    // Populate the modal's list with warnings
+                    e.preventDefault();
                     const listEl = document.getElementById('outOfSpecList');
                     listEl.innerHTML = "";
                     outOfSpecWarnings.forEach(function(msg) {
@@ -603,11 +556,7 @@
                         li.textContent = msg;
                         listEl.appendChild(li);
                     });
-        
-                    // Show the modal
                     outOfSpecModal.show();
-        
-                    // When confirmed, submit the form programmatically
                     document.getElementById('confirmSubmit').onclick = function() {
                         outOfSpecModal.hide();
                         form.submit();
@@ -615,8 +564,6 @@
                 }
             });
         });
-        </script>
-        
-
+    </script>
 </body>
 </html>

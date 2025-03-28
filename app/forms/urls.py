@@ -42,6 +42,7 @@ urlpatterns = [
 
 
 
-    path('test-email/', test_send_email, name='test_send_email'),
+    path('load_more_answers/<int:form_id>/<int:offset>/', load_more_answers, name='load_more_answers'),
+
 
 ]
