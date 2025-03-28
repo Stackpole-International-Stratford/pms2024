@@ -144,6 +144,16 @@
                                 </tbody>
                             </table>                      
                         </div>
+                        <div class="mb-3">
+                            <label for="answer_inspection_filter" class="form-label">Filter Answers by Inspection Type:</label>
+                            <select id="answer_inspection_filter" class="form-select">
+                              <option value="all" selected>All</option>
+                              <option value="OIS">OIS</option>
+                              <option value="First Off">First Off</option>
+                              <option value="Last Off">Last Off</option>
+                            </select>
+                          </div>
+                          
                         <div class="d-flex justify-content-end mt-3">
                             <button id="more-button" class="btn btn-outline-dark d-flex align-items-center">
                               More Answers
@@ -255,6 +265,45 @@
     </div>
 
     <!-- Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const answerFilterDropdown = document.getElementById('answer_inspection_filter');
+            // Select all answer cells in the answers table
+            const answerCells = document.querySelectorAll('#answers-body td');
+            
+            // Store the original answers in a data attribute for later reference
+            answerCells.forEach(cell => {
+                cell.setAttribute('data-original', cell.innerHTML);
+            });
+            
+            answerFilterDropdown.addEventListener('change', function() {
+                const filterValue = answerFilterDropdown.value;
+                answerCells.forEach(cell => {
+                    const original = cell.getAttribute('data-original');
+                    // Split the answers by comma and trim any extra whitespace
+                    const answers = original.split(',').map(s => s.trim()).filter(s => s !== '');
+                    
+                    // If "all" is selected, restore the original content
+                    if (filterValue === 'all') {
+                        cell.innerHTML = original;
+                    } else {
+                        // Filter answers by checking if the inspection type in parentheses matches the selected value.
+                        // This uses a regex to extract text inside parentheses.
+                        const filteredAnswers = answers.filter(answer => {
+                            const match = answer.match(/\(([^)]+)\)/);
+                            if (match) {
+                                const type = match[1].trim();
+                                return type === filterValue;
+                            }
+                            return false;
+                        });
+                        cell.innerHTML = filteredAnswers.length > 0 ? filteredAnswers.join(', ') : '-';
+                    }
+                });
+            });
+        });
+        </script>
+        
     <!-- More Button Script -->
     <script>
         let offsetDays = 7; // starting with the next 7-day block
