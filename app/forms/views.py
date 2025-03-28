@@ -517,7 +517,7 @@ def print_out_of_spec_answers(answers):
 
 
 
-def submit_ois_answers(formset, request, questions):
+def submit_ois_answers(formset, request, questions, machine):
     # Capture the inspection type and operator number
     inspection_type = request.POST.get('inspection_type', 'OIS')
     operator_number = request.POST.get('operator_number', '')
@@ -590,6 +590,7 @@ def submit_ois_answers(formset, request, questions):
                 'answer': answer['answer'],
                 'input_type': answer['type'],
                 'inspection_type': inspection_type,
+                'machine': machine,
                 'out_of_spec': out_of_spec,
                 'min': min_value,
                 'max': max_value
@@ -609,6 +610,7 @@ def submit_ois_answers(formset, request, questions):
                 'answer': answer['answer'],
                 'type': answer['type'],
                 'out_of_spec': out_of_spec,
+                'machine': machine,
                 'min': min_value,
                 'max': max_value
             })
@@ -923,7 +925,7 @@ def form_questions_view(request, form_id):
                 print("[DEBUG] form_questions_view: Formset is valid.")
                 if form_instance.form_type.name == 'OIS':
                     print("[DEBUG] form_questions_view: Processing as OIS form.")
-                    submit_ois_answers(formset, request, questions)
+                    submit_ois_answers(formset, request, questions, machine)
                     seven_day_data = seven_day_answers(form_instance)
                     print("[DEBUG] form_questions_view: Seven day data retrieved.")
                     return render(request, template_name, {
