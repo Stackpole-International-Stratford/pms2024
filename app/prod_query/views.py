@@ -6218,7 +6218,7 @@ def compute_oee_metrics(
     Compute OEE metrics overall and by line using the following formulas:
     
       1. Planned Production Time (PPT) = total_potential_minutes - planned_downtime
-      2. Run Time = PPT - (unplanned_downtime + planned_downtime)
+      2. Run Time = PPT - (unplanned_downtime)
       3. ideal_cycle_time = PPT / target_parts  (target_parts is overall_total_target or per-line target)
       4. Availability = run_time / PPT
       5. Performance = (ideal_cycle_time * actual_parts) / run_time
@@ -6610,7 +6610,7 @@ def compute_machine_oee(machine_data, queried_minutes):
     
     Formulas:
       PPT (Planned Production Time) = potential_minutes - planned_downtime
-      Run Time = PPT - (planned_downtime + unplanned_downtime)
+      Run Time = PPT - (unplanned_downtime)
       Ideal Cycle Time = PPT / target  (if target > 0)
       Availability = Run Time / PPT   (if PPT > 0)
       Performance = (Ideal Cycle Time * produced_parts) / Run Time   (if Run Time > 0)
