@@ -6624,7 +6624,8 @@ def compute_machine_oee(machine_data, queried_minutes):
     potential = queried_minutes
     ppt = potential - planned_downtime
     run_time = ppt - (unplanned_downtime)
-    
+
+
     ideal_cycle_time = ppt / target if target > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 0.0
     performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
