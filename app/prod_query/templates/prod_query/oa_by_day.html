@@ -393,9 +393,15 @@ document.addEventListener("DOMContentLoaded", function() {
       if (document.getElementById("exclude-weekends").checked) {
         const newUrl = "{% url 'prod_query:fetch_exclude_weekends_data' %}?start_date=" 
                        + encodeURIComponent(startDate) + "&end_date=" + encodeURIComponent(endDate);
-        window.location.href = newUrl;
+        fetch(newUrl)
+          .then(response => response.json())
+          .then(data => {
+            updateProductionData(data);  // reuse your existing DOM-update code
+          })
+          .catch(error => console.error('Error fetching production data:', error));
         return;
       }
+      
   
       // Otherwise, fetch the new production data as before.
       fetchProductionData(startDate, endDate);

@@ -6862,24 +6862,34 @@ def fetch_exclude_weekends_data(request):
     This view takes start_date and end_date from GET parameters, removes any weekend periods
     (from Friday 23:00 to Sunday 23:00), and for each remaining time block fetches production,
     downtime, scrap, etc. data. The data is then totaled and the OEE metrics computed.
-    For now, the results are printed as HTML.
+    It returns a JSON response with the same structure as the original fetch_oa_by_day_production_data view.
     """
     import datetime, os, importlib
     from datetime import timedelta, time
-    from django.http import HttpResponse
-    # Get the original start/end from the request.
-    start_date_str = request.GET.get('start_date', None)
-    end_date_str = request.GET.get('end_date', None)
-    if not start_date_str or not end_date_str:
-        return HttpResponse("start_date and end_date must be provided in the GET parameters.")
+    from django.http import JsonResponse
 
-    # Compute the valid time blocks (i.e. excluding weekends).
+    # Get the original start/end from the request.
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    if not start_date_str or not end_date_str:
+        return JsonResponse({"error": "start_date and end_date must be provided in the GET parameters."})
+    
+    # Compute previous_day_str based on the start_date.
+    try:
+        # Expecting the format "Y-m-d H:i"
+        start_date_obj = datetime.datetime.strptime(start_date_str, "%Y-%m-%d %H:%M")
+    except ValueError:
+        # Fallback to "Y-m-d" if time is not provided.
+        start_date_obj = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
+    previous_day_str = (start_date_obj.date() - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    # Compute the valid time blocks (excluding weekends).
     intervals = stip_weekends(start_date_str, end_date_str)
     if not intervals:
-        return HttpResponse("No valid time blocks remain after excluding weekends.")
+        return JsonResponse({"error": "No valid time blocks remain after excluding weekends."})
 
     # Initialize accumulators.
-    aggregated_data = {}  # { line: { machine: { produced_parts, target, downtime, etc. } } }
+    aggregated_data = {}               # { line: { machine: { produced_parts, target, downtime, etc. } } }
     downtime_totals_by_line = {}
     planned_downtime_totals_by_line = {}
     unplanned_downtime_totals_by_line = {}
@@ -6894,7 +6904,7 @@ def fetch_exclude_weekends_data(request):
     overall_scrap_total = 0
     overall_total_potential_minutes = 0
 
-    # Initialize per-line and per-machine accumulators based on your global "lines" structure.
+    # Assume "lines" is your global structure.
     for line in lines:
         line_name = line["line"]
         aggregated_data[line_name] = {}
@@ -6933,8 +6943,6 @@ def fetch_exclude_weekends_data(request):
         block_start_timestamp = int(block_start.timestamp())
         block_end_timestamp = int(block_end.timestamp())
         # For functions that require datetimes, we use block_start and block_end directly.
-
-        # For each line/operation/machine, fetch and accumulate data.
         for line in lines:
             line_name = line["line"]
             for operation in line.get("operations", []):
@@ -6960,8 +6968,7 @@ def fetch_exclude_weekends_data(request):
                     aggregated_data[line_name][machine_number]["downtime_events"].extend(downtime_events)
                     downtime_totals_by_line[line_name] += downtime_seconds
 
-                    # Fetch PR downtime entries.
-                    # Pass datetime objects instead of strings.
+                    # Fetch PR downtime entries (passing datetime objects).
                     pr_entries = get_pr_downtime_entries(machine_number, block_start, block_end)
                     aggregated_data[line_name][machine_number]["pr_downtime_entries"].extend(pr_entries)
 
@@ -6999,13 +7006,13 @@ def fetch_exclude_weekends_data(request):
 
     # Loop over intervals to fetch scrap data and sum it.
     for (block_start, block_end) in intervals:
-        # Instead of passing formatted strings:
+        # Pass datetime objects so the scrap function can format them.
         scrap_by_line, scrap_total = fetch_daily_scrap_data(cursor, block_start, block_end)
         for line_name, scrap_val in scrap_by_line.items():
             scrap_totals_by_line[line_name] += scrap_val
         overall_scrap_total += scrap_total
 
-    # Compute the OEE metrics using your helper.
+    # Compute the OEE metrics.
     oee_metrics = compute_oee_metrics(
         totals_by_line,
         overall_total_produced,
@@ -7020,25 +7027,29 @@ def fetch_exclude_weekends_data(request):
         unplanned_downtime_totals_by_line
     )
 
-    # Build a response string for debugging / printing.
-    response_str = "<h2>Aggregated Data Excluding Weekends</h2>"
-    response_str += "<h3>Production Totals</h3>"
-    response_str += f"Overall Produced: {overall_total_produced}<br>"
-    response_str += f"Overall Target: {overall_total_target}<br>"
-    response_str += f"Overall Downtime (min): {overall_downtime_minutes}<br>"
-    response_str += f"Overall Potential Minutes: {overall_total_potential_minutes}<br>"
-    response_str += f"Overall Scrap Total: {overall_scrap_total}<br>"
-    response_str += "<h3>OEE Metrics</h3>"
-    overall_oee = oee_metrics.get('overall', {})
-    response_str += f"Overall OEE: {overall_oee.get('OEE', 'N/A')}<br>"
-    response_str += f"Overall Availability (A): {overall_oee.get('A', 'N/A')}<br>"
-    response_str += f"Overall Performance (P): {overall_oee.get('P', 'N/A')}<br>"
-    response_str += f"Overall Quality (Q): {overall_oee.get('Q', 'N/A')}<br>"
+    response_data = {
+        "production_data": aggregated_data,
+        "totals_by_line": totals_by_line,
+        "overall_totals": {"total_produced": overall_total_produced, "total_target": overall_total_target},
+        "downtime_totals_by_line": downtime_totals_by_line,
+        "overall_downtime": {
+            "downtime_seconds": overall_downtime_seconds,
+            "downtime_minutes": overall_downtime_minutes,
+            "planned_downtime_minutes": overall_planned_downtime_minutes,
+            "unplanned_downtime_minutes": overall_unplanned_downtime_minutes,
+        },
+        "potential_minutes_by_line": potential_minutes_by_line,
+        "overall_potential_minutes": overall_total_potential_minutes,
+        "scrap_totals_by_line": scrap_totals_by_line,
+        "overall_scrap_total": overall_scrap_total,
+        "previous_day": previous_day_str,
+        "planned_downtime_totals_by_line": planned_downtime_totals_by_line,
+        "unplanned_downtime_totals_by_line": unplanned_downtime_totals_by_line,
+        "oee_metrics": oee_metrics,
+    }
 
-    # Clean up.
     cursor.close()
     conn.close()
-
-    return HttpResponse(response_str)
+    return JsonResponse(response_data)
 
 
