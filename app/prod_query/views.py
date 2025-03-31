@@ -6238,8 +6238,11 @@ def compute_oee_metrics(
     overall_run_time = overall_ppt - (overall_unplanned_downtime_minutes)
     overall_ideal_cycle_time = overall_ppt / overall_total_target if overall_total_target > 0 else 0.0
 
+    overall_adjusted_target = overall_total_target / (overall_total_potential_minutes / (overall_unplanned_downtime_minutes + overall_planned_downtime_minutes))
+
+
     overall_availability = overall_run_time / overall_ppt if overall_ppt > 0 else 0.0
-    overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
+    overall_performance = overall_total_produced / overall_adjusted_target
     overall_quality = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced > 0 else 0.0
     overall_oee = overall_availability * overall_performance * overall_quality
 
@@ -6257,8 +6260,11 @@ def compute_oee_metrics(
         run_time = ppt - (unplanned_downtime)
         ideal_cycle_time = ppt / target if target > 0 else 0.0
         
+
+        adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
+
         availability = run_time / ppt if ppt > 0 else 0.0
-        performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+        performance = produced / adjusted_target
         quality = (produced - scrap) / produced if produced > 0 else 0.0
         oee = availability * performance * quality
         
@@ -6625,10 +6631,12 @@ def compute_machine_oee(machine_data, queried_minutes):
     ppt = potential - planned_downtime
     run_time = ppt - (unplanned_downtime)
 
+    adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
 
     ideal_cycle_time = ppt / target if target > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 0.0
     performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+    # performance = produced / adjusted_target
     
     return {"A": availability, "P": performance}
 
