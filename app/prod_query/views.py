@@ -6632,6 +6632,68 @@ def compute_machine_oee(machine_data, queried_minutes):
     return {"A": availability, "P": performance}
 
 
+
+
+
+def stip_weekends(start_date_str, end_date_str):
+    """
+    Remove any time portions that fall between Friday 23:00 and Sunday 23:00.
+    Returns a list of (start, end) datetime tuples representing the allowed blocks.
+    """
+    from datetime import datetime, time, timedelta
+    dt_format = "%Y-%m-%d %H:%M"
+    start = datetime.strptime(start_date_str, dt_format)
+    end = datetime.strptime(end_date_str, dt_format)
+    
+    def is_in_weekend(dt):
+        # Define weekend as [Friday 23:00, Sunday 23:00)
+        if dt.weekday() == 4:  # Friday
+            return dt.time() >= time(23, 0)
+        elif dt.weekday() == 5:  # Saturday (always in weekend)
+            return True
+        elif dt.weekday() == 6:  # Sunday
+            return dt.time() < time(23, 0)
+        return False
+
+    intervals = []
+    current = start
+
+    while current < end:
+        if is_in_weekend(current):
+            # If current is within a weekend, skip to the end of this weekend.
+            # For Friday (after 23:00), the weekend started at today's 23:00.
+            # For Saturday/Sunday, we find last Friday’s 23:00.
+            if current.weekday() == 4:
+                weekend_start = datetime.combine(current.date(), time(23, 0))
+            else:
+                days_back = current.weekday() - 4  # Saturday:1, Sunday:2
+                friday_date = current.date() - timedelta(days=days_back)
+                weekend_start = datetime.combine(friday_date, time(23, 0))
+            weekend_end = weekend_start + timedelta(days=2)  # Ends Sunday 23:00
+            current = weekend_end
+            continue
+        else:
+            # current is not in a weekend.
+            # Determine the upcoming weekend start.
+            if current.weekday() == 4 and current.time() < time(23, 0):
+                upcoming_weekend_start = datetime.combine(current.date(), time(23, 0))
+            else:
+                # For non-Friday days (or Friday before 23:00), calculate how many days
+                # until the next Friday.
+                days_until_friday = (4 - current.weekday()) % 7
+                # If today is Friday and we're before 23:00, days_until_friday will be 0.
+                # Otherwise, if today is after Friday (which should be in weekend) the function
+                # would have already skipped over.
+                upcoming_friday_date = current.date() + timedelta(days=days_until_friday)
+                upcoming_weekend_start = datetime.combine(upcoming_friday_date, time(23, 0))
+            # The valid block is from 'current' until the earlier of end or the upcoming weekend.
+            block_end = min(end, upcoming_weekend_start)
+            intervals.append((current, block_end))
+            current = upcoming_weekend_start
+
+    return intervals
+
+
 # --- Main Functions ---
 
 def fetch_oa_by_day_production_data(request):
@@ -6795,10 +6857,24 @@ def fetch_oa_by_day_production_data(request):
 
 
 def fetch_exclude_weekends_data(request):
-    start_date = request.GET.get('start_date', 'Not provided')
-    end_date = request.GET.get('end_date', 'Not provided')
-    return HttpResponse(f"Start Date: {start_date}, End Date: {end_date}")
-
+    start_date_str = request.GET.get('start_date', 'Not provided')
+    end_date_str = request.GET.get('end_date', 'Not provided')
+    
+    # Call the helper function to remove weekend periods.
+    intervals = stip_weekends(start_date_str, end_date_str)
+    
+    # Build a simple HTML response showing the time blocks.
+    response_str = "<h3>Time Blocks Excluding Weekends:</h3>"
+    if intervals:
+        for start, end in intervals:
+            response_str += (
+                f"From <strong>{start.strftime('%Y-%m-%d %H:%M')}</strong> "
+                f"to <strong>{end.strftime('%Y-%m-%d %H:%M')}</strong><br>"
+            )
+    else:
+        response_str += "No valid time blocks remain after excluding weekends."
+    
+    return HttpResponse(response_str)
 
 
 
