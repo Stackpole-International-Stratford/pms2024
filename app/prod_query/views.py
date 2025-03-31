@@ -6235,9 +6235,9 @@ def compute_oee_metrics(
 
     # overall_total_produced = 500
     # overall_total_target = 1000
-    # overall_total_potential_minutes = 7200
-    # overall_unplanned_downtime_minutes = 1800
-    # overall_planned_downtime_minutes = 1800
+    # overall_total_potential_minutes = 480
+    # overall_unplanned_downtime_minutes = 120
+    # overall_planned_downtime_minutes = 120
     # overall_scrap_total = 0
     
     # Overall metrics calculations
@@ -6641,6 +6641,11 @@ def compute_machine_oee(machine_data, queried_minutes):
     target = float(machine_data.get("target", 0))
     planned_downtime = float(machine_data.get("planned_downtime_minutes", 0))
     unplanned_downtime = float(machine_data.get("unplanned_downtime_minutes", 0))
+
+    # produced = 500
+    # target = 1000
+    # planned_downtime = 0
+    # unplanned_downtime = 3600
     
     # For each machine, potential minutes is simply the queried minutes.
     potential = queried_minutes
@@ -6656,8 +6661,8 @@ def compute_machine_oee(machine_data, queried_minutes):
 
     ideal_cycle_time = ppt / target if target > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 0.0
-    performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
-    # performance = produced / adjusted_target
+    # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+    performance = produced / adjusted_target
     
     return {"A": availability, "P": performance}
 
