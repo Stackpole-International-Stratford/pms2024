@@ -6232,6 +6232,13 @@ def compute_oee_metrics(
     overall_unplanned_downtime_minutes = float(overall_unplanned_downtime_minutes)
     overall_planned_downtime_minutes = float(overall_planned_downtime_minutes)
     overall_scrap_total = float(overall_scrap_total)
+
+    # overall_total_produced = 500
+    # overall_total_target = 1000
+    # overall_total_potential_minutes = 7200
+    # overall_unplanned_downtime_minutes = 3600
+    # overall_planned_downtime_minutes = 0
+    # overall_scrap_total = 0
     
     # Overall metrics calculations
     overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
@@ -6255,6 +6262,13 @@ def compute_oee_metrics(
         planned_downtime = float(planned_downtime_totals_by_line.get(line, 0))
         unplanned_downtime = float(unplanned_downtime_totals_by_line.get(line, 0))
         scrap = float(scrap_totals_by_line.get(line, 0))
+
+        # produced = 500
+        # target = 1000
+        # potential = 7200
+        # planned_downtime = 0
+        # unplanned_downtime = 3600
+        # scrap = 0
         
         ppt = potential - planned_downtime
         run_time = ppt - (unplanned_downtime)
