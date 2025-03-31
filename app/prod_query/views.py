@@ -6226,19 +6226,19 @@ def compute_oee_metrics(
       7. OEE = Availability * Performance * Quality
     """
     # Convert overall parameters to floats to avoid type issues
-    # overall_total_produced = float(overall_total_produced)
-    # overall_total_target = float(overall_total_target)
-    # overall_total_potential_minutes = float(overall_total_potential_minutes)
-    # overall_unplanned_downtime_minutes = float(overall_unplanned_downtime_minutes)
-    # overall_planned_downtime_minutes = float(overall_planned_downtime_minutes)
-    # overall_scrap_total = float(overall_scrap_total)
+    overall_total_produced = float(overall_total_produced)
+    overall_total_target = float(overall_total_target)
+    overall_total_potential_minutes = float(overall_total_potential_minutes)
+    overall_unplanned_downtime_minutes = float(overall_unplanned_downtime_minutes)
+    overall_planned_downtime_minutes = float(overall_planned_downtime_minutes)
+    overall_scrap_total = float(overall_scrap_total)
 
-    overall_total_produced = 500
-    overall_total_target = 1000
-    overall_total_potential_minutes = 7200
-    overall_unplanned_downtime_minutes = 1800
-    overall_planned_downtime_minutes = 1800
-    overall_scrap_total = 0
+    # overall_total_produced = 500
+    # overall_total_target = 1000
+    # overall_total_potential_minutes = 7200
+    # overall_unplanned_downtime_minutes = 1800
+    # overall_planned_downtime_minutes = 1800
+    # overall_scrap_total = 0
     
     # Overall metrics calculations
     overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
@@ -6257,19 +6257,19 @@ def compute_oee_metrics(
     lines_metrics = {}
     # By-line metrics calculations
     for line, totals in totals_by_line.items():
-        # produced = float(totals.get("total_produced", 0))
-        # target = float(totals.get("total_target", 0))
-        # potential = float(potential_minutes_by_line.get(line, 0))
-        # planned_downtime = float(planned_downtime_totals_by_line.get(line, 0))
-        # unplanned_downtime = float(unplanned_downtime_totals_by_line.get(line, 0))
-        # scrap = float(scrap_totals_by_line.get(line, 0))
+        produced = float(totals.get("total_produced", 0))
+        target = float(totals.get("total_target", 0))
+        potential = float(potential_minutes_by_line.get(line, 0))
+        planned_downtime = float(planned_downtime_totals_by_line.get(line, 0))
+        unplanned_downtime = float(unplanned_downtime_totals_by_line.get(line, 0))
+        scrap = float(scrap_totals_by_line.get(line, 0))
 
-        produced = 500
-        target = 1000
-        potential = 7200
-        planned_downtime = 1800
-        unplanned_downtime = 1800
-        scrap = 0
+        # produced = 500
+        # target = 1000
+        # potential = 7200
+        # planned_downtime = 1800
+        # unplanned_downtime = 1800
+        # scrap = 0
         
         ppt = potential - planned_downtime
         run_time = ppt - (unplanned_downtime)
@@ -6647,7 +6647,12 @@ def compute_machine_oee(machine_data, queried_minutes):
     ppt = potential - planned_downtime
     run_time = ppt - (unplanned_downtime)
 
-    adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
+    downtime_total = planned_downtime + unplanned_downtime
+
+    if potential == 0 or downtime_total == 0:
+        adjusted_target = target
+    else:
+        adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
 
     ideal_cycle_time = ppt / target if target > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 0.0
@@ -6886,7 +6891,8 @@ def fetch_exclude_weekends_data(request):
     """
     This view takes start_date and end_date from GET parameters, removes any weekend periods
     (from Friday 23:00 to Sunday 23:00), and for each remaining time block fetches production,
-    downtime, scrap, etc. data. The data is then totaled and the OEE metrics computed.
+    downtime, scrap, etc. data. The data is then totaled and the OEE metrics computed, including
+    machine-level OEE metrics.
     It returns a JSON response with the same structure as the original fetch_oa_by_day_production_data view.
     """
     import datetime, os, importlib
@@ -6912,9 +6918,9 @@ def fetch_exclude_weekends_data(request):
     intervals = stip_weekends(start_date_str, end_date_str)
     if not intervals:
         return JsonResponse({"error": "No valid time blocks remain after excluding weekends."})
-
+    
     # Initialize accumulators.
-    aggregated_data = {}               # { line: { machine: { produced_parts, target, downtime, etc. } } }
+    aggregated_data = {}  # { line: { machine: { produced_parts, target, downtime, etc. } } }
     downtime_totals_by_line = {}
     planned_downtime_totals_by_line = {}
     unplanned_downtime_totals_by_line = {}
@@ -6951,6 +6957,7 @@ def fetch_exclude_weekends_data(request):
                     "downtime_events": [],
                     "planned_downtime_minutes": 0,
                     "unplanned_downtime_minutes": 0,
+                    "total_queried_minutes": 0  # New field to accumulate block queried minutes
                 }
 
     # Set up the DB connection.
@@ -6967,14 +6974,18 @@ def fetch_exclude_weekends_data(request):
         block_queried_minutes = int((block_end - block_start).total_seconds() / 60)
         block_start_timestamp = int(block_start.timestamp())
         block_end_timestamp = int(block_end.timestamp())
-        # For functions that require datetimes, we use block_start and block_end directly.
+        
+        # Process production, downtime, and other data per machine in this block.
         for line in lines:
             line_name = line["line"]
             for operation in line.get("operations", []):
                 op_name = operation["op"]
                 for machine in operation.get("machines", []):
                     machine_number = machine["number"]
-
+                    
+                    # Accumulate queried minutes for machine-level OEE.
+                    aggregated_data[line_name][machine_number]["total_queried_minutes"] += block_queried_minutes
+                    
                     # Fetch production data for this block.
                     prod_data = get_production_data_for_machine(
                         cursor, machine, machine_number,
@@ -6983,7 +6994,7 @@ def fetch_exclude_weekends_data(request):
                     )
                     aggregated_data[line_name][machine_number]["produced_parts"] += prod_data.get("produced_parts", 0)
                     aggregated_data[line_name][machine_number]["target"] += prod_data.get("target", 0)
-
+                    
                     # Calculate downtime events.
                     downtime_seconds, downtime_events = calculate_downtime_events(
                         cursor, machine_number, block_start_timestamp, block_end_timestamp
@@ -6992,25 +7003,25 @@ def fetch_exclude_weekends_data(request):
                     aggregated_data[line_name][machine_number]["downtime_minutes"] += int(downtime_seconds / 60)
                     aggregated_data[line_name][machine_number]["downtime_events"].extend(downtime_events)
                     downtime_totals_by_line[line_name] += downtime_seconds
-
-                    # Fetch PR downtime entries (passing datetime objects).
+                    
+                    # Fetch PR downtime entries.
                     pr_entries = get_pr_downtime_entries(machine_number, block_start, block_end)
                     aggregated_data[line_name][machine_number]["pr_downtime_entries"].extend(pr_entries)
-
+                    
                     # Calculate planned downtime.
                     planned_downtime = calculate_planned_downtime(downtime_events, pr_entries)
                     aggregated_data[line_name][machine_number]["planned_downtime_minutes"] += planned_downtime
-
+                    
                     # Calculate unplanned downtime.
                     total_downtime = int(downtime_seconds / 60)
                     unplanned_downtime = calculate_unplanned_downtime(total_downtime, planned_downtime)
                     aggregated_data[line_name][machine_number]["unplanned_downtime_minutes"] += unplanned_downtime
-
+                    
                     planned_downtime_totals_by_line[line_name] += planned_downtime
                     unplanned_downtime_totals_by_line[line_name] += unplanned_downtime
                     overall_planned_downtime_minutes += planned_downtime
                     overall_unplanned_downtime_minutes += unplanned_downtime
-
+        
         # For potential minutes, add the block minutes multiplied by the machine count.
         for line in lines:
             line_name = line["line"]
@@ -7024,20 +7035,25 @@ def fetch_exclude_weekends_data(request):
             totals_by_line[line_name]["total_target"] += machine_data.get("target", 0)
             overall_total_produced += machine_data.get("produced_parts", 0)
             overall_total_target += machine_data.get("target", 0)
-
+    
     overall_downtime_seconds = sum(downtime_totals_by_line.values())
     overall_downtime_minutes = int(overall_downtime_seconds / 60)
     overall_total_potential_minutes = sum(potential_minutes_by_line.values())
-
+    
     # Loop over intervals to fetch scrap data and sum it.
     for (block_start, block_end) in intervals:
-        # Pass datetime objects so the scrap function can format them.
         scrap_by_line, scrap_total = fetch_daily_scrap_data(cursor, block_start, block_end)
         for line_name, scrap_val in scrap_by_line.items():
             scrap_totals_by_line[line_name] += scrap_val
         overall_scrap_total += scrap_total
-
-    # Compute the OEE metrics.
+    
+    # Compute machine-level OEE metrics for each machine.
+    for line_name, machines in aggregated_data.items():
+        for machine_number, machine_data in machines.items():
+            machine_metrics = compute_machine_oee(machine_data, machine_data["total_queried_minutes"])
+            aggregated_data[line_name][machine_number].update(machine_metrics)
+    
+    # Compute overall OEE metrics.
     oee_metrics = compute_oee_metrics(
         totals_by_line,
         overall_total_produced,
@@ -7051,7 +7067,7 @@ def fetch_exclude_weekends_data(request):
         planned_downtime_totals_by_line,
         unplanned_downtime_totals_by_line
     )
-
+    
     response_data = {
         "production_data": aggregated_data,
         "totals_by_line": totals_by_line,
@@ -7072,7 +7088,7 @@ def fetch_exclude_weekends_data(request):
         "unplanned_downtime_totals_by_line": unplanned_downtime_totals_by_line,
         "oee_metrics": oee_metrics,
     }
-
+    
     cursor.close()
     conn.close()
     return JsonResponse(response_data)
