@@ -6226,19 +6226,19 @@ def compute_oee_metrics(
       7. OEE = Availability * Performance * Quality
     """
     # Convert overall parameters to floats to avoid type issues
-    overall_total_produced = float(overall_total_produced)
-    overall_total_target = float(overall_total_target)
-    overall_total_potential_minutes = float(overall_total_potential_minutes)
-    overall_unplanned_downtime_minutes = float(overall_unplanned_downtime_minutes)
-    overall_planned_downtime_minutes = float(overall_planned_downtime_minutes)
-    overall_scrap_total = float(overall_scrap_total)
+    # overall_total_produced = float(overall_total_produced)
+    # overall_total_target = float(overall_total_target)
+    # overall_total_potential_minutes = float(overall_total_potential_minutes)
+    # overall_unplanned_downtime_minutes = float(overall_unplanned_downtime_minutes)
+    # overall_planned_downtime_minutes = float(overall_planned_downtime_minutes)
+    # overall_scrap_total = float(overall_scrap_total)
 
-    # overall_total_produced = 500
-    # overall_total_target = 1000
-    # overall_total_potential_minutes = 7200
-    # overall_unplanned_downtime_minutes = 3600
-    # overall_planned_downtime_minutes = 0
-    # overall_scrap_total = 0
+    overall_total_produced = 500
+    overall_total_target = 1000
+    overall_total_potential_minutes = 7200
+    overall_unplanned_downtime_minutes = 1800
+    overall_planned_downtime_minutes = 1800
+    overall_scrap_total = 0
     
     # Overall metrics calculations
     overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
@@ -6257,19 +6257,19 @@ def compute_oee_metrics(
     lines_metrics = {}
     # By-line metrics calculations
     for line, totals in totals_by_line.items():
-        produced = float(totals.get("total_produced", 0))
-        target = float(totals.get("total_target", 0))
-        potential = float(potential_minutes_by_line.get(line, 0))
-        planned_downtime = float(planned_downtime_totals_by_line.get(line, 0))
-        unplanned_downtime = float(unplanned_downtime_totals_by_line.get(line, 0))
-        scrap = float(scrap_totals_by_line.get(line, 0))
+        # produced = float(totals.get("total_produced", 0))
+        # target = float(totals.get("total_target", 0))
+        # potential = float(potential_minutes_by_line.get(line, 0))
+        # planned_downtime = float(planned_downtime_totals_by_line.get(line, 0))
+        # unplanned_downtime = float(unplanned_downtime_totals_by_line.get(line, 0))
+        # scrap = float(scrap_totals_by_line.get(line, 0))
 
-        # produced = 500
-        # target = 1000
-        # potential = 7200
-        # planned_downtime = 0
-        # unplanned_downtime = 3600
-        # scrap = 0
+        produced = 500
+        target = 1000
+        potential = 7200
+        planned_downtime = 1800
+        unplanned_downtime = 1800
+        scrap = 0
         
         ppt = potential - planned_downtime
         run_time = ppt - (unplanned_downtime)
