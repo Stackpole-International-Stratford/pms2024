@@ -6201,7 +6201,6 @@ def oee_metrics_view(request):
     return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)
 
 
-
 def compute_oee_metrics(
     totals_by_line,
     overall_total_produced,
@@ -6286,7 +6285,6 @@ def compute_oee_metrics(
     return {"overall": overall_metrics, "lines": lines_metrics}
 
 
-
 def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
     """
     A copy of `fetch_prdowntime1_entries` that also fetches the `idnumber` column.
@@ -6363,8 +6361,6 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
         return {"error": str(e)}
 
 
-
-
 def fetch_machine_target(machine_id, line_name, effective_timestamp):
     """
     Fetches the most recent target for a given machine and line from the OAMachineTargets table.
@@ -6381,7 +6377,6 @@ def fetch_machine_target(machine_id, line_name, effective_timestamp):
         .first()
     )
     return target_record.target if target_record else None
-
 
 
 def fetch_daily_scrap_data(cursor, start_time, end_time):
@@ -6412,7 +6407,6 @@ def fetch_daily_scrap_data(cursor, start_time, end_time):
 
     overall_scrap_total = sum(scrap_totals_by_line.values())
     return scrap_totals_by_line, overall_scrap_total
-
 
 
 def parse_date_range(request):
@@ -6496,7 +6490,6 @@ def get_production_data_for_machine(cursor, machine, machine_number, start_times
     return production_entry
 
 
-
 def calculate_downtime_events(cursor, machine_number, start_timestamp, end_timestamp):
     import datetime
     """Calculates downtime events (gaps >5 minutes) based on production timestamps."""
@@ -6544,7 +6537,6 @@ def calculate_downtime_events(cursor, machine_number, start_timestamp, end_times
         })
 
     return downtime_seconds, downtime_events
-
 
 
 def get_pr_downtime_entries(machine_number, start_time, end_time):
@@ -6608,8 +6600,6 @@ def calculate_unplanned_downtime(total_downtime_minutes, planned_downtime_minute
     return total_downtime_minutes - planned_downtime_minutes
 
 
-
-
 def compute_machine_oee(machine_data, queried_minutes):
     """
     Calculate Availability (A) and Performance (P) for a single machine.
@@ -6642,8 +6632,7 @@ def compute_machine_oee(machine_data, queried_minutes):
     return {"A": availability, "P": performance}
 
 
-
-# --- Main Function ---
+# --- Main Functions ---
 
 def fetch_oa_by_day_production_data(request):
     import datetime, os, importlib, json
