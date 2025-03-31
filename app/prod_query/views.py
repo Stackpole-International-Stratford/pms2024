@@ -6635,66 +6635,9 @@ def compute_machine_oee(machine_data, queried_minutes):
 
 
 
-def stip_weekends(start_date_str, end_date_str):
-    """
-    Remove any time portions that fall between Friday 23:00 and Sunday 23:00.
-    Returns a list of (start, end) datetime tuples representing the allowed blocks.
-    """
-    from datetime import datetime, time, timedelta
-    dt_format = "%Y-%m-%d %H:%M"
-    start = datetime.strptime(start_date_str, dt_format)
-    end = datetime.strptime(end_date_str, dt_format)
-    
-    def is_in_weekend(dt):
-        # Define weekend as [Friday 23:00, Sunday 23:00)
-        if dt.weekday() == 4:  # Friday
-            return dt.time() >= time(23, 0)
-        elif dt.weekday() == 5:  # Saturday (always in weekend)
-            return True
-        elif dt.weekday() == 6:  # Sunday
-            return dt.time() < time(23, 0)
-        return False
-
-    intervals = []
-    current = start
-
-    while current < end:
-        if is_in_weekend(current):
-            # If current is within a weekend, skip to the end of this weekend.
-            # For Friday (after 23:00), the weekend started at today's 23:00.
-            # For Saturday/Sunday, we find last Friday’s 23:00.
-            if current.weekday() == 4:
-                weekend_start = datetime.combine(current.date(), time(23, 0))
-            else:
-                days_back = current.weekday() - 4  # Saturday:1, Sunday:2
-                friday_date = current.date() - timedelta(days=days_back)
-                weekend_start = datetime.combine(friday_date, time(23, 0))
-            weekend_end = weekend_start + timedelta(days=2)  # Ends Sunday 23:00
-            current = weekend_end
-            continue
-        else:
-            # current is not in a weekend.
-            # Determine the upcoming weekend start.
-            if current.weekday() == 4 and current.time() < time(23, 0):
-                upcoming_weekend_start = datetime.combine(current.date(), time(23, 0))
-            else:
-                # For non-Friday days (or Friday before 23:00), calculate how many days
-                # until the next Friday.
-                days_until_friday = (4 - current.weekday()) % 7
-                # If today is Friday and we're before 23:00, days_until_friday will be 0.
-                # Otherwise, if today is after Friday (which should be in weekend) the function
-                # would have already skipped over.
-                upcoming_friday_date = current.date() + timedelta(days=days_until_friday)
-                upcoming_weekend_start = datetime.combine(upcoming_friday_date, time(23, 0))
-            # The valid block is from 'current' until the earlier of end or the upcoming weekend.
-            block_end = min(end, upcoming_weekend_start)
-            intervals.append((current, block_end))
-            current = upcoming_weekend_start
-
-    return intervals
 
 
-# --- Main Functions ---
+# --- Main Function ---
 
 def fetch_oa_by_day_production_data(request):
     import datetime, os, importlib, json
@@ -6855,26 +6798,247 @@ def fetch_oa_by_day_production_data(request):
     return JsonResponse(response_data)
 
 
+# --- Exclude Weekends ---
 
+
+
+
+
+
+# --- Helper Function to Remove Weekends ---
+def stip_weekends(start_date_str, end_date_str):
+    """
+    Given two date strings (format: "Y-m-d H:i"), remove any portions that fall 
+    between Friday 23:00 and Sunday 23:00.
+    Returns a list of (start_datetime, end_datetime) tuples.
+    """
+    import datetime, os, importlib
+    from datetime import timedelta, time
+    from django.http import HttpResponse
+    dt_format = "%Y-%m-%d %H:%M"
+    start = datetime.datetime.strptime(start_date_str, dt_format)
+    end = datetime.datetime.strptime(end_date_str, dt_format)
+    
+    def is_in_weekend(dt):
+        # Define weekend as from Friday 23:00 to Sunday 23:00.
+        if dt.weekday() == 4 and dt.time() >= time(23, 0):
+            return True
+        if dt.weekday() == 5:  # Saturday all day
+            return True
+        if dt.weekday() == 6 and dt.time() < time(23, 0):
+            return True
+        return False
+
+    intervals = []
+    current = start
+    while current < end:
+        if is_in_weekend(current):
+            # Skip ahead to the end of the weekend.
+            if current.weekday() == 4:
+                weekend_start = datetime.datetime.combine(current.date(), time(23, 0))
+            else:
+                days_back = current.weekday() - 4  # Saturday:1, Sunday:2
+                friday_date = current.date() - timedelta(days=days_back)
+                weekend_start = datetime.datetime.combine(friday_date, time(23, 0))
+            weekend_end = weekend_start + timedelta(days=2)  # Sunday 23:00
+            current = weekend_end
+            continue
+        else:
+            # Determine the next upcoming weekend.
+            if current.weekday() == 4 and current.time() < time(23, 0):
+                upcoming_weekend = datetime.datetime.combine(current.date(), time(23, 0))
+            else:
+                days_until_friday = (4 - current.weekday()) % 7
+                upcoming_friday = current.date() + timedelta(days=days_until_friday)
+                upcoming_weekend = datetime.datetime.combine(upcoming_friday, time(23, 0))
+            block_end = min(end, upcoming_weekend)
+            intervals.append((current, block_end))
+            current = block_end
+    return intervals
+
+# --- New View Function: Exclude Weekends, Aggregate Data, and Compute OEE ---
 def fetch_exclude_weekends_data(request):
-    start_date_str = request.GET.get('start_date', 'Not provided')
-    end_date_str = request.GET.get('end_date', 'Not provided')
-    
-    # Call the helper function to remove weekend periods.
-    intervals = stip_weekends(start_date_str, end_date_str)
-    
-    # Build a simple HTML response showing the time blocks.
-    response_str = "<h3>Time Blocks Excluding Weekends:</h3>"
-    if intervals:
-        for start, end in intervals:
-            response_str += (
-                f"From <strong>{start.strftime('%Y-%m-%d %H:%M')}</strong> "
-                f"to <strong>{end.strftime('%Y-%m-%d %H:%M')}</strong><br>"
-            )
-    else:
-        response_str += "No valid time blocks remain after excluding weekends."
-    
-    return HttpResponse(response_str)
+    """
+    This view takes start_date and end_date from GET parameters, removes any weekend periods
+    (from Friday 23:00 to Sunday 23:00), and for each remaining time block fetches production,
+    downtime, scrap, etc. data. The data is then totaled and the OEE metrics computed.
+    For now, the results are printed as HTML.
+    """
+    import datetime, os, importlib
+    from datetime import timedelta, time
+    from django.http import HttpResponse
+    # Get the original start/end from the request.
+    start_date_str = request.GET.get('start_date', None)
+    end_date_str = request.GET.get('end_date', None)
+    if not start_date_str or not end_date_str:
+        return HttpResponse("start_date and end_date must be provided in the GET parameters.")
 
+    # Compute the valid time blocks (i.e. excluding weekends).
+    intervals = stip_weekends(start_date_str, end_date_str)
+    if not intervals:
+        return HttpResponse("No valid time blocks remain after excluding weekends.")
+
+    # Initialize accumulators.
+    aggregated_data = {}  # { line: { machine: { produced_parts, target, downtime, etc. } } }
+    downtime_totals_by_line = {}
+    planned_downtime_totals_by_line = {}
+    unplanned_downtime_totals_by_line = {}
+    totals_by_line = {}
+    scrap_totals_by_line = {}
+    potential_minutes_by_line = {}
+    overall_total_produced = 0
+    overall_total_target = 0
+    overall_planned_downtime_minutes = 0
+    overall_unplanned_downtime_minutes = 0
+    overall_downtime_seconds = 0
+    overall_scrap_total = 0
+    overall_total_potential_minutes = 0
+
+    # Initialize per-line and per-machine accumulators based on your global "lines" structure.
+    for line in lines:
+        line_name = line["line"]
+        aggregated_data[line_name] = {}
+        downtime_totals_by_line[line_name] = 0
+        planned_downtime_totals_by_line[line_name] = 0
+        unplanned_downtime_totals_by_line[line_name] = 0
+        totals_by_line[line_name] = {"total_produced": 0, "total_target": 0}
+        scrap_totals_by_line[line_name] = 0
+        potential_minutes_by_line[line_name] = 0
+        for operation in line.get("operations", []):
+            for machine in operation.get("machines", []):
+                machine_number = machine["number"]
+                aggregated_data[line_name][machine_number] = {
+                    "produced_parts": 0,
+                    "target": 0,
+                    "downtime_seconds": 0,
+                    "downtime_minutes": 0,
+                    "pr_downtime_entries": [],
+                    "downtime_events": [],
+                    "planned_downtime_minutes": 0,
+                    "unplanned_downtime_minutes": 0,
+                }
+
+    # Set up the DB connection.
+    settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
+    spec = importlib.util.spec_from_file_location("settings", settings_path)
+    settings = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(settings)
+    get_db_connection = settings.get_db_connection
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Loop over each valid (non-weekend) time block.
+    for (block_start, block_end) in intervals:
+        block_queried_minutes = int((block_end - block_start).total_seconds() / 60)
+        block_start_timestamp = int(block_start.timestamp())
+        block_end_timestamp = int(block_end.timestamp())
+        # For functions that require datetimes, we use block_start and block_end directly.
+
+        # For each line/operation/machine, fetch and accumulate data.
+        for line in lines:
+            line_name = line["line"]
+            for operation in line.get("operations", []):
+                op_name = operation["op"]
+                for machine in operation.get("machines", []):
+                    machine_number = machine["number"]
+
+                    # Fetch production data for this block.
+                    prod_data = get_production_data_for_machine(
+                        cursor, machine, machine_number,
+                        block_start_timestamp, block_end_timestamp,
+                        op_name, block_queried_minutes, line_name
+                    )
+                    aggregated_data[line_name][machine_number]["produced_parts"] += prod_data.get("produced_parts", 0)
+                    aggregated_data[line_name][machine_number]["target"] += prod_data.get("target", 0)
+
+                    # Calculate downtime events.
+                    downtime_seconds, downtime_events = calculate_downtime_events(
+                        cursor, machine_number, block_start_timestamp, block_end_timestamp
+                    )
+                    aggregated_data[line_name][machine_number]["downtime_seconds"] += downtime_seconds
+                    aggregated_data[line_name][machine_number]["downtime_minutes"] += int(downtime_seconds / 60)
+                    aggregated_data[line_name][machine_number]["downtime_events"].extend(downtime_events)
+                    downtime_totals_by_line[line_name] += downtime_seconds
+
+                    # Fetch PR downtime entries.
+                    # Pass datetime objects instead of strings.
+                    pr_entries = get_pr_downtime_entries(machine_number, block_start, block_end)
+                    aggregated_data[line_name][machine_number]["pr_downtime_entries"].extend(pr_entries)
+
+                    # Calculate planned downtime.
+                    planned_downtime = calculate_planned_downtime(downtime_events, pr_entries)
+                    aggregated_data[line_name][machine_number]["planned_downtime_minutes"] += planned_downtime
+
+                    # Calculate unplanned downtime.
+                    total_downtime = int(downtime_seconds / 60)
+                    unplanned_downtime = calculate_unplanned_downtime(total_downtime, planned_downtime)
+                    aggregated_data[line_name][machine_number]["unplanned_downtime_minutes"] += unplanned_downtime
+
+                    planned_downtime_totals_by_line[line_name] += planned_downtime
+                    unplanned_downtime_totals_by_line[line_name] += unplanned_downtime
+                    overall_planned_downtime_minutes += planned_downtime
+                    overall_unplanned_downtime_minutes += unplanned_downtime
+
+        # For potential minutes, add the block minutes multiplied by the machine count.
+        for line in lines:
+            line_name = line["line"]
+            machine_count = sum(len(op.get("machines", [])) for op in line.get("operations", []))
+            potential_minutes_by_line[line_name] += machine_count * block_queried_minutes
+
+    # Aggregate production totals per line.
+    for line_name, machines in aggregated_data.items():
+        for machine_number, machine_data in machines.items():
+            totals_by_line[line_name]["total_produced"] += machine_data.get("produced_parts", 0)
+            totals_by_line[line_name]["total_target"] += machine_data.get("target", 0)
+            overall_total_produced += machine_data.get("produced_parts", 0)
+            overall_total_target += machine_data.get("target", 0)
+
+    overall_downtime_seconds = sum(downtime_totals_by_line.values())
+    overall_downtime_minutes = int(overall_downtime_seconds / 60)
+    overall_total_potential_minutes = sum(potential_minutes_by_line.values())
+
+    # Loop over intervals to fetch scrap data and sum it.
+    for (block_start, block_end) in intervals:
+        # Instead of passing formatted strings:
+        scrap_by_line, scrap_total = fetch_daily_scrap_data(cursor, block_start, block_end)
+        for line_name, scrap_val in scrap_by_line.items():
+            scrap_totals_by_line[line_name] += scrap_val
+        overall_scrap_total += scrap_total
+
+    # Compute the OEE metrics using your helper.
+    oee_metrics = compute_oee_metrics(
+        totals_by_line,
+        overall_total_produced,
+        overall_total_target,
+        overall_total_potential_minutes,
+        overall_unplanned_downtime_minutes,
+        overall_planned_downtime_minutes,
+        overall_scrap_total,
+        scrap_totals_by_line,
+        potential_minutes_by_line,
+        planned_downtime_totals_by_line,
+        unplanned_downtime_totals_by_line
+    )
+
+    # Build a response string for debugging / printing.
+    response_str = "<h2>Aggregated Data Excluding Weekends</h2>"
+    response_str += "<h3>Production Totals</h3>"
+    response_str += f"Overall Produced: {overall_total_produced}<br>"
+    response_str += f"Overall Target: {overall_total_target}<br>"
+    response_str += f"Overall Downtime (min): {overall_downtime_minutes}<br>"
+    response_str += f"Overall Potential Minutes: {overall_total_potential_minutes}<br>"
+    response_str += f"Overall Scrap Total: {overall_scrap_total}<br>"
+    response_str += "<h3>OEE Metrics</h3>"
+    overall_oee = oee_metrics.get('overall', {})
+    response_str += f"Overall OEE: {overall_oee.get('OEE', 'N/A')}<br>"
+    response_str += f"Overall Availability (A): {overall_oee.get('A', 'N/A')}<br>"
+    response_str += f"Overall Performance (P): {overall_oee.get('P', 'N/A')}<br>"
+    response_str += f"Overall Quality (Q): {overall_oee.get('Q', 'N/A')}<br>"
+
+    # Clean up.
+    cursor.close()
+    conn.close()
+
+    return HttpResponse(response_str)
 
 
