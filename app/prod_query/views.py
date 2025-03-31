@@ -6249,6 +6249,7 @@ def compute_oee_metrics(
 
 
     overall_availability = overall_run_time / overall_ppt if overall_ppt > 0 else 0.0
+    # overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
     overall_performance = overall_total_produced / overall_adjusted_target
     overall_quality = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced > 0 else 0.0
     overall_oee = overall_availability * overall_performance * overall_quality
@@ -6278,6 +6279,7 @@ def compute_oee_metrics(
         adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
 
         availability = run_time / ppt if ppt > 0 else 0.0
+        # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
         performance = produced / adjusted_target
         quality = (produced - scrap) / produced if produced > 0 else 0.0
         oee = availability * performance * quality
