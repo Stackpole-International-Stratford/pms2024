@@ -676,6 +676,268 @@ document.addEventListener("DOMContentLoaded", function() {
       .catch(error => console.error('Error fetching production data:', error));
   }
 
+  function updateProductionData(data) {
+    // Store production data globally for modal lookup.
+    window.productionData = data.production_data;
+  
+    // Update production data for each machine.
+    document.querySelectorAll('.produced').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (data.production_data[lineName] && data.production_data[lineName][machineNumber]) {
+        elem.innerText = data.production_data[lineName][machineNumber].produced_parts;
+      } else {
+        elem.innerText = '0';
+      }
+      elem.classList.remove('loading');
+    });
+  
+    // Update target values.
+    document.querySelectorAll('.target').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (data.production_data[lineName] && data.production_data[lineName][machineNumber]) {
+        elem.innerText = data.production_data[lineName][machineNumber].target;
+      }
+      elem.classList.remove('loading');
+    });
+  
+    // Update downtime values.
+    document.querySelectorAll('.downtime').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (data.production_data[lineName] &&
+          data.production_data[lineName][machineNumber] &&
+          data.production_data[lineName][machineNumber].downtime_minutes !== undefined) {
+        elem.innerText = parseFloat(data.production_data[lineName][machineNumber].downtime_minutes) + " min";
+      } else {
+        elem.innerText = '0 min';
+      }
+    });
+  
+    // Update planned downtime values.
+    document.querySelectorAll('.planned-downtime').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (window.productionData[lineName] &&
+          window.productionData[lineName][machineNumber] &&
+          window.productionData[lineName][machineNumber].planned_downtime_minutes !== undefined) {
+        elem.innerText = window.productionData[lineName][machineNumber].planned_downtime_minutes + " min";
+      } else {
+        elem.innerText = '0 min';
+      }
+    });
+  
+    // Update unplanned downtime values.
+    document.querySelectorAll('.unplanned-downtime').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (window.productionData[lineName] &&
+          window.productionData[lineName][machineNumber] &&
+          window.productionData[lineName][machineNumber].unplanned_downtime_minutes !== undefined) {
+        elem.innerText = window.productionData[lineName][machineNumber].unplanned_downtime_minutes + " min";
+      } else {
+        elem.innerText = '0 min';
+      }
+    });
+  
+    // Update overall totals.
+    if (data.overall_totals) {
+      document.getElementById('overall-produced').innerText = data.overall_totals.total_produced;
+      document.getElementById('overall-target').innerText = data.overall_totals.total_target;
+    }
+    if (data.overall_downtime) {
+      var overallDowntimeMinutes = parseFloat(data.overall_downtime.downtime_minutes);
+      document.getElementById('overall-downtime').innerText = overallDowntimeMinutes + " min";
+      var overallPlanned = parseFloat(data.overall_downtime.planned_downtime_minutes);
+      document.getElementById('overall-planned-downtime').innerText = overallPlanned + " min";
+      var overallUnplanned = parseFloat(data.overall_downtime.unplanned_downtime_minutes);
+      document.getElementById('overall-unplanned-downtime').innerText = overallUnplanned + " min";
+    }
+    if (data.overall_potential_minutes !== undefined) {
+      document.getElementById('overall-potential-minutes').innerText = data.overall_potential_minutes;
+    }
+  
+    // Totals by line.
+    if (data.totals_by_line) {
+      var totalsByLineDiv = document.getElementById('totals-by-line');
+      totalsByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Totals by Line</h2></div><div class="card-body" id="line-totals-content"></div></div>';
+      var contentDiv = document.getElementById('line-totals-content');
+      for (var line in data.totals_by_line) {
+        var lineTotal = data.totals_by_line[line];
+        var p = document.createElement('p');
+        p.innerHTML = '<strong>Line ' + line + ':</strong> Parts: ' + lineTotal.total_produced + ', Target: ' + lineTotal.total_target;
+        contentDiv.appendChild(p);
+      }
+    }
+  
+    // Downtime totals by line.
+    if (data.downtime_totals_by_line) {
+      var downtimeByLineDiv = document.getElementById('downtime-totals-by-line');
+      downtimeByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Downtime Totals by Line</h2></div><div class="card-body" id="downtime-line-totals-content"></div></div>';
+      var dtContentDiv = document.getElementById('downtime-line-totals-content');
+      for (var line in data.downtime_totals_by_line) {
+        var dtTotalSeconds = data.downtime_totals_by_line[line];
+        var dtTotalMinutes = Math.floor(dtTotalSeconds / 60);
+        var p = document.createElement('p');
+        p.innerHTML = '<strong>Line ' + line + ':</strong> Downtime: ' + dtTotalMinutes + ' min';
+        dtContentDiv.appendChild(p);
+      }
+    }
+  
+    // Planned downtime totals by line.
+    if (data.planned_downtime_totals_by_line) {
+      var plannedByLineDiv = document.getElementById('planned-downtime-by-line');
+      plannedByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Planned Downtime by Line</h2></div><div class="card-body" id="planned-line-totals-content"></div></div>';
+      var plannedContentDiv = document.getElementById('planned-line-totals-content');
+      for (var line in data.planned_downtime_totals_by_line) {
+        var plannedMinutes = data.planned_downtime_totals_by_line[line];
+        var p = document.createElement('p');
+        p.innerHTML = '<strong>Line ' + line + ':</strong> Planned Downtime: ' + plannedMinutes + ' min';
+        plannedContentDiv.appendChild(p);
+      }
+    }
+  
+    // Unplanned downtime totals by line.
+    if (data.unplanned_downtime_totals_by_line) {
+      var unplannedByLineDiv = document.getElementById('unplanned-downtime-by-line');
+      unplannedByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Unplanned Downtime by Line</h2></div><div class="card-body" id="unplanned-line-totals-content"></div></div>';
+      var unplannedContentDiv = document.getElementById('unplanned-line-totals-content');
+      for (var line in data.unplanned_downtime_totals_by_line) {
+        var unplannedMinutes = data.unplanned_downtime_totals_by_line[line];
+        var p = document.createElement('p');
+        p.innerHTML = '<strong>Line ' + line + ':</strong> Unplanned Downtime: ' + unplannedMinutes + ' min';
+        unplannedContentDiv.appendChild(p);
+      }
+    }
+  
+    // Potential minutes by line.
+    if (data.potential_minutes_by_line) {
+      var potentialMinutesDiv = document.getElementById('potential-minutes-by-line');
+      potentialMinutesDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Potential Minutes by Line</h2></div><div class="card-body" id="line-potential-minutes-content"></div></div>';
+      var potentialContentDiv = document.getElementById('line-potential-minutes-content');
+      for (var line in data.potential_minutes_by_line) {
+        var linePotential = data.potential_minutes_by_line[line];
+        var p = document.createElement('p');
+        p.innerHTML = '<strong>Line ' + line + ':</strong> Potential Minutes: ' + linePotential;
+        potentialContentDiv.appendChild(p);
+      }
+    }
+  
+    // Update Availability values.
+    document.querySelectorAll('.availability').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (window.productionData[lineName] &&
+          window.productionData[lineName][machineNumber] &&
+          window.productionData[lineName][machineNumber].A !== undefined) {
+        elem.innerText = (window.productionData[lineName][machineNumber].A * 100).toFixed(2) + "%";
+      } else {
+        elem.innerText = "N/A";
+      }
+    });
+  
+    // Update Performance values.
+    document.querySelectorAll('.performance').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (window.productionData[lineName] &&
+          window.productionData[lineName][machineNumber] &&
+          window.productionData[lineName][machineNumber].P !== undefined) {
+        elem.innerText = (window.productionData[lineName][machineNumber].P * 100).toFixed(2) + "%";
+      } else {
+        elem.innerText = "N/A";
+      }
+    });
+  
+    // Scrap totals by line.
+    if (data.scrap_totals_by_line) {
+      var scrapByLineDiv = document.getElementById('scrap-totals-by-line');
+      scrapByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Scrap Totals by Line</h2></div><div class="card-body" id="scrap-line-totals-content"></div></div>';
+      var scrapContentDiv = document.getElementById('scrap-line-totals-content');
+      for (var line in data.scrap_totals_by_line) {
+        var scrapTotal = data.scrap_totals_by_line[line];
+        var p = document.createElement('p');
+        p.innerHTML = '<strong>Line ' + line + ':</strong> Scrap: ' + scrapTotal;
+        scrapContentDiv.appendChild(p);
+      }
+    }
+  
+    // Overall scrap total.
+    if (data.overall_scrap_total !== undefined) {
+      var overallScrapDiv = document.getElementById('overall-scrap-total');
+      overallScrapDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Overall Scrap Total</h2></div><div class="card-body"><p><strong>Total Scrap:</strong> <span id="scrap-total">Loading...</span></p></div></div>';
+      document.getElementById('scrap-total').innerText = data.overall_scrap_total;
+    }
+  
+    // OEE Metrics overall and by line.
+    if (data.oee_metrics && data.oee_metrics.overall) {
+      document.getElementById('overall-A').innerText = (data.oee_metrics.overall.A * 100).toFixed(2) + "%";
+      document.getElementById('overall-P').innerText = (data.oee_metrics.overall.P * 100).toFixed(2) + "%";
+      document.getElementById('overall-Q').innerText = (data.oee_metrics.overall.Q * 100).toFixed(2) + "%";
+      document.getElementById('overall-OEE').innerText = (data.oee_metrics.overall.OEE * 100).toFixed(2) + "%";
+    }
+    
+    if (data.oee_metrics && data.oee_metrics.lines) {
+      var oeeByLineDiv = document.getElementById('oee-by-line');
+      oeeByLineDiv.innerHTML =
+        '<div class="card shadow-sm mb-4">' +
+          '<div class="card-header bg-light">' +
+            '<h2 class="h5 mb-0">OEE Metrics by Line</h2>' +
+          '</div>' +
+          '<div class="card-body" id="oee-line-content"></div>' +
+        '</div>';
+      
+      var oeeLineContentDiv = document.getElementById('oee-line-content');
+      var lines = Object.keys(data.oee_metrics.lines);
+      
+      // Sort lines by highest OEE value.
+      lines.sort(function(a, b) {
+        return data.oee_metrics.lines[b].OEE - data.oee_metrics.lines[a].OEE;
+      });
+      
+      // Create a table to display the metrics.
+      var table = document.createElement('table');
+      table.className = 'table table-striped';
+      
+      // Table header.
+      var thead = document.createElement('thead');
+      thead.innerHTML =
+        '<tr>' +
+          '<th>Line</th>' +
+          '<th>Availability (A)</th>' +
+          '<th>Performance (P)</th>' +
+          '<th>Quality (Q)</th>' +
+          '<th>OEE</th>' +
+        '</tr>';
+      table.appendChild(thead);
+      
+      // Table body.
+      var tbody = document.createElement('tbody');
+      lines.forEach(function(line) {
+        var metrics = data.oee_metrics.lines[line];
+        var row = document.createElement('tr');
+        row.innerHTML =
+          '<td>' + line + '</td>' +
+          '<td>' + metrics.A.toFixed(2) + '</td>' +
+          '<td>' + metrics.P.toFixed(2) + '</td>' +
+          '<td>' + metrics.Q.toFixed(4) + '</td>' +
+          '<td>' + metrics.OEE.toFixed(2) + '</td>';
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      
+      oeeLineContentDiv.appendChild(table);
+    }
+  
+    // Remove any remaining loading classes.
+    document.querySelectorAll('.loading').forEach(function(elem) {
+      elem.classList.remove('loading');
+    });
+  }
+  
+
+
   // Set up Detailed Downtime button event listeners.
   document.querySelectorAll('.detailed-downtime-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
