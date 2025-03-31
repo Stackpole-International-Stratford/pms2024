@@ -6287,10 +6287,6 @@ def compute_oee_metrics(
 
 
 
-
-
-
-
 def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
     """
     A copy of `fetch_prdowntime1_entries` that also fetches the `idnumber` column.
@@ -6809,6 +6805,10 @@ def fetch_oa_by_day_production_data(request):
 
 
 
+def fetch_exclude_weekends_data(request):
+    start_date = request.GET.get('start_date', 'Not provided')
+    end_date = request.GET.get('end_date', 'Not provided')
+    return HttpResponse(f"Start Date: {start_date}, End Date: {end_date}")
 
 
 

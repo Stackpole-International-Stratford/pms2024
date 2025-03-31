@@ -18,8 +18,16 @@
         <!-- Calendar Column -->
         <div class="col-md-6 mb-3 mb-md-0">
           <div id="calendar"></div>
+          <!-- Add the Exclude Weekends checkbox -->
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" value="" id="exclude-weekends">
+            <label class="form-check-label" for="exclude-weekends">
+              Exclude weekends
+            </label>
+          </div>
           <button id="submit-dates" class="btn btn-dark mt-3">Submit Dates</button>
         </div>
+        
         <!-- OEE Metrics Column -->
         <div class="col-md-6 d-flex flex-column justify-content-center">
           <div class="card text-center">
@@ -377,11 +385,19 @@ document.addEventListener("DOMContentLoaded", function() {
       const startDateObj = new Date(selectedDates[0]);
       const previousDay = calendarInstance.formatDate(startDateObj, "Y-m-d H:i");
       document.getElementById("selected-date-display").innerText = previousDay + " to " + endDate;
-
+  
       // Set the loading state before fetching new data.
       showLoadingState();
-
-      // Fetch the new production data.
+  
+      // If "Exclude weekends" is checked, redirect to the new view.
+      if (document.getElementById("exclude-weekends").checked) {
+        const newUrl = "{% url 'prod_query:fetch_exclude_weekends_data' %}?start_date=" 
+                       + encodeURIComponent(startDate) + "&end_date=" + encodeURIComponent(endDate);
+        window.location.href = newUrl;
+        return;
+      }
+  
+      // Otherwise, fetch the new production data as before.
       fetchProductionData(startDate, endDate);
     } else {
       alert("Please select both a start and an end date.");
