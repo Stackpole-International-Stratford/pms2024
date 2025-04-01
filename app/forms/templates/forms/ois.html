@@ -652,26 +652,38 @@
           
                 // Send a GET request to the new view with the question id
                 fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
-                  .then(response => response.json())
-                  .then(data => {
-                      console.log("Answers:", data.answers);
-                      var answersHtml = "";
-                      if (data.answers && data.answers.length > 0) {
-                          answersHtml = "<ul>";
-                          data.answers.forEach(function(ans) {
-                              answersHtml += "<li>" + ans + "</li>";
-                          });
-                          answersHtml += "</ul>";
-                      } else {
-                          answersHtml = "<p>No answers in the last week.</p>";
-                      }
-                      document.getElementById('questionAnswersDisplay').innerHTML = answersHtml;
-                  })
-                  .catch(error => {
-                      console.error("Error fetching answers:", error);
-                      document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
-                  });
-          
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Answers:", data.answers);
+                    var answersHtml = "";
+                    if (data.answers && data.answers.length > 0) {
+                        answersHtml = "<ul>";
+                        data.answers.forEach(function(ans) {
+                            answersHtml += "<li>" + ans + "</li>";
+                        });
+                        answersHtml += "</ul>";
+                    } else {
+                        answersHtml = "<p>No answers in the last week.</p>";
+                    }
+                    
+                    // Optionally, build specs HTML if available.
+                    var specsHtml = "";
+                    if (data.question_specs && (data.question_specs.min || data.question_specs.nominal || data.question_specs.max)) {
+                        specsHtml += "<p><strong>Specifications:</strong> ";
+                        specsHtml += "Min: " + (data.question_specs.min || 'N/A') + ", ";
+                        specsHtml += "Nominal: " + (data.question_specs.nominal || 'N/A') + ", ";
+                        specsHtml += "Max: " + (data.question_specs.max || 'N/A');
+                        specsHtml += "</p>";
+                    }
+                    
+                    // Set the innerHTML of the answers display element
+                    document.getElementById('questionAnswersDisplay').innerHTML = specsHtml + answersHtml;
+                })
+                .catch(error => {
+                    console.error("Error fetching answers:", error);
+                    document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
+                });
+
                 // Initialize and show the modal using Bootstrap's Modal API
                 var modalElement = document.getElementById('questionModal');
                 var questionModal = new bootstrap.Modal(modalElement);

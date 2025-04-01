@@ -519,7 +519,11 @@ def ois_answer_chart_view(request):
     """
     Fetch all answers for a given question (specified by GET parameter 'question_id')
     in the last week. Each answer is stored as a JSON object in the FormAnswer model;
-    this view extracts only the value corresponding to the key "answer" from each record.
+    this view extracts the value under the key "answer" from each record.
+    
+    It also retrieves the corresponding question and extracts its "min", "max", and
+    "nominal" values from the specifications (if available), and returns these along
+    with additional details (e.g. created_at and form_id).
     """
     question_id = request.GET.get('question_id')
     if not question_id:
@@ -539,11 +543,38 @@ def ois_answer_chart_view(request):
     # Extract only the answer value from each JSON field.
     answers_list = []
     for ans in answers_qs:
-        # If the JSON field is a dict, get the value under the "answer" key.
+        # If the answer field is a dict, get the value under the "answer" key.
         answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
         answers_list.append(answer_value)
     
-    return JsonResponse({"answers": answers_list})
+    # Fetch the question record and extract specifications if available.
+    try:
+        question_obj = FormQuestion.objects.get(id=question_id)
+    except FormQuestion.DoesNotExist:
+        question_specs = {}
+        question_details = {}
+    else:
+        specs = question_obj.question.get('specifications')
+        if isinstance(specs, dict):
+            question_specs = {
+                'min': specs.get('min'),
+                'max': specs.get('max'),
+                'nominal': specs.get('nominal'),
+            }
+        else:
+            question_specs = {}
+        
+        question_details = {
+            'question': question_obj.question,  # Full question JSON or extract specific keys if needed
+            'created_at': question_obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'form_id': question_obj.form.id,
+        }
+    
+    return JsonResponse({
+        "answers": answers_list,
+        "question_specs": question_specs,
+        "question_details": question_details,
+    })
 
 def submit_ois_answers(formset, request, questions, machine):
     # Capture the inspection type, operator number, and spindle nest
