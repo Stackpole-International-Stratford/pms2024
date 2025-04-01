@@ -640,6 +640,7 @@
         });
     </script>
 
+   
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Create and append the modal element if it doesn't exist
@@ -739,16 +740,40 @@
 
                     const ctx = document.getElementById('answerChart').getContext('2d');
 
-                    const yAxisTicks = [];
-                    if (maxVal !== null) yAxisTicks.push(maxVal);
-                    if (upperPrecontrolLimit !== null) yAxisTicks.push(upperPrecontrolLimit);
-                    if (nominalVal !== null) yAxisTicks.push(nominalVal);
-                    if (lowerPrecontrolLimit !== null) yAxisTicks.push(lowerPrecontrolLimit);
-                    if (minVal !== null) yAxisTicks.push(minVal);
-                    // Ensure ticks are sorted correctly
-                    yAxisTicks.sort((a, b) => a - b);
                     const yMin = minVal !== null ? minVal : Math.min(...data);
                     const yMax = maxVal !== null ? maxVal : Math.max(...data);
+
+                    const annotations = [];
+
+                    const addLineAnnotation = (value, color, labelContent, borderDash = []) => {
+                        if (value !== null) {
+                            annotations.push({
+                                type: 'line',
+                                yMin: value,
+                                yMax: value,
+                                borderColor: color,
+                                borderWidth: 1,
+                                borderDash: borderDash,
+                                label: {
+                                    enabled: true,
+                                    position: 'right',
+                                    color: 'black',
+                                    font: {
+                                        size: 10
+                                    },
+                                    content: labelContent
+                                },
+                                order: 1
+                            });
+                        }
+                    };
+
+                    addLineAnnotation(maxVal, 'red', 'Max: ' + (maxVal !== null ? maxVal.toFixed(2) : ''));
+                    addLineAnnotation(upperPrecontrolLimit, 'orange', 'UCL: ' + (upperPrecontrolLimit !== null ? upperPrecontrolLimit.toFixed(2) : ''), [5, 5]);
+                    addLineAnnotation(nominalVal, 'green', 'Nominal: ' + (nominalVal !== null ? nominalVal.toFixed(2) : ''), [5, 5]);
+                    addLineAnnotation(lowerPrecontrolLimit, 'orange', 'LCL: ' + (lowerPrecontrolLimit !== null ? lowerPrecontrolLimit.toFixed(2) : ''), [5, 5]);
+                    addLineAnnotation(minVal, 'red', 'Min: ' + (minVal !== null ? minVal.toFixed(2) : ''));
+
 
                     answerChartInstance = new Chart(ctx, {
                         type: 'line',
@@ -776,7 +801,7 @@
                                     },
                                     title: {
                                         display: true,
-                                        text: 'Date'
+                                        text: 'Date Time Sample'
                                     }
                                 },
                                 y: {
@@ -787,16 +812,16 @@
                                     },
                                     ticks: {
                                         callback: function(value) {
-                                            if (maxVal !== null && value === maxVal) return 'Max: ' + value;
-                                            if (upperPrecontrolLimit !== null && value === upperPrecontrolLimit) return 'UCL: ' + value.toFixed(2);
-                                            if (nominalVal !== null && value === nominalVal) return 'Nominal: ' + value;
-                                            if (lowerPrecontrolLimit !== null && value === lowerPrecontrolLimit) return 'LCL: ' + value.toFixed(2);
-                                            if (minVal !== null && value === minVal) return 'Min: ' + value;
-                                            return value;
+                                            const formattedValue = parseFloat(value).toFixed(2);
+                                            let label = formattedValue;
+                                            if (maxVal !== null && parseFloat(formattedValue) === maxVal) label = 'Max: ' + formattedValue;
+                                            else if (upperPrecontrolLimit !== null && parseFloat(formattedValue) === upperPrecontrolLimit) label = 'UCL: ' + formattedValue;
+                                            else if (nominalVal !== null && parseFloat(formattedValue) === nominalVal) label = 'Nominal: ' + formattedValue;
+                                            else if (lowerPrecontrolLimit !== null && parseFloat(formattedValue) === lowerPrecontrolLimit) label = 'LCL: ' + formattedValue;
+                                            else if (minVal !== null && parseFloat(formattedValue) === minVal) label = 'Min: ' + formattedValue;
+                                            return label;
                                         }
-                                    },
-                                    suggestedMin: yMin,
-                                    suggestedMax: yMax
+                                    }
                                 }
                             },
                             plugins: {
@@ -804,70 +829,7 @@
                                     display: false
                                 },
                                 annotation: {
-                                    annotations: [
-                                        ...(maxVal !== null ? [{
-                                            type: 'line',
-                                            yMin: maxVal,
-                                            yMax: maxVal,
-                                            borderColor: 'red',
-                                            borderWidth: 1,
-                                            label: {
-                                                enabled: true,
-                                                position: 'right',
-                                                content: 'Max: ' + maxVal
-                                            }
-                                        }] : []),
-                                        ...(upperPrecontrolLimit !== null ? [{
-                                            type: 'line',
-                                            yMin: upperPrecontrolLimit,
-                                            yMax: upperPrecontrolLimit,
-                                            borderColor: 'orange',
-                                            borderWidth: 1,
-                                            borderDash: [5, 5],
-                                            label: {
-                                                enabled: true,
-                                                position: 'right',
-                                                content: 'UCL: ' + upperPrecontrolLimit.toFixed(2)
-                                            }
-                                        }] : []),
-                                        ...(nominalVal !== null ? [{
-                                            type: 'line',
-                                            yMin: nominalVal,
-                                            yMax: nominalVal,
-                                            borderColor: 'green',
-                                            borderWidth: 2,
-                                            label: {
-                                                enabled: true,
-                                                position: 'right',
-                                                content: 'Nominal: ' + nominalVal
-                                            }
-                                        }] : []),
-                                        ...(lowerPrecontrolLimit !== null ? [{
-                                            type: 'line',
-                                            yMin: lowerPrecontrolLimit,
-                                            yMax: lowerPrecontrolLimit,
-                                            borderColor: 'orange',
-                                            borderWidth: 1,
-                                            borderDash: [5, 5],
-                                            label: {
-                                                enabled: true,
-                                                position: 'right',
-                                                content: 'LCL: ' + lowerPrecontrolLimit.toFixed(2)
-                                            }
-                                        }] : []),
-                                        ...(minVal !== null ? [{
-                                            type: 'line',
-                                            yMin: minVal,
-                                            yMax: minVal,
-                                            borderColor: 'red',
-                                            borderWidth: 1,
-                                            label: {
-                                                enabled: true,
-                                                position: 'right',
-                                                content: 'Min: ' + minVal
-                                            }
-                                        }] : [])
-                                    ]
+                                    annotations: annotations
                                 }
                             }
                         }
@@ -879,7 +841,6 @@
             });
         });
         </script>
-        
         
 </body>
 </html>
