@@ -634,5 +634,56 @@
             });
         });
     </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create and append the modal element if it doesn't exist
+            if (!document.getElementById('featureModal')) {
+                var modalHTML = `
+                <div class="modal fade" id="featureModal" tabindex="-1" aria-labelledby="featureModalLabel" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="featureModalLabel">Feature Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p id="modalFeature"></p>
+                        <p id="modalSpecs"></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            }
+        
+            // Get a reference to the left column table (the first .col-md-6 div)
+            var leftColumn = document.querySelectorAll('.col-md-6')[0];
+            if (!leftColumn) return; // if not found, exit
+        
+            var tableRows = leftColumn.querySelectorAll('table tbody tr');
+        
+            // Create a Bootstrap modal instance
+            var featureModalEl = document.getElementById('featureModal');
+            var featureModal = new bootstrap.Modal(featureModalEl);
+        
+            // Attach a click event handler to each row in the left table
+            tableRows.forEach(function(row) {
+                row.addEventListener('click', function() {
+                    // Get feature from the first cell and specifications from the second cell
+                    var feature = row.cells[0].textContent.trim();
+                    var specs = row.cells[1].textContent.trim();
+                    
+                    // Populate the modal content
+                    document.getElementById('modalFeature').textContent = "Feature: " + feature;
+                    document.getElementById('modalSpecs').textContent = "Specifications: " + specs;
+                    
+                    // Show the modal
+                    featureModal.show();
+                });
+            });
+        });
+        </script>
+        
 </body>
 </html>
