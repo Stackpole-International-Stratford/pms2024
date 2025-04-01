@@ -650,6 +650,9 @@
                       <div class="modal-body">
                         <p id="modalFeature"></p>
                         <p id="modalSpecs"></p>
+                        <hr>
+                        <h6>Last Week's Answers:</h6>
+                        <ul id="modalAnswersList"></ul>
                       </div>
                     </div>
                   </div>
@@ -657,26 +660,51 @@
                 document.body.insertAdjacentHTML('beforeend', modalHTML);
             }
         
-            // Get a reference to the left column table (the first .col-md-6 div)
+            // Select the left column table (the first .col-md-6)
             var leftColumn = document.querySelectorAll('.col-md-6')[0];
-            if (!leftColumn) return; // if not found, exit
+            if (!leftColumn) return;
         
             var tableRows = leftColumn.querySelectorAll('table tbody tr');
         
-            // Create a Bootstrap modal instance
+            // Create a Bootstrap modal instance for the feature modal
             var featureModalEl = document.getElementById('featureModal');
             var featureModal = new bootstrap.Modal(featureModalEl);
         
             // Attach a click event handler to each row in the left table
             tableRows.forEach(function(row) {
                 row.addEventListener('click', function() {
-                    // Get feature from the first cell and specifications from the second cell
+                    // Extract feature and specifications from the clicked row
                     var feature = row.cells[0].textContent.trim();
                     var specs = row.cells[1].textContent.trim();
                     
-                    // Populate the modal content
+                    // Populate the modal with feature and specification data
                     document.getElementById('modalFeature').textContent = "Feature: " + feature;
                     document.getElementById('modalSpecs').textContent = "Specifications: " + specs;
+                    
+                    // Clear any previous answers
+                    var answersListEl = document.getElementById('modalAnswersList');
+                    answersListEl.innerHTML = '';
+        
+                    // Get the question key from the clicked row (assumed stored in data-question-key)
+                    var questionKey = row.getAttribute('data-question-key');
+                    if (questionKey) {
+                        // Find the corresponding row in the answers table (right column)
+                        var answerRow = document.querySelector('#answers-body tr[data-question-key="'+questionKey+'"]');
+                        if (answerRow) {
+                            // Get all header cells to pair dates with answers
+                            var headerCells = document.querySelectorAll('#answers-header th');
+                            // Get each cell in the answer row
+                            var answerCells = answerRow.querySelectorAll('td');
+        
+                            headerCells.forEach(function(th, index) {
+                                var dateText = th.textContent.trim();
+                                var answerText = answerCells[index] ? answerCells[index].textContent.trim() : '-';
+                                var li = document.createElement('li');
+                                li.textContent = dateText + ": " + answerText;
+                                answersListEl.appendChild(li);
+                            });
+                        }
+                    }
                     
                     // Show the modal
                     featureModal.show();
@@ -684,6 +712,7 @@
             });
         });
         </script>
+        
         
 </body>
 </html>
