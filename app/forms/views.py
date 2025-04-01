@@ -576,6 +576,8 @@ def ois_answer_chart_view(request):
         "question_details": question_details,
     })
 
+
+
 def submit_ois_answers(formset, request, questions, machine):
     # Capture the inspection type, operator number, and spindle nest
     inspection_type = request.POST.get('inspection_type', 'OIS')
