@@ -786,6 +786,8 @@ def seven_day_answers(form_instance, offset_days=0):
         questions_dict[key] = {
             'Feature': question.question.get('feature', 'N/A'),
             'Characteristic': question.question.get('characteristic', 'N/A'),
+            'RawSpecifications': question.question.get('specifications', {}),  # the raw JSON
+            'SpecificationType': question.question.get('specification_type', ''),
             'Specifications': formatted_specifications,
             'SampleSize': sample_size,
             'Answers': []  # To be filled in below
