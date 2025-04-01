@@ -639,8 +639,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Create and append the modal element if it doesn't exist
             if (!document.getElementById('featureModal')) {
-                var modalHTML = `
-                <div class="modal fade" id="featureModal" tabindex="-1" aria-labelledby="featureModalLabel" aria-hidden="true">
+                var modalHTML =                 `<div class="modal fade" id="featureModal" tabindex="-1" aria-labelledby="featureModalLabel" aria-hidden="true">
                   <div class="modal-dialog">
                     <div class="modal-content">
                       <div class="modal-header">
@@ -650,6 +649,7 @@
                       <div class="modal-body">
                         <p id="modalFeature"></p>
                         <p id="modalSpecs"></p>
+                        <p id="modalPrecontrol"></p>
                         <hr>
                         <h6>Last Week's Answers:</h6>
                         <ul id="modalAnswersList"></ul>
@@ -659,32 +659,59 @@
                 </div>`;
                 document.body.insertAdjacentHTML('beforeend', modalHTML);
             }
-        
+
             // Select the left column table (the first .col-md-6)
             var leftColumn = document.querySelectorAll('.col-md-6')[0];
             if (!leftColumn) return;
-        
+
             var tableRows = leftColumn.querySelectorAll('table tbody tr');
-        
+
             // Create a Bootstrap modal instance for the feature modal
             var featureModalEl = document.getElementById('featureModal');
             var featureModal = new bootstrap.Modal(featureModalEl);
-        
+
             // Attach a click event handler to each row in the left table
             tableRows.forEach(function(row) {
                 row.addEventListener('click', function() {
                     // Extract feature and specifications from the clicked row
                     var feature = row.cells[0].textContent.trim();
                     var specs = row.cells[1].textContent.trim();
-                    
+
                     // Populate the modal with feature and specification data
                     document.getElementById('modalFeature').textContent = "Feature: " + feature;
                     document.getElementById('modalSpecs').textContent = "Specifications: " + specs;
-                    
-                    // Clear any previous answers
+
+                    // Clear any previous answers and precontrol info
                     var answersListEl = document.getElementById('modalAnswersList');
                     answersListEl.innerHTML = '';
-        
+                    document.getElementById('modalPrecontrol').textContent = '';
+
+                    // Check if Min, Max, and Nominal are present in the specifications
+                    if (specs.includes("Min:") && specs.includes("Max:") && specs.includes("Nominal:")) {
+                        // Extract the numerical values
+                        const minMatch = specs.match(/Min:\s*([-+]?\d*\.?\d+)/);
+                        const maxMatch = specs.match(/Max:\s*([-+]?\d*\.?\d+)/);
+                        const nominalMatch = specs.match(/Nominal:\s*([-+]?\d*\.?\d+)/);
+
+                        if (minMatch && maxMatch && nominalMatch) {
+                            const min = parseFloat(minMatch[1]);
+                            const max = parseFloat(maxMatch[1]);
+                            const nominal = parseFloat(nominalMatch[1]);
+
+                            // Calculate pre-control limits
+                            const lowerPrecontrolLimit = (nominal + min) / 2;
+                            const upperPrecontrolLimit = (max + nominal) / 2;
+
+                            // Display the pre-control limits
+                            const precontrolText = `Lower Pre-control Limit (LPL): ${lowerPrecontrolLimit.toFixed(2)}, Upper Pre-control Limit (UPL): ${upperPrecontrolLimit.toFixed(2)}`;
+                            document.getElementById('modalPrecontrol').textContent = precontrolText;
+                        } else {
+                            document.getElementById('modalPrecontrol').textContent = 'Could not parse Min, Max, or Nominal values.';
+                        }
+                    } else {
+                        document.getElementById('modalPrecontrol').textContent = 'Min, Max, and Nominal values not found in specifications.';
+                    }
+
                     // Get the question key from the clicked row (assumed stored in data-question-key)
                     var questionKey = row.getAttribute('data-question-key');
                     if (questionKey) {
@@ -695,7 +722,7 @@
                             var headerCells = document.querySelectorAll('#answers-header th');
                             // Get each cell in the answer row
                             var answerCells = answerRow.querySelectorAll('td');
-        
+
                             headerCells.forEach(function(th, index) {
                                 var dateText = th.textContent.trim();
                                 var answerText = answerCells[index] ? answerCells[index].textContent.trim() : '-';
@@ -705,7 +732,7 @@
                             });
                         }
                     }
-                    
+
                     // Show the modal
                     featureModal.show();
                 });
