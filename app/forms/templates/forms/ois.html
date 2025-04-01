@@ -862,11 +862,12 @@
                                 const answerText = answerCells[i] ? answerCells[i].textContent.trim() : null;
                                 if (answerText !== null && !isNaN(parseFloat(answerText))) {
                                     const d = new Date(dateText);
-                                    if (!isNaN(d)) {
+                                    // Use d.getTime() to verify the date is valid
+                                    if (!isNaN(d.getTime())) {
                                         dataPoints.push({ date: d, value: parseFloat(answerText) });
                                     }
                                 }
-                            });
+                            });                            
                         }
                     }
         
