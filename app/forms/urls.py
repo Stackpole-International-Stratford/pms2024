@@ -50,5 +50,7 @@ urlpatterns = [
 
     path('load_more_answers/<int:form_id>/<int:offset>/', load_more_answers, name='load_more_answers'),
 
+    path('ois-answer-chart/', ois_answer_chart_view, name='ois_answer_chart'),
+
 
 ]

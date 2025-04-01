@@ -640,24 +640,33 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Select all table rows in the left column
             var tableRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
-          
+        
             // Add click event listener to each row
             tableRows.forEach(function(row) {
               row.addEventListener('click', function() {
-                // Get the actual database id from the new data attribute
+                // Get the actual database id from the data attribute
                 var questionId = row.getAttribute('data-question-id');
-          
+        
                 // Set the text in the modal to display the database id
                 document.getElementById('questionIdDisplay').textContent = "Question ID: " + questionId;
-          
+        
+                // Send a GET request to the new view with the question id
+                fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
+                  .then(response => response.json())
+                  .then(data => {
+                      console.log("Response from ois_answer_chart_view:", data);
+                  })
+                  .catch(error => {
+                      console.error("Error:", error);
+                  });
+        
                 // Initialize and show the modal using Bootstrap's Modal API
                 var modalElement = document.getElementById('questionModal');
                 var questionModal = new bootstrap.Modal(modalElement);
                 questionModal.show();
               });
             });
-          });
-          
+        });
         </script>
         
 

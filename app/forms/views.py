@@ -515,7 +515,17 @@ def print_out_of_spec_answers(answers):
     print("--- End of Out-of-Range Check ---\n")
 
 
-
+def ois_answer_chart_view(request):
+    """
+    A simple view that reads the question id from the GET parameters,
+    prints it to the console, and returns a JSON response.
+    """
+    question_id = request.GET.get('question_id')
+    if question_id:
+        print("Received question id:", question_id)
+    else:
+        print("No question id provided.")
+    return JsonResponse({"status": "success", "question_id": question_id})
 
 
 def submit_ois_answers(formset, request, questions, machine):
