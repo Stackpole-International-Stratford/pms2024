@@ -3,13 +3,17 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from ..models.setupfor_models import SetupFor, Asset, Part
-from ..forms.setupfor_forms import SetupForForm, AssetForm, PartForm
+from ..forms.setupfor_forms import AssetForm, PartForm
 from django.utils import timezone
 import re
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage
 from django.db import models
 from django.urls import reverse
-
+from datetime import timedelta
+from datetime import datetime
+import pytz
+from django.views.decorators.http import require_POST
+from django.utils.dateparse import parse_datetime
 
 
 
@@ -22,75 +26,7 @@ def natural_sort_key(s):
     # Convert numeric parts to integers
     return [int(part) if part.isdigit() else part for part in parts]
 
-from datetime import timedelta
 
-def display_setups(request):
-    # Calculate the date 30 days ago from today
-    last_30_days = timezone.now() - timedelta(days=30)
-    
-    # Get the date range from GET parameters if provided
-    from_date_str = request.GET.get('from_date')
-    to_date_str = request.GET.get('to_date')
-    
-    if from_date_str and to_date_str:
-        try:
-            from_date = timezone.datetime.fromisoformat(from_date_str)
-            to_date = timezone.datetime.fromisoformat(to_date_str)
-        except ValueError:
-            from_date = last_30_days
-            to_date = timezone.now()
-    else:
-        from_date = last_30_days
-        to_date = timezone.now()
-
-    # Get SetupFor objects within the specified date range, ordered by 'since' in descending order
-    setups = SetupFor.objects.filter(since__range=[from_date, to_date]).order_by('-since')
-    assets = Asset.objects.all().order_by('asset_number')
-    part = None
-
-    if request.method == 'POST':
-        asset_number = request.POST.get('asset_number')
-        timestamp = request.POST.get('timestamp')
-        if asset_number and timestamp:
-            try:
-                timestamp = timezone.datetime.fromisoformat(timestamp)
-                part = SetupFor.setupfor_manager.get_part_at_time(asset_number, timestamp)
-            except ValueError:
-                part = None
-
-    return render(request, 'setupfor/display_setups.html', {'setups': setups, 'assets': assets, 'part': part})
-
-
-def create_setupfor(request):
-
-    if request.method == 'POST':
-        form = SetupForForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('display_setups')
-    else:
-        form = SetupForForm()
-    return render(request, 'setupfor/setupfor_form.html', {'form': form, 'title': 'Add New SetupFor'})
-
-def edit_setupfor(request, id):
-    # Get the SetupFor object by id or return 404 if not found
-    setupfor = get_object_or_404(SetupFor, id=id)
-    if request.method == 'POST':
-        form = SetupForForm(request.POST, instance=setupfor)
-        if form.is_valid():
-            form.save()
-            return redirect('display_setups')
-    else:
-        form = SetupForForm(instance=setupfor)
-    return render(request, 'setupfor/setupfor_form.html', {'form': form, 'title': 'Edit SetupFor'})
-
-def delete_setupfor(request, id):
-    # Get the SetupFor object by id or return 404 if not found
-    setupfor = get_object_or_404(SetupFor, id=id)
-    if request.method == 'POST':
-        setupfor.delete()
-        return redirect('display_setups')
-    return render(request, 'setupfor/delete_setupfor.html', {'setupfor': setupfor})
 
 def display_assets(request):
     # Get the search query
@@ -384,3 +320,186 @@ def update_part_for_asset(request):
     # Handle any other unexpected errors and return a 500 Internal Server Error response
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+
+
+# =======================================================
+# =======================================================
+# ========== Refreshed setupFor views and page ==========
+# =======================================================
+# =======================================================
+
+
+
+def display_setups(request):
+    # Retrieve all SetupFor records ordered by descending changeover datetime (since)
+    setups = SetupFor.objects.all().order_by('-since')
+    paginator = Paginator(setups, 100)
+    page_obj = paginator.page(1)
+    eastern = pytz.timezone('US/Eastern')
+    
+    # Add both a human-readable and a datetime-local formatted value for each record
+    for setup in page_obj:
+        setup.since_human = datetime.fromtimestamp(setup.since, eastern).strftime("%Y-%m-%d %H:%M")
+        setup.since_local = datetime.fromtimestamp(setup.since, eastern).strftime("%Y-%m-%dT%H:%M")
+    
+    # Retrieve lists of assets and parts for the dropdown menus
+    assets = Asset.objects.all().order_by('asset_number')
+    parts = Part.objects.all().order_by('part_number')
+    
+    return render(request, 'setupfor/display_setups.html', {
+        'setups': page_obj,
+        'assets': assets,
+        'parts': parts,
+    })
+
+def load_more_setups(request):
+    # Get the requested page number from GET parameters, default to 2
+    page_number = request.GET.get('page', 2)
+    try:
+        page_number = int(page_number)
+    except ValueError:
+        page_number = 2
+
+    setups = SetupFor.objects.all().order_by('-since')
+    paginator = Paginator(setups, 100)
+    
+    try:
+        page_obj = paginator.page(page_number)
+    except EmptyPage:
+        return JsonResponse({'records': []})
+    
+    eastern = pytz.timezone('US/Eastern')
+    records = []
+    for setup in page_obj:
+        since_human = datetime.fromtimestamp(setup.since, eastern).strftime("%Y-%m-%d %H:%M")
+        since_local = datetime.fromtimestamp(setup.since, eastern).strftime("%Y-%m-%dT%H:%M")
+        records.append({
+            'id': setup.id,
+            'asset': setup.asset.asset_number,
+            'asset_id': setup.asset.id,
+            'part': setup.part.part_number,
+            'part_id': setup.part.id,
+            'since_human': since_human,
+            'since_local': since_local,
+        })
+    
+    return JsonResponse({'records': records})
+
+@require_POST
+def update_setup(request):
+    record_id = request.POST.get('record_id')
+    asset_id = request.POST.get('asset_id')
+    part_id = request.POST.get('part_id')
+    since_value = request.POST.get('since')  # Expecting format "YYYY-MM-DDTHH:MM"
+    
+    try:
+        setup = SetupFor.objects.get(id=record_id)
+    except SetupFor.DoesNotExist:
+        return JsonResponse({'error': 'Record not found'}, status=404)
+    
+    try:
+        asset = Asset.objects.get(id=asset_id)
+        part = Part.objects.get(id=part_id)
+    except (Asset.DoesNotExist, Part.DoesNotExist):
+        return JsonResponse({'error': 'Asset or Part not found'}, status=400)
+    
+    try:
+        eastern = pytz.timezone('US/Eastern')
+        dt = datetime.strptime(since_value, "%Y-%m-%dT%H:%M")
+        # Localize the datetime to Eastern Time
+        dt = eastern.localize(dt)
+        timestamp = dt.timestamp()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format'}, status=400)
+    
+    # Update record fields
+    setup.asset = asset
+    setup.part = part
+    setup.since = timestamp
+    setup.save()
+    
+    # Format values to send back to the client
+    since_human = dt.strftime("%Y-%m-%d %H:%M")
+    since_local = dt.strftime("%Y-%m-%dT%H:%M")
+    
+    return JsonResponse({
+        'record_id': setup.id,
+        'asset': setup.asset.asset_number,
+        'asset_id': setup.asset.id,
+        'part': setup.part.part_number,
+        'part_id': setup.part.id,
+        'since_human': since_human,
+        'since_local': since_local,
+    })
+
+
+@require_POST
+def add_setup(request):
+    asset_id = request.POST.get('asset_id', '').strip()
+    part_id = request.POST.get('part_id', '').strip()
+    since_value = request.POST.get('since', '').strip()  # Expected format "YYYY-MM-DDTHH:MM"
+    
+    # Check if required fields are provided
+    if not asset_id or not part_id or not since_value:
+        return JsonResponse({'error': 'Please select an asset, part, and date/time.'}, status=400)
+    
+    try:
+        asset = Asset.objects.get(id=asset_id)
+        part = Part.objects.get(id=part_id)
+    except (Asset.DoesNotExist, Part.DoesNotExist):
+        return JsonResponse({'error': 'Asset or Part not found'}, status=400)
+    
+    try:
+        eastern = pytz.timezone('US/Eastern')
+        dt = datetime.strptime(since_value, "%Y-%m-%dT%H:%M")
+        # Localize datetime to Eastern Time
+        dt = eastern.localize(dt)
+        timestamp = dt.timestamp()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format'}, status=400)
+    
+    # Create a new SetupFor record
+    setup = SetupFor.objects.create(asset=asset, part=part, since=timestamp)
+    
+    # Format the date for display
+    since_human = dt.strftime("%Y-%m-%d %H:%M")
+    since_local = dt.strftime("%Y-%m-%dT%H:%M")
+    
+    return JsonResponse({
+        'record_id': setup.id,
+        'asset': setup.asset.asset_number,
+        'asset_id': setup.asset.id,
+        'part': setup.part.part_number,
+        'part_id': setup.part.id,
+        'since_human': since_human,
+        'since_local': since_local,
+    })
+
+
+@csrf_exempt
+@require_POST
+def check_part(request):
+    asset_id = request.POST.get('asset_id')
+    datetime_str = request.POST.get('datetime')
+
+    if not asset_id or not datetime_str:
+        return JsonResponse({'error': 'Asset and datetime are required.'})
+
+    # Parse the datetime string from the input. The datetime-local input typically returns an ISO format.
+    dt = parse_datetime(datetime_str)
+    if dt is None:
+        return JsonResponse({'error': 'Invalid datetime format.'})
+
+    # Convert the datetime to epoch integer.
+    # If your datetime is timezone naive, dt.timestamp() treats it as local time.
+    epoch_time = int(dt.timestamp())
+
+    # Query for the latest SetupFor record for the given asset that occurred on or before the provided datetime.
+    record = SetupFor.objects.filter(asset_id=asset_id, since__lte=epoch_time).order_by('-since').first()
+
+    if record:
+        return JsonResponse({'part_number': record.part.part_number})
+    else:
+        return JsonResponse({'error': 'No record found for the given asset and time.'})

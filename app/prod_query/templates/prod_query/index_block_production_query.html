@@ -74,14 +74,26 @@
                 </a>
             </li>
             <li class="list-group-item card-hover">
+                <a href="{% url 'prod_query:oa_by_day' %}" class="text-decoration-none text-dark">
+                    <h5 class="mb-1">Overall Plant OEE</h5>
+                    <p class="mb-1">View granular or windowed timeframes of the plant's overall equipment effectiveness</p>
+                </a>
+            </li>
+            <li class="list-group-item card-hover">
+                <a href="{% url 'prod_query:press_runtime3' %}" class="text-decoration-none text-dark">
+                    <h5 class="mb-1">Press Runtime</h5>
+                    <p class="mb-1">View Press Runtime Data</p>
+                </a>
+            </li>
+            <li class="list-group-item card-hover">
                 <a href="{% url 'prod_query:oa-byline' %}" class="text-decoration-none text-dark">
-                    <h5 class="mb-1">OA By Week</h5>
+                    <h5 class="mb-1">OEE By Week</h5>
                     <p class="mb-1">Calculate and View Operational Availability by Week</p>
                 </a>
             </li>
             <li class="list-group-item card-hover">
                 <a href="{% url 'prod_query:oa_byline2' %}" class="text-decoration-none text-dark">
-                    <h5 class="mb-1">OA By Month</h5>
+                    <h5 class="mb-1">OEE By Month</h5>
                     <p class="mb-1">Calculate and View Operational Availability by Month</p>
                 </a>
             </li>
@@ -101,3 +113,4 @@
     </div>
 </body>
 </html>
+

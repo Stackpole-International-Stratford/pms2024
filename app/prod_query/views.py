@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.db import connections
+import mysql.connector
 # import mysql.connector
 
 from datetime import datetime, date, timedelta
@@ -15,6 +16,22 @@ from query_tracking.models import record_execution_time
 from django.shortcuts import redirect
 from math import ceil
 import logging
+from django.conf import settings
+from django.views.decorators.http import require_GET
+
+
+from django.utils.dateparse import parse_datetime
+from django.http import JsonResponse
+from plant.models.setupfor_models import SetupFor, AssetCycleTimes
+
+
+DAVE_HOST = settings.DAVE_HOST
+DAVE_USER = settings.DAVE_USER
+DAVE_PASSWORD = settings.DAVE_PASSWORD
+DAVE_DB = settings.DAVE_DB
+
+
+
 logger = logging.getLogger('prod-query')
 
 
@@ -1177,8 +1194,14 @@ def machine_detail(request, machine, start_timestamp, times):
     context['machine'] = machine
     context['reject_data'] = get_reject_data(
         machine, start_timestamp, times, part_list)
+    
+    # Remove "REJ" from machine only if it exists
+    clean_machine = machine
+    if "REJ" in machine:
+        clean_machine = machine.replace("REJ", "")
+
     context['production_data'] = get_production_data(
-        machine, start_timestamp, times, part_list)
+        clean_machine, start_timestamp, times, part_list)
     context['ts'] = int(start_timestamp)
     context['times'] = int(times)
     context['elapsed'] = time.time() - tic
@@ -1225,13 +1248,17 @@ def get_reject_data(machine, start_timestamp, times, part_list):
         sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 21600) + \
             ' AND TimeStamp < ' + \
             str(start_timestamp + 25200) + ' THEN 1 ELSE 0 END) as hour7, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp +
-                                                   25200) + ' THEN 1 ELSE 0 END) AS hour8 '
+        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 25200) + ' THEN 1 ELSE 0 END) AS hour8 '
         sql += 'FROM `01_vw_production_rejects` '
         sql += 'WHERE TimeStamp >= ' + \
             str(start_timestamp) + ' AND TimeStamp < ' + \
             str(start_timestamp + 28800) + ' '
-        sql += 'AND Machine = "' + machine + 'REJ" '
+        if not machine.endswith("REJ"):
+            machine_for_query = machine + "REJ"
+        else:
+            machine_for_query = machine
+        sql += 'AND Machine = "' + machine_for_query + '" '
+
         if (part_list):
             sql += 'AND Part IN (' + part_list + ') '
         sql += 'GROUP BY Part, Reason '
@@ -1244,13 +1271,17 @@ def get_reject_data(machine, start_timestamp, times, part_list):
         sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 28800) + \
             ' AND TimeStamp < ' + \
             str(start_timestamp + 57600) + ' THEN 1 ELSE 0 END) as shift2, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp +
-                                                   57600) + ' THEN 1 ELSE 0 END) AS shift3 '
+        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 57600) + ' THEN 1 ELSE 0 END) AS shift3 '
         sql += 'FROM `01_vw_production_rejects` '
         sql += 'WHERE TimeStamp >= ' + \
             str(start_timestamp) + ' AND TimeStamp < ' + \
             str(start_timestamp + 86400) + ' '
-        sql += 'AND Machine = "' + machine + 'REJ" '
+        if not machine.endswith("REJ"):
+            machine_for_query = machine + "REJ"
+        else:
+            machine_for_query = machine
+        sql += 'AND Machine = "' + machine_for_query + '" '
+
         if (part_list):
             sql += 'AND Part IN (' + part_list + ') '
         sql += 'GROUP BY Part, Reason '
@@ -1281,7 +1312,12 @@ def get_reject_data(machine, start_timestamp, times, part_list):
         sql += 'WHERE TimeStamp >= ' + \
             str(start_timestamp) + ' AND TimeStamp < ' + \
             str(start_timestamp + 604800) + ' '
-        sql += 'AND Machine = "' + machine + 'REJ" '
+        if not machine.endswith("REJ"):
+            machine_for_query = machine + "REJ"
+        else:
+            machine_for_query = machine
+        sql += 'AND Machine = "' + machine_for_query + '" '
+
         if (part_list):
             sql += 'AND Part IN (' + part_list + ') '
         sql += 'GROUP BY Part, Reason '
@@ -1942,13 +1978,13 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1504", "target": 5625},  
-                    {"number": "1506", "target": 5625},  
+                    {"number": "1504", "target": 6187},  
+                    {"number": "1506", "target": 6187},  
                     {"number": "1519", "target": 5625},  
                     {"number": "1520", "target": 5625},
                     {"number": "1518", "target": 5625},  
                     {"number": "1521", "target": 5625},  
-                    {"number": "1522", "target": 5625}, 
+                    {"number": "1522", "target": 6187}, 
                     {"number": "1523", "target": 5625}, 
                 ],
             },
@@ -2112,8 +2148,8 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1708L", "target": 5918},
-                    {"number": "1708R", "target": 5918},
+                    {"number": "1708L", "target": 3600},
+                    {"number": "1708R", "target": 3600},
                 ],
             },
             # {
@@ -2125,56 +2161,56 @@ lines = [
             {
                 "op": "30",
                 "machines": [
-                    {"number": "1710", "target": 8454},
+                    {"number": "1710", "target": 7200},
                 ],
             },
             {
                 "op": "40",
                 "machines": [
-                    {"number": "1711", "target": 16908},
+                    {"number": "1711", "target": 7200},
                 ],
             },
             {
                 "op": "50",
                 "machines": [
-                    {"number": "1715", "target": 16908},
+                    {"number": "1715", "target": 7200},
                 ],
             },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "1717R", "target": 16908},
+                    {"number": "1717R", "target": 7200},
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "1706", "target": 16908},
+                    {"number": "1706", "target": 5000},
                 ],
             },
             {
                 "op": "80",
                 "machines": [
-                    {"number": "1720", "target": 16908},
+                    {"number": "1720", "target": 5000},
                 ],
             },
             {
                 "op": "90",
                 "machines": [
-                    {"number": "748", "target": 1908},
-                    {"number": "677", "target": 1908},
+                    {"number": "748", "target": 5000},
+                    {"number": "677", "target": 5000},
                 ],
             },
                         {
                 "op": "100",
                 "machines": [
-                    {"number": "1723", "target": 1908, "part_numbers": ["50-0519", "50-5404"]},
+                    {"number": "1723", "target": 7200, "part_numbers": ["50-0519", "50-5404"]},
                 ],
             },
                         {
                 "op": "110",
                 "machines": [
-                    {"number": "1752", "target": 1908},
+                    {"number": "1752", "target": 7200},
                 ],
             },
         ],
@@ -2186,15 +2222,15 @@ lines = [
             {
                 "op": "compact",
                 "machines": [
-                    {"number": "272", "target": 18000,},
-                    {"number": "273", "target": 18000,},
-                    {"number": "277", "target": 18000,},
-                    {"number": "278", "target": 18000,},
-                    {"number": "262", "target": 18000,},
-                    {"number": "240", "target": 18000,},
-                    {"number": "280", "target": 18000,},
-                    {"number": "242", "target": 18000,},
-                    {"number": "245", "target": 18000,},
+                    {"number": "272", "target": 27496,},
+                    {"number": "273", "target": 29592,},
+                    {"number": "277", "target": 57600,},
+                    {"number": "278", "target": 43116,},
+                    {"number": "262", "target": 43711,},
+                    {"number": "240", "target": 59659,},
+                    {"number": "280", "target": 49888,},
+                    {"number": "242", "target": 53355,},
+                    {"number": "245", "target": 50000,},
                 ],
             },
         ],
@@ -4248,3 +4284,2255 @@ def downtime_frequency_view(request):
         'threshold_breach_count': threshold_breach_count,
         'interval_results': interval_results,  # Pass filtered interval data to the template
     })
+
+
+
+
+
+
+# =================================================================
+# =================================================================
+# ================== Press OEE With PR Downtime ===================
+# =================================================================
+# =================================================================
+
+
+
+
+def get_custom_time_blocks(start_date, end_date):
+    """
+    Generates time blocks based on the given start and end dates.
+    
+    If the range is a full week or more, it uses Sunday 11 PM to Friday 11 PM logic.
+    If the range is shorter, it uses start_date 11 PM to end_date 11 PM.
+    It also ensures no future dates are included.
+
+    Args:
+        start_date (datetime): The start date selected.
+        end_date (datetime): The end date selected.
+
+    Returns:
+        list of tuples: Each tuple contains (start_time, end_time) for the block.
+        OR
+        str: "That's in the future" if the date range includes future dates.
+    """
+    now = datetime.now()
+
+    # Ensure no future dates
+    if start_date > now or end_date > now:
+        return "That's in the future"
+
+    # Adjust start and end times to 11 PM
+    start_date = start_date.replace(hour=23, minute=0, second=0, microsecond=0)
+    end_date = end_date.replace(hour=23, minute=0, second=0, microsecond=0)
+
+    # If the range is less than a full week, return only that block
+    if (end_date - start_date).days < 6:
+        return [(start_date, end_date)]
+
+    # Otherwise, use full Sunday-to-Friday blocks
+    return get_sunday_to_friday_ranges_custom(start_date, end_date)
+
+
+def fetch_production_count(machine, cursor, start_timestamp, end_timestamp):
+    """
+    Returns the number of production entries for a given machine within the time window.
+    
+    Args:
+        machine (str): The machine/asset number.
+        cursor: Database cursor.
+        start_timestamp (int): The starting timestamp (in seconds).
+        end_timestamp (int): The ending timestamp (in seconds).
+    
+    Returns:
+        int: The number of production entries.
+    """
+    query = """
+        SELECT COUNT(*) 
+        FROM GFxPRoduction
+        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s;
+    """
+    cursor.execute(query, (machine, start_timestamp, end_timestamp))
+    result = cursor.fetchone()
+    return result[0] if result else 0
+
+
+
+
+
+
+def calculate_downtime_press(machine, cursor, start_timestamp, end_timestamp, downtime_threshold=5, machine_parts=None):
+    """
+    Calculate the total downtime for a specific machine over a given time period.
+
+    Also returns individual downtime events that exceed the threshold.
+    """
+    machine_downtime = 0  # Accumulate total downtime
+    prev_timestamp = start_timestamp  # For interval calculations
+    downtime_events = []  # List to hold individual downtime events
+
+    # Build the query based on machine parts provided
+    if not machine_parts:
+        query = """
+            SELECT TimeStamp
+            FROM GFxPRoduction
+            WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+            ORDER BY TimeStamp ASC;
+        """
+        params = [machine, start_timestamp, end_timestamp]
+    else:
+        placeholders = ','.join(['%s'] * len(machine_parts))
+        query = f"""
+            SELECT TimeStamp
+            FROM GFxPRoduction
+            WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s AND Part IN ({placeholders})
+            ORDER BY TimeStamp ASC;
+        """
+        params = [machine, start_timestamp, end_timestamp] + machine_parts
+
+    cursor.execute(query, params)  # Execute the query
+
+    timestamps_fetched = False
+    for row in cursor:
+        timestamps_fetched = True
+        current_timestamp = row[0]
+        # Calculate the time difference (in minutes)
+        time_delta = (current_timestamp - prev_timestamp) / 60
+        if time_delta > downtime_threshold:
+            downtime_minutes = round(time_delta)
+            downtime_events.append({
+                'start': prev_timestamp,
+                'end': current_timestamp,
+                'duration': downtime_minutes
+            })
+            machine_downtime += downtime_minutes
+
+
+        prev_timestamp = current_timestamp
+
+    if not timestamps_fetched:
+        # No production timestamps: entire period is downtime
+        total_potential_minutes = (end_timestamp - start_timestamp) / 60
+        return round(total_potential_minutes), [{
+            'start': start_timestamp,
+            'end': end_timestamp,
+            'duration': round(total_potential_minutes)
+        }]
+
+    # Handle downtime from last production timestamp to the end of the period
+    remaining_time = (end_timestamp - prev_timestamp) / 60
+    if remaining_time > 0:
+        downtime_events.append({
+            'start': prev_timestamp,
+            'end': end_timestamp,
+            'duration': round(remaining_time)
+        })
+        machine_downtime += remaining_time
+
+    return round(machine_downtime), downtime_events
+
+
+
+
+
+def fetch_press_prdowntime1_entries(assetnum, called4helptime, completedtime):
+    """
+    Fetches downtime entries based on the given parameters using raw SQL.
+
+    :param assetnum: The asset number of the machine.
+    :param called4helptime: The start of the time window (ISO 8601 format).
+    :param completedtime: The end of the time window (ISO 8601 format).
+    :return: List of rows matching the criteria.
+    """
+    try:
+        # Parse the dates to ensure they are in datetime format
+        called4helptime = datetime.fromisoformat(called4helptime)
+        completedtime = datetime.fromisoformat(completedtime)
+
+        # Dynamically import `get_db_connection` from settings.py
+        settings_path = os.path.join(
+            os.path.dirname(__file__), '../pms/settings.py'
+        )
+        spec = importlib.util.spec_from_file_location("settings", settings_path)
+        settings = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(settings)
+        get_db_connection = settings.get_db_connection
+
+        # Get database connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Raw SQL query to fetch the required data
+        query = """
+        SELECT problem, called4helptime, completedtime, idnumber
+        FROM pr_downtime1
+        WHERE assetnum = %s
+        AND down = 'Yes_Down'
+        AND (
+            -- Entries that start before the window and bleed into the window
+            (called4helptime < %s AND (completedtime >= %s OR completedtime IS NULL))
+            -- Entries that start within the window
+            OR (called4helptime >= %s AND called4helptime <= %s)
+            -- Entries that start in the window and bleed out
+            OR (called4helptime >= %s AND called4helptime <= %s AND (completedtime > %s OR completedtime IS NULL))
+            -- Entries that bleed both before and after the window
+            OR (called4helptime < %s AND (completedtime > %s OR completedtime IS NULL))
+        )
+        """
+
+        # Execute the query
+        cursor.execute(query, (
+            assetnum,
+            called4helptime, called4helptime,
+            called4helptime, completedtime,
+            called4helptime, completedtime, completedtime,
+            called4helptime, completedtime
+        ))
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Close the cursor and connection
+        cursor.close()
+        conn.close()
+
+        return rows
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+
+def compute_overlap_label(detail_start, detail_end, pr_entries):
+    for pr in pr_entries:
+        pr_start = pr['start_time']
+        # If pr_end is None, treat it as an ongoing event by using datetime.max
+        pr_end = pr['end_time'] or datetime.max
+        pr_id = pr.get('idnumber')
+        
+        # Check for no overlap
+        if detail_end <= pr_start or detail_start >= pr_end:
+            continue
+
+        # Determine the type of overlap and return along with the idnumber
+        if detail_start >= pr_start and detail_end <= pr_end:
+            return {"overlap": "WITHIN PR", "pr_id": pr_id}
+        elif detail_start <= pr_start and detail_end >= pr_end:
+            return {"overlap": "CONTAINS PR", "pr_id": pr_id}
+        elif detail_start < pr_start and detail_end > pr_start and detail_end < pr_end:
+            return {"overlap": "OVERLAP LEFT", "pr_id": pr_id}
+        elif detail_start > pr_start and detail_start < pr_end and detail_end > pr_end:
+            return {"overlap": "OVERLAP RIGHT", "pr_id": pr_id}
+    return {"overlap": "No Overlap", "pr_id": None}
+
+
+
+
+
+def attach_spm_chart_data_to_blocks(time_blocks, machine, interval=5):
+    """
+    For each time block in the provided list, fetch the strokes per minute chart data 
+    using the given machine and time block start/end times, and attach it to the block.
+
+    Args:
+        time_blocks (list of dict): Each dict should include at least 'block_start' and 'block_end'.
+            If available, 'raw_block_start' and 'raw_block_end' should contain datetime objects.
+        machine (str): The machine identifier used to fetch the SPM data.
+        interval (int): Interval (in minutes) for calculating strokes per minute data. Default is 5.
+        
+    Returns:
+        list of dict: The original list, with each block now including:
+                      - 'chart_labels': list of timestamps (for ChartJS labels)
+                      - 'chart_counts': list of stroke rates (for ChartJS data)
+    """
+
+    for block in time_blocks:
+        # Use raw datetime objects if available; otherwise, parse the formatted strings.
+        if 'raw_block_start' in block and 'raw_block_end' in block:
+            block_start_dt = block['raw_block_start']
+            block_end_dt = block['raw_block_end']
+        else:
+            block_start_dt = datetime.strptime(block['block_start'], '%Y-%m-%d %H:%M:%S')
+            block_end_dt = datetime.strptime(block['block_end'], '%Y-%m-%d %H:%M:%S')
+            
+        start_ts = int(block_start_dt.timestamp())
+        end_ts = int(block_end_dt.timestamp())
+        
+        # Get the chart data using your existing strokes_per_minute_chart_data function
+        labels, counts = strokes_per_minute_chart_data(machine, start_ts, end_ts, interval)
+        
+        # Attach the fetched chart data to the block dictionary
+        block['chart_labels'] = labels
+        block['chart_counts'] = counts
+        
+    return time_blocks
+
+
+
+
+
+
+
+def fetch_press_changeovers(machine_id, start_timestamp, end_timestamp):
+    """
+    Fetch entries from the 'Press_Changeovers' table for the given asset (machine_id)
+    where called4helptime is between start_timestamp and end_timestamp.
+
+    If no entries are found, the time window is doubled up to 5 times or until 
+    the search window reaches a maximum of 1 year.
+
+    Returns:
+        A list of tuples:
+          (asset, part_no, ideal_cycle_time, called4helptime, completedtime, downtime, code)
+        where part_no is the last 9 characters of the problem field and ideal_cycle_time 
+        is retrieved from AssetCycleTimes if available.
+    """
+    MAX_DAYS = 365  # Maximum search window in days
+    SECONDS_IN_A_DAY = 86400  # Seconds per day
+    MAX_EXPANSIONS = 5  # Stop after 5 expansions
+
+    press_changeover_records = []  # This will hold our results
+
+    try:
+        connection = mysql.connector.connect(
+            host=settings.DAVE_HOST,
+            user=settings.DAVE_USER,
+            password=settings.DAVE_PASSWORD,
+            database=settings.DAVE_DB
+        )
+        cursor = connection.cursor()
+
+        original_window = end_timestamp - start_timestamp
+        max_window = MAX_DAYS * SECONDS_IN_A_DAY
+        current_window = original_window
+        expansion_count = 0  # Track how many times we expand the window
+
+        # Keep expanding the window until we get at least one record, capped at 5 expansions or 1 year
+        while current_window <= max_window and expansion_count < MAX_EXPANSIONS:
+            query = """
+                SELECT asset, problem, called4helptime, completedtime, Downtime, Code
+                FROM Press_Changeovers
+                WHERE asset = %s
+                AND UNIX_TIMESTAMP(called4helptime) BETWEEN %s AND %s
+                ORDER BY called4helptime ASC
+            """
+            cursor.execute(query, (machine_id, start_timestamp, end_timestamp))
+            records = cursor.fetchall()
+
+            if records:
+                for rec in records:
+                    asset = rec[0]
+                    problem_full = rec[1] if rec[1] is not None else ""
+                    part_no = problem_full[-9:] if len(problem_full) >= 9 else problem_full
+
+                    # Query the AssetCycleTimes for the given part number.
+                    cycle_record = AssetCycleTimes.objects.filter(
+                        part__part_number=part_no
+                    ).order_by("-effective_date").first()
+                    
+                    # Use the cycle_time if a record exists, else set a default value.
+                    ideal_cycle_time = cycle_record.cycle_time if cycle_record else "N/A"
+
+                    called4helptime = rec[2]
+                    completedtime = rec[3] if rec[3] else "na"
+                    downtime = rec[4]
+                    code = rec[5]
+
+                    # Append the new tuple with the ideal_cycle_time inserted
+                    press_changeover_records.append(
+                        (asset, part_no, ideal_cycle_time, called4helptime, completedtime, downtime, code)
+                    )
+
+                break  # Exit the loop when records are found
+
+            # If no records, double the window (expand search window backward)
+            new_window = min(current_window * 2, max_window)
+            extension = new_window - current_window
+            start_timestamp -= extension
+            current_window = new_window
+            expansion_count += 1  # Increment expansion counter
+
+            # print(f"[DEBUG] Expansion {expansion_count}: New range: {start_timestamp} - {end_timestamp}")
+
+        # if expansion_count >= MAX_EXPANSIONS:
+        #     print(f"[DEBUG] No records found after {MAX_EXPANSIONS} expansions, stopping search.")
+
+        return press_changeover_records
+
+    except Exception as e:
+        print(f"[ERROR] Error fetching press changeovers: {e}")
+        return []
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+
+
+def calculate_runtime_press(machine, cursor, start_timestamp, end_timestamp, running_threshold=5):
+    """
+    Calculate the running intervals for a specific machine over a given time period.
+    A running interval is defined as a contiguous series of production timestamps where
+    the gap between consecutive timestamps does not exceed the running_threshold (in minutes).
+
+    Args:
+        machine (str): The machine/asset number.
+        cursor: Database cursor.
+        start_timestamp (int): The starting timestamp (in seconds).
+        end_timestamp (int): The ending timestamp (in seconds).
+        running_threshold (int): Maximum gap (in minutes) to consider production as continuous.
+
+    Returns:
+        list of dict: Each dictionary contains:
+                      - 'start': start time of the running interval (timestamp)
+                      - 'end': end time of the running interval (timestamp)
+                      - 'duration': duration in minutes (rounded)
+    """
+    query = """
+        SELECT TimeStamp
+        FROM GFxPRoduction
+        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+        ORDER BY TimeStamp ASC;
+    """
+    cursor.execute(query, (machine, start_timestamp, end_timestamp))
+    rows = cursor.fetchall()
+    
+    if not rows:
+        # If there are no production timestamps, there are no running intervals.
+        return []
+    
+    running_intervals = []
+    # Start the first running interval at the first production timestamp.
+    run_start = rows[0][0]
+    previous_ts = run_start
+
+    for row in rows[1:]:
+        current_ts = row[0]
+        # If the gap between the current and previous production timestamp is larger than threshold,
+        # finish the current running interval.
+        if (current_ts - previous_ts) / 60 > running_threshold:
+            run_end = previous_ts
+            duration = round((run_end - run_start) / 60)
+            if duration > 0:
+                running_intervals.append({
+                    'start': run_start,
+                    'end': run_end,
+                    'duration': duration
+                })
+            # Start a new running interval.
+            run_start = current_ts
+        previous_ts = current_ts
+
+    # Add the final running interval.
+    run_end = previous_ts
+    duration = round((run_end - run_start) / 60)
+    if duration > 0:
+        running_intervals.append({
+            'start': run_start,
+            'end': run_end,
+            'duration': duration
+        })
+    
+    return running_intervals
+
+
+def get_fallback_part_from_sc_production(machine, running_start_ts):
+    """
+    Fallback lookup for an active part from the sc_production1 table.
+    It returns the last record (before the running interval starts) for the given asset,
+    but only if the part number is exactly 9 characters long.
+    
+    Args:
+        machine (str): The asset number.
+        running_start_ts (int): The running interval start timestamp.
+        
+    Returns:
+        str or None: The part number if found and valid, otherwise None.
+    """
+    running_start_dt = datetime.fromtimestamp(running_start_ts)
+    query = """
+        SELECT partno, updatedtime FROM sc_production1
+        WHERE asset_num = %s AND updatedtime < %s
+        ORDER BY updatedtime DESC
+        LIMIT 1;
+    """
+    with connections['prodrpt-md'].cursor() as cursor:
+        cursor.execute(query, (machine, running_start_dt))
+        row = cursor.fetchone()
+        if row:
+            partno = row[0]
+            if partno and len(partno.strip()) == 9:
+                return partno.strip()
+    return None
+
+
+
+def get_cycle_time_for_part(part_no):
+    """
+    Attempts to look up the ideal cycle time for a given part number
+    using the AssetCycleTimes table. Returns the cycle time if found,
+    otherwise "N/A".
+    
+    Args:
+        part_no (str): The part number to look up.
+    
+    Returns:
+        cycle_time (float or str): The ideal cycle time in seconds, or "N/A".
+    """
+    try:
+        cycle_record = AssetCycleTimes.objects.filter(
+            part__part_number=part_no
+        ).order_by("-effective_date").first()
+        if cycle_record:
+            return cycle_record.cycle_time
+    except Exception as e:
+        print(f"[ERROR] Looking up cycle time for part {part_no}: {e}")
+    return "N/A"
+
+def get_active_part(running_interval, changeover_records, machine):
+    """
+    Determines which part is active for a given running interval for a specific machine.
+    It first checks changeover records (ensuring the record's asset matches the machine).
+    If no record is found, it falls back to querying the sc_production1 table.
+    If the fallback finds a valid part number, it also looks up its cycle time.
+    
+    Args:
+        running_interval (dict): Contains at least the 'start' key (timestamp in seconds).
+        changeover_records (list of tuples): Each tuple is
+            (asset, part_no, ideal_cycle_time, called4helptime, completedtime, downtime, code).
+        machine (str): The machine asset identifier.
+    
+    Returns:
+        dict: A dictionary with:
+            - 'part': The active part number or "N/A"
+            - 'cycle_time': The ideal cycle time for that part or "N/A"
+    """
+    running_start_ts = running_interval['start']
+    active_record = None
+    for record in changeover_records:
+        # Only consider records for the specified machine.
+        if str(record[0]).strip() != machine.strip():
+            continue
+        completedtime = record[4]
+        if completedtime != "na" and isinstance(completedtime, datetime):
+            if completedtime.timestamp() <= running_start_ts:
+                if active_record is None or completedtime.timestamp() > active_record[4].timestamp():
+                    active_record = record
+    if active_record:
+        return {'part': active_record[1], 'cycle_time': active_record[2]}
+    else:
+        # Fallback: query the sc_production1 table.
+        fallback_part = get_fallback_part_from_sc_production(machine, running_start_ts)
+        if fallback_part:
+            cycle_time = get_cycle_time_for_part(fallback_part)
+            return {'part': fallback_part, 'cycle_time': cycle_time}
+        else:
+            return {'part': "N/A", 'cycle_time': "N/A"}
+
+
+
+
+def compute_press_pa_oee(total_potential_minutes, planned_minutes_down, unplanned_minutes_down, total_minutes_up, cycle_time, actual_parts, total_target):
+    """
+    Calculates production effectiveness metrics for a press using the following formulas:
+
+      1. Planned Production Time (PPT):
+         PPT = total_potential_minutes - planned_minutes_down
+
+      2. Total Downtime:
+         total_downtime = planned_minutes_down + unplanned_minutes_down
+
+      3. Run Time:
+         run_time = PPT - total_downtime
+
+      4. Target Parts:
+         target_parts = PPT / cycle_time
+
+      5. Availability:
+         availability = run_time / PPT
+
+      6. Performance:
+         performance = (cycle_time * actual_parts) / run_time
+
+      7. Quality:
+         quality = 1.0  (assumed)
+
+      8. Overall Equipment Effectiveness (OEE):
+         oee = availability * performance * quality
+
+    Args:
+      total_potential_minutes (float): e.g., 7200 minutes (theoretical full-time)
+      planned_minutes_down (float): Planned downtime in minutes (y)
+      unplanned_minutes_down (float): Unplanned downtime in minutes (the rest of total downtime)
+      total_minutes_up (float): Total minutes running (not used directly in these calculations)
+      cycle_time (float): Ideal cycle time (in seconds) for one part (b)
+      actual_parts (float): Actual parts produced (a)
+      total_target (float): Provided target parts (will be recalculated)
+
+    Returns:
+      dict: A dictionary with keys:
+         - planned_production_time (PPT)
+         - run_time
+         - target_parts
+         - availability
+         - performance
+         - quality
+         - oee
+    """
+    try:
+        total_potential_minutes = float(total_potential_minutes)
+    except:
+        total_potential_minutes = 0.0
+    try:
+        planned_minutes_down = float(planned_minutes_down)
+    except:
+        planned_minutes_down = 0.0
+    try:
+        unplanned_minutes_down = float(unplanned_minutes_down)
+    except:
+        unplanned_minutes_down = 0.0
+    try:
+        total_minutes_up = float(total_minutes_up)
+    except:
+        total_minutes_up = 0.0
+    try:
+        cycle_time = float(cycle_time)
+    except:
+        cycle_time = 0.0
+    try:
+        actual_parts = float(actual_parts)
+    except:
+        actual_parts = 0.0
+
+    # 1. Planned Production Time (PPT)
+    planned_production_time = total_potential_minutes - planned_minutes_down
+
+    # 2. Total downtime and Run Time
+    total_downtime = planned_minutes_down + unplanned_minutes_down
+    run_time = planned_production_time - total_downtime
+
+    # Check if run_time is less than 0, and adjust if necessary
+    if run_time < 0:
+        run_time = total_minutes_up
+
+
+    # 3. Target Parts (recalculated)
+    target_parts = ((planned_production_time * 60)  / cycle_time) if cycle_time > 0 else 0.0
+
+    # Calculate availability
+    availability = (run_time / planned_production_time) if planned_production_time > 0 else 0.0
+
+   
+
+    # 5. Performance
+    performance = ((cycle_time * actual_parts) / (run_time * 60)) if run_time > 0 else 0.0
+
+    # 6. Quality is assumed to be 100%
+    quality = 1.0
+
+    # 7. Overall Equipment Effectiveness (OEE)
+    oee = availability * performance * quality
+
+    return {
+        "planned_production_time": planned_production_time,
+        "run_time": run_time,
+        "target_parts": target_parts,
+        "availability": availability,
+        "performance": performance,
+        "quality": quality,
+        "oee": oee
+    }
+
+
+
+
+
+def summarize_contiguous_intervals(intervals, downtime_details, human_readable_format='%Y-%m-%d %H:%M:%S'):
+    """
+    Aggregates contiguous intervals by part number and adds:
+      - 'planned_minutes_down': Sum of downtime events (in whole minutes) that are >= 240 minutes 
+          and do NOT overlap with a PR downtime.
+      - 'unplanned_minutes_down': Sum of the remaining downtime events within the group.
+      - 'minutes_down': The sum of planned and unplanned downtime.
+      - 'total_potential_minutes': Total minutes up (duration) plus minutes_down.
+      - 'target': Calculated as (total_potential_minutes * 60) / cycle_time for the group.
+      - Additional PA/OEE metrics are computed by calling compute_press_pa_oee.
+    
+    The downtime events (downtime_details) are expected to be a list of dicts with keys:
+      'start', 'end', 'duration', 'overlap'
+    where the times are formatted as strings using human_readable_format.
+    
+    Returns:
+      A list of dictionaries (one per contiguous group) with the aggregated values and PA/OEE metrics.
+    """
+    if not intervals:
+        return []
+    
+    summaries = []
+    # Start with the first interval as the current group.
+    current_group = intervals[0].copy()
+    try:
+        current_group['duration'] = int(current_group['duration'])
+    except:
+        pass
+    try:
+        current_group['parts_produced'] = int(current_group['parts_produced']) if current_group['parts_produced'] != "N/A" else "N/A"
+    except:
+        pass
+    try:
+        current_group['target'] = int(current_group['target']) if current_group['target'] != "N/A" else "N/A"
+    except:
+        pass
+
+    for interval in intervals[1:]:
+        if interval['part'] == current_group['part']:
+            # Same part, so update the current group.
+            current_group['end'] = interval['end']
+            try:
+                current_group['duration'] += int(interval['duration'])
+            except:
+                current_group['duration'] = "N/A"
+            if current_group['parts_produced'] != "N/A" and interval['parts_produced'] != "N/A":
+                current_group['parts_produced'] += int(interval['parts_produced'])
+            else:
+                current_group['parts_produced'] = "N/A"
+            if current_group['target'] != "N/A" and interval['target'] != "N/A":
+                current_group['target'] += int(interval['target'])
+            else:
+                current_group['target'] = "N/A"
+        else:
+            # Compute downtime metrics for the current group.
+            try:
+                group_start = datetime.strptime(current_group['start'], human_readable_format)
+                group_end = datetime.strptime(current_group['end'], human_readable_format)
+            except Exception:
+                group_start = group_end = None
+            planned = 0
+            unplanned = 0
+            if group_start and group_end:
+                for dt_event in downtime_details:
+                    try:
+                        event_start = datetime.strptime(dt_event['start'], human_readable_format)
+                        event_end = datetime.strptime(dt_event['end'], human_readable_format)
+                    except Exception:
+                        continue
+                    # Only include downtime events that fall completely within the group's boundaries.
+                    if event_start >= group_start and event_end <= group_end:
+                        if dt_event['duration'] >= 240 and dt_event['overlap'] == "No Overlap":
+                            planned += dt_event['duration']
+                        else:
+                            unplanned += dt_event['duration']
+            current_group['planned_minutes_down'] = planned
+            current_group['unplanned_minutes_down'] = unplanned
+            current_group['minutes_down'] = planned + unplanned
+            if isinstance(current_group.get('duration'), int):
+                current_group['total_potential_minutes'] = current_group['duration'] + current_group['minutes_down']
+            else:
+                current_group['total_potential_minutes'] = "N/A"
+            # Recalculate target using total potential minutes:
+            try:
+                cycle_time = float(current_group.get('cycle_time'))
+            except Exception:
+                cycle_time = None
+            if (isinstance(current_group.get('total_potential_minutes'), int) and cycle_time and cycle_time > 0):
+                current_group['target'] = int((current_group['total_potential_minutes'] * 60) / cycle_time)
+            else:
+                current_group['target'] = "N/A"
+            # Call compute_press_pa_oee to get PA/OEE metrics and update the group.
+            pa_oee_data = compute_press_pa_oee(
+                total_potential_minutes=current_group.get('total_potential_minutes', 0),
+                planned_minutes_down=current_group.get('planned_minutes_down', 0),
+                unplanned_minutes_down=current_group.get('unplanned_minutes_down', 0),
+                total_minutes_up=current_group.get('duration', 0),
+                cycle_time=current_group.get('cycle_time', 0),
+                actual_parts=current_group.get('parts_produced', 0),
+                total_target=current_group.get('target', 0)
+            )
+            current_group.update(pa_oee_data)
+            summaries.append(current_group)
+            # Start a new group for the next part.
+            current_group = interval.copy()
+            try:
+                current_group['duration'] = int(current_group['duration'])
+            except:
+                pass
+            try:
+                current_group['parts_produced'] = int(current_group['parts_produced']) if current_group['parts_produced'] != "N/A" else "N/A"
+            except:
+                pass
+            try:
+                current_group['target'] = int(current_group['target']) if current_group['target'] != "N/A" else "N/A"
+            except:
+                pass
+
+    # Process final group.
+    try:
+        group_start = datetime.strptime(current_group['start'], human_readable_format)
+        group_end = datetime.strptime(current_group['end'], human_readable_format)
+    except Exception:
+        group_start = group_end = None
+    planned = 0
+    unplanned = 0
+    if group_start and group_end:
+        for dt_event in downtime_details:
+            try:
+                event_start = datetime.strptime(dt_event['start'], human_readable_format)
+                event_end = datetime.strptime(dt_event['end'], human_readable_format)
+            except Exception:
+                continue
+            if event_start >= group_start and event_end <= group_end:
+                if dt_event['duration'] >= 240 and dt_event['overlap'] == "No Overlap":
+                    planned += dt_event['duration']
+                else:
+                    unplanned += dt_event['duration']
+    current_group['planned_minutes_down'] = planned
+    current_group['unplanned_minutes_down'] = unplanned
+    current_group['minutes_down'] = planned + unplanned
+    if isinstance(current_group.get('duration'), int):
+        current_group['total_potential_minutes'] = current_group['duration'] + current_group['minutes_down']
+    else:
+        current_group['total_potential_minutes'] = "N/A"
+    try:
+        cycle_time = float(current_group.get('cycle_time'))
+    except Exception:
+        cycle_time = None
+    if (isinstance(current_group.get('total_potential_minutes'), int) and cycle_time and cycle_time > 0):
+        current_group['target'] = int((current_group['total_potential_minutes'] * 60) / cycle_time)
+    else:
+        current_group['target'] = "N/A"
+    pa_oee_data = compute_press_pa_oee(
+        total_potential_minutes=current_group.get('total_potential_minutes', 0),
+        planned_minutes_down=current_group.get('planned_minutes_down', 0),
+        unplanned_minutes_down=current_group.get('unplanned_minutes_down', 0),
+        total_minutes_up=current_group.get('duration', 0),
+        cycle_time=current_group.get('cycle_time', 0),
+        actual_parts=current_group.get('parts_produced', 0),
+        total_target=current_group.get('target', 0)
+    )
+    current_group.update(pa_oee_data)
+    summaries.append(current_group)
+    return summaries
+
+
+
+
+
+def press_runtime_wrapper(request):
+    # Get parameters from POST or, if not provided, from GET (with defaults)
+    start_date_str = request.POST.get('start_date') or request.GET.get('start_date', '')
+    end_date_str = request.POST.get('end_date') or request.GET.get('end_date', '')
+    machine_input = (request.POST.get('machine_id') or request.GET.get('machine_id', '272')).strip()
+    machine_ids = [m.strip() for m in machine_input.split(',') if m.strip()]
+
+    # This dictionary will hold each machine's data grouped nicely.
+    machines_data = {}
+
+    # Process if start and end dates are provided (via POST or URL)
+    if start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+
+            # If start date and end date are the same, subtract 24 hours from start date
+            if start_date == end_date:
+                start_date -= timedelta(hours=24)
+
+            time_blocks = get_custom_time_blocks(start_date, end_date)
+            if isinstance(time_blocks, str):
+                return render(request, 'prod_query/press_oee.html', {'error_message': time_blocks})
+
+            human_readable_format = '%Y-%m-%d %H:%M:%S'
+            
+            # Initialize groups for each machine
+            for machine in machine_ids:
+                machines_data[machine] = {
+                    'part_numbers_data': [],
+                    'downtime_events': [],
+                    'downtime_entries': [],
+                    'running_events': [],
+                }
+            
+            with connections['prodrpt-md'].cursor() as cursor:
+                for block_start, block_end in time_blocks:
+                    start_ts = int(block_start.timestamp())
+                    end_ts = int(block_end.timestamp())
+                    block_start_str = block_start.strftime(human_readable_format)
+                    block_end_str = block_end.strftime(human_readable_format)
+                    
+                    for machine in machine_ids:
+                        # Fetch and store press changeover records per machine
+                        part_records = fetch_press_changeovers(machine, start_ts, end_ts)
+                        machines_data[machine]['part_numbers_data'].append({
+                            'machine': machine,
+                            'block_start': block_start_str,
+                            'block_end': block_end_str,
+                            'raw_block_start': block_start,
+                            'raw_block_end': block_end,
+                            'part_records': part_records
+                        })
+
+                        produced = fetch_production_count(machine, cursor, start_ts, end_ts)
+                        total_downtime, downtime_details = calculate_downtime_press(machine, cursor, start_ts, end_ts)
+                        
+                        # Fetch PR downtime entries
+                        called4helptime_iso = block_start.isoformat()
+                        completedtime_iso = block_end.isoformat()
+                        pr_entries_for_block = []
+                        try:
+                            raw_downtime_data = fetch_press_prdowntime1_entries(machine, called4helptime_iso, completedtime_iso)
+                            if not (isinstance(raw_downtime_data, dict) and 'error' in raw_downtime_data):
+                                for entry in raw_downtime_data:
+                                    problem = entry[0]
+                                    pr_start_time = entry[1]  # assumed datetime
+                                    pr_end_time = entry[2]    # assumed datetime
+                                    pr_idnumber = entry[3]
+                                    if pr_end_time is not None:
+                                        duration_minutes = int((pr_end_time - pr_start_time).total_seconds() / 60)
+                                    else:
+                                        duration_minutes = "Ongoing"
+                                    pr_entry = {
+                                        'machine': machine,
+                                        'problem': problem,
+                                        'start_time': pr_start_time,
+                                        'end_time': pr_end_time,
+                                        'duration_minutes': duration_minutes,
+                                        'idnumber': pr_idnumber
+                                    }
+                                    pr_entries_for_block.append(pr_entry)
+                                    machines_data[machine]['downtime_entries'].append(pr_entry)
+                        except Exception as e:
+                            print(f"[ERROR] Exception while fetching PR downtime entries for machine {machine}: {e}")
+                        
+                        # Process downtime details and aggregate annotated downtime events
+                        annotated_details = []
+                        non_overlap_total = 0
+                        overlap_total = 0
+                        for detail in downtime_details:
+                            dt_start = datetime.fromtimestamp(detail['start'])
+                            dt_end = datetime.fromtimestamp(detail['end'])
+                            overlap_info = compute_overlap_label(dt_start, dt_end, pr_entries_for_block)
+                            annotated_detail = {
+                                'start': dt_start.strftime(human_readable_format),
+                                'end': dt_end.strftime(human_readable_format),
+                                'duration': detail['duration'],
+                                'overlap': overlap_info['overlap'],
+                                'pr_id': overlap_info['pr_id']
+                            }
+                            annotated_details.append(annotated_detail)
+                            if overlap_info['overlap'] == "No Overlap":
+                                if detail['duration'] < 240:
+                                    overlap_total += detail['duration']
+                                else:
+                                    non_overlap_total += detail['duration']
+                            else:
+                                overlap_total += detail['duration']
+                        
+                        if total_downtime > 5:
+                            machines_data[machine]['downtime_events'].append({
+                                'machine': machine,
+                                'block_start': block_start_str,
+                                'block_end': block_end_str,
+                                'produced': produced,
+                                'downtime_minutes': total_downtime,
+                                'non_overlap_minutes': non_overlap_total,
+                                'overlap_minutes': overlap_total,
+                                'details': annotated_details
+                            })
+
+                        # Calculate running intervals for this machine in this block
+                        runtime_intervals = calculate_runtime_press(machine, cursor, start_ts, end_ts, running_threshold=5)
+                        formatted_runtime_intervals = []
+                        for interval in runtime_intervals:
+                            active_info = get_active_part(interval, part_records, machine)
+                            parts_produced = fetch_production_count(machine, cursor, interval['start'], interval['end'])
+                            try:
+                                cycle_time = float(active_info['cycle_time'])
+                            except Exception:
+                                cycle_time = None
+                            target = int((interval['duration'] * 60) / cycle_time) if cycle_time and cycle_time > 0 else "N/A"
+                            formatted_interval = {
+                                'start': datetime.fromtimestamp(interval['start']).strftime(human_readable_format),
+                                'end': datetime.fromtimestamp(interval['end']).strftime(human_readable_format),
+                                'duration': interval['duration'],
+                                'part': active_info['part'],
+                                'cycle_time': active_info['cycle_time'],
+                                'parts_produced': parts_produced,
+                                'target': target
+                            }
+                            formatted_runtime_intervals.append(formatted_interval)
+                        
+                        aggregated_summary = summarize_contiguous_intervals(formatted_runtime_intervals, annotated_details, human_readable_format)
+                        machines_data[machine]['running_events'].append({
+                            'machine': machine,
+                            'block_start': block_start_str,
+                            'block_end': block_end_str,
+                            'running_intervals': formatted_runtime_intervals,
+                            'summary': aggregated_summary
+                        })
+            
+            # Optionally, attach SPM chart data if needed (update part_numbers_data accordingly)
+            for machine in machine_ids:
+                machines_data[machine]['part_numbers_data'] = attach_spm_chart_data_to_blocks(
+                    machines_data[machine]['part_numbers_data'], machine, interval=5
+                )
+            
+        except Exception as e:
+            print(f"[ERROR] Error processing time blocks: {e}")
+    
+    return render(request, 'prod_query/press_oee.html', {
+        'machines_data': machines_data,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'machine_id': machine_input,
+    })
+
+
+
+def press_runtime_wrapper2(request):
+    # First, try to get dates from the URL (GET parameters)
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    # If the form is submitted via POST, override with POST data
+    if request.method == 'POST':
+        start_date_str = request.POST.get('start_date', start_date_str)
+        end_date_str = request.POST.get('end_date', end_date_str)
+    
+    machine_ids = ['272', '273', '277', '278']
+    machines_data = {}
+
+    if (request.method == 'POST' or start_date_str and end_date_str):
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+
+            # If start date and end date are the same, subtract 24 hours from start date
+            if start_date == end_date:
+                start_date -= timedelta(hours=24)
+
+            time_blocks = get_custom_time_blocks(start_date, end_date)
+            if isinstance(time_blocks, str):
+                return render(request, 'prod_query/press_oee2.html', {'error_message': time_blocks})
+            
+            human_readable_format = '%Y-%m-%d %H:%M:%S'
+            # Initialize groups for each machine
+            for machine in machine_ids:
+                machines_data[machine] = {
+                    'part_numbers_data': [],
+                    'downtime_events': [],
+                    'downtime_entries': [],
+                    'running_events': [],
+                }
+            
+            with connections['prodrpt-md'].cursor() as cursor:
+                for block_start, block_end in time_blocks:
+                    start_ts = int(block_start.timestamp())
+                    end_ts = int(block_end.timestamp())
+                    block_start_str = block_start.strftime(human_readable_format)
+                    block_end_str = block_end.strftime(human_readable_format)
+                    
+                    for machine in machine_ids:
+                        # Fetch press changeover records
+                        part_records = fetch_press_changeovers(machine, start_ts, end_ts)
+                        machines_data[machine]['part_numbers_data'].append({
+                            'machine': machine,
+                            'block_start': block_start_str,
+                            'block_end': block_end_str,
+                            'raw_block_start': block_start,
+                            'raw_block_end': block_end,
+                            'part_records': part_records
+                        })
+                        
+                        produced = fetch_production_count(machine, cursor, start_ts, end_ts)
+                        total_downtime, downtime_details = calculate_downtime_press(machine, cursor, start_ts, end_ts)
+                        
+                        # Fetch PR downtime entries
+                        called4helptime_iso = block_start.isoformat()
+                        completedtime_iso = block_end.isoformat()
+                        pr_entries_for_block = []
+                        try:
+                            raw_downtime_data = fetch_press_prdowntime1_entries(machine, called4helptime_iso, completedtime_iso)
+                            if not (isinstance(raw_downtime_data, dict) and 'error' in raw_downtime_data):
+                                for entry in raw_downtime_data:
+                                    problem = entry[0]
+                                    pr_start_time = entry[1]
+                                    pr_end_time = entry[2]
+                                    pr_idnumber = entry[3]
+                                    if pr_end_time is not None:
+                                        duration_minutes = int((pr_end_time - pr_start_time).total_seconds() / 60)
+                                    else:
+                                        duration_minutes = "Ongoing"
+                                    pr_entry = {
+                                        'machine': machine,
+                                        'problem': problem,
+                                        'start_time': pr_start_time,
+                                        'end_time': pr_end_time,
+                                        'duration_minutes': duration_minutes,
+                                        'idnumber': pr_idnumber
+                                    }
+                                    pr_entries_for_block.append(pr_entry)
+                                    machines_data[machine]['downtime_entries'].append(pr_entry)
+                        except Exception as e:
+                            print(f"[ERROR] Exception while fetching PR downtime entries for machine {machine}: {e}")
+                        
+                        # Process downtime details and aggregate annotated downtime events
+                        annotated_details = []
+                        non_overlap_total = 0
+                        overlap_total = 0
+                        for detail in downtime_details:
+                            dt_start = datetime.fromtimestamp(detail['start'])
+                            dt_end = datetime.fromtimestamp(detail['end'])
+                            overlap_info = compute_overlap_label(dt_start, dt_end, pr_entries_for_block)
+                            annotated_detail = {
+                                'start': dt_start.strftime(human_readable_format),
+                                'end': dt_end.strftime(human_readable_format),
+                                'duration': detail['duration'],
+                                'overlap': overlap_info['overlap'],
+                                'pr_id': overlap_info['pr_id']
+                            }
+                            annotated_details.append(annotated_detail)
+                            if overlap_info['overlap'] == "No Overlap":
+                                if detail['duration'] < 240:
+                                    overlap_total += detail['duration']
+                                else:
+                                    non_overlap_total += detail['duration']
+                            else:
+                                overlap_total += detail['duration']
+                        
+                        if total_downtime > 5:
+                            machines_data[machine]['downtime_events'].append({
+                                'machine': machine,
+                                'block_start': block_start_str,
+                                'block_end': block_end_str,
+                                'produced': produced,
+                                'downtime_minutes': total_downtime,
+                                'non_overlap_minutes': non_overlap_total,
+                                'overlap_minutes': overlap_total,
+                                'details': annotated_details
+                            })
+                        
+                        # Calculate running intervals for this machine in this block
+                        runtime_intervals = calculate_runtime_press(machine, cursor, start_ts, end_ts, running_threshold=5)
+                        formatted_runtime_intervals = []
+                        for interval in runtime_intervals:
+                            active_info = get_active_part(interval, part_records, machine)
+                            parts_produced = fetch_production_count(machine, cursor, interval['start'], interval['end'])
+                            try:
+                                cycle_time = float(active_info['cycle_time'])
+                            except Exception:
+                                cycle_time = None
+                            target = int((interval['duration'] * 60) / cycle_time) if cycle_time and cycle_time > 0 else "N/A"
+                            formatted_interval = {
+                                'start': datetime.fromtimestamp(interval['start']).strftime(human_readable_format),
+                                'end': datetime.fromtimestamp(interval['end']).strftime(human_readable_format),
+                                'duration': interval['duration'],
+                                'part': active_info['part'],
+                                'cycle_time': active_info['cycle_time'],
+                                'parts_produced': parts_produced,
+                                'target': target
+                            }
+                            formatted_runtime_intervals.append(formatted_interval)
+                        
+                        aggregated_summary = summarize_contiguous_intervals(formatted_runtime_intervals, annotated_details, human_readable_format)
+                        machines_data[machine]['running_events'].append({
+                            'machine': machine,
+                            'block_start': block_start_str,
+                            'block_end': block_end_str,
+                            'running_intervals': formatted_runtime_intervals,
+                            'summary': aggregated_summary
+                        })
+            
+            # Optionally, attach SPM chart data if needed
+
+        except Exception as e:
+            print(f"[ERROR] Error processing time blocks: {e}")
+    
+    return render(request, 'prod_query/press_oee2.html', {
+        'machines_data': machines_data,
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+    })
+
+
+
+
+def aggregate_machine_groups(machines_data, group_definitions):
+    """
+    Aggregates machine totals for defined groups and returns a dictionary of aggregated totals.
+    
+    Args:
+        machines_data (dict): Original machine data with each machine having a 'totals' dictionary.
+        group_definitions (dict): Mapping from group label to a list of machine IDs to aggregate.
+            Example: {'1500T': ['272', '273']}
+    
+    Returns:
+        dict: A dictionary mapping each group label to a totals dictionary that mirrors the structure
+              of an individual machine's totals.
+    """
+    aggregated = {}
+    for group_label, machine_list in group_definitions.items():
+        total_minutes_up = 0
+        total_unplanned_down = 0
+        total_planned_down = 0
+        total_potential_minutes = 0
+        total_parts_produced = 0
+        total_target = 0
+        weighted_cycle_sum = 0  # Sum of (machine weighted cycle * machine potential minutes)
+        potential_for_weight = 0  # Sum of potential minutes (to weight the cycle time)
+        block_range = ""
+        
+        for m in machine_list:
+            machine_totals = machines_data.get(m, {}).get('totals')
+            if machine_totals:
+                total_minutes_up += machine_totals.get('total_minutes_up', 0)
+                total_unplanned_down += machine_totals.get('total_unplanned_down', 0)
+                total_planned_down += machine_totals.get('total_planned_down', 0)
+                tp = machine_totals.get('total_potential_minutes', 0)
+                total_potential_minutes += tp
+                total_parts_produced += machine_totals.get('total_parts_produced', 0)
+                tot_target = machine_totals.get('total_target', 0)
+                if isinstance(tot_target, (int, float)):
+                    total_target += tot_target
+                # Use each machine's potential minutes as weight for its cycle time
+                wc = machine_totals.get('weighted_cycle', 0)
+                if isinstance(wc, (int, float)) and tp:
+                    weighted_cycle_sum += wc * tp
+                    potential_for_weight += tp
+                # Use the block range from the first machine (if available)
+                if not block_range:
+                    block_range = machine_totals.get('block', "")
+        
+        if potential_for_weight:
+            weighted_cycle = weighted_cycle_sum / potential_for_weight
+        else:
+            weighted_cycle = "N/A"
+        
+        # Compute availability, performance, and OEE
+        availability = (total_minutes_up / total_potential_minutes) if total_potential_minutes else 0
+        performance = (total_parts_produced / total_target) if total_target else 0
+        oee = availability * performance
+        
+        aggregated[group_label] = {
+            'block': block_range,
+            'total_minutes_up': total_minutes_up,
+            'total_unplanned_down': total_unplanned_down,
+            'total_planned_down': total_planned_down,
+            'total_potential_minutes': total_potential_minutes,
+            'weighted_cycle': round(weighted_cycle, 2) if isinstance(weighted_cycle, (int, float)) else weighted_cycle,
+            'total_parts_produced': total_parts_produced,
+            'total_target': total_target,
+            'availability': round(availability, 2),
+            'performance': round(performance, 2),
+            'oee': round(oee, 2)
+        }
+    return aggregated
+
+
+
+
+def press_runtime_wrapper3(request):
+    # Get parameters from POST (or default values)
+    start_date_str = request.POST.get('start_date', '')
+    end_date_str = request.POST.get('end_date', '')
+    machine_ids = ['272', '273', '277', '278']
+
+    # This dictionary will hold each machine's data grouped nicely.
+    machines_data = {}
+
+    if request.method == 'POST' and start_date_str and end_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+
+            # If start date and end date are the same, subtract 24 hours from start date
+            if start_date == end_date:
+                start_date -= timedelta(hours=24)
+
+            time_blocks = get_custom_time_blocks(start_date, end_date)
+            if isinstance(time_blocks, str):
+                return render(request, 'prod_query/press_oee3.html', {'error_message': time_blocks})
+
+            human_readable_format = '%Y-%m-%d %H:%M:%S'
+            
+            # Initialize groups for each individual machine
+            for machine in machine_ids:
+                machines_data[machine] = {
+                    'part_numbers_data': [],
+                    'downtime_events': [],
+                    'downtime_entries': [],
+                    'running_events': [],
+                    'totals': {}
+                }
+            
+            with connections['prodrpt-md'].cursor() as cursor:
+                for block_start, block_end in time_blocks:
+                    start_ts = int(block_start.timestamp())
+                    end_ts = int(block_end.timestamp())
+                    block_start_str = block_start.strftime(human_readable_format)
+                    block_end_str = block_end.strftime(human_readable_format)
+                    
+                    for machine in machine_ids:
+                        # Fetch and store press changeover records per machine
+                        part_records = fetch_press_changeovers(machine, start_ts, end_ts)
+                        machines_data[machine]['part_numbers_data'].append({
+                            'machine': machine,
+                            'block_start': block_start_str,
+                            'block_end': block_end_str,
+                            'raw_block_start': block_start,
+                            'raw_block_end': block_end,
+                            'part_records': part_records
+                        })
+
+                        produced = fetch_production_count(machine, cursor, start_ts, end_ts)
+                        total_downtime, downtime_details = calculate_downtime_press(machine, cursor, start_ts, end_ts)
+                        
+                        # Fetch PR downtime entries
+                        called4helptime_iso = block_start.isoformat()
+                        completedtime_iso = block_end.isoformat()
+                        pr_entries_for_block = []
+                        try:
+                            raw_downtime_data = fetch_press_prdowntime1_entries(machine, called4helptime_iso, completedtime_iso)
+                            if not (isinstance(raw_downtime_data, dict) and 'error' in raw_downtime_data):
+                                for entry in raw_downtime_data:
+                                    problem = entry[0]
+                                    pr_start_time = entry[1]  # assumed datetime
+                                    pr_end_time = entry[2]    # assumed datetime
+                                    pr_idnumber = entry[3]
+                                    if pr_end_time is not None:
+                                        duration_minutes = int((pr_end_time - pr_start_time).total_seconds() / 60)
+                                    else:
+                                        duration_minutes = "Ongoing"
+                                    pr_entry = {
+                                        'machine': machine,
+                                        'problem': problem,
+                                        'start_time': pr_start_time,
+                                        'end_time': pr_end_time,
+                                        'duration_minutes': duration_minutes,
+                                        'idnumber': pr_idnumber
+                                    }
+                                    pr_entries_for_block.append(pr_entry)
+                                    machines_data[machine]['downtime_entries'].append(pr_entry)
+                        except Exception as e:
+                            print(f"[ERROR] Exception while fetching PR downtime entries for machine {machine}: {e}")
+                        
+                        # Process downtime details and aggregate annotated downtime events
+                        annotated_details = []
+                        non_overlap_total = 0
+                        overlap_total = 0
+                        for detail in downtime_details:
+                            dt_start = datetime.fromtimestamp(detail['start'])
+                            dt_end = datetime.fromtimestamp(detail['end'])
+                            overlap_info = compute_overlap_label(dt_start, dt_end, pr_entries_for_block)
+                            annotated_detail = {
+                                'start': dt_start.strftime(human_readable_format),
+                                'end': dt_end.strftime(human_readable_format),
+                                'duration': detail['duration'],
+                                'overlap': overlap_info['overlap'],
+                                'pr_id': overlap_info['pr_id']
+                            }
+                            annotated_details.append(annotated_detail)
+                            if overlap_info['overlap'] == "No Overlap":
+                                if detail['duration'] < 240:
+                                    overlap_total += detail['duration']
+                                else:
+                                    non_overlap_total += detail['duration']
+                            else:
+                                overlap_total += detail['duration']
+                        
+                        if total_downtime > 5:
+                            machines_data[machine]['downtime_events'].append({
+                                'machine': machine,
+                                'block_start': block_start_str,
+                                'block_end': block_end_str,
+                                'produced': produced,
+                                'downtime_minutes': total_downtime,
+                                'non_overlap_minutes': non_overlap_total,
+                                'overlap_minutes': overlap_total,
+                                'details': annotated_details
+                            })
+
+                        # Calculate running intervals for this machine in this block
+                        runtime_intervals = calculate_runtime_press(machine, cursor, start_ts, end_ts, running_threshold=5)
+                        formatted_runtime_intervals = []
+                        for interval in runtime_intervals:
+                            active_info = get_active_part(interval, part_records, machine)
+                            parts_produced = fetch_production_count(machine, cursor, interval['start'], interval['end'])
+                            try:
+                                cycle_time = float(active_info['cycle_time'])
+                            except Exception:
+                                cycle_time = None
+                            target = int((interval['duration'] * 60) / cycle_time) if cycle_time and cycle_time > 0 else "N/A"
+                            formatted_interval = {
+                                'start': datetime.fromtimestamp(interval['start']).strftime(human_readable_format),
+                                'end': datetime.fromtimestamp(interval['end']).strftime(human_readable_format),
+                                'duration': interval['duration'],
+                                'part': active_info['part'],
+                                'cycle_time': cycle_time,
+                                'parts_produced': parts_produced,
+                                'target': target,
+                                'unplanned_minutes_down': sum(d['duration'] for d in annotated_details if d['overlap'] != "No Overlap"),
+                                'planned_minutes_down': sum(d['duration'] for d in annotated_details if d['overlap'] == "No Overlap")
+                            }
+                            formatted_runtime_intervals.append(formatted_interval)
+                        
+                        aggregated_summary = summarize_contiguous_intervals(formatted_runtime_intervals, annotated_details, human_readable_format)
+                        machines_data[machine]['running_events'].append({
+                            'machine': machine,
+                            'block_start': block_start_str,
+                            'block_end': block_end_str,
+                            'running_intervals': formatted_runtime_intervals,
+                            'summary': aggregated_summary
+                        })
+            
+            # After processing all blocks, compute totals for each machine
+            for machine, data in machines_data.items():
+                total_minutes_up = 0
+                total_unplanned_down = 0
+                total_planned_down = 0
+                total_potential_minutes = 0
+                total_parts_produced = 0
+                total_target = 0
+                weighted_cycle_sum = 0
+
+                for event in data.get('running_events', []):
+                    summaries = event.get('summary')
+                    if summaries:
+                        for summary in summaries:
+                            total_minutes_up += summary.get('duration', 0)
+                            total_unplanned_down += summary.get('unplanned_minutes_down', 0)
+                            total_planned_down += summary.get('planned_minutes_down', 0)
+                            total_potential_minutes += summary.get('total_potential_minutes', 0)
+                            total_parts_produced += summary.get('parts_produced', 0)
+                            target_val = summary.get('target')
+                            if isinstance(target_val, (int, float)):
+                                total_target += target_val
+                            cycle_time = summary.get('cycle_time')
+                            potential = summary.get('total_potential_minutes', 0)
+                            if cycle_time and potential:
+                                weighted_cycle_sum += cycle_time * potential
+
+                if total_potential_minutes > 0:
+                    weighted_cycle = weighted_cycle_sum / total_potential_minutes
+                    weighted_cycle = round(weighted_cycle, 2)
+                else:
+                    weighted_cycle = None
+
+                overall_availability = total_minutes_up / total_potential_minutes if total_potential_minutes else 0
+                overall_performance = total_parts_produced / total_target if total_target else 0
+                overall_oee = overall_availability * overall_performance
+
+                machines_data[machine]['totals'] = {
+                    'block': f"{start_date_str} - {end_date_str}",
+                    'total_minutes_up': total_minutes_up,
+                    'total_unplanned_down': total_unplanned_down,
+                    'total_planned_down': total_planned_down,
+                    'total_potential_minutes': total_potential_minutes,
+                    'weighted_cycle': weighted_cycle if weighted_cycle is not None else "N/A",
+                    'total_parts_produced': total_parts_produced,
+                    'total_target': total_target,
+                    'availability': overall_availability,
+                    'performance': overall_performance,
+                    'oee': overall_oee
+                }
+            
+            # --- Aggregate groups ---
+            group_definitions = {
+                '1500T': ['272', '273']  # The group for 1500T aggregates these machines.
+            }
+            aggregated_groups = aggregate_machine_groups(machines_data, group_definitions)
+            # Add the aggregated group rows into machines_data and mark them with a flag (group=True)
+            for group_label, totals in aggregated_groups.items():
+                machines_data[group_label] = {'totals': totals, 'group': True}
+            
+            # Build a list of machine entries for sorted display.
+            # Order: first Press 272 and 273, then group "1500T", then the rest.
+            sorted_machines_data = []
+            for machine in ['272', '273']:
+                if machine in machines_data:
+                    sorted_machines_data.append({'machine': machine, 'data': machines_data[machine]})
+            if '1500T' in machines_data:
+                sorted_machines_data.append({'machine': '1500T', 'data': machines_data['1500T']})
+            for machine in ['277', '278']:
+                if machine in machines_data:
+                    sorted_machines_data.append({'machine': machine, 'data': machines_data[machine]})
+
+
+        except Exception as e:
+            print(f"[ERROR] Error processing time blocks: {e}")
+    
+    return render(request, 'prod_query/press_oee3.html', {
+        'sorted_machines_data': sorted_machines_data if 'sorted_machines_data' in locals() else [],
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+    })
+
+
+
+
+
+def compute_cycle_time(timestamps):
+    """
+    Computes the cycle time based on the differences between sorted timestamps.
+    Uses a weighted average of the top 3 most frequent cycle times.
+    """
+    if len(timestamps) < 2:
+        return 0  # No production, cycle time should be 0
+
+    timestamps = np.sort(timestamps)  # Ensure timestamps are sorted
+    time_diffs = np.diff(timestamps)  # Compute time differences
+    time_diffs = np.round(time_diffs).astype(int)  # Round to nearest second
+
+    unique_times, counts = np.unique(time_diffs, return_counts=True)  # Find unique cycle times and occurrences
+    sorted_indices = np.argsort(counts)[::-1]  # Sort occurrences in descending order
+
+    # Get top 3 cycle times
+    top_3_times = unique_times[sorted_indices[:5]]
+    top_3_counts = counts[sorted_indices[:5]]
+
+    print(f'Top 3 times:  {top_3_times}')
+    print(f'Top 3 counts: {top_3_counts}')
+
+    # Compute weighted average cycle time
+    weighted_cycle_time = np.sum(top_3_times * top_3_counts) / np.sum(top_3_counts)
+
+    return weighted_cycle_time
+
+def production_from_cycletime(cycle_time):
+    """
+    Calculates theoretical production for an hour based on the cycle time.
+    """
+    if cycle_time == 0:
+        return 0  # No production if cycle time is zero
+    return int(3600 / cycle_time)  # How many parts could be made in 1 hour
+
+def fetch_timestamps_for_timeblocks():
+    """
+    Fetches timestamps, computes cycle time for every hour, and prints debugging information.
+    """
+    asset_num = '272'
+    start_date = datetime(2025, 2, 15)
+    end_date = datetime(2025, 3, 1)
+
+    # Get custom time blocks
+    time_blocks = get_custom_time_blocks(start_date, end_date)
+
+    if isinstance(time_blocks, str):
+        print("Error:", time_blocks)
+        return
+
+    query = """
+        SELECT TimeStamp 
+        FROM GFxPRoduction
+        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+        ORDER BY TimeStamp ASC;
+    """
+
+    all_hourly_timestamps = []
+
+    print("\n=== DEBUGGING TIMESTAMP COUNT, CYCLE TIME & THEORETICAL PRODUCTION PER HOUR ===")
+
+    with connections['prodrpt-md'].cursor() as cursor:
+        for block_start, block_end in time_blocks:
+            print(f"\nTime Block: {block_start} to {block_end}")
+
+            current_hour = block_start
+
+            while current_hour < block_end:
+                next_hour = current_hour + timedelta(hours=1)
+                if next_hour > block_end:
+                    next_hour = block_end
+
+                start_timestamp = int(current_hour.timestamp())
+                end_timestamp = int(next_hour.timestamp())
+
+                # Fetch all timestamps
+                cursor.execute(query, (asset_num, start_timestamp, end_timestamp))
+                timestamps = [row[0] for row in cursor.fetchall()]
+                
+                # Store fetched timestamps
+                all_hourly_timestamps.append(timestamps)
+
+                print(f"\n⏳ Hour: {current_hour.strftime('%Y-%m-%d %H:%M:%S')} - {next_hour.strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"  🔍 Raw Timestamps: {timestamps}")
+
+                # Compute cycle time
+                cycle_time = compute_cycle_time(np.array(timestamps))
+
+                # Compute theoretical production
+                theoretical_production = int(3600 / cycle_time) if cycle_time > 0 else 0
+
+                # Print summary
+                print(f"  ✅ Entries: {len(timestamps)}")
+                print(f"  ⏳ Cycle Time: {cycle_time:.2f} seconds")
+                print(f"  🏭 Theoretical Production: {theoretical_production} parts")
+
+                current_hour = next_hour
+
+    print("\n=== END OF DEBUGGING OUTPUT ===")
+    
+    return all_hourly_timestamps  # Returning for further processing
+
+
+
+
+
+def test_view(request):
+    """
+    Django view that calls fetch_timestamps_for_timeblocks and returns the data as JSON.
+    """
+    try:
+        timestamps = fetch_timestamps_for_timeblocks()
+        return JsonResponse({"timestamps": timestamps})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+# I used that to make the press runtime wrapper which can handle multiple machines much better
+
+# def press_runtime(request):
+#     time_blocks = []
+#     downtime_events = []      # Calculated machine downtime events (over 5 min)
+#     downtime_entries = []     # PR downtime entries (with pre-calculated duration)
+#     part_numbers_data = []    # To store part numbers data for each time block
+#     running_events = []       # New list for running intervals
+
+#     # Initialize these variables with default values
+#     start_date_str = ""
+#     end_date_str = ""
+#     machine_input = ""
+#     header = "Generated Time Blocks"    # Default header
+
+#     if request.method == 'POST':
+#         start_date_str = request.POST.get('start_date', '')
+#         end_date_str = request.POST.get('end_date', '')
+#         machine_input = request.POST.get('machine_id', '').strip()  # Get the machine number(s)
+
+#         if not machine_input:
+#             machine_input = '272'
+
+#         machine_ids = [m.strip() for m in machine_input.split(',') if m.strip()]
+#         header_parts = []
+#         for m in machine_ids:
+#             if m in ['272', '273']:
+#                 header_parts.append(f"1500T Press {m}")
+#             else:
+#                 header_parts.append(f"Press {m}")
+#         header = "Generated Time Blocks for " + ", ".join(header_parts)
+
+#         try:
+#             if start_date_str and end_date_str:
+#                 start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+#                 end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+
+#                 # Get custom time blocks (assumed to be defined elsewhere)
+#                 time_blocks = get_custom_time_blocks(start_date, end_date)
+#                 if isinstance(time_blocks, str):
+#                     return render(request, 'prod_query/press_oee.html', {'error_message': time_blocks})
+
+#                 human_readable_format = '%Y-%m-%d %H:%M:%S'
+
+#                 with connections['prodrpt-md'].cursor() as cursor:
+#                     for block_start, block_end in time_blocks:
+#                         start_timestamp = int(block_start.timestamp())
+#                         end_timestamp = int(block_end.timestamp())
+
+#                         for machine in machine_ids:
+#                             # Fetch press changeover records for the machine
+#                             part_records = fetch_press_changeovers(machine, start_timestamp, end_timestamp)
+#                             part_numbers_data.append({
+#                                 'machine': machine,
+#                                 'block_start': block_start.strftime(human_readable_format),
+#                                 'block_end': block_end.strftime(human_readable_format),
+#                                 'raw_block_start': block_start,
+#                                 'raw_block_end': block_end,
+#                                 'part_records': part_records
+#                             })
+
+#                             produced = fetch_production_count(machine, cursor, start_timestamp, end_timestamp)
+#                             total_downtime, downtime_details = calculate_downtime_press(machine, cursor, start_timestamp, end_timestamp)
+
+#                             block_start_str = block_start.strftime(human_readable_format)
+#                             block_end_str = block_end.strftime(human_readable_format)
+
+#                             # Fetch PR downtime entries (existing logic)
+#                             called4helptime_iso = block_start.isoformat()
+#                             completedtime_iso = block_end.isoformat()
+#                             pr_entries_for_block = []
+#                             try:
+#                                 raw_downtime_data = fetch_press_prdowntime1_entries(machine, called4helptime_iso, completedtime_iso)
+#                                 if isinstance(raw_downtime_data, dict) and 'error' in raw_downtime_data:
+#                                     print(f"[ERROR] Error fetching PR downtime entries: {raw_downtime_data['error']}")
+#                                 else:
+#                                     for entry in raw_downtime_data:
+#                                         problem = entry[0]
+#                                         pr_start_time = entry[1]  # assumed datetime
+#                                         pr_end_time = entry[2]    # assumed datetime
+#                                         pr_idnumber = entry[3]
+#                                         if pr_end_time is not None:
+#                                             duration_minutes = int((pr_end_time - pr_start_time).total_seconds() / 60)
+#                                         else:
+#                                             duration_minutes = "Ongoing"
+#                                         pr_entry = {
+#                                             'machine': machine,
+#                                             'problem': problem,
+#                                             'start_time': pr_start_time,
+#                                             'end_time': pr_end_time,
+#                                             'duration_minutes': duration_minutes,
+#                                             'idnumber': pr_idnumber
+#                                         }
+#                                         pr_entries_for_block.append(pr_entry)
+#                                         downtime_entries.append(pr_entry)
+#                             except Exception as e:
+#                                 print(f"[ERROR] Exception while fetching PR downtime entries for machine {machine}: {e}")
+
+#                             annotated_details = []
+#                             non_overlap_total = 0
+#                             overlap_total = 0
+#                             for detail in downtime_details:
+#                                 dt_start = datetime.fromtimestamp(detail['start'])
+#                                 dt_end = datetime.fromtimestamp(detail['end'])
+#                                 overlap_info = compute_overlap_label(dt_start, dt_end, pr_entries_for_block)
+#                                 annotated_detail = {
+#                                     'start': dt_start.strftime(human_readable_format),
+#                                     'end': dt_end.strftime(human_readable_format),
+#                                     'duration': detail['duration'],
+#                                     'overlap': overlap_info['overlap'],
+#                                     'pr_id': overlap_info['pr_id']
+#                                 }
+#                                 annotated_details.append(annotated_detail)
+
+#                                 if overlap_info['overlap'] == "No Overlap":
+#                                     if detail['duration'] < 240:
+#                                         overlap_total += detail['duration']
+#                                     else:
+#                                         non_overlap_total += detail['duration']
+#                                 else:
+#                                     overlap_total += detail['duration']
+
+#                             if total_downtime > 5:
+#                                 downtime_events.append({
+#                                     'machine': machine,
+#                                     'block_start': block_start_str,
+#                                     'block_end': block_end_str,
+#                                     'produced': produced,
+#                                     'downtime_minutes': total_downtime,
+#                                     'non_overlap_minutes': non_overlap_total,
+#                                     'overlap_minutes': overlap_total,
+#                                     'details': annotated_details
+#                                 })
+
+#                             # ----- New: Calculate running intervals for this machine in this block -----
+#                             runtime_intervals = calculate_runtime_press(machine, cursor, start_timestamp, end_timestamp, running_threshold=5)
+#                            # ... within your loop for each time block and machine ...
+#                         formatted_runtime_intervals = []
+#                         for interval in runtime_intervals:
+#                             active_info = get_active_part(interval, part_records, machine)
+#                             parts_produced = fetch_production_count(machine, cursor, interval['start'], interval['end'])
+                            
+#                             try:
+#                                 cycle_time = float(active_info['cycle_time'])
+#                             except Exception:
+#                                 cycle_time = None
+#                             if cycle_time and cycle_time > 0:
+#                                 target = int((interval['duration'] * 60) / cycle_time)
+#                             else:
+#                                 target = "N/A"
+                            
+#                             formatted_interval = {
+#                                 'start': datetime.fromtimestamp(interval['start']).strftime(human_readable_format),
+#                                 'end': datetime.fromtimestamp(interval['end']).strftime(human_readable_format),
+#                                 'duration': interval['duration'],
+#                                 'part': active_info['part'],
+#                                 'cycle_time': active_info['cycle_time'],
+#                                 'parts_produced': parts_produced,
+#                                 'target': target
+#                             }
+#                             formatted_runtime_intervals.append(formatted_interval)
+
+#                         # Aggregate contiguous intervals by part number
+#                         aggregated_summary = summarize_contiguous_intervals(formatted_runtime_intervals, annotated_details, human_readable_format)
+
+#                         running_events.append({
+#                             'machine': machine,
+#                             'block_start': block_start_str,
+#                             'block_end': block_end_str,
+#                             'running_intervals': formatted_runtime_intervals,
+#                             'summary': aggregated_summary  # Include the summary in the data passed to the template
+#                         })
+
+#         except Exception as e:
+#             print(f"[ERROR] Error processing time blocks: {e}")
+
+#         # --- Attach SPM chart data to each time block ---
+#         part_numbers_data = attach_spm_chart_data_to_blocks(part_numbers_data, machine_input, interval=5)
+
+#     return render(request, 'prod_query/press_oee.html', {
+#         'time_blocks': time_blocks,
+#         'downtime_events': downtime_events,
+#         'downtime_entries': downtime_entries,
+#         'part_numbers_data': part_numbers_data,
+#         'running_events': running_events,  # Pass the new running events data to the template
+#         'header': header,
+#         'start_date': start_date_str,
+#         'end_date': end_date_str,
+#         'machine_id': machine_input,
+#     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =============================================================================
+# =============================================================================
+# ================================ OA By Day ==================================
+# =============================================================================
+# =============================================================================
+
+
+
+# Global mapping for scrap lines.
+line_scrap_mapping = {
+    "AB1V Reaction": ["AB1V Reaction", "AB1V Reaction Gas"],
+    "AB1V Input": ["AB1V Input", "AB1V Input Gas"],
+    "AB1V Overdrive": ["AB1V Overdrive", "AB1V Overdrive Gas"],
+    "10R80": ["10R80"],
+    "10R60": ["10R60"],
+    "10R140": ["10R140"],
+    "Presses": ["Compact"],
+}
+
+
+def compute_oee_metrics(totals_by_line, overall_total_produced, overall_total_target,
+                        overall_total_potential_minutes, overall_downtime_minutes,
+                        overall_scrap_total, scrap_totals_by_line, potential_minutes_by_line,
+                        downtime_totals_by_line):
+    """
+    Computes the OEE metrics overall and per line using:
+      - Run Time = Total potential minutes - downtime (in minutes)
+      - Availability (A) = run time / total potential minutes
+      - Ideal Cycle Time = total potential minutes / target parts
+      - Performance (P) = (ideal cycle time * produced parts) / run time
+      - Quality (Q) = (produced parts - scrap) / produced parts
+      - OEE = A * P * Q
+    """
+    # Cast overall_scrap_total to float to avoid mixing Decimal and float.
+    overall_scrap_total = float(overall_scrap_total)
+
+    # Overall calculations
+    overall_run_time = overall_total_potential_minutes - overall_downtime_minutes
+    overall_A = overall_run_time / overall_total_potential_minutes if overall_total_potential_minutes else 0.0
+    ideal_cycle_time_overall = overall_total_potential_minutes / overall_total_target if overall_total_target else 0.0
+    overall_P = (ideal_cycle_time_overall * overall_total_produced) / overall_run_time if overall_run_time else 0.0
+    overall_Q = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced else 0.0
+    overall_OEE = overall_A * overall_P * overall_Q
+    oee_overall = {"A": overall_A, "P": overall_P, "Q": overall_Q, "OEE": overall_OEE}
+
+    # Per-line calculations
+    oee_by_line = {}
+    for line in totals_by_line:
+        potential = potential_minutes_by_line.get(line, 0)
+        # Downtime per line is stored in seconds, so convert to minutes:
+        downtime_seconds = downtime_totals_by_line.get(line, 0)
+        downtime_minutes = downtime_seconds / 60.0
+        run_time = potential - downtime_minutes
+        line_totals = totals_by_line[line]
+        total_produced = line_totals.get("total_produced", 0)
+        total_target = line_totals.get("total_target", 0)
+        A = run_time / potential if potential else 0.0
+        ideal_cycle_time = potential / total_target if total_target else 0.0
+        P = (ideal_cycle_time * total_produced) / run_time if run_time else 0.0
+        # Ensure scrap is a float
+        scrap = float(scrap_totals_by_line.get(line, 0))
+        Q = (total_produced - scrap) / total_produced if total_produced else 0.0
+        OEE = A * P * Q
+        oee_by_line[line] = {"A": A, "P": P, "Q": Q, "OEE": OEE}
+
+    return {"overall": oee_overall, "by_line": oee_by_line}
+
+
+
+
+def fetch_machine_target(machine_id, line_name, effective_timestamp):
+    """
+    Fetches the most recent target for a given machine and line from the OAMachineTargets table.
+    Only targets with effective_date_unix less than or equal to the effective_timestamp are considered.
+    Returns the target value if found, or None otherwise.
+    """
+    target_record = (
+        OAMachineTargets.objects.filter(
+            machine_id=machine_id,
+            line=line_name,
+            effective_date_unix__lte=effective_timestamp
+        )
+        .order_by('-effective_date_unix')
+        .first()
+    )
+    return target_record.target if target_record else None
+
+
+
+
+def fetch_daily_scrap_data(cursor, start_time, end_time):
+    """
+    Fetches scrap totals from the tkb_scrap table for the given time window.
+    Aggregates scrap_amount by production line using line_scrap_mapping.
+    
+    Assumes that the `date_current` column is stored as a datetime.
+    """
+    start_time_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    end_time_str = end_time.strftime('%Y-%m-%d %H:%M:%S')
+    
+    query = """
+        SELECT scrap_line, SUM(scrap_amount)
+        FROM tkb_scrap
+        WHERE date_current BETWEEN %s AND %s
+        GROUP BY scrap_line;
+    """
+    cursor.execute(query, [start_time_str, end_time_str])
+    rows = cursor.fetchall()
+
+    # Initialize totals for each production line defined in our mapping.
+    scrap_totals_by_line = {line: 0 for line in line_scrap_mapping.keys()}
+    for scrap_line, total in rows:
+        for prod_line, valid_values in line_scrap_mapping.items():
+            if scrap_line in valid_values:
+                scrap_totals_by_line[prod_line] += total
+
+    overall_scrap_total = sum(scrap_totals_by_line.values())
+    return scrap_totals_by_line, overall_scrap_total
+
+
+def fetch_oa_by_day_production_data(request):
+    """
+    Combined view that fetches production, downtime, potential minutes,
+    and scrap data for each machine for a given date range.
+
+    The GET parameters expected are:
+       start_date: (YYYY-MM-DD or YYYY-MM-DD HH:MM) start of range
+                   - Default: yesterday at 11pm (date only, so auto subtract 1 day)
+       end_date:   (YYYY-MM-DD or YYYY-MM-DD HH:MM) end of range
+                   - Default: yesterday at 11pm
+
+    The time window is computed as:
+       If the user provided a time:
+         start_time = start_date  (use the chosen datetime directly)
+       Else:
+         start_time = (start_date with default time 23:00) - 1 day
+       end_time   = end_date (using the provided time or defaulting to 23:00)
+
+    Production and scrap queries then use this window.
+    The target for each machine is scaled by the ratio (queried_minutes / 7200)
+    (assuming an original target is for 7200 minutes, i.e. 5 days).
+    """
+    import datetime, os, importlib
+    from django.http import JsonResponse
+
+    # Default to yesterday if not provided.
+    default_date_str = (datetime.datetime.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    start_date_str = request.GET.get('start_date', default_date_str)
+    end_date_str = request.GET.get('end_date', default_date_str)
+
+    try:
+        # Try to parse a datetime with time included.
+        start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d %H:%M')
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d %H:%M')
+        auto_subtract = False  # User explicitly provided a time, so do not auto subtract.
+    except ValueError:
+        # Fallback: parse as date only.
+        start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d')
+        auto_subtract = True
+
+    # If no time was provided, default to 11pm.
+    if auto_subtract:
+        start_date = start_date.replace(hour=23, minute=0, second=0)
+        end_date = end_date.replace(hour=23, minute=0, second=0)
+        # For default behavior, subtract one day from the start_date.
+        start_time = start_date - datetime.timedelta(days=1)
+    else:
+        # If the user provided a time, use it as-is.
+        start_time = start_date
+
+    # For the end time, always use the provided datetime (or default 11pm if auto).
+    end_time = end_date
+
+    start_timestamp = int(start_time.timestamp())
+    end_timestamp = int(end_time.timestamp())
+    queried_minutes = (end_timestamp - start_timestamp) / 60
+    # print("Queried minutes:", queried_minutes)
+    
+    # Import database connection
+    settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
+    spec = importlib.util.spec_from_file_location("settings", settings_path)
+    settings = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(settings)
+    get_db_connection = settings.get_db_connection
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    production_data = {}
+    downtime_totals_by_line = {}
+
+    # Assume 'lines' is defined globally with your line/operation/machine structure.
+    for line in lines:
+        line_name = line["line"]
+        production_data.setdefault(line_name, {})
+        downtime_totals_by_line.setdefault(line_name, 0)
+        for operation in line["operations"]:
+            op = operation["op"]
+            for machine in operation["machines"]:
+                machine_number = machine["number"]
+                # Instead of:
+                # original_target = machine.get("target")
+                # try:
+                #     target = int(int(original_target) * (queried_minutes / 7200)) if original_target is not None else None
+                # except ValueError:
+                #     target = None
+                #
+                # Fetch target from the database:
+                target_val = fetch_machine_target(machine_number, line_name, start_timestamp)
+                if target_val is not None:
+                    target = int(target_val * (queried_minutes / 7200))
+                else:
+                    target = None
+
+                # Continue with production query logic using this 'target'
+                part_numbers = machine.get("part_numbers", None)
+                if part_numbers and isinstance(part_numbers, list) and len(part_numbers) > 0:
+                    placeholders = ", ".join(["%s"] * len(part_numbers))
+                    query_str = f"""
+                        SELECT Part, COUNT(*)
+                        FROM GFxPRoduction
+                        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+                        AND Part IN ({placeholders})
+                        GROUP BY Part;
+                    """
+                    params = [machine_number, start_timestamp, end_timestamp] + part_numbers
+                    cursor.execute(query_str, params)
+                    results = cursor.fetchall()
+                    produced_parts_by_part = {row[0]: row[1] for row in results}
+                    total_count = sum(produced_parts_by_part.values())
+                    
+                    if machine_number in production_data[line_name]:
+                        existing = production_data[line_name][machine_number]
+                        existing["produced_parts"] += total_count
+                        for part, count in produced_parts_by_part.items():
+                            existing.setdefault("produced_parts_by_part", {})[part] = (
+                                existing.get("produced_parts_by_part", {}).get(part, 0) + count
+                            )
+                    else:
+                        production_data[line_name][machine_number] = {
+                            "operation": op,
+                            "target": target,
+                            "produced_parts": total_count,
+                            "produced_parts_by_part": produced_parts_by_part,
+                            "part_numbers": part_numbers,
+                        }
+                else:
+                    query_str = """
+                        SELECT COUNT(*)
+                        FROM GFxPRoduction
+                        WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s;
+                    """
+                    cursor.execute(query_str, (machine_number, start_timestamp, end_timestamp))
+                    count = cursor.fetchone()[0] or 0
+                    production_data[line_name][machine_number] = {
+                        "operation": op,
+                        "target": target,
+                        "produced_parts": count,
+                        "part_numbers": None,
+                    }
+                
+                # Downtime calculation
+                query_ts = """
+                    SELECT TimeStamp
+                    FROM GFxPRoduction
+                    WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
+                    ORDER BY TimeStamp ASC;
+                """
+                cursor.execute(query_ts, (machine_number, start_timestamp, end_timestamp))
+                ts_rows = cursor.fetchall()
+                timestamps = [row[0] for row in ts_rows]
+                # print(f"Machine {machine_number}: fetched {len(timestamps)} timestamps for downtime.")
+                downtime_seconds = 0
+                previous_ts = start_timestamp
+                for ts in timestamps:
+                    gap = ts - previous_ts
+                    if gap > 300:
+                        downtime_seconds += gap
+                    previous_ts = ts
+                gap = end_timestamp - previous_ts
+                if gap > 300:
+                    downtime_seconds += gap
+                downtime_minutes = int(downtime_seconds / 60)
+                # print(f"Machine {machine_number}: downtime_seconds: {downtime_seconds}, downtime_minutes: {downtime_minutes}")
+                
+                production_data[line_name][machine_number]["downtime_seconds"] = downtime_seconds
+                production_data[line_name][machine_number]["downtime_minutes"] = downtime_minutes
+                downtime_totals_by_line[line_name] += downtime_seconds
+
+    # Scrap data
+    # print("Fetching scrap data for the time window.")
+    scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
+    # print("Scrap totals:", scrap_totals_by_line, "Overall scrap total:", overall_scrap_total)
+    
+    cursor.close()
+    conn.close()
+    
+    # Aggregation for production totals
+    totals_by_line = {}
+    overall_total_produced = 0
+    overall_total_target = 0
+    for line_name, machines in production_data.items():
+        line_total_produced = sum(m.get("produced_parts", 0) for m in machines.values())
+        line_total_target = sum(m.get("target", 0) for m in machines.values() if m.get("target") is not None)
+        totals_by_line[line_name] = {"total_produced": line_total_produced, "total_target": line_total_target}
+        overall_total_produced += line_total_produced
+        overall_total_target += line_total_target
+    # print("Totals by line:", totals_by_line)
+    # print("Overall produced:", overall_total_produced, "Overall target:", overall_total_target)
+    
+    overall_downtime_seconds = sum(downtime_totals_by_line.values())
+    overall_downtime_minutes = int(overall_downtime_seconds / 60)
+    # print("Overall downtime seconds:", overall_downtime_seconds, "Overall downtime minutes:", overall_downtime_minutes)
+    
+    # Dynamic potential minutes calculation: for each line, potential = (# machines) * queried_minutes
+    potential_minutes_by_line = {}
+    overall_total_potential_minutes = 0
+    for line in lines:
+        line_name = line["line"]
+        machine_count = sum(len(operation.get("machines", [])) for operation in line.get("operations", []))
+        line_potential = machine_count * queried_minutes
+        potential_minutes_by_line[line_name] = line_potential
+        overall_total_potential_minutes += line_potential
+        # print(f"Line {line_name}: machine count: {machine_count}, potential minutes: {line_potential}")
+    # print("Overall potential minutes:", overall_total_potential_minutes)
+    
+    previous_day_str = (start_date.date() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+
+    response_data = {
+        "production_data": production_data,
+        "totals_by_line": totals_by_line,
+        "overall_totals": {"total_produced": overall_total_produced, "total_target": overall_total_target},
+        "downtime_totals_by_line": downtime_totals_by_line,
+        "overall_downtime": {"downtime_seconds": overall_downtime_seconds, "downtime_minutes": overall_downtime_minutes},
+        "potential_minutes_by_line": potential_minutes_by_line,
+        "overall_potential_minutes": overall_total_potential_minutes,
+        "scrap_totals_by_line": scrap_totals_by_line,
+        "overall_scrap_total": overall_scrap_total,
+        "previous_day": previous_day_str,  # <-- added here
+    }
+
+    # Compute the OEE metrics using the new function.
+    oee_metrics = compute_oee_metrics(
+        totals_by_line, overall_total_produced, overall_total_target,
+        overall_total_potential_minutes, overall_downtime_minutes,
+        overall_scrap_total, scrap_totals_by_line, potential_minutes_by_line,
+        downtime_totals_by_line
+    )
+    # Add the computed metrics to the response.
+    response_data["oee_metrics"] = oee_metrics
+
+    # print("Response data:", response_data)
+    return JsonResponse(response_data)
+
+
+def oa_by_day(request):
+    """
+    Render the production data page with an inline range calendar.
+    The calendar is initialized in range mode so that the user can select a start and end date.
+    These dates are then passed as GET parameters (start_date and end_date) to the backend.
+    If not provided, both default to yesterday.
+    """
+    import datetime
+    from datetime import timedelta
+
+    # Default to yesterday for both start and end if not provided.
+    default_date_str = (datetime.datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
+    start_date_str = request.GET.get('start_date', default_date_str)
+    end_date_str = request.GET.get('end_date', default_date_str)
+
+    # Compute previous day from start_date.
+    start_date_obj = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    previous_day_str = (start_date_obj - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # For rendering, pass along the selected dates and computed previous_day.
+    context = {
+        'start_date': start_date_str,
+        'end_date': end_date_str,
+        'previous_day': previous_day_str,  # Formatted as YYYY-MM-DD
+        'lines': lines  # original structure for initial rendering (will be adjusted by JS if needed)
+    }
+    return render(request, 'prod_query/oa_by_day.html', context)
+
+
+
+
+
+@require_GET
+def oee_metrics_view(request):
+    """
+    API endpoint that returns different values based on query parameters:
+    - `?oee=1` → Returns the OEE number for yesterday.
+    - `?column=1` → Returns the column NUMBER for yesterday.
+    - `?row=1` → Returns the row NUMBER for yesterday.
+    
+    Example responses:
+    - "63"  (if `?oee=1` is passed)
+    - "48"  (if `?column=1` is passed)
+    - "19"  (if `?row=1` is passed)
+    """
+
+    # Always use yesterday's date
+    yesterday_date = datetime.now() - timedelta(days=1)
+    yesterday_day = yesterday_date.strftime('%d')  # Extracts the day number as a string (e.g., "18")
+
+    # Date-to-Cell Mapping (Row, Column)
+    date_to_cell_map = {
+        '1': (13, 56), '2': (15, 44), '3': (15, 46), '4': (15, 48), '5': (15, 50), '6': (15, 52), '7': (15, 54),
+        '8': (15, 56), '9': (17, 44), '10': (17, 46), '11': (17, 48), '12': (17, 50), '13': (17, 52), '14': (17, 54),
+        '15': (17, 56), '16': (19, 44), '17': (19, 46), '18': (19, 48), '19': (19, 50), '20': (19, 52), '21': (19, 54),
+        '22': (19, 56), '23': (21, 44), '24': (21, 46), '25': (21, 48), '26': (21, 50), '27': (21, 52), '28': (21, 54),
+        '29': (21, 56), '30': (23, 44), '31': (23, 46)
+    }
+
+    # Get the correct (row, column) tuple for yesterday
+    cell = date_to_cell_map.get(yesterday_day)
+
+    # Check if the user is requesting 'oee', 'column', or 'row'
+    if 'oee' in request.GET:
+        # Fetch full production JSON
+        full_response = fetch_oa_by_day_production_data(request)
+        data = json.loads(full_response.content.decode('utf-8'))
+
+        # Extract 'overall.OEE' value safely
+        overall_oee = data.get("oee_metrics", {}).get("overall", {}).get("OEE", None)
+
+        if overall_oee is not None:
+            oee_number = round(overall_oee * 100, 2)  # Convert to a number (e.g., 0.63 → 63)
+            return HttpResponse(str(oee_number), content_type="text/plain")
+        else:
+            return HttpResponse("N/A", content_type="text/plain")  # Return "N/A" if no OEE data
+
+    elif 'column' in request.GET:
+        if cell:
+            return HttpResponse(str(cell[1]), content_type="text/plain")  # Return column number
+        return HttpResponse("UNKNOWN", content_type="text/plain")
+
+    elif 'row' in request.GET:
+        if cell:
+            return HttpResponse(str(cell[0]), content_type="text/plain")  # Return row number
+        return HttpResponse("UNKNOWN", content_type="text/plain")
+
+    # If no valid parameter is found, return an error
+    return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)

@@ -5,128 +5,386 @@ Changeover Records
 {% endblock %}
 
 {% block content %}
-{% load static %}
-<div class="container">
-    <h1 class="mt-5">Changeovers</h1>
-    <div class="mb-3">
-        <a href="{% url 'create_setupfor' %}" class="btn btn-dark">Add New Changeover</a>
-        <a href="{% url 'display_assets' %}" class="btn btn-secondary">Assets</a>
-        <a href="{% url 'display_parts' %}" class="btn btn-secondary">Parts</a>
+<div class="container mt-4">
+  <!-- New card for checking the running part -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h4>Check Running Part</h4>
     </div>
-    <div class="mb-3">
-        <form method="GET" class="form-inline">
-            <div class="row">
-                <div class="col">
-                    <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search by part or asset" class="form-control" style="width: 100%;">
-                </div>
-                <div class="col">
-                    <input type="date" class="form-control form-control-md" id="from_date" name="from_date" value="{{ request.GET.from_date }}">
-                </div>
-                <div class="col">
-                    <input type="date" class="form-control form-control-md" id="to_date" name="to_date" value="{{ request.GET.to_date }}">
-                </div>
-                <div class="col">
-                    <button type="submit" class="btn btn-warning">Filter</button>
-                </div>
-            </div>
-        </form>
+    <div class="card-body">
+      <form id="checkPartForm">
+        <div class="row">
+          <div class="col-md-4">
+            <label for="assetSelectCheck" class="form-label">Asset</label>
+            <select class="form-select" id="assetSelectCheck" name="asset_id">
+              <option value="" selected>-------</option>
+              {% for asset in assets %}
+                <option value="{{ asset.id }}">{{ asset.asset_number }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="datetimePicker" class="form-label">Changeover Date &amp; Time</label>
+            <input type="datetime-local" class="form-control" id="datetimePicker" name="datetime">
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-warning">Check Part</button>
+          </div>
+        </div>
+      </form>
+      <div id="partResult" class="mt-3"></div>
     </div>
-    <div class="scrollable-table-container">
-        <table class="table table-bordered" id="recordsTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Asset</th>
-                    <th>Part</th>
-                    <th>Changeover Date & Time</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for setup in setups %}
-                <tr>
-                    <td>{{ setup.id }}</td>
-                    <td>{{ setup.asset.asset_number }}</td>
-                    <td>{{ setup.part.part_number }}</td>
-                    <td>{{ setup.since }}</td>
-                    <td>
-                        <a href="{% url 'edit_setupfor' setup.id %}" class="btn btn-sm btn-dark">Edit</a>
-                        <a href="{% url 'delete_setupfor' setup.id %}" class="btn btn-sm btn-warning">Delete</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  </div>
+
+  <!-- Changeover Records Card -->
+  <div class="card shadow">
+    <div class="card-header bg-dark text-white">
+      <h3 class="mb-0">Changeover Records</h3>
     </div>
-    <h2 class="mt-5">Find Part for Asset</h2>
-    <form method="POST">
-        {% csrf_token %}
-            <div class="row">
-                <div class="col">
-                    <input type="text" class="form-control" id="asset_number" name="asset_number" required placeholder="Asset Number">
-                </div>
-                <div class="col">
-                    <input type="datetime-local" class="form-control" id="timestamp" name="timestamp" required>
-                </div>
-            </div>
-        <button type="submit" class="btn btn-warning" style="padding: 10px 20px; margin-top: 20px;">Find Part</button>
-    </form>    
-    {% if part %}
-    <div class="mt-3">
-        <h3>Result</h3>
-        <p>Part: {{ part.part_number }}</p>
+    <div class="card-body">
+      <table class="table table-striped table-hover" id="changeoverTable">
+        <thead>
+          <tr>
+            <th scope="col">Asset</th>
+            <th scope="col">Part</th>
+            <th scope="col">Changeover Date &amp; Time (EST)</th>
+            <th scope="col">Actions</th>
+          </tr>
+          <tr>
+            <th scope="col">
+              <input type="text" id="assetFilter" class="form-control table-filter" placeholder="Search Asset">
+            </th>
+            <th scope="col">
+              <input type="text" id="partFilter" class="form-control table-filter" placeholder="Search Part">
+            </th>
+            <th scope="col">
+              <input type="text" id="dateFilter" class="form-control table-filter" placeholder="Search Date">
+            </th>
+            <th scope="col">
+            <!-- Plus icon button to add a new record -->
+            <button type="button" class="btn btn-link p-0" id="addRecordButton">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#ffc107" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
+              </svg>
+            </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for setup in setups %}
+          <tr class="data-row">
+            <td>{{ setup.asset.asset_number }}</td>
+            <td>{{ setup.part.part_number }}</td>
+            <td>{{ setup.since_human }}</td>
+            <td>
+              <!-- Edit button with data attributes -->
+              <button type="button" class="btn btn-link p-0 edit-record"
+                      data-record-id="{{ setup.id }}"
+                      data-asset-id="{{ setup.asset.id }}"
+                      data-part-id="{{ setup.part.id }}"
+                      data-since="{{ setup.since_local }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="text-warning" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="text-center">
+        <button id="loadMoreButton" class="btn btn-dark">Load More</button>
+      </div>
     </div>
-    {% elif part is None and request.method == 'POST' %}
-    <div class="mt-3">
-        <h3>Result</h3>
-        <p>No part found for the given asset and timestamp.</p>
-    </div>
-    {% endif %}
+  </div>
 </div>
 
-<script>
-    function searchTable() {
-        // Get the value of the search input and convert it to lowercase for case-insensitive comparison
-        const input = document.getElementById('searchInput').value.toLowerCase();
-        
-        // Get the table element that contains the records
-        const table = document.getElementById('recordsTable');
-        
-        // Get all the rows (tr elements) within the table
-        const trs = table.getElementsByTagName('tr');
-        
-        // Loop through all table rows, starting from the second row (index 1)
-        // since the first row is typically the table header
-        for (let i = 1; i < trs.length; i++) {
-            let row = trs[i];
-            
-            // Get the specific cells in the row that contain part and asset information
-            let partCell = row.getElementsByTagName('td')[2];
-            let assetCell = row.getElementsByTagName('td')[1];
-            
-            // Check if the part and asset cells exist
-            if (partCell || assetCell) {
-                // Get the text content of the part and asset cells
-                let partText = partCell.textContent || partCell.innerText;
-                let assetText = assetCell.textContent || assetCell.innerText;
-                
-                // Check if the search input is found within the part or asset text
-                if (partText.toLowerCase().indexOf(input) > -1 || assetText.toLowerCase().indexOf(input) > -1) {
-                    // If found, display the row
-                    row.style.display = '';
-                } else {
-                    // If not found, hide the row
-                    row.style.display = 'none';
-                }
-            }
-        }
-    }    
-</script>
+<!-- Modal for editing an existing record -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editForm">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Edit Record</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Hidden field for record ID -->
+          <input type="hidden" name="record_id" id="recordIdInput">
+          <div class="mb-3">
+            <label for="assetSelect" class="form-label">Asset</label>
+            <select class="form-select" name="asset_id" id="assetSelect">
+              {% for asset in assets %}
+              <option value="{{ asset.id }}">{{ asset.asset_number }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="partSelect" class="form-label">Part</label>
+            <select class="form-select" name="part_id" id="partSelect">
+              {% for part in parts %}
+              <option value="{{ part.id }}">{{ part.part_number }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="sinceInput" class="form-label">Changeover Date &amp; Time</label>
+            <input type="datetime-local" class="form-control" name="since" id="sinceInput">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-<style>
-    .scrollable-table-container {
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-</style>
+<!-- Modal for adding a new record -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="addForm">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title" id="addModalLabel">Add New Record</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="addAssetSelect" class="form-label">Asset</label>
+              <select class="form-select" name="asset_id" id="addAssetSelect">
+                <option value="" selected>-------</option>
+                {% for asset in assets %}
+                <option value="{{ asset.id }}">{{ asset.asset_number }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="addPartSelect" class="form-label">Part</label>
+              <select class="form-select" name="part_id" id="addPartSelect">
+                <option value="" selected>-------</option>
+                {% for part in parts %}
+                <option value="{{ part.id }}">{{ part.part_number }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="addSinceInput" class="form-label">Changeover Date &amp; Time</label>
+              <input type="datetime-local" class="form-control" name="since" id="addSinceInput">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-warning">Add Record</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Live Search functionality
+  const assetFilter = document.getElementById('assetFilter');
+  const partFilter = document.getElementById('partFilter');
+  const dateFilter = document.getElementById('dateFilter');
+  
+  assetFilter.addEventListener('input', filterTable);
+  partFilter.addEventListener('input', filterTable);
+  dateFilter.addEventListener('input', filterTable);
+  
+  function filterTable() {
+    const assetQuery = assetFilter.value.toLowerCase();
+    const partQuery = partFilter.value.toLowerCase();
+    const dateQuery = dateFilter.value.toLowerCase();
+    
+    const rows = document.querySelectorAll('#changeoverTable tbody .data-row');
+    
+    rows.forEach(function(row) {
+      const assetText = row.cells[0].textContent.toLowerCase();
+      const partText = row.cells[1].textContent.toLowerCase();
+      const dateText = row.cells[2].textContent.toLowerCase();
+      
+      if (assetText.includes(assetQuery) && partText.includes(partQuery) && dateText.includes(dateQuery)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
+      }
+    });
+  }
+  
+  // AJAX Load More functionality
+  let currentPage = 1;
+  const loadMoreButton = document.getElementById('loadMoreButton');
+
+  loadMoreButton.addEventListener('click', function() {
+    currentPage++;
+    fetch("{% url 'load_more_setups' %}?page=" + currentPage)
+      .then(response => response.json())
+      .then(data => {
+        if (data.records.length === 0) {
+          loadMoreButton.style.display = "none";
+        } else {
+          const tbody = document.querySelector('#changeoverTable tbody');
+          data.records.forEach(function(record) {
+            const tr = document.createElement('tr');
+            tr.classList.add('data-row');
+            tr.innerHTML = `
+              <td>${record.asset}</td>
+              <td>${record.part}</td>
+              <td>${record.since_human}</td>
+              <td>
+                <button type="button" class="btn btn-link p-0 edit-record"
+                        data-record-id="${record.id}"
+                        data-asset-id="${record.asset_id}"
+                        data-part-id="${record.part_id}"
+                        data-since="${record.since_local}">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="text-warning" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                  </svg>
+                </button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+          attachEditEvents();
+        }
+      })
+      .catch(error => console.error('Error:', error));
+  });
+  
+  // Attach edit-record click events
+  function attachEditEvents() {
+    const editButtons = document.querySelectorAll('.edit-record');
+    editButtons.forEach(function(button) {
+      button.removeEventListener('click', editHandler);
+      button.addEventListener('click', editHandler);
+    });
+  }
+  
+  function editHandler() {
+    const recordId = this.getAttribute('data-record-id');
+    const assetId = this.getAttribute('data-asset-id');
+    const partId = this.getAttribute('data-part-id');
+    const since = this.getAttribute('data-since');
+    
+    document.getElementById('recordIdInput').value = recordId;
+    document.getElementById('assetSelect').value = assetId;
+    document.getElementById('partSelect').value = partId;
+    document.getElementById('sinceInput').value = since;
+    
+    var editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    editModal.show();
+  }
+  
+  attachEditEvents();
+  
+  // Handle edit form submission
+  document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch("{% url 'update_setup' %}", {
+      method: 'POST',
+      body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+      } else {
+        const recordId = data.record_id;
+        const matchingButtons = document.querySelectorAll(`.edit-record[data-record-id='${recordId}']`);
+        matchingButtons.forEach(function(btn) {
+          const tr = btn.closest('tr');
+          if (tr) {
+            tr.cells[0].textContent = data.asset;
+            tr.cells[1].textContent = data.part;
+            tr.cells[2].textContent = data.since_human;
+            btn.setAttribute('data-asset-id', data.asset_id);
+            btn.setAttribute('data-part-id', data.part_id);
+            btn.setAttribute('data-since', data.since_local);
+          }
+        });
+        var modalEl = document.getElementById('editModal');
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+      }
+    })
+    .catch(error => console.error('Error:', error));
+  });
+  
+  // Show add modal when plus icon is clicked
+  document.getElementById('addRecordButton').addEventListener('click', function() {
+    var addModal = new bootstrap.Modal(document.getElementById('addModal'));
+    document.getElementById('addForm').reset();
+    addModal.show();
+  });
+  
+  // Handle add form submission
+  document.getElementById('addForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch("{% url 'add_setup' %}", {
+      method: 'POST',
+      body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+      } else {
+        const tbody = document.querySelector('#changeoverTable tbody');
+        const tr = document.createElement('tr');
+        tr.classList.add('data-row');
+        tr.innerHTML = `
+          <td>${data.asset}</td>
+          <td>${data.part}</td>
+          <td>${data.since_human}</td>
+          <td>
+            <button type="button" class="btn btn-link p-0 edit-record"
+                    data-record-id="${data.record_id}"
+                    data-asset-id="${data.asset_id}"
+                    data-part-id="${data.part_id}"
+                    data-since="${data.since_local}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="text-warning" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+              </svg>
+            </button>
+          </td>
+        `;
+        tbody.prepend(tr);
+        attachEditEvents();
+        var modalEl = document.getElementById('addModal');
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+      }
+    })
+    .catch(error => console.error('Error:', error));
+  });
+
+  // Handle check part form submission
+  document.getElementById('checkPartForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch("{% url 'check_part' %}", {
+      method: 'POST',
+      body: formData,
+    })
+    .then(response => response.json())
+    .then(data => {
+      const resultDiv = document.getElementById('partResult');
+      if (data.error) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+      } else {
+        resultDiv.innerHTML = `<div class="alert alert-info">Running Part: ${data.part_number}</div>`;
+      }
+    })
+    .catch(error => console.error('Error:', error));
+  });
+});
+</script>
 {% endblock %}

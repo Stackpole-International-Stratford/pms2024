@@ -1,0 +1,424 @@
+{% extends "parent.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-5">
+                <span id="selected-date-display">11pm {{ previous_day }} to 11pm {{ end_date }}</span>
+            </h1>
+        </div>
+    </div>
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="row">
+            <!-- Calendar Column -->
+            <div class="col-md-6 mb-3 mb-md-0">
+              <div id="calendar"></div>
+              <button id="submit-dates" class="btn btn-dark mt-3">Submit Dates</button>
+
+            </div>
+            <!-- OEE Metrics Column -->
+            <div class="col-md-6 d-flex flex-column justify-content-center">
+                <div class="card text-center">
+                <div class="card-body">
+                    <!-- Main OEE Display -->
+                    <h2 id="overall-OEE" class="display-3 mb-1">Loading...</h2>
+                    <p class="lead mb-4">Overall OEE</p>
+                    <!-- Sub-metrics Row -->
+                    <div class="row">
+                    <div class="col">
+                        <h5 id="overall-A" class="mb-0">Loading...</h5>
+                        <small>Availability (A)</small>
+                    </div>
+                    <div class="col">
+                        <h5 id="overall-P" class="mb-0">Loading...</h5>
+                        <small>Performance (P)</small>
+                    </div>
+                    <div class="col">
+                        <h5 id="overall-Q" class="mb-0">Loading...</h5>
+                        <small>Quality (Q)</small>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+  
+          </div>
+        </div>
+    </div>
+      
+
+    <!-- OEE Notes Accordion -->
+    <div class="accordion mb-4" id="oeeNotesAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOeeNotes">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#collapseOeeNotes" aria-expanded="false" 
+                        aria-controls="collapseOeeNotes">
+                    OEE Calculation Notes
+                </button>
+            </h2>
+            <div id="collapseOeeNotes" class="accordion-collapse collapse" 
+                aria-labelledby="headingOeeNotes" data-bs-parent="#oeeNotesAccordion">
+                <div class="accordion-body">
+                    <h5>Formula Used for OEE Calculation</h5>
+                    <p>We use the following formula to calculate OEE for this page: </p>
+                    <ul>
+                        <li><strong>Run Time</strong> = Total Potential Minutes - Downtime</li>
+                        <li><strong>Availability (A)</strong> = Run Time / Total Potential Minutes</li>
+                        <li><strong>Ideal Cycle Time</strong> = Total Potential Minutes / Target Parts</li>
+                        <li><strong>Performance (P)</strong> = (Ideal Cycle Time * Produced Parts) / Run Time</li>
+                        <li><strong>Quality (Q)</strong> = (Produced Parts - Scrap) / Produced Parts</li>
+                        <li><strong>OEE</strong> = A × P × Q</li>
+                    </ul>
+                    <p>Source: <a href="https://www.oee.com/calculating-oee/" target="_blank">OEE.com</a></p>
+
+                    <h5>Important Notes</h5>
+                    <ul>
+                        <li><strong>Performance (P) is often skewed higher</strong> and <strong>Availability (A) is often skewed lower than reality</strong> because we currently do not have the ability to distinguish between planned and unplanned downtime. However, the resulting OEE is still correct (verified).</li>
+                        <li><strong>Target values</strong> are currently sourced from the database table <strong>prod_query_oamachinetargets</strong> which is the same table used for all other oee pages.</li>
+                        <li>We use the <strong>targets and planned production time</strong> to deduce an ideal cycle time because we do not have ideal cycle times for every machine like we do for presses.</li>
+                        <li>Downtime events are considered as <strong>any gap over 5 minutes</strong> between making parts. This accounts for both long stoppages and microstoppages.</li>
+                        <li><strong>Quality (Q) frequently shows as 100%</strong> because the recorded scrap counts are typically less than 1% of total production.</li>
+                        <li><strong>Targets are originally based on a 5-day workweek (7200 minutes).</strong> When a user selects a custom date/time range, targets are adjusted proportionally based on the ratio of the selected time range to the original 7200-minute baseline.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- OEE Metrics by Line -->
+    <div id="oee-by-line" class="mb-4"></div>
+  
+    <div class="accordion mb-4" id="summarizedDataAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingSummarizedData">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSummarizedData" aria-expanded="false" aria-controls="collapseSummarizedData">
+              Summarized Data
+            </button>
+          </h2>
+          <div id="collapseSummarizedData" class="accordion-collapse collapse" aria-labelledby="headingSummarizedData" data-bs-parent="#summarizedDataAccordion">
+            <div class="accordion-body">
+              <!-- Summary Totals -->
+              <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                  <h2 class="h5 mb-0">Overall Totals</h2>
+                </div>
+                <div class="card-body">
+                  <p class="mb-2"><strong>Overall Produced Parts:</strong> <span id="overall-produced">Loading...</span></p>
+                  <p class="mb-0"><strong>Overall Target:</strong> <span id="overall-target">Loading...</span></p>
+                </div>
+              </div>
+      
+              <!-- Overall Downtime Totals -->
+              <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                  <h2 class="h5 mb-0">Overall Downtime</h2>
+                </div>
+                <div class="card-body">
+                  <p class="mb-0"><strong>Overall Downtime:</strong> <span id="overall-downtime">Loading...</span></p>
+                </div>
+              </div>
+      
+              <!-- Overall Potential Minutes Totals -->
+              <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                  <h2 class="h5 mb-0">Overall Potential Minutes</h2>
+                </div>
+                <div class="card-body">
+                  <p class="mb-0"><strong>Overall Potential Minutes:</strong> <span id="overall-potential-minutes">Loading...</span></p>
+                </div>
+              </div>
+      
+              <!-- Totals by Line for Production -->
+              <div id="totals-by-line" class="mb-4"></div>
+      
+              <!-- Downtime Totals by Line -->
+              <div id="downtime-totals-by-line" class="mb-4"></div>
+      
+              <!-- Potential Minutes by Line -->
+              <div id="potential-minutes-by-line" class="mb-4"></div>
+              
+              <!-- Scrap Totals by Line -->
+              <div id="scrap-totals-by-line" class="mb-4"></div>
+              
+              <!-- Overall Scrap Total -->
+              <div id="overall-scrap-total" class="mb-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+
+
+    <!-- Production Data Cards -->
+    <div class="accordion" id="productionData">
+        {% for line in lines %}
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false" aria-controls="collapse{{ forloop.counter }}">
+              {{ line.line }}
+            </button>
+          </h2>
+          <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#productionData">
+            <div class="accordion-body">
+              {% for operation in line.operations %}
+              <h3 class="h6 mt-3">Operation: {{ operation.op }}</h3>
+              <div class="row">
+                {% for machine in operation.machines %}
+                <div class="col-md-4 mb-3">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <p class="mb-2"><strong>Machine Number:</strong> {{ machine.number }}</p>
+                      <p class="mb-2">
+                        <strong>Target:</strong>
+                        <span class="target" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                          {{ machine.target }}
+                        </span>
+                      </p>
+                      {% if machine.part_numbers %}
+                        <p class="mb-2"><strong>Part Numbers:</strong> {{ machine.part_numbers|join:", " }}</p>
+                      {% endif %}
+                      <p class="mb-2">
+                        <strong>Parts:</strong>
+                        <span class="produced" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                          Loading...
+                        </span>
+                      </p>
+                      <p class="mb-0">
+                        <strong>Downtime:</strong>
+                        <span class="downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                          Loading...
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Initialize flatpickr and store the instance.
+    const calendarInstance = flatpickr("#calendar", {
+        mode: "range",
+        inline: true,
+        enableTime: true,         // Enable time picker
+        time_24hr: true,          // Use 24-hour time format
+        dateFormat: "Y-m-d H:i",  // Include time in the format
+        // Default to 11pm for both start and end dates.
+        defaultDate: ["{{ start_date }} 23:00", "{{ end_date }} 23:00"],
+    });
+
+    // Listen for button clicks.
+    document.getElementById("submit-dates").addEventListener("click", function() {
+        const selectedDates = calendarInstance.selectedDates;
+        if (selectedDates.length === 2) {
+            const startDate = calendarInstance.formatDate(selectedDates[0], "Y-m-d H:i");
+            const endDate = calendarInstance.formatDate(selectedDates[1], "Y-m-d H:i");
+            
+            // Optionally compute previous day from the start date (if still needed for display)
+            const startDateObj = new Date(selectedDates[0]);
+            startDateObj.setDate(startDateObj.getDate() - 0);
+            const previousDay = calendarInstance.formatDate(startDateObj, "Y-m-d H:i");
+            
+            // Update header title.
+            document.getElementById("selected-date-display").innerText = previousDay + " to " + endDate;
+            fetchProductionData(startDate, endDate);
+        } else {
+            alert("Please select both a start and an end date.");
+        }
+    });
+
+    
+    
+    
+    // Initial fetch using the default dates passed in from the backend.
+    fetchProductionData("{{ start_date }}", "{{ end_date }}");
+    
+    function fetchProductionData(startDate, endDate) {
+        var url = "{% url 'prod_query:fetch_oa_by_day_production_data' %}?start_date=" 
+                  + encodeURIComponent(startDate) + "&end_date=" + encodeURIComponent(endDate);
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Update production data for each machine.
+                document.querySelectorAll('.produced').forEach(function(elem) {
+                    var lineName = elem.getAttribute('data-line');
+                    var machineNumber = elem.getAttribute('data-machine');
+                    if (data.production_data[lineName] && data.production_data[lineName][machineNumber]) {
+                        elem.innerText = data.production_data[lineName][machineNumber].produced_parts;
+                    } else {
+                        elem.innerText = '0';
+                    }
+                });
+
+                // Update target values with the adjusted target from the JSON response.
+                document.querySelectorAll('.target').forEach(function(elem) {
+                    var lineName = elem.getAttribute('data-line');
+                    var machineNumber = elem.getAttribute('data-machine');
+                    if (data.production_data[lineName] && data.production_data[lineName][machineNumber]) {
+                        elem.innerText = data.production_data[lineName][machineNumber].target;
+                    }
+                });
+
+                // Update downtime data.
+                document.querySelectorAll('.downtime').forEach(function(elem) {
+                    var lineName = elem.getAttribute('data-line');
+                    var machineNumber = elem.getAttribute('data-machine');
+                    if (data.production_data[lineName] && data.production_data[lineName][machineNumber] &&
+                        data.production_data[lineName][machineNumber].downtime_minutes !== undefined) {
+                        elem.innerText = parseFloat(data.production_data[lineName][machineNumber].downtime_minutes) + " min";
+                    } else {
+                        elem.innerText = '0 min';
+                    }
+                });
+                // Update overall totals.
+                if (data.overall_totals) {
+                    document.getElementById('overall-produced').innerText = data.overall_totals.total_produced;
+                    document.getElementById('overall-target').innerText = data.overall_totals.total_target;
+                }
+                if (data.overall_downtime) {
+                    var overallDowntimeMinutes = parseFloat(data.overall_downtime.downtime_minutes);
+                    document.getElementById('overall-downtime').innerText = overallDowntimeMinutes + " min";
+                }
+                if (data.overall_potential_minutes !== undefined) {
+                    document.getElementById('overall-potential-minutes').innerText = data.overall_potential_minutes;
+                }
+                // Update totals by line.
+                if (data.totals_by_line) {
+                    var totalsByLineDiv = document.getElementById('totals-by-line');
+                    totalsByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Totals by Line</h2></div><div class="card-body" id="line-totals-content"></div></div>';
+                    var contentDiv = document.getElementById('line-totals-content');
+                    for (var line in data.totals_by_line) {
+                        var lineTotal = data.totals_by_line[line];
+                        var p = document.createElement('p');
+                        p.innerHTML = '<strong>Line ' + line + ':</strong> Parts: ' + lineTotal.total_produced + ', Target: ' + lineTotal.total_target;
+                        contentDiv.appendChild(p);
+                    }
+                }
+                // Update downtime totals by line.
+                if (data.downtime_totals_by_line) {
+                    var downtimeByLineDiv = document.getElementById('downtime-totals-by-line');
+                    downtimeByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Downtime Totals by Line</h2></div><div class="card-body" id="downtime-line-totals-content"></div></div>';
+                    var dtContentDiv = document.getElementById('downtime-line-totals-content');
+                    for (var line in data.downtime_totals_by_line) {
+                        var dtTotalSeconds = data.downtime_totals_by_line[line];
+                        var dtTotalMinutes = Math.floor(dtTotalSeconds / 60);
+                        var p = document.createElement('p');
+                        p.innerHTML = '<strong>Line ' + line + ':</strong> Downtime: ' + dtTotalMinutes + ' min';
+                        dtContentDiv.appendChild(p);
+                    }
+                }
+                // Update potential minutes by line.
+                if (data.potential_minutes_by_line) {
+                    var potentialMinutesDiv = document.getElementById('potential-minutes-by-line');
+                    potentialMinutesDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Potential Minutes by Line</h2></div><div class="card-body" id="line-potential-minutes-content"></div></div>';
+                    var potentialContentDiv = document.getElementById('line-potential-minutes-content');
+                    for (var line in data.potential_minutes_by_line) {
+                        var linePotential = data.potential_minutes_by_line[line];
+                        var p = document.createElement('p');
+                        p.innerHTML = '<strong>Line ' + line + ':</strong> Potential Minutes: ' + linePotential;
+                        potentialContentDiv.appendChild(p);
+                    }
+                }
+                // Update scrap totals by line.
+                if (data.scrap_totals_by_line) {
+                    var scrapByLineDiv = document.getElementById('scrap-totals-by-line');
+                    scrapByLineDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Scrap Totals by Line</h2></div><div class="card-body" id="scrap-line-totals-content"></div></div>';
+                    var scrapContentDiv = document.getElementById('scrap-line-totals-content');
+                    for (var line in data.scrap_totals_by_line) {
+                        var scrapTotal = data.scrap_totals_by_line[line];
+                        var p = document.createElement('p');
+                        p.innerHTML = '<strong>Line ' + line + ':</strong> Scrap: ' + scrapTotal;
+                        scrapContentDiv.appendChild(p);
+                    }
+                }
+                // Update overall scrap total.
+                if (data.overall_scrap_total !== undefined) {
+                    var overallScrapDiv = document.getElementById('overall-scrap-total');
+                    overallScrapDiv.innerHTML = '<div class="card shadow-sm mb-4"><div class="card-header bg-light"><h2 class="h5 mb-0">Overall Scrap Total</h2></div><div class="card-body"><p><strong>Total Scrap:</strong> <span id="scrap-total">Loading...</span></p></div></div>';
+                    document.getElementById('scrap-total').innerText = data.overall_scrap_total;
+                }
+
+                // Update OEE Metrics overall and by line.
+                if (data.oee_metrics && data.oee_metrics.overall) {
+                  document.getElementById('overall-A').innerText = (data.oee_metrics.overall.A * 100).toFixed(2) + "%";
+                  document.getElementById('overall-P').innerText = (data.oee_metrics.overall.P * 100).toFixed(2) + "%";
+                  document.getElementById('overall-Q').innerText = (data.oee_metrics.overall.Q * 100).toFixed(2) + "%";
+                  document.getElementById('overall-OEE').innerText = (data.oee_metrics.overall.OEE * 100).toFixed(2) + "%";
+              }
+              
+
+                if (data.oee_metrics && data.oee_metrics.by_line) {
+                    var oeeByLineDiv = document.getElementById('oee-by-line');
+                    oeeByLineDiv.innerHTML = 
+                        '<div class="card shadow-sm mb-4">' +
+                            '<div class="card-header bg-light">' +
+                                '<h2 class="h5 mb-0">OEE Metrics by Line</h2>' +
+                            '</div>' +
+                            '<div class="card-body" id="oee-line-content"></div>' +
+                        '</div>';
+                    
+                    var oeeLineContentDiv = document.getElementById('oee-line-content');
+                    var lines = Object.keys(data.oee_metrics.by_line);
+                    
+                    // Sort lines by highest OEE value
+                    lines.sort(function(a, b) {
+                        return data.oee_metrics.by_line[b].OEE - data.oee_metrics.by_line[a].OEE;
+                    });
+                    
+                    // Create a table to display the metrics nicely.
+                    var table = document.createElement('table');
+                    table.className = 'table table-striped';
+                    
+                    // Create table header.
+                    var thead = document.createElement('thead');
+                    thead.innerHTML = 
+                        '<tr>' +
+                            '<th>Line</th>' +
+                            '<th>Availability (A)</th>' +
+                            '<th>Performance (P)</th>' +
+                            '<th>Quality (Q)</th>' +
+                            '<th>OEE</th>' +
+                        '</tr>';
+                    table.appendChild(thead);
+                    
+                    // Create table body.
+                    var tbody = document.createElement('tbody');
+                    lines.forEach(function(line) {
+                        var metrics = data.oee_metrics.by_line[line];
+                        var row = document.createElement('tr');
+                        row.innerHTML = 
+                            '<td>' + line + '</td>' +
+                            '<td>' + metrics.A.toFixed(2) + '</td>' +
+                            '<td>' + metrics.P.toFixed(2) + '</td>' +
+                            '<td>' + metrics.Q.toFixed(4) + '</td>' +
+                            '<td>' + metrics.OEE.toFixed(2) + '</td>';
+                        tbody.appendChild(row);
+                    });
+                    table.appendChild(tbody);
+                    
+                    oeeLineContentDiv.appendChild(table);
+                }
+                
+
+            })
+            .catch(error => console.error('Error fetching production data:', error));
+    }
+});
+</script>
+{% endblock %}

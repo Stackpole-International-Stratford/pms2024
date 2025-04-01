@@ -1,0 +1,105 @@
+{% extends 'parent.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h1>Press Runtime Summary</h1>
+
+  <!-- Form Section: Start and End Dates -->
+  <form method="POST">
+    {% csrf_token %}
+    <div class="row">
+      <div class="col-md-6">
+        <label for="start_date" class="form-label">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+      </div>
+      <div class="col-md-6">
+        <label for="end_date" class="form-label">End Date:</label>
+        <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-dark mt-3">Submit</button>
+  </form>
+
+  {% if error_message %}
+    <div class="alert alert-danger mt-3">{{ error_message }}</div>
+  {% endif %}
+
+  <!-- Loop over the machines -->
+  {% if machines_data %}
+    {% for machine, data in machines_data.items %}
+
+
+    {% if machine == "272" or machine == "273" %}
+    <h2 class="mt-4">Press {{ machine }} (1500T)</h2>
+  {% else %}
+    <h2 class="mt-4">Press {{ machine }}</h2>
+  {% endif %}
+  <a href="{% url 'prod_query:press_runtime' %}?start_date={{ start_date }}&end_date={{ end_date }}&machine_id={{ machine }}" 
+   target="_blank" 
+   class="btn btn-secondary my-1">
+   Dive Deeper
+</a>
+  <p><strong>Note:</strong> This uses press_changeovers and falls back to sc_production for the running part. N/As occur when the part number doesn’t adhere to the 9-digit format or when there's simply no entries.</p>
+  <p>If performance is consistently too high, this suggests innaccurate ideal cycle times - needs to be faster</p>
+  <p>Ideal cycle times are coming from <a href="{% url 'asset_cycle_times_page' %}">here</a>.</p>
+
+      {% if data.running_events %}
+        <table class="table table-bordered mt-3">
+          <thead>
+            <tr>
+              <th style="min-width: 160px;">Time Block</th>
+              <th style="min-width: 100px;">Part</th>
+              <th style="min-width: 100px;">Started</th>
+              <th style="min-width: 100px;">Ended</th>
+              <th>Total Minutes Up</th>
+              <th>Unplanned Minutes Down</th>
+              <th>Planned Minutes Down</th>
+              <th>Total Potential Minutes</th>
+              <th>Ideal Cycle Time</th>
+              <th>Total Parts Produced</th>
+              <th>Total Target</th>
+              <th>Availability</th>
+              <th>Performance</th>
+              <th style="min-width: 65px;">OEE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in data.running_events %}
+              {% if event.summary %}
+                {% for summary in event.summary %}
+                  <tr>
+                    {% if forloop.first %}  <!-- Only show Time Block on the first row -->
+                      <td rowspan="{{ event.summary|length }}">{{ event.block_start|slice:":16" }} - {{ event.block_end|slice:":16" }}</td>
+                    {% endif %}
+                    <td>{{ summary.part }}</td>
+                    <td>{{ summary.start }}</td>
+                    <td>{{ summary.end }}</td>
+                    <td>{{ summary.duration }}</td>
+                    <td>{{ summary.unplanned_minutes_down }}</td>
+                    <td>{{ summary.planned_minutes_down }}</td>
+                    <td>{{ summary.total_potential_minutes }}</td>
+                    <td>{{ summary.cycle_time }}</td>
+                    <td>{{ summary.parts_produced }}</td>
+                    <td>{{ summary.target }}</td>
+                    <td>{{ summary.availability|floatformat:2 }}</td>
+                    <td>{{ summary.performance|floatformat:2 }}</td>
+                    <td>{{ summary.oee|floatformat:2 }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td>{{ event.block_start|slice:":16" }} - {{ event.block_end|slice:":16" }}</td>
+                  <td colspan="13">No summary data available</td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No running events found for this machine.</p>
+      {% endif %}
+
+    {% endfor %}
+  {% else %}
+  {% endif %}
+</div>
+{% endblock %}

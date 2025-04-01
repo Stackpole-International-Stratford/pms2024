@@ -1,0 +1,1625 @@
+[
+  {
+    "asset": "",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1713588818
+  },
+  {
+    "asset": "240",
+    "part_number": "50-9341-A",
+    "completed_time_epoch": 1712257129
+  },
+  {
+    "asset": "240",
+    "part_number": "50-9341-B",
+    "completed_time_epoch": 1717123665
+  },
+  {
+    "asset": "240",
+    "part_number": "50-9341-B",
+    "completed_time_epoch": 1726192262
+  },
+  {
+    "asset": "240",
+    "part_number": "50-9341-B",
+    "completed_time_epoch": 1718902281
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0447-A",
+    "completed_time_epoch": 1718233738
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1715663187
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1738052942
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1723813260
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1707891408
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1708660460
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1716860723
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1723018922
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1739301386
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1708128192
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1720823069
+  },
+  {
+    "asset": "242",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1724307094
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1713-A",
+    "completed_time_epoch": 1731045917
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1713-A",
+    "completed_time_epoch": 1727718264
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1713-A",
+    "completed_time_epoch": 1733133715
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1720011533
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1709571374
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1731601854
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1709653406
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1740594459
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1718631564
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1715264636
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1724463036
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1726050499
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-A",
+    "completed_time_epoch": 1714768666
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-a",
+    "completed_time_epoch": 1714167955
+  },
+  {
+    "asset": "242",
+    "part_number": "50-1731-B",
+    "completed_time_epoch": 1726226077
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1716384904
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1736787286
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1734109425
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1708561202
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3214-b",
+    "completed_time_epoch": 1720442366
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1723519792
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3627-A",
+    "completed_time_epoch": 1707739858
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3632-A",
+    "completed_time_epoch": 1712199368
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3632-A",
+    "completed_time_epoch": 1710355823
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3632-A",
+    "completed_time_epoch": 1713342545
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3632-A",
+    "completed_time_epoch": 1719546103
+  },
+  {
+    "asset": "242",
+    "part_number": "50-3632-B",
+    "completed_time_epoch": 1712909765
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1713914147
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1714557223
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1732736774
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1715035360
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1734402089
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1741386194
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1739569954
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1725589278
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1738349966
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1740731111
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1729770790
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1729163433
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1733436543
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1726540583
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1730467166
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1727862453
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1727130083
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1722295281
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1729647681
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1719309252
+  },
+  {
+    "asset": "242",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1717828366
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1707221179
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1717520861
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1708417892
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1723138803
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1720082160
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1720490574
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1721381308
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1720633697
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1718377816
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1722525239
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1717759832
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1730183653
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1732255806
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1716523246
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1718930405
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1715413102
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1724163498
+  },
+  {
+    "asset": "242",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1721254962
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1717191965
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1737146245
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1707357365
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1728177589
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1719578986
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1733302090
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1725451206
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1712354140
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1738750775
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1706701148
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1721959788
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1721919622
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1732018022
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1726782755
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1721120643
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1727385211
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1721744611
+  },
+  {
+    "asset": "242",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1728402974
+  },
+  {
+    "asset": "242",
+    "part_number": "to 4865-A",
+    "completed_time_epoch": 1728512206
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0447-A",
+    "completed_time_epoch": 1733780257
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1722363670
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1729027934
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1714461212
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-A",
+    "completed_time_epoch": 1715684980
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1724453120
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1723189435
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1720131493
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1707185262
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1721080970
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1716576079
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1727940171
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1712770229
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1736161879
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1732742161
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1738329140
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1731024772
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1739448054
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1717800895
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1736796622
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1713565720
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1732056911
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1737498992
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1727142357
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1721947375
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1740532572
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1726520230
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1719024714
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1719022293
+  },
+  {
+    "asset": "245",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1715911905
+  },
+  {
+    "asset": "245",
+    "part_number": "50-1713-A",
+    "completed_time_epoch": 1741044488
+  },
+  {
+    "asset": "245",
+    "part_number": "50-1713-B",
+    "completed_time_epoch": 1734567265
+  },
+  {
+    "asset": "245",
+    "part_number": "50-1731-B",
+    "completed_time_epoch": 1720722835
+  },
+  {
+    "asset": "245",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1725548027
+  },
+  {
+    "asset": "245",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1712656596
+  },
+  {
+    "asset": "245",
+    "part_number": "50-3627-A",
+    "completed_time_epoch": 1713405611
+  },
+  {
+    "asset": "245",
+    "part_number": "50-3627-B",
+    "completed_time_epoch": 1707839016
+  },
+  {
+    "asset": "245",
+    "part_number": "50-3627-B",
+    "completed_time_epoch": 1706821621
+  },
+  {
+    "asset": "245",
+    "part_number": "50-3627-B",
+    "completed_time_epoch": 1713178927
+  },
+  {
+    "asset": "245",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1718326841
+  },
+  {
+    "asset": "245",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1717420150
+  },
+  {
+    "asset": "245",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1730134491
+  },
+  {
+    "asset": "245",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1720023134
+  },
+  {
+    "asset": "245",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1729700426
+  },
+  {
+    "asset": "245",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1714582865
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1725398478
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1715297034
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1731488824
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1726676440
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1728598522
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5401-b",
+    "completed_time_epoch": 1714000281
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1725070137
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1737680981
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1732235777
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1718807551
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1730438747
+  },
+  {
+    "asset": "245",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1732575857
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1723788854
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1717590032
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1727404988
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1730842295
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1722349574
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1720478133
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1733226579
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1728364943
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1719386566
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1718476261
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1724836382
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1716376143
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1729261878
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1722535368
+  },
+  {
+    "asset": "245",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1721441755
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-A",
+    "completed_time_epoch": 1724286666
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1706660801
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1719684755
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1712278298
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1707417717
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1717440672
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1723016230
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1718152784
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1726830327
+  },
+  {
+    "asset": "245",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1727735650
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1727738633
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1707744425
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1726239229
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1707940615
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1709665905
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0447-B",
+    "completed_time_epoch": 1712627870
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1714604104
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1730213662
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0455-B",
+    "completed_time_epoch": 1729084568
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1709826226
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1728671913
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1734567309
+  },
+  {
+    "asset": "261",
+    "part_number": "50-0519-B",
+    "completed_time_epoch": 1727200621
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1717054308
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1720655986
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1722507339
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1715818965
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1719451410
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1717776312
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1721685984
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1718794481
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1723227868
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-A",
+    "completed_time_epoch": 1724697341
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-A",
+    "completed_time_epoch": 1725577083
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-B",
+    "completed_time_epoch": 1725002130
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-B",
+    "completed_time_epoch": 1732916627
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-B",
+    "completed_time_epoch": 1727835324
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-B",
+    "completed_time_epoch": 1723685041
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1713-B",
+    "completed_time_epoch": 1731086169
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1731-B",
+    "completed_time_epoch": 1740508979
+  },
+  {
+    "asset": "261",
+    "part_number": "50-1731-B",
+    "completed_time_epoch": 1724344026
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1722307595
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1719249651
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1723047485
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1721406176
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1713909319
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3214-B",
+    "completed_time_epoch": 1732555314
+  },
+  {
+    "asset": "261",
+    "part_number": "50-3627-A",
+    "completed_time_epoch": 1709001797
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-A",
+    "completed_time_epoch": 1724811867
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1730721751
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1731438724
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1736180170
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1732123313
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1733948565
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1733400467
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1737146250
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1738286345
+  },
+  {
+    "asset": "261",
+    "part_number": "50-4865-B",
+    "completed_time_epoch": 1739310884
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1738783508
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1741109522
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5214-B",
+    "completed_time_epoch": 1729526910
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1706739311
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1739583967
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1712570566
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1715277397
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5401-B",
+    "completed_time_epoch": 1727376085
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1726589367
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1714451965
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1707459301
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1708600136
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1733832116
+  },
+  {
+    "asset": "261",
+    "part_number": "50-5404-B",
+    "completed_time_epoch": 1713309355
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1726021118
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1712793506
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1729824996
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-b",
+    "completed_time_epoch": 1714042947
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1707216710
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1708148125
+  },
+  {
+    "asset": "261",
+    "part_number": "50-6114-B",
+    "completed_time_epoch": 1726748403
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1732001716
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1733240780
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1738945892
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1741623759
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1734404897
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1736954177
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1730930464
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1724200594
+  },
+  {
+    "asset": "261",
+    "part_number": "50-9641-B",
+    "completed_time_epoch": 1729513133
+  },
+  {
+    "asset": "261",
+    "part_number": "to 5404-B",
+    "completed_time_epoch": 1728468882
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1707327700
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1714228178
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1714731691
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1732881713
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1731540844
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1708104143
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1708710072
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1736530613
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1712857426
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1723851295
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1715021601
+  },
+  {
+    "asset": "262",
+    "part_number": "50-1467-A",
+    "completed_time_epoch": 1727278145
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1708505968
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1736269040
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1738022125
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1713976682
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1724427261
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1732537494
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1726847299
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1712591351
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1727887009
+  },
+  {
+    "asset": "262",
+    "part_number": "50-3050-A",
+    "completed_time_epoch": 1731063881
+  },
+  {
+    "asset": "262",
+    "part_number": "50-5710-A",
+    "completed_time_epoch": 1707940881
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1734023452
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1727278152
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1736530602
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1707246049
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1723228574
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1719442686
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1708120219
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1708712687
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1715870569
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1714451934
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1720649642
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1718675224
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1714716668
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1721686680
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1732818968
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1715022062
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1712851603
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1723844685
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1717053767
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1731594123
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1717776302
+  },
+  {
+    "asset": "263",
+    "part_number": "50-1467-B",
+    "completed_time_epoch": 1722501709
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-b",
+    "completed_time_epoch": 1726848525
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1719249668
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1727887117
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1732537486
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1731055519
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1712584427
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1723649913
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1723047978
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1722272988
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1724427272
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1738022128
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1721412670
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1708505080
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1713973675
+  },
+  {
+    "asset": "263",
+    "part_number": "50-3050-B",
+    "completed_time_epoch": 1736275264
+  },
+  {
+    "asset": "263",
+    "part_number": "50-5710-B",
+    "completed_time_epoch": 1707940865
+  }
+]
+
+
+

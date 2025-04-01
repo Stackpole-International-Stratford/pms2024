@@ -2,13 +2,6 @@
 from django import forms
 from ..models.setupfor_models import Asset, Part, SetupFor
 
-class SetupForForm(forms.ModelForm):
-    class Meta:
-        model = SetupFor
-        fields = ['asset', 'part', 'since']
-        widgets = {
-            'since': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-        }
 
 class AssetForm(forms.ModelForm):
     class Meta:

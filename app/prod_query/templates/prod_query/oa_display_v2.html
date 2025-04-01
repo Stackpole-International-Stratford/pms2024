@@ -44,7 +44,7 @@
         <div class="row bordered mb-3 text-center">
             <div class="col-12">
                 <img src="{% static 'images/JE_Logo_PNG.png' %}" alt="JE Logo" style="height: 50px; margin-bottom: 10px;">
-                <h1>Operational Availability by Line</h1>
+                <h1>Overall Equipment Effectiveness by Line</h1>
             </div>
         </div>
     </div>
@@ -459,79 +459,37 @@
     <!-- ========== SCRIPT: Highlight Table Cells ========== -->
     <script>
         function highlightTable() {
-            const percentageDownCells = document.querySelectorAll('.percentage-down');
-            let maxPercentage = -Infinity, minPercentage = Infinity;
-            percentageDownCells.forEach(cell => {
-                const percentage = parseInt(cell.dataset.percentage, 10);
-                if (!isNaN(percentage)) {
-                    if (percentage > maxPercentage) maxPercentage = percentage;
-                    if (percentage < minPercentage) minPercentage = percentage;
-                }
+            // Get all percentage down cells and create an array with their values
+            const percentageDownCells = Array.from(document.querySelectorAll('.percentage-down')).map(cell => ({
+                cell: cell,
+                value: parseInt(cell.dataset.percentage, 10)
+            })).filter(item => !isNaN(item.value));
+        
+            // Sort the array in descending order (worst first)
+            percentageDownCells.sort((a, b) => b.value - a.value);
+        
+            // Reset any previously applied styles (optional)
+            document.querySelectorAll('.percentage-down').forEach(cell => {
+                cell.style.color = '';
+                cell.style.fontWeight = '';
             });
+        
+            // Apply colors to the worst three machines
+            if (percentageDownCells[0]) {
+                percentageDownCells[0].cell.style.color = '#D32F2F'; // Worst machine - Dark Red
+                percentageDownCells[0].cell.style.fontWeight = 'bold';
+            }
+            if (percentageDownCells[1]) {
+                percentageDownCells[1].cell.style.color = '#F57C00'; // Second worst - Dark Orange
+                percentageDownCells[1].cell.style.fontWeight = 'bold';
+            }
+            if (percentageDownCells[2]) {
+                percentageDownCells[2].cell.style.color = '#FFB300'; // Third worst - Amber/Mustard
+                percentageDownCells[2].cell.style.fontWeight = 'bold';
+            }
 
-            // Highlight min/max Percentage Down
-            percentageDownCells.forEach(cell => {
-                const percentage = parseInt(cell.dataset.percentage, 10);
-                if (percentage === maxPercentage) {
-                    cell.style.color = 'red';
-                    cell.style.fontWeight = 'bold';
-                } else if (percentage === minPercentage) {
-                    cell.style.color = 'green';
-                    cell.style.fontWeight = 'bold';
-                }
-            });
-
-            // Highlight the min P among subtotals
-            const pCells = document.querySelectorAll('.subtotal-p');
-            let minP = Infinity;
-            pCells.forEach(cell => {
-                const pValue = parseFloat(cell.dataset.p);
-                if (!isNaN(pValue) && pValue < minP) {
-                    minP = pValue;
-                }
-            });
-            pCells.forEach(cell => {
-                const pValue = parseFloat(cell.dataset.p);
-                if (pValue === minP) {
-                    cell.style.color = 'red';
-                    cell.style.fontWeight = 'bold';
-                }
-            });
-
-            // Highlight the min A among subtotals
-            const aCells = document.querySelectorAll('.subtotal-a');
-            let minA = Infinity;
-            aCells.forEach(cell => {
-                const aValue = parseFloat(cell.dataset.a);
-                if (!isNaN(aValue) && aValue < minA) {
-                    minA = aValue;
-                }
-            });
-            aCells.forEach(cell => {
-                const aValue = parseFloat(cell.dataset.a);
-                if (aValue === minA) {
-                    cell.style.color = 'red';
-                    cell.style.fontWeight = 'bold';
-                }
-            });
-
-            // (Optional) Highlight the minimum PxA among subtotals
-            const pxaCells = document.querySelectorAll('.subtotal-pxa');
-            let minPxA = Infinity;
-            pxaCells.forEach(cell => {
-                const pxaValue = parseFloat(cell.dataset.pxa);
-                if (!isNaN(pxaValue) && pxaValue < minPxA) {
-                    minPxA = pxaValue;
-                }
-            });
-            pxaCells.forEach(cell => {
-                const pxaValue = parseFloat(cell.dataset.pxa);
-                if (pxaValue === minPxA) {
-                    cell.style.color = 'red';
-                    cell.style.fontWeight = 'bold';
-                }
-            });
         }
+        
     </script>
 
     <!-- ========== SCRIPT: Display Downtime Details in a Modal ========== -->

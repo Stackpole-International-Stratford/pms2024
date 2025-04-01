@@ -1,7 +1,9 @@
 from datetime import datetime
 import importlib.util
 import os
-
+from django.utils.dateparse import parse_datetime
+from django.http import JsonResponse
+from plant.models.setupfor_models import SetupFor
 
 def fetch_prdowntime1_entries(assetnum, called4helptime, completedtime):
     """
@@ -310,3 +312,72 @@ def calculate_oa_metrics(data):
         raise ValueError(f"Missing key in input data: {e}")
     except ValueError as e:
         raise ValueError(f"Invalid input: {e}")
+
+
+
+
+
+
+
+
+
+# ==================================================================
+# ==================================================================
+# ==================== Fetch Part for Asset ========================
+# ==================================================================
+# ==================================================================
+
+
+def get_part_number(asset_id, datetime_str):
+    """
+    Given an asset ID and a datetime string, this function returns a dictionary containing the
+    part number for the latest SetupFor record (on or before the provided datetime). If an error occurs
+    or no record is found, an appropriate error message is returned.
+
+    :param asset_id: The asset identifier.
+    :param datetime_str: A datetime string in ISO format (e.g., from an HTML datetime-local input).
+    :return: A dictionary with either {'part_number': <value>} or {'error': <message>}.
+    """
+
+    # Validate input
+    if not asset_id or not datetime_str:
+        return {'error': 'Asset and datetime are required.'}
+
+    # Parse the datetime string from the input.
+    dt = parse_datetime(datetime_str)
+    if dt is None:
+        return {'error': 'Invalid datetime format.'}
+
+    # Convert the datetime to an epoch timestamp.
+    # Note: If dt is naive, dt.timestamp() treats it as local time.
+    epoch_time = int(dt.timestamp())
+
+    # Query for the latest SetupFor record for the given asset that occurred on or before the provided datetime.
+    record = SetupFor.objects.filter(asset_id=asset_id, since__lte=epoch_time).order_by('-since').first()
+
+    if record:
+        return {'part_number': record.part.part_number}
+    else:
+        return {'error': 'No record found for the given asset and time.'}
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ====================================================================
+# ====================================================================
+# ==================== OA By Day Useful Functions ====================
+# ====================================================================
+# ====================================================================
+
+

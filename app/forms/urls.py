@@ -31,6 +31,12 @@ urlpatterns = [
 
     path('closed_lpas/', closed_lpas_view, name='closed_lpas'),
 
+
+    path('na-answers/', na_answers_view, name='na_answers_list'),
+    path('na-dealt-answers/', na_dealt_answers_view, name='na_dealt_answers_list'),
+
+
+
     path('form/<int:form_id>/create-copy/', create_form_copy_view, name='create_form_copy'),
 
     path('process-selected-forms/', process_selected_forms, name='process_selected_forms'),
