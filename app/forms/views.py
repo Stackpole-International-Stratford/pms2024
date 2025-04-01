@@ -650,86 +650,67 @@ def format_specifications(spec):
 
 def populate_answers_with_range_check(questions_dict, answers, date_hour_range, est):
     """
-    Populate all answers into the corresponding date-hour slots and check for range-based answers.
-    Also include the inspection_type for each answer.
-    """
-    for question_key, question_data in questions_dict.items():
-        # Filter the answers once per question to avoid redundant checks
-        question_answers = [
-            answer for answer in answers
-            if answer.question.question.get('feature', 'N/A') in question_key and
-               answer.question.question.get('characteristic', 'N/A') in question_key
-        ]
+    Populate all answers into the corresponding date-hour slots for each question,
+    and tag range-based answers that are out of spec.
 
-        # Check if the question is range-based (only once per question)
+    Now, questions_dict is keyed by the question's database id.
+    """
+    for question_id, question_data in questions_dict.items():
+        # Filter answers that belong to this question using the database id.
+        question_answers = [answer for answer in answers if answer.question.id == question_id]
+
+        # Determine if the question is range-based.
         is_range_based = (
-            question_answers and 
+            question_answers and
             question_answers[0].question.question.get('specification_type', 'N/A') == 'range'
         )
         
-        # If range-based, get the min and max values
+        # If range-based, extract min and max values from the specifications.
         if is_range_based:
             specifications = question_answers[0].question.question.get('specifications', {})
-            min_value = specifications.get('min', None)
-            max_value = specifications.get('max', None)
-            
-            # Convert to float if possible
             try:
-                min_value = float(min_value)
-                max_value = float(max_value)
+                min_value = float(specifications.get('min'))
             except (TypeError, ValueError):
                 min_value = None
+            try:
+                max_value = float(specifications.get('max'))
+            except (TypeError, ValueError):
                 max_value = None
+        else:
+            min_value = max_value = None
 
+        # For each hour in the 7-day range, collect matching answers.
         for date_hour in date_hour_range:
-            # Get all answers for the question on this date-hour including inspection_type
             hourly_answers = [
                 {
-                    'value': answer.answer.get('answer', ''),
-                    'inspection_type': answer.answer.get('inspection_type', 'N/A')
+                    'value': answer.answer.get('answer', '') if isinstance(answer.answer, dict) else answer.answer,
+                    'inspection_type': answer.answer.get('inspection_type', 'N/A') if isinstance(answer.answer, dict) else 'N/A'
                 }
                 for answer in question_answers
                 if answer.created_at.astimezone(est).strftime('%Y-%m-%d %H:00') == date_hour
             ]
 
-            tagged_answers = []  # Collect tagged answers for this date-hour
+            tagged_answers = []  # To store processed answers for this date_hour
 
-            # Only process if it's a range-based question
+            # If range-based, compare each answer value against the min and max.
             if is_range_based and hourly_answers:
                 for ans in hourly_answers:
-                    answer_value = ans['value']
-                    inspection_type = ans['inspection_type']
                     try:
-                        ans_float = float(answer_value)  # Convert answer to float for comparison
-                        
-                        # Check if the answer is out of range
+                        ans_float = float(ans['value'])
                         if min_value is not None and ans_float < min_value:
-                            tagged_answers.append(
-                                f'<span class="out-of-range">{answer_value} ({inspection_type})</span>'
-                            )
+                            tagged_answers.append(f'<span class="out-of-range">{ans["value"]} ({ans["inspection_type"]})</span>')
                         elif max_value is not None and ans_float > max_value:
-                            tagged_answers.append(
-                                f'<span class="out-of-range">{answer_value} ({inspection_type})</span>'
-                            )
+                            tagged_answers.append(f'<span class="out-of-range">{ans["value"]} ({ans["inspection_type"]})</span>')
                         else:
-                            tagged_answers.append(
-                                f'{answer_value} ({inspection_type})'
-                            )
-                    
+                            tagged_answers.append(f'{ans["value"]} ({ans["inspection_type"]})')
                     except ValueError:
-                        tagged_answers.append(
-                            f'<span class="invalid-answer">{answer_value} ({inspection_type})</span>'
-                        )
-
+                        tagged_answers.append(f'<span class="invalid-answer">{ans["value"]} ({ans["inspection_type"]})</span>')
             else:
-                # If not range-based or no answers, simply include the inspection_type with the answer value
-                tagged_answers = [
-                    f'{ans["value"]} ({ans["inspection_type"]})' for ans in hourly_answers
-                ]
+                # For non-range-based answers, just format them with the inspection type.
+                tagged_answers = [f'{ans["value"]} ({ans["inspection_type"]})' for ans in hourly_answers]
 
-            # Format the answers for this date-hour as a comma-separated string
+            # Join answers for this hour or use a placeholder if none exist.
             formatted_answers = ", ".join(tagged_answers) if tagged_answers else "-"
-            # Append the formatted string for this date-hour
             question_data['Answers'].append(formatted_answers)
 
 
@@ -752,21 +733,38 @@ def load_more_answers(request, form_id, offset):
 # Main function to get seven day answers
 def seven_day_answers(form_instance, offset_days=0):
     """
-    Fetch and organize answers for a 7-day period, 
-    starting offset_days ago.
+    Fetch and organize answers for a 7-day period, starting offset_days ago.
+
+    Returns a dictionary with:
+      - 'date_range': a list of date-hour strings for display.
+      - 'questions_dict': an OrderedDict keyed by each question's database id.
+         Each value includes:
+            - 'id': the question's database id
+            - 'Feature': the feature value
+            - 'Characteristic': the characteristic value
+            - 'Composite': a composite string (Feature - Characteristic) for display
+            - 'Specifications': formatted specifications
+            - 'SampleSize': the sample size
+            - 'Answers': an empty list that will be populated with answers.
     """
+    import pytz
+    from datetime import timedelta
+    from django.utils import timezone
+    from collections import OrderedDict
+
+    # Set up timezone and determine current hour in EST with offset applied
     est = pytz.timezone('America/New_York')
-    # Get the current time in EST and subtract the offset
     current_time = timezone.now().astimezone(est) - timedelta(days=offset_days)
     current_hour = current_time.replace(minute=0, second=0, microsecond=0)
-    
-    # Generate the hourly range for 7 days prior to current_hour
+
+    # Generate hourly range for the last 7 days
     date_hour_range = []
     for i in range(7 * 24):
         hour = current_hour - timedelta(hours=i)
         date_hour_range.append(hour.strftime('%Y-%m-%d %H:00'))
     date_hour_range.sort(reverse=True)
 
+    # Retrieve answers within the appropriate time frame
     answers = (
         FormAnswer.objects
         .filter(
@@ -777,21 +775,31 @@ def seven_day_answers(form_instance, offset_days=0):
         .order_by('created_at')
     )
 
-    # Organize answers by question and date-hour as before
+    # Create an OrderedDict keyed by the question's database id
     questions_dict = OrderedDict()
     for question in form_instance.questions.all():
-        key = f"{question.question.get('feature', 'N/A')} - {question.question.get('characteristic', 'N/A')}"
+        question_id = question.id  # Use the actual database ID as the key
+        feature = question.question.get('feature', 'N/A')
+        characteristic = question.question.get('characteristic', 'N/A')
+        composite = f"{feature} - {characteristic}"  # For display in the table
         sample_size = question.question.get('sample_size', 'N/A')
         formatted_specifications = format_specifications(question.question.get('specifications', 'N/A'))
-        questions_dict[key] = {
-            'Feature': question.question.get('feature', 'N/A'),
-            'Characteristic': question.question.get('characteristic', 'N/A'),
+        questions_dict[question_id] = {
+            'id': question_id,
+            'Feature': feature,
+            'Characteristic': characteristic,
+            'Composite': composite,
             'Specifications': formatted_specifications,
             'SampleSize': sample_size,
-            'Answers': []  # To be filled in below
+            'Answers': []  # This will be populated with answers
         }
 
+    # Populate answers into each question entry.
+    # (Make sure your populate_answers_with_range_check function is updated
+    #  to use the question's id for matching answers.)
     populate_answers_with_range_check(questions_dict, answers, date_hour_range, est)
+
+    # Prepare a display-friendly version of the date range (e.g., omitting the year-month if desired)
     date_hour_range_display = [date_hour[5:] for date_hour in date_hour_range]
 
     return {
