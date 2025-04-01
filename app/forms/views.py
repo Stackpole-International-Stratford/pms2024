@@ -519,27 +519,23 @@ def print_out_of_spec_answers(answers):
 
 
 def submit_ois_answers(formset, request, questions, machine):
-    # Capture the inspection type and operator number
+    # Capture the inspection type, operator number, and spindle nest
     inspection_type = request.POST.get('inspection_type', 'OIS')
     operator_number = request.POST.get('operator_number', '')
+    spindle_nest = request.POST.get('spindle_nests', 'N/A')  # New: Get spindle nest
 
     print("\n--- Collecting OIS Answers ---")
 
     # Loop through each question to collect its answers
     all_answers = []
     for i, question in enumerate(questions):
-        # Safely convert sample_size to an integer or default to 1
         sample_size_value = question.question.get("sample_size", 1)
         sample_size = int(sample_size_value) if str(sample_size_value).isdigit() else 1
         
         answers = []
-
-        # Check if the question uses a checkmark (Pass/Fail)
         is_checkmark = question.question.get('checkmark', False)
         
-        # Collect answers based on the input type
         if is_checkmark:
-            # Pass/Fail Dropdown
             answer_key = f"answer_{question.id}"
             answer_data = request.POST.get(answer_key)
             if answer_data:
@@ -548,7 +544,6 @@ def submit_ois_answers(formset, request, questions, machine):
                     'type': 'pass_fail'
                 })
         else:
-            # Text Input for Sample Size
             for j in range(sample_size):
                 answer_key = f"answer_{question.id}_{j}"
                 answer_data = request.POST.get(answer_key)
@@ -557,47 +552,39 @@ def submit_ois_answers(formset, request, questions, machine):
                         'answer': answer_data,
                         'type': 'text'
                     })
-
-        # Save each answer as a separate FormAnswer entry
+        
         for answer in answers:
-            # Determine if out of spec
             out_of_spec = False
             min_value, max_value = None, None
             
-            # Only check range if it's a text input (not pass/fail)
             if answer['type'] == 'text':
                 is_range_based = question.question.get('specification_type', 'N/A') == 'range'
-                
                 if is_range_based:
                     specifications = question.question.get('specifications', {})
                     min_value = specifications.get('min', None)
                     max_value = specifications.get('max', None)
-                    
-                    # Convert to float if possible
                     try:
                         min_value = float(min_value)
                         max_value = float(max_value)
                         answer_float = float(answer['answer'])
-                        
-                        # Check if out of range
                         if (min_value is not None and answer_float < min_value) or \
                            (max_value is not None and answer_float > max_value):
                             out_of_spec = True
                     except (TypeError, ValueError):
                         pass
 
-            # Format the answer JSON for the entry
+            # Build the answer JSON and attach spindle_nest to it
             answer_json = {
                 'answer': answer['answer'],
                 'input_type': answer['type'],
                 'inspection_type': inspection_type,
                 'machine': machine,
+                'spindle_nest': spindle_nest,  # New key added here
                 'out_of_spec': out_of_spec,
                 'min': min_value,
                 'max': max_value
             }
 
-            # Save each answer as a separate FormAnswer entry
             FormAnswer.objects.create(
                 question=question,
                 answer=answer_json,  # Save as JSON for easier processing later
@@ -605,7 +592,6 @@ def submit_ois_answers(formset, request, questions, machine):
                 created_at=timezone.now()
             )
 
-            # Add to the all_answers list for post-submission checks
             all_answers.append({
                 'question': question,
                 'answer': answer['answer'],
@@ -617,8 +603,6 @@ def submit_ois_answers(formset, request, questions, machine):
             })
 
     print("\n--- All Answers Saved Successfully ---")
-
-    # === Call the new out-of-range checker ===
     print_out_of_spec_answers(all_answers)
 
 
