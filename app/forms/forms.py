@@ -106,6 +106,22 @@ class OISQuestionForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    # New Fields: Lower and Upper Control Limits (optional)
+    lower_control_limit = forms.FloatField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Lower Control Limit'
+        })
+    )
+    upper_control_limit = forms.FloatField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Upper Control Limit'
+        })
+    )
+
     # New Field: Inspection Type as Dropdown
     inspection_type = forms.ChoiceField(
         choices=[
@@ -165,6 +181,7 @@ class OISQuestionForm(forms.ModelForm):
             'feature', 'special_characteristic', 'characteristic', 
             'specification_type', 'specification_string', 
             'min_value', 'nominal_value', 'max_value', 'units',
+            'lower_control_limit', 'upper_control_limit',
             'sample_frequency', 'sample_size', 'done_by', 
             'order', 'checkmark', 'inspection_type'
         ]
@@ -184,6 +201,9 @@ class OISQuestionForm(forms.ModelForm):
                 self.fields['nominal_value'].initial = specs.get('nominal', '')
                 self.fields['max_value'].initial = specs.get('max', '')
                 self.fields['units'].initial = specs.get('units', '')
+                # Set initial values for the new control limits if present
+                self.fields['lower_control_limit'].initial = specs.get('lower_control_limit', '')
+                self.fields['upper_control_limit'].initial = specs.get('upper_control_limit', '')
 
             self.fields['feature'].initial = q.get('feature', '')
             self.fields['special_characteristic'].initial = q.get('special_characteristic', '')
@@ -210,6 +230,12 @@ class OISQuestionForm(forms.ModelForm):
             elif min_v > nominal_v or nominal_v > max_v:
                 self.add_error('nominal_value', 'Nominal value must be between Min and Max.')
 
+            # If both lower and upper control limits are provided, check that lower <= upper.
+            lcl = cleaned_data.get('lower_control_limit')
+            ucl = cleaned_data.get('upper_control_limit')
+            if lcl is not None and ucl is not None:
+                if lcl > ucl:
+                    self.add_error('lower_control_limit', 'Lower Control Limit must be less than or equal to Upper Control Limit.')
         if not cleaned_data.get('inspection_type'):
             self.add_error('inspection_type', 'Please select an inspection type.')
 
@@ -237,6 +263,8 @@ class OISQuestionForm(forms.ModelForm):
                 'nominal': cd.get('nominal_value'),
                 'max': cd.get('max_value'),
                 'units': cd.get('units'),
+                'lower_control_limit': cd.get('lower_control_limit'),
+                'upper_control_limit': cd.get('upper_control_limit'),
             }
 
         question_data = {
@@ -257,6 +285,7 @@ class OISQuestionForm(forms.ModelForm):
         if commit:
             question_instance.save()
         return question_instance
+
 
 
 
