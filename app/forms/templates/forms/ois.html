@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
     <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    
+    <script src={% static "chart.js/chart.umd.js" %}></script>
+    <script src={% static "moment.js/moment.min.js" %}></script>
+    <script src={% static "chart.js/chartjs-adapter-moment.min.js" %}></script>
+    <script src="{% static 'chart.js/chartjs-plugin-regression.min.js' %}"></script> <!-- Added this line -->
     <title>{{ form_instance.name }}</title>
     <style>
         body {
@@ -640,19 +645,14 @@
             // Create and append the modal element if it doesn't exist
             if (!document.getElementById('featureModal')) {
                 var modalHTML =                 `<div class="modal fade" id="featureModal" tabindex="-1" aria-labelledby="featureModalLabel" aria-hidden="true">
-                  <div class="modal-dialog">
+                  <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                       <div class="modal-header">
-                        <h5 class="modal-title" id="featureModalLabel">Feature Details</h5>
+                        <h5 class="modal-title" id="featureModalLabel"></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                       </div>
                       <div class="modal-body">
-                        <p id="modalFeature"></p>
-                        <p id="modalSpecs"></p>
-                        <p id="modalPrecontrol"></p>
-                        <hr>
-                        <h6>Last Week's Answers:</h6>
-                        <ul id="modalAnswersList"></ul>
+                        <canvas id="answerChart" style="width:100%; height:300px"></canvas>
                       </div>
                     </div>
                   </div>
@@ -669,69 +669,209 @@
             // Create a Bootstrap modal instance for the feature modal
             var featureModalEl = document.getElementById('featureModal');
             var featureModal = new bootstrap.Modal(featureModalEl);
+            var answerChartInstance = null; // To store the chart instance
+
+            // Function to destroy the existing chart if it exists
+            function destroyChart() {
+                if (answerChartInstance) {
+                    answerChartInstance.destroy();
+                    answerChartInstance = null;
+                }
+            }
 
             // Attach a click event handler to each row in the left table
             tableRows.forEach(function(row) {
                 row.addEventListener('click', function() {
+                    destroyChart(); // Destroy any existing chart
+
                     // Extract feature and specifications from the clicked row
                     var feature = row.cells[0].textContent.trim();
                     var specs = row.cells[1].textContent.trim();
 
-                    // Populate the modal with feature and specification data
-                    document.getElementById('modalFeature').textContent = "Feature: " + feature;
-                    document.getElementById('modalSpecs').textContent = "Specifications: " + specs;
+                    // Set the modal title
+                    document.getElementById('featureModalLabel').textContent = feature;
 
-                    // Clear any previous answers and precontrol info
-                    var answersListEl = document.getElementById('modalAnswersList');
-                    answersListEl.innerHTML = '';
-                    document.getElementById('modalPrecontrol').textContent = '';
+                    // Extract Min, Max, and Nominal values
+                    let minVal = null;
+                    let maxVal = null;
+                    let nominalVal = null;
+                    let lowerPrecontrolLimit = null;
+                    let upperPrecontrolLimit = null;
 
-                    // Check if Min, Max, and Nominal are present in the specifications
                     if (specs.includes("Min:") && specs.includes("Max:") && specs.includes("Nominal:")) {
-                        // Extract the numerical values
                         const minMatch = specs.match(/Min:\s*([-+]?\d*\.?\d+)/);
                         const maxMatch = specs.match(/Max:\s*([-+]?\d*\.?\d+)/);
                         const nominalMatch = specs.match(/Nominal:\s*([-+]?\d*\.?\d+)/);
 
                         if (minMatch && maxMatch && nominalMatch) {
-                            const min = parseFloat(minMatch[1]);
-                            const max = parseFloat(maxMatch[1]);
-                            const nominal = parseFloat(nominalMatch[1]);
-
-                            // Calculate pre-control limits
-                            const lowerPrecontrolLimit = (nominal + min) / 2;
-                            const upperPrecontrolLimit = (max + nominal) / 2;
-
-                            // Display the pre-control limits
-                            const precontrolText = `Lower Pre-control Limit (LPL): ${lowerPrecontrolLimit.toFixed(2)}, Upper Pre-control Limit (UPL): ${upperPrecontrolLimit.toFixed(2)}`;
-                            document.getElementById('modalPrecontrol').textContent = precontrolText;
-                        } else {
-                            document.getElementById('modalPrecontrol').textContent = 'Could not parse Min, Max, or Nominal values.';
+                            minVal = parseFloat(minMatch[1]);
+                            maxVal = parseFloat(maxMatch[1]);
+                            nominalVal = parseFloat(nominalMatch[1]);
+                            lowerPrecontrolLimit = (nominalVal + minVal) / 2;
+                            upperPrecontrolLimit = (maxVal + nominalVal) / 2;
                         }
-                    } else {
-                        document.getElementById('modalPrecontrol').textContent = 'Min, Max, and Nominal values not found in specifications.';
                     }
 
-                    // Get the question key from the clicked row (assumed stored in data-question-key)
+                    // Get the question key from the clicked row
                     var questionKey = row.getAttribute('data-question-key');
+                    var labels = [];
+                    var data = [];
+
                     if (questionKey) {
                         // Find the corresponding row in the answers table (right column)
                         var answerRow = document.querySelector('#answers-body tr[data-question-key="'+questionKey+'"]');
                         if (answerRow) {
-                            // Get all header cells to pair dates with answers
+                            // Get all header cells (dates)
                             var headerCells = document.querySelectorAll('#answers-header th');
-                            // Get each cell in the answer row
+                            // Get each cell in the answer row (answers)
                             var answerCells = answerRow.querySelectorAll('td');
 
                             headerCells.forEach(function(th, index) {
                                 var dateText = th.textContent.trim();
-                                var answerText = answerCells[index] ? answerCells[index].textContent.trim() : '-';
-                                var li = document.createElement('li');
-                                li.textContent = dateText + ": " + answerText;
-                                answersListEl.appendChild(li);
+                                var answerText = answerCells[index] ? answerCells[index].textContent.trim() : null;
+                                if (answerText !== null && !isNaN(parseFloat(answerText))) {
+                                    labels.push(dateText);
+                                    data.push(parseFloat(answerText));
+                                }
                             });
                         }
                     }
+
+                    const ctx = document.getElementById('answerChart').getContext('2d');
+
+                    const yAxisTicks = [];
+                    if (maxVal !== null) yAxisTicks.push(maxVal);
+                    if (upperPrecontrolLimit !== null) yAxisTicks.push(upperPrecontrolLimit);
+                    if (nominalVal !== null) yAxisTicks.push(nominalVal);
+                    if (lowerPrecontrolLimit !== null) yAxisTicks.push(lowerPrecontrolLimit);
+                    if (minVal !== null) yAxisTicks.push(minVal);
+                    // Ensure ticks are sorted correctly
+                    yAxisTicks.sort((a, b) => a - b);
+                    const yMin = minVal !== null ? minVal : Math.min(...data);
+                    const yMax = maxVal !== null ? maxVal : Math.max(...data);
+
+                    answerChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Answer Value',
+                                data: data,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 2,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                x: {
+                                    type: 'time',
+                                    time: {
+                                        unit: 'day'
+                                    },
+                                    adapters: {
+                                        date: {
+                                            locale: 'en-CA' // Assuming Canadian locale for dates
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Date'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: minVal === null && Math.min(...data) >= 0,
+                                    title: {
+                                        display: true,
+                                        text: 'Value'
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            if (maxVal !== null && value === maxVal) return 'Max: ' + value;
+                                            if (upperPrecontrolLimit !== null && value === upperPrecontrolLimit) return 'UCL: ' + value.toFixed(2);
+                                            if (nominalVal !== null && value === nominalVal) return 'Nominal: ' + value;
+                                            if (lowerPrecontrolLimit !== null && value === lowerPrecontrolLimit) return 'LCL: ' + value.toFixed(2);
+                                            if (minVal !== null && value === minVal) return 'Min: ' + value;
+                                            return value;
+                                        }
+                                    },
+                                    suggestedMin: yMin,
+                                    suggestedMax: yMax
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                annotation: {
+                                    annotations: [
+                                        ...(maxVal !== null ? [{
+                                            type: 'line',
+                                            yMin: maxVal,
+                                            yMax: maxVal,
+                                            borderColor: 'red',
+                                            borderWidth: 1,
+                                            label: {
+                                                enabled: true,
+                                                position: 'right',
+                                                content: 'Max: ' + maxVal
+                                            }
+                                        }] : []),
+                                        ...(upperPrecontrolLimit !== null ? [{
+                                            type: 'line',
+                                            yMin: upperPrecontrolLimit,
+                                            yMax: upperPrecontrolLimit,
+                                            borderColor: 'orange',
+                                            borderWidth: 1,
+                                            borderDash: [5, 5],
+                                            label: {
+                                                enabled: true,
+                                                position: 'right',
+                                                content: 'UCL: ' + upperPrecontrolLimit.toFixed(2)
+                                            }
+                                        }] : []),
+                                        ...(nominalVal !== null ? [{
+                                            type: 'line',
+                                            yMin: nominalVal,
+                                            yMax: nominalVal,
+                                            borderColor: 'green',
+                                            borderWidth: 2,
+                                            label: {
+                                                enabled: true,
+                                                position: 'right',
+                                                content: 'Nominal: ' + nominalVal
+                                            }
+                                        }] : []),
+                                        ...(lowerPrecontrolLimit !== null ? [{
+                                            type: 'line',
+                                            yMin: lowerPrecontrolLimit,
+                                            yMax: lowerPrecontrolLimit,
+                                            borderColor: 'orange',
+                                            borderWidth: 1,
+                                            borderDash: [5, 5],
+                                            label: {
+                                                enabled: true,
+                                                position: 'right',
+                                                content: 'LCL: ' + lowerPrecontrolLimit.toFixed(2)
+                                            }
+                                        }] : []),
+                                        ...(minVal !== null ? [{
+                                            type: 'line',
+                                            yMin: minVal,
+                                            yMax: minVal,
+                                            borderColor: 'red',
+                                            borderWidth: 1,
+                                            label: {
+                                                enabled: true,
+                                                position: 'right',
+                                                content: 'Min: ' + minVal
+                                            }
+                                        }] : [])
+                                    ]
+                                }
+                            }
+                        }
+                    });
 
                     // Show the modal
                     featureModal.show();
