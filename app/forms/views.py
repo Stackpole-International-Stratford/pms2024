@@ -517,16 +517,33 @@ def print_out_of_spec_answers(answers):
 
 def ois_answer_chart_view(request):
     """
-    A simple view that reads the question id from the GET parameters,
-    prints it to the console, and returns a JSON response.
+    Fetch all answers for a given question (specified by GET parameter 'question_id')
+    in the last week. Each answer is stored as a JSON object in the FormAnswer model;
+    this view extracts only the value corresponding to the key "answer" from each record.
     """
     question_id = request.GET.get('question_id')
-    if question_id:
-        print("Received question id:", question_id)
-    else:
-        print("No question id provided.")
-    return JsonResponse({"status": "success", "question_id": question_id})
-
+    if not question_id:
+        return JsonResponse({"error": "No question_id provided."}, status=400)
+    
+    try:
+        question_id = int(question_id)
+    except ValueError:
+        return JsonResponse({"error": "Invalid question_id provided."}, status=400)
+    
+    one_week_ago = timezone.now() - timedelta(days=7)
+    answers_qs = FormAnswer.objects.filter(
+        question_id=question_id,
+        created_at__gte=one_week_ago
+    ).order_by('created_at')
+    
+    # Extract only the answer value from each JSON field.
+    answers_list = []
+    for ans in answers_qs:
+        # If the JSON field is a dict, get the value under the "answer" key.
+        answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
+        answers_list.append(answer_value)
+    
+    return JsonResponse({"answers": answers_list})
 
 def submit_ois_answers(formset, request, questions, machine):
     # Capture the inspection type, operator number, and spindle nest

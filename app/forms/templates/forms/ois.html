@@ -640,26 +640,38 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Select all table rows in the left column
             var tableRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
-        
+          
             // Add click event listener to each row
             tableRows.forEach(function(row) {
               row.addEventListener('click', function() {
                 // Get the actual database id from the data attribute
                 var questionId = row.getAttribute('data-question-id');
-        
+          
                 // Set the text in the modal to display the database id
                 document.getElementById('questionIdDisplay').textContent = "Question ID: " + questionId;
-        
+          
                 // Send a GET request to the new view with the question id
                 fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
                   .then(response => response.json())
                   .then(data => {
-                      console.log("Response from ois_answer_chart_view:", data);
+                      console.log("Answers:", data.answers);
+                      var answersHtml = "";
+                      if (data.answers && data.answers.length > 0) {
+                          answersHtml = "<ul>";
+                          data.answers.forEach(function(ans) {
+                              answersHtml += "<li>" + ans + "</li>";
+                          });
+                          answersHtml += "</ul>";
+                      } else {
+                          answersHtml = "<p>No answers in the last week.</p>";
+                      }
+                      document.getElementById('questionAnswersDisplay').innerHTML = answersHtml;
                   })
                   .catch(error => {
-                      console.error("Error:", error);
+                      console.error("Error fetching answers:", error);
+                      document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
                   });
-        
+          
                 // Initialize and show the modal using Bootstrap's Modal API
                 var modalElement = document.getElementById('questionModal');
                 var questionModal = new bootstrap.Modal(modalElement);
@@ -669,6 +681,8 @@
         });
         </script>
         
+        
+
 
     <!-- Question Modal -->
     <div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
@@ -680,6 +694,7 @@
             </div>
             <div class="modal-body">
             <p id="questionIdDisplay"></p>
+            <div id="questionAnswersDisplay"></div>
             </div>
             <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -687,6 +702,7 @@
         </div>
         </div>
     </div>
+
   
         
 </body>
