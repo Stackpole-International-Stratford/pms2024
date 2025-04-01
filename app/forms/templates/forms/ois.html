@@ -643,204 +643,249 @@
    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Create and append the modal element if it doesn't exist
+            // 1) CREATE/REPLACE THE MODAL WITH A BIGGER SIZE & BIGGER CANVAS
             if (!document.getElementById('featureModal')) {
-                var modalHTML =                 `<div class="modal fade" id="featureModal" tabindex="-1" aria-labelledby="featureModalLabel" aria-hidden="true">
-                  <div class="modal-dialog modal-lg">
+                const modalHTML = `
+                <div class="modal fade" id="featureModal" tabindex="-1" aria-labelledby="featureModalLabel" aria-hidden="true">
+                  <div class="modal-dialog modal-xl"><!-- Use .modal-xl for extra width -->
                     <div class="modal-content">
                       <div class="modal-header">
                         <h5 class="modal-title" id="featureModalLabel"></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                       </div>
                       <div class="modal-body">
-                        <canvas id="answerChart" style="width:100%; height:300px"></canvas>
+                        <!-- Larger canvas to avoid clipping -->
+                        <canvas id="answerCanvas" width="1200" height="600" style="width:100%; height:auto;"></canvas>
                       </div>
                     </div>
                   </div>
                 </div>`;
                 document.body.insertAdjacentHTML('beforeend', modalHTML);
             }
-
-            // Select the left column table (the first .col-md-6)
-            var leftColumn = document.querySelectorAll('.col-md-6')[0];
-            if (!leftColumn) return;
-
-            var tableRows = leftColumn.querySelectorAll('table tbody tr');
-
-            // Create a Bootstrap modal instance for the feature modal
-            var featureModalEl = document.getElementById('featureModal');
-            var featureModal = new bootstrap.Modal(featureModalEl);
-            var answerChartInstance = null; // To store the chart instance
-
-            // Function to destroy the existing chart if it exists
-            function destroyChart() {
-                if (answerChartInstance) {
-                    answerChartInstance.destroy();
-                    answerChartInstance = null;
+            const featureModalEl = document.getElementById('featureModal');
+            const featureModal = new bootstrap.Modal(featureModalEl);
+        
+            // 2) FUNCTION TO DRAW THE PRE CONTROL CHART USING RAW CANVAS
+            function drawPreControlChart(canvas, dataPoints, minVal, lcl, nominalVal, ucl, maxVal) {
+                const ctx = canvas.getContext('2d');
+                // Clear the entire canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+                // A) Setup 5 horizontal color bands: (Red / Yellow / Green / Yellow / Red)
+                //    We'll expand the chart range slightly so the top/bottom red areas show.
+                const chartMin = minVal - (lcl - minVal);  // Extend below minVal by same gap
+                const chartMax = maxVal + (maxVal - ucl);  // Extend above maxVal by same gap
+        
+                // B) Define margins so labels don't get clipped
+                const margin = { left: 80, right: 50, top: 60, bottom: 80 };
+                const plotWidth  = canvas.width  - margin.left - margin.right;
+                const plotHeight = canvas.height - margin.top  - margin.bottom;
+        
+                // C) yCoord maps a value to canvas Y (inverted)
+                function yCoord(val) {
+                    return margin.top + plotHeight - ((val - chartMin) / (chartMax - chartMin)) * plotHeight;
                 }
-            }
-
-            // Attach a click event handler to each row in the left table
-            tableRows.forEach(function(row) {
-                row.addEventListener('click', function() {
-                    destroyChart(); // Destroy any existing chart
-
-                    // Extract feature and specifications from the clicked row
-                    var feature = row.cells[0].textContent.trim();
-                    var specs = row.cells[1].textContent.trim();
-
-                    // Set the modal title
-                    document.getElementById('featureModalLabel').textContent = feature;
-
-                    // Extract Min, Max, and Nominal values
-                    let minVal = null;
-                    let maxVal = null;
-                    let nominalVal = null;
-                    let lowerPrecontrolLimit = null;
-                    let upperPrecontrolLimit = null;
-
-                    if (specs.includes("Min:") && specs.includes("Max:") && specs.includes("Nominal:")) {
-                        const minMatch = specs.match(/Min:\s*([-+]?\d*\.?\d+)/);
-                        const maxMatch = specs.match(/Max:\s*([-+]?\d*\.?\d+)/);
-                        const nominalMatch = specs.match(/Nominal:\s*([-+]?\d*\.?\d+)/);
-
-                        if (minMatch && maxMatch && nominalMatch) {
-                            minVal = parseFloat(minMatch[1]);
-                            maxVal = parseFloat(maxMatch[1]);
-                            nominalVal = parseFloat(nominalMatch[1]);
-                            lowerPrecontrolLimit = (nominalVal + minVal) / 2;
-                            upperPrecontrolLimit = (maxVal + nominalVal) / 2;
-                        }
-                    }
-
-                    // Get the question key from the clicked row
-                    var questionKey = row.getAttribute('data-question-key');
-                    var labels = [];
-                    var data = [];
-
-                    if (questionKey) {
-                        // Find the corresponding row in the answers table (right column)
-                        var answerRow = document.querySelector('#answers-body tr[data-question-key="'+questionKey+'"]');
-                        if (answerRow) {
-                            // Get all header cells (dates)
-                            var headerCells = document.querySelectorAll('#answers-header th');
-                            // Get each cell in the answer row (answers)
-                            var answerCells = answerRow.querySelectorAll('td');
-
-                            headerCells.forEach(function(th, index) {
-                                var dateText = th.textContent.trim();
-                                var answerText = answerCells[index] ? answerCells[index].textContent.trim() : null;
-                                if (answerText !== null && !isNaN(parseFloat(answerText))) {
-                                    labels.push(dateText);
-                                    data.push(parseFloat(answerText));
-                                }
-                            });
-                        }
-                    }
-
-                    const ctx = document.getElementById('answerChart').getContext('2d');
-
-                    const yMin = minVal !== null ? minVal : Math.min(...data);
-                    const yMax = maxVal !== null ? maxVal : Math.max(...data);
-
-                    const annotations = [];
-
-                    const addLineAnnotation = (value, color, labelContent, borderDash = []) => {
-                        if (value !== null) {
-                            annotations.push({
-                                type: 'line',
-                                yMin: value,
-                                yMax: value,
-                                borderColor: color,
-                                borderWidth: 1,
-                                borderDash: borderDash,
-                                label: {
-                                    enabled: true,
-                                    position: 'right',
-                                    color: 'black',
-                                    font: {
-                                        size: 10
-                                    },
-                                    content: labelContent
-                                },
-                                order: 1
-                            });
-                        }
-                    };
-
-                    addLineAnnotation(maxVal, 'red', 'Max: ' + (maxVal !== null ? maxVal.toFixed(2) : ''));
-                    addLineAnnotation(upperPrecontrolLimit, 'orange', 'UCL: ' + (upperPrecontrolLimit !== null ? upperPrecontrolLimit.toFixed(2) : ''), [5, 5]);
-                    addLineAnnotation(nominalVal, 'green', 'Nominal: ' + (nominalVal !== null ? nominalVal.toFixed(2) : ''), [5, 5]);
-                    addLineAnnotation(lowerPrecontrolLimit, 'orange', 'LCL: ' + (lowerPrecontrolLimit !== null ? lowerPrecontrolLimit.toFixed(2) : ''), [5, 5]);
-                    addLineAnnotation(minVal, 'red', 'Min: ' + (minVal !== null ? minVal.toFixed(2) : ''));
-
-
-                    answerChartInstance = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Answer Value',
-                                data: data,
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 2,
-                                fill: false
-                            }]
-                        },
-                        options: {
-                            scales: {
-                                x: {
-                                    type: 'time',
-                                    time: {
-                                        unit: 'day'
-                                    },
-                                    adapters: {
-                                        date: {
-                                            locale: 'en-CA' // Assuming Canadian locale for dates
-                                        }
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Date Time Sample'
-                                    }
-                                },
-                                y: {
-                                    beginAtZero: minVal === null && Math.min(...data) >= 0,
-                                    title: {
-                                        display: true,
-                                        text: 'Value'
-                                    },
-                                    ticks: {
-                                        callback: function(value) {
-                                            const formattedValue = parseFloat(value).toFixed(2);
-                                            let label = formattedValue;
-                                            if (maxVal !== null && parseFloat(formattedValue) === maxVal) label = 'Max: ' + formattedValue;
-                                            else if (upperPrecontrolLimit !== null && parseFloat(formattedValue) === upperPrecontrolLimit) label = 'UCL: ' + formattedValue;
-                                            else if (nominalVal !== null && parseFloat(formattedValue) === nominalVal) label = 'Nominal: ' + formattedValue;
-                                            else if (lowerPrecontrolLimit !== null && parseFloat(formattedValue) === lowerPrecontrolLimit) label = 'LCL: ' + formattedValue;
-                                            else if (minVal !== null && parseFloat(formattedValue) === minVal) label = 'Min: ' + formattedValue;
-                                            return label;
-                                        }
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                annotation: {
-                                    annotations: annotations
-                                }
+        
+                // D) xCoord maps a date within the last 7 days to canvas X
+                const now = new Date();
+                const xMin = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+                const xMax = now;
+                const totalMs = xMax - xMin;
+                function xCoord(date) {
+                    return margin.left + ((date - xMin) / totalMs) * plotWidth;
+                }
+        
+                // 3) Draw the 5 colored bands (bottom red, lower yellow, green, upper yellow, top red)
+                function drawBand(y1, y2, color) {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(margin.left, y2, plotWidth, y1 - y2);
+                }
+                drawBand(yCoord(chartMin), yCoord(minVal),  "rgba(255,0,0,0.2)");    // bottom red
+                drawBand(yCoord(minVal),  yCoord(lcl),      "rgba(255,255,0,0.2)"); // lower yellow
+                drawBand(yCoord(lcl),     yCoord(ucl),      "rgba(0,255,0,0.2)");   // green
+                drawBand(yCoord(ucl),     yCoord(maxVal),   "rgba(255,255,0,0.2)"); // upper yellow
+                drawBand(yCoord(maxVal),  yCoord(chartMax), "rgba(255,0,0,0.2)");   // top red
+        
+                // 4) Draw grid lines
+                ctx.strokeStyle = "#ccc";
+                ctx.lineWidth = 1;
+        
+                // A) Horizontal lines at chartMin, minVal, LCL, Nominal, UCL, maxVal, chartMax
+                const yLines = [chartMin, minVal, lcl, nominalVal, ucl, maxVal, chartMax];
+                yLines.forEach(val => {
+                    const y = yCoord(val);
+                    ctx.beginPath();
+                    ctx.moveTo(margin.left, y);
+                    ctx.lineTo(margin.left + plotWidth, y);
+                    ctx.stroke();
+                });
+        
+                // B) Vertical lines for each hour in the last week
+                //    Label every 6 hours so we don’t get too cluttered
+                for (let t = new Date(xMin.getTime()); t <= xMax; t.setHours(t.getHours() + 1)) {
+                    const x = xCoord(t);
+                    ctx.beginPath();
+                    ctx.moveTo(x, margin.top);
+                    ctx.lineTo(x, margin.top + plotHeight);
+                    ctx.stroke();
+                }
+        
+                // 5) Plot the data points as a blue line
+                if (dataPoints.length > 0) {
+                    // Sort by date
+                    dataPoints.sort((a,b) => a.date - b.date);
+                    ctx.strokeStyle = "blue";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    let firstPoint = true;
+                    dataPoints.forEach(pt => {
+                        // Only plot if within last 7 days
+                        if (pt.date >= xMin && pt.date <= xMax) {
+                            const x = xCoord(pt.date);
+                            const y = yCoord(pt.value);
+                            if (firstPoint) {
+                                ctx.moveTo(x, y);
+                                firstPoint = false;
+                            } else {
+                                ctx.lineTo(x, y);
                             }
                         }
                     });
-
-                    // Show the modal
+                    ctx.stroke();
+                }
+        
+                // 6) Draw axes in black
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 1;
+                // Y-axis
+                ctx.beginPath();
+                ctx.moveTo(margin.left, margin.top);
+                ctx.lineTo(margin.left, margin.top + plotHeight);
+                ctx.stroke();
+                // X-axis
+                ctx.beginPath();
+                ctx.moveTo(margin.left, margin.top + plotHeight);
+                ctx.lineTo(margin.left + plotWidth, margin.top + plotHeight);
+                ctx.stroke();
+        
+                // 7) Chart title, axis labels, angled ticks
+                // A) Title: "Pre Control Chart"
+                ctx.fillStyle = "#000";
+                ctx.font = "bold 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("Pre Control Chart", margin.left + plotWidth / 2, margin.top - 15);
+        
+                // B) Y-axis label: "Number" (rotated)
+                ctx.save();
+                ctx.translate(margin.left - 50, margin.top + plotHeight / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.font = "bold 14px sans-serif";
+                ctx.textAlign = "center";
+                ctx.restore();
+        
+                // C) X-axis label: "Date/Time Sample"
+                ctx.font = "bold 14px sans-serif";
+                ctx.textAlign = "center";
+        
+                // D) Y-axis tick labels: only for minVal, lcl, nominalVal, ucl, maxVal
+                ctx.font = "10px sans-serif";
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                [minVal, lcl, nominalVal, ucl, maxVal].forEach(val => {
+                    const y = yCoord(val);
+                    let label = "";
+                    if      (val === minVal)      label = "Min: "     + val.toFixed(4);
+                    else if (val === lcl)         label = "LCL: "     + val.toFixed(4);
+                    else if (val === nominalVal)  label = "Nominal: " + val.toFixed(4);
+                    else if (val === ucl)         label = "UCL: "     + val.toFixed(4);
+                    else if (val === maxVal)      label = "Max: "     + val.toFixed(4);
+                    ctx.fillText(label, margin.left - 5, y);
+                });
+        
+                // E) X-axis tick labels: angled at -45° every 6 hours
+                ctx.font = "12px sans-serif";
+                ctx.textBaseline = "top";
+                // We label from xMin to xMax in 6 hour increments
+                const labelTime = new Date(xMin.getTime());
+                while (labelTime <= xMax) {
+                    const x = xCoord(labelTime);
+                    // Format label as "MM/DD HH:00"
+                    const mm = (labelTime.getMonth() + 1).toString().padStart(2, '0');
+                    const dd = labelTime.getDate().toString().padStart(2, '0');
+                    const hh = labelTime.getHours().toString().padStart(2, '0');
+                    const labelStr = `${mm}/${dd} ${hh}:00`;
+        
+                    // Rotate each label -45° so they don't overlap
+                    ctx.save();
+                    ctx.translate(x, margin.top + plotHeight + 5);
+                    ctx.rotate(-Math.PI / 4);
+                    ctx.textAlign = "right";
+                    ctx.fillText(labelStr, 0, 0);
+                    ctx.restore();
+        
+                    labelTime.setHours(labelTime.getHours() + 6);
+                }
+            }
+        
+            // 8) On click of each row in the left table, parse data & draw the chart
+            const leftColumn = document.querySelectorAll('.col-md-6')[0];
+            if (!leftColumn) return;
+            const tableRows = leftColumn.querySelectorAll('table tbody tr');
+        
+            tableRows.forEach(function(row) {
+                row.addEventListener('click', function() {
+                    // A) Feature name & specs
+                    const feature = row.cells[0].textContent.trim();
+                    const specs   = row.cells[1].textContent.trim();
+                    document.getElementById('featureModalLabel').textContent = feature;
+        
+                    // B) Parse Min, Max, Nominal from specs
+                    let minVal=null, maxVal=null, nominalVal=null;
+                    let lcl=null, ucl=null;
+                    const minMatch     = specs.match(/Min:\s*([-+]?\d*\.?\d+)/);
+                    const maxMatch     = specs.match(/Max:\s*([-+]?\d*\.?\d+)/);
+                    const nominalMatch = specs.match(/Nominal:\s*([-+]?\d*\.?\d+)/);
+                    if (minMatch && maxMatch && nominalMatch) {
+                        minVal     = parseFloat(minMatch[1]);
+                        maxVal     = parseFloat(maxMatch[1]);
+                        nominalVal = parseFloat(nominalMatch[1]);
+                        // Precontrol limits
+                        lcl = (minVal + nominalVal) / 2;
+                        ucl = (nominalVal + maxVal) / 2;
+                    }
+        
+                    // C) Collect the data from the right table
+                    const questionKey = row.getAttribute('data-question-key');
+                    const dataPoints = []; // { date: Date, value: number }
+                    if (questionKey) {
+                        const answerRow = document.querySelector(`#answers-body tr[data-question-key="${questionKey}"]`);
+                        if (answerRow) {
+                            const headerCells = document.querySelectorAll('#answers-header th');
+                            const answerCells = answerRow.querySelectorAll('td');
+                            headerCells.forEach((th, i) => {
+                                const dateText   = th.textContent.trim();
+                                const answerText = answerCells[i] ? answerCells[i].textContent.trim() : null;
+                                if (answerText !== null && !isNaN(parseFloat(answerText))) {
+                                    const d = new Date(dateText);
+                                    if (!isNaN(d)) {
+                                        dataPoints.push({ date: d, value: parseFloat(answerText) });
+                                    }
+                                }
+                            });
+                        }
+                    }
+        
+                    // D) Draw the chart
+                    const canvas = document.getElementById('answerCanvas');
+                    drawPreControlChart(canvas, dataPoints, minVal, lcl, nominalVal, ucl, maxVal);
+        
+                    // E) Show the modal
                     featureModal.show();
                 });
             });
         });
         </script>
+        
         
 </body>
 </html>
