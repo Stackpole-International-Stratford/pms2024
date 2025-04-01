@@ -112,24 +112,13 @@
                                 </thead>
                                 <tbody>
                                     {% for question_key, question in seven_day_data.questions_dict.items %}
-                                        {% if question.SpecificationType == "range" %}
-                                            <tr class="range-question"
-                                                data-feature="{{ question.Feature }}"
-                                                data-characteristic="{{ question.Characteristic }}"
-                                                data-specs='{{ question.RawSpecifications|json_script:"specs_" }}'>
-                                                <td>{{ question_key }}</td>
-                                                <td>{{ question.Specifications }}</td>
-                                                <td>{{ question.SampleSize }}</td>
-                                            </tr>
-                                        {% else %}
-                                            <tr data-question-key="{{ question_key }}">
-                                                <td>{{ question_key }}</td>
-                                                <td>{{ question.Specifications }}</td>
-                                                <td>{{ question.SampleSize }}</td>
-                                            </tr>
-                                        {% endif %}
+                                    <tr data-question-key="{{ question_key }}">
+                                        <td>{{ question_key }}</td>
+                                        <td>{{ question.Specifications }}</td>
+                                        <td>{{ question.SampleSize }}</td>
+                                    </tr>
                                     {% endfor %}
-                                </tbody>                                
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -146,13 +135,13 @@
                                 </thead>
                                 <tbody id="answers-body">
                                     {% for question_key, question in seven_day_data.questions_dict.items %}
-                                            <tr data-question-key="{{ question_key }}">
+                                    <tr data-question-key="{{ question_key }}">
                                         {% for answer in question.Answers %}
                                         <td>{{ answer|safe }}</td>
                                         {% endfor %}
-                                            </tr>
+                                    </tr>
                                     {% endfor %}
-                                </tbody>                                
+                                </tbody>
                             </table>                      
                         </div>
                         <div class="d-flex justify-content-end mt-3">
@@ -645,69 +634,5 @@
             });
         });
     </script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Select all rows that represent range questions
-            var rangeRows = document.querySelectorAll('.range-question');
-            
-            rangeRows.forEach(function(row) {
-                row.addEventListener('click', function() {
-                    // Get data attributes from the clicked row
-                    var feature = row.getAttribute('data-feature');
-                    var characteristic = row.getAttribute('data-characteristic');
-                    var specsData = row.getAttribute('data-specs');
-                    var specs = {};
-                    try {
-                        specs = JSON.parse(specsData);
-                    } catch(e) {
-                        console.error("Error parsing specs data", e);
-                    }
-                    
-                    // Build a specifications text string
-                    var specsText = "";
-                    if (specs.min) {
-                        specsText += "Min: " + specs.min + " " + (specs.units || '') + " ";
-                    }
-                    if (specs.nominal) {
-                        specsText += "Nominal: " + specs.nominal + " " + (specs.units || '') + " ";
-                    }
-                    if (specs.max) {
-                        specsText += "Max: " + specs.max + " " + (specs.units || '');
-                    }
-                    
-                    // Populate the modal with the data
-                    document.getElementById('modal-feature').textContent = feature;
-                    document.getElementById('modal-characteristic').textContent = characteristic;
-                    document.getElementById('modal-specs').textContent = specsText;
-                    
-                    // Use Bootstrap's modal method to show the modal
-                    var specModal = new bootstrap.Modal(document.getElementById('specModal'));
-                    specModal.show();
-                });
-            });
-        });
-        
-    </script>
-
-    <div class="modal fade" id="specModal" tabindex="-1" aria-labelledby="specModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="specModalLabel">Specification Details</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <p><strong>Feature:</strong> <span id="modal-feature"></span></p>
-              <p><strong>Characteristic:</strong> <span id="modal-characteristic"></span></p>
-              <p><strong>Specifications:</strong> <span id="modal-specs"></span></p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
 </body>
 </html>

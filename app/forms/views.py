@@ -786,8 +786,6 @@ def seven_day_answers(form_instance, offset_days=0):
         questions_dict[key] = {
             'Feature': question.question.get('feature', 'N/A'),
             'Characteristic': question.question.get('characteristic', 'N/A'),
-            'RawSpecifications': question.question.get('specifications', {}),  # the raw JSON
-            'SpecificationType': question.question.get('specification_type', ''),
             'Specifications': formatted_specifications,
             'SampleSize': sample_size,
             'Answers': []  # To be filled in below
@@ -1651,5 +1649,4 @@ def na_dealt_answers_view(request):
     # print(f"Total 'N/A-Dealt' questions in the last 3 years: {na_dealt_answers.count()}")
 
     return render(request, 'forms/na_dealt_answers_list.html', {'na_dealt_answers': na_dealt_answers})
-
 
