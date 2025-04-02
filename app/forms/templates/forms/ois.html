@@ -645,170 +645,176 @@
 
 
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Select all table rows in the left column
-    var tableRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
-
-    // Add click event listener to each row
-    tableRows.forEach(function(row) {
-        row.addEventListener('click', function() {
-            // Get the database id from the data attribute
-            var questionId = row.getAttribute('data-question-id');
-
-            // Display the database id in the modal
-            document.getElementById('questionIdDisplay').textContent = "Question ID: " + questionId;
-
-            // Fetch question details and answers
-            fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
-            .then(response => response.json())
-            .then(data => {
-                console.log("Answers:", data.answers);
-                var answersHtml = "";
-                if (data.answers && data.answers.length > 0) {
-                    answersHtml = "<ul>";
-                    data.answers.forEach(function(ans) {
-                        answersHtml += "<li>" + ans + "</li>";
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select all table rows in the left column
+            var tableRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
+        
+            // Add click event listener to each row
+            tableRows.forEach(function(row) {
+                row.addEventListener('click', function() {
+                    // Get the database id from the data attribute
+                    var questionId = row.getAttribute('data-question-id');
+        
+                    // Display the database id in the modal
+                    document.getElementById('questionIdDisplay').textContent = "Question ID: " + questionId;
+        
+                    // Fetch question details and answers
+                    fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Answers:", data.answers);
+                        var answersHtml = "";
+                        if (data.answers && data.answers.length > 0) {
+                            answersHtml = "<ul>";
+                            data.answers.forEach(function(ans) {
+                                answersHtml += "<li>" + ans + "</li>";
+                            });
+                            answersHtml += "</ul>";
+                        } else {
+                            answersHtml = "<p>No answers in the last week.</p>";
+                        }
+                        
+                        // Build specifications HTML if available
+                        var specsHtml = "";
+                        if (data.question_specs && (data.question_specs.min || data.question_specs.nominal || data.question_specs.max ||
+                            data.question_specs.lower_control_limit || data.question_specs.upper_control_limit)) {
+                            
+                            specsHtml += "<p><strong>Specifications:</strong> ";
+                            specsHtml += "Min: " + (data.question_specs.min || 'N/A') + ", ";
+                            specsHtml += "Nominal: " + (data.question_specs.nominal || 'N/A') + ", ";
+                            specsHtml += "Max: " + (data.question_specs.max || 'N/A') + ", ";
+                            specsHtml += "Lower Control Limit: " + (data.question_specs.lower_control_limit || 'N/A') + ", ";
+                            specsHtml += "Upper Control Limit: " + (data.question_specs.upper_control_limit || 'N/A');
+                            specsHtml += "</p>";
+                        }
+                        
+                        document.getElementById('questionAnswersDisplay').innerHTML = specsHtml + answersHtml;
+                    })
+                    .catch(error => {
+                        console.error("Error fetching answers:", error);
+                        document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
                     });
-                    answersHtml += "</ul>";
-                } else {
-                    answersHtml = "<p>No answers in the last week.</p>";
-                }
-                
-                // Build specifications HTML if available
-                var specsHtml = "";
-                if (data.question_specs && (data.question_specs.min || data.question_specs.nominal || data.question_specs.max ||
-                    data.question_specs.lower_control_limit || data.question_specs.upper_control_limit)) {
-                    
-                    specsHtml += "<p><strong>Specifications:</strong> ";
-                    specsHtml += "Min: " + (data.question_specs.min || 'N/A') + ", ";
-                    specsHtml += "Nominal: " + (data.question_specs.nominal || 'N/A') + ", ";
-                    specsHtml += "Max: " + (data.question_specs.max || 'N/A') + ", ";
-                    specsHtml += "Lower Control Limit: " + (data.question_specs.lower_control_limit || 'N/A') + ", ";
-                    specsHtml += "Upper Control Limit: " + (data.question_specs.upper_control_limit || 'N/A');
-                    specsHtml += "</p>";
-                }
-                
-                document.getElementById('questionAnswersDisplay').innerHTML = specsHtml + answersHtml;
-            })
-            .catch(error => {
-                console.error("Error fetching answers:", error);
-                document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
-            });
-
-            // Initialize the sample chart
-            // Destroy any existing chart instance to avoid duplication
-            if (window.sampleChartInstance) {
-                window.sampleChartInstance.destroy();
-            }
-            var ctx = document.getElementById('sampleChart').getContext('2d');
-            window.sampleChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-                    datasets: [{
-                        label: 'Sample Data',
-                        data: [65, 59, 80, 81, 56, 55, 40],
-                        fill: false,
-                        borderColor: 'rgb(75, 192, 192)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    plugins: {
-                        annotation: {
-                          annotations: {
-                            // Red zone below the yellow band (lowest values)
-                            redZoneLower: {
-                              type: 'box',
-                              xScaleID: 'x',       // specify the x-axis scale
-                              yScaleID: 'y',       // specify the y-axis scale
-                              xMin: 'Jan',         // set to the first label
-                              xMax: 'Jul',         // set to the last label
-                              yMin: 0,
-                              yMax: 20,
-                              backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                              borderWidth: 0
+        
+                    // Destroy any existing chart instance to avoid duplication
+                    if (window.sampleChartInstance) {
+                        window.sampleChartInstance.destroy();
+                    }
+                    var ctx = document.getElementById('sampleChart').getContext('2d');
+        
+                    // Create the scatter chart instance
+                    window.sampleChartInstance = new Chart(ctx, {
+                        type: 'scatter', // Change chart type to scatter
+                        data: {
+                            // Remove labels property and use an array of {x, y} objects
+                            datasets: [{
+                                label: 'Sample Data',
+                                data: [
+                                    { x: 1, y: 65 },
+                                    { x: 2, y: 59 },
+                                    { x: 3, y: 80 },
+                                    { x: 4, y: 81 },
+                                    { x: 5, y: 56 },
+                                    { x: 6, y: 55 },
+                                    { x: 7, y: 40 }
+                                ],
+                                fill: false,
+                                borderColor: 'rgb(75, 192, 192)',
+                                showLine: false, // Ensures the chart shows only points
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            plugins: {
+                                annotation: {
+                                    annotations: {
+                                        // Adjust xMin and xMax to numeric values matching the scatter data
+                                        redZoneLower: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 0,
+                                            yMax: 20,
+                                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        yellowZoneLower: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 20,
+                                            yMax: 40,
+                                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        greenZone: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 40,
+                                            yMax: 60,
+                                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        yellowZoneUpper: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 60,
+                                            yMax: 80,
+                                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        redZoneUpper: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 80,
+                                            yMax: 100,
+                                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                            borderWidth: 0
+                                        }
+                                    }
+                                }
                             },
-                            // Yellow zone below the green band
-                            yellowZoneLower: {
-                              type: 'box',
-                              xScaleID: 'x',
-                              yScaleID: 'y',
-                              xMin: 'Jan',
-                              xMax: 'Jul',
-                              yMin: 20,
-                              yMax: 40,
-                              backgroundColor: 'rgba(255, 255, 0, 0.2)',
-                              borderWidth: 0
-                            },
-                            // Green band in the middle
-                            greenZone: {
-                              type: 'box',
-                              xScaleID: 'x',
-                              yScaleID: 'y',
-                              xMin: 'Jan',
-                              xMax: 'Jul',
-                              yMin: 40,
-                              yMax: 60,
-                              backgroundColor: 'rgba(0, 255, 0, 0.2)',
-                              borderWidth: 0
-                            },
-                            // Yellow zone above the green band
-                            yellowZoneUpper: {
-                              type: 'box',
-                              xScaleID: 'x',
-                              yScaleID: 'y',
-                              xMin: 'Jan',
-                              xMax: 'Jul',
-                              yMin: 60,
-                              yMax: 80,
-                              backgroundColor: 'rgba(255, 255, 0, 0.2)',
-                              borderWidth: 0
-                            },
-                            // Red zone above the yellow band (highest values)
-                            redZoneUpper: {
-                              type: 'box',
-                              xScaleID: 'x',
-                              yScaleID: 'y',
-                              xMin: 'Jan',
-                              xMax: 'Jul',
-                              yMin: 80,
-                              yMax: 100,
-                              backgroundColor: 'rgba(255, 0, 0, 0.2)',
-                              borderWidth: 0
+                            scales: {
+                                x: {
+                                    type: 'linear', // Set x-axis to linear
+                                    position: 'bottom'
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100  // Ensures the full range is visible
+                                }
                             }
-                          }
                         }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          max: 100  // Ensures the full range is visible
+                    });
+        
+                    // Initialize and show the modal using Bootstrap's Modal API
+                    var modalElement = document.getElementById('questionModal');
+                    modalElement.addEventListener('shown.bs.modal', function () {
+                        if (window.sampleChartInstance) {
+                            window.sampleChartInstance.update();
                         }
-                      }
-                       
-                    
-                }
+                    });
+        
+                    var questionModal = new bootstrap.Modal(modalElement);
+                    questionModal.show();
+                });
             });
-
-            // Initialize and show the modal using Bootstrap's Modal API
-            var modalElement = document.getElementById('questionModal');
-            modalElement.addEventListener('shown.bs.modal', function () {
-                // Force the chart to re-calculate its dimensions
-                if (window.sampleChartInstance) {
-                    //window.sampleChartInstance.resize();
-                    // Alternatively, you can use update() if needed:
-                    window.sampleChartInstance.update();
-                }
-            });
-
-            var questionModal = new bootstrap.Modal(modalElement);
-            questionModal.show();
         });
-    });
-});
-</script>
+        </script>
+        
 
 <style>
 /* Change the cursor on table row hover */
