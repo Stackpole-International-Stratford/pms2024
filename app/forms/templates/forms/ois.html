@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
     <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+    <script src={% static "chart.js/chart.umd.js" %}></script>
+    <script src={% static "moment.js/moment.min.js" %}></script>
+    <script src={% static "chart.js/chartjs-adapter-moment.min.js" %}></script>
+    <script src="{% static 'chart.js/chartjs-plugin-regression.min.js' %}"></script> <!-- Added this line -->
+    <script src="{% static 'chart.js/chartjs-plugin-annotation.min.js' %}"></script> <!-- Added this line -->
+
     <title>{{ form_instance.name }}</title>
     <style>
         body {
@@ -640,16 +647,16 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Select all table rows in the left column
             var tableRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
-          
+        
             // Add click event listener to each row
             tableRows.forEach(function(row) {
                 row.addEventListener('click', function() {
                     // Get the actual database id from the data attribute
                     var questionId = row.getAttribute('data-question-id');
-              
+        
                     // Set the text in the modal to display the database id
                     document.getElementById('questionIdDisplay').textContent = "Question ID: " + questionId;
-              
+        
                     // Send a GET request to the new view with the question id
                     fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
                     .then(response => response.json())
@@ -688,6 +695,63 @@
                         document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
                     });
         
+                    // Initialize the sample chart
+                    // Destroy any existing chart to avoid duplication
+                    if(window.sampleChartInstance) {
+                        window.sampleChartInstance.destroy();
+                    }
+                    var ctx = document.getElementById('sampleChart').getContext('2d');
+                    window.sampleChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                            datasets: [{
+                                label: 'Sample Data',
+                                data: [65, 59, 80, 81, 56, 55, 40],
+                                fill: false,
+                                borderColor: 'rgb(75, 192, 192)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            plugins: {
+                                annotation: {
+                                    annotations: {
+                                        // Green zone: from 0 to 50
+                                        greenZone: {
+                                            type: 'box',
+                                            yMin: 0,
+                                            yMax: 50,
+                                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        // Yellow zone: from 50 to 70
+                                        yellowZone: {
+                                            type: 'box',
+                                            yMin: 50,
+                                            yMax: 70,
+                                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        // Red zone: from 70 to 100
+                                        redZone: {
+                                            type: 'box',
+                                            yMin: 70,
+                                            yMax: 100,
+                                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                            borderWidth: 0
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+        
                     // Initialize and show the modal using Bootstrap's Modal API
                     var modalElement = document.getElementById('questionModal');
                     var questionModal = new bootstrap.Modal(modalElement);
@@ -695,33 +759,42 @@
                 });
             });
         });
-    </script>
-
-    <style>
-    .col-md-6:first-child table tbody tr:hover {
-        cursor: pointer;
-    }
-    </style>
-    
-            
-    <!-- Question Modal -->
-    <div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="questionModalLabel">Question Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="questionIdDisplay"></p>
-                    <div id="questionAnswersDisplay"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </script>
+        
+        <style>
+        /* Change the cursor on table row hover */
+        .col-md-6:first-child table tbody tr:hover {
+            cursor: pointer;
+        }
+        
+        /* Optional: Ensure the chart canvas has a proper height */
+        #sampleChart {
+            max-width: 100%;
+            height: 300px;
+        }
+        </style>
+        
+        <!-- Question Modal -->
+        <div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">  <!-- modal-lg for extra width to accommodate the chart -->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="questionModalLabel">Question Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Question details -->
+                        <p id="questionIdDisplay"></p>
+                        <div id="questionAnswersDisplay"></div>
+                        <!-- Canvas for the sample line chart with annotations -->
+                        <canvas id="sampleChart"></canvas>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     
 
   
