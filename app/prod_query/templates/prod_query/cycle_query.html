@@ -25,30 +25,31 @@
     <div>
         <canvas id="chart1"></canvas>
     </div>
-    <!-- Show cycle_metrics data if it exists -->
     {% if cycle_metrics %}
     <div style="margin-top: 10px;">
       <h4>Cycle Metrics for {{ machine }}</h4>
       <ul>
-        <li>Trimmed Average (excl top/bottom 5%): 
-            {{ cycle_metrics.trimmed_average|floatformat:2 }} seconds</li>
-        <li>Microstoppages (count of stoppages > 300s): 
-            {{ cycle_metrics.microstoppages_count }}</li>
-        <li>Total Downtime (minutes): 
-            {{ cycle_metrics.downtime_minutes|floatformat:2 }} minutes</li>
+        <li>Weighted Cycle Time: {{ cycle_metrics.weighted_cycle_time }} seconds</li>
+        <li>Top 6 Cycle Times:
+          <ul>
+            {% for ct, freq in cycle_metrics.top_six %}
+              <li>{{ ct }} seconds: {{ freq }} occurrences</li>
+            {% endfor %}
+          </ul>
+        </li>
       </ul>
     </div>
     {% endif %}
     <table class="table">
-        <th scope="col">Cycle time in seconds</th>
-        <th scope="col">Number of occurences</th>    
+        <tr>
+            <th scope="col">Cycle time in seconds</th>
+            <th scope="col">Number of occurrences</th>
+        </tr>
         {% for res in result %}
-            <div class="d-inline list-group-item vertical-align d-flex justify-content-between align-items-center">
-                <tr>
-                    <td>{{ res.0 }}</td>
-                    <td>{{ res.1 }}</td>
-                </tr>
-            </div>
+            <tr>
+                <td>{{ res.0 }}</td>
+                <td>{{ res.1 }}</td>
+            </tr>
         {% endfor %}
     </table>
     <div style="margin-bottom: 10px;">

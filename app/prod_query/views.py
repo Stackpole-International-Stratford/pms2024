@@ -434,55 +434,28 @@ def get_cycle_metrics(cycle_data):
       cycle_data: A list of tuples (cycle_time_in_seconds, frequency),
                   sorted by ascending cycle_time.
 
-    Returns: A dict with keys:
-      - 'trimmed_average': (float) average cycle time excluding top & bottom 5%
-      - 'microstoppages_count': (int) how many cycles exceeded 300s
-      - 'downtime_minutes': (float) total downtime minutes (sum of cycles > 300s)
+    Returns:
+      A dictionary with:
+         - 'top_six': a list of the top 6 tuples (cycle_time, frequency) sorted by frequency descending,
+         - 'weighted_cycle_time': the weighted average of the top six cycle times (rounded to 3 decimals),
+         - 'histogram': the original cycle_data list.
     """
+    if not cycle_data:
+        return {"top_six": [], "weighted_cycle_time": 0, "histogram": []}
 
-    # Flatten out the data so we can easily remove top/bottom cycles
-    expanded_cycles = []
-    for (ct, freq) in cycle_data:
-        expanded_cycles.extend([ct] * freq)
+    # Get the top 6 cycle times by frequency (highest first)
+    top_six = sorted(cycle_data, key=lambda x: x[1], reverse=True)[:6]
 
-    # Sort the list (in case it wasn't already sorted)
-    expanded_cycles.sort()
-    
-    total_cycles = len(expanded_cycles)
-    if total_cycles == 0:
-        return {
-            'trimmed_average': 0.0,
-            'microstoppages_count': 0,
-            'downtime_minutes': 0.0,
-        }
-
-    # Compute how many cycles to remove at each end (5%)
-    remove_count = int(round(total_cycles * 0.05))
-
-    # Slice out the top & bottom
-    trimmed_array = expanded_cycles[remove_count : total_cycles - remove_count]
-
-    # Edge case: if removing top/bottom 5% kills all data, fallback
-    if len(trimmed_array) == 0:
-        trimmed_array = expanded_cycles
-
-    trimmed_sum = sum(trimmed_array)
-    trimmed_count = len(trimmed_array)
-    trimmed_average = trimmed_sum / trimmed_count  # in seconds
-
-    # Compute microstoppages count & total downtime
-    microstoppages_count = 0
-    downtime_seconds = 0
-    for (ct, freq) in cycle_data:
-        if ct > 300:  # 5 minutes
-            microstoppages_count += freq  # Counting occurrences
-            downtime_seconds += ct * freq  # Summing total downtime
+    total_frequency = sum(freq for ct, freq in top_six)
+    weighted_sum = sum(ct * freq for ct, freq in top_six)
+    weighted_cycle_time = round(weighted_sum / total_frequency, 3) if total_frequency else 0
 
     return {
-        'trimmed_average': trimmed_average,                # in seconds
-        'microstoppages_count': microstoppages_count,      # count of stoppages
-        'downtime_minutes': downtime_seconds / 60.0,       # total minutes lost
+        "top_six": top_six,
+        "weighted_cycle_time": weighted_cycle_time,
+        "histogram": cycle_data
     }
+
 
 
 
@@ -540,18 +513,17 @@ def cycle_times(request):
             context['result'] = res
             context['machine'] = machine
 
-            # If we want to compute metrics, pass to get_cycle_metrics
-            if len(res) > 0:
+            # Compute metrics: top 6 cycle times & weighted average
+            if res:
                 cycle_metrics = get_cycle_metrics(res)
                 context['cycle_metrics'] = cycle_metrics
             else:
                 context['cycle_metrics'] = None
-
         else:
-            # Form was invalid, re-render with errors
+            # Handle invalid form: you could re-render with errors here
             pass
 
-    # Always keep form in context
+    # Always include the form in context
     context['form'] = form
 
     return render(request, 'prod_query/cycle_query.html', context)
