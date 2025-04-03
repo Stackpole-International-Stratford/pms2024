@@ -5,90 +5,139 @@
 {% endblock %}
 
 {% block content %}
-<div class="col-12">
-    <h1 class="fw-bolder text-center">Cycle Time Query</h1>
-</div>
-<div class="col-12">
-    <hr>
-</div>
-
-<form method="post">
-  {% csrf_token %}
-  <table>
-      {{ form.as_table }}
-  </table>
-  <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
-  <button type="submit" class="btn btn-dark">Submit</button>
-</form>
-
-{% if result %}
-    <!-- Show cycle_metrics data if it exists -->
-    {% if cycle_metrics %}
-    <div style="margin-top: 10px;">
-      <h4>Cycle Metrics for {{ machine }}</h4>
-      <ul>
-        <li>Weighted Cycle Time: {{ cycle_metrics.weighted_cycle_time }} seconds</li>
-        <li>Top 8 Cycle Times:
-          <ul>
-            {% for ct, freq in cycle_metrics.top_eight %}
-              <li>{{ ct }} seconds: {{ freq }} occurrences</li>
-            {% endfor %}
-          </ul>
-        </li>
-      </ul>
+<div class="container my-4">
+  <div class="row">
+    <div class="col-12 text-center mb-4">
+      <h1 class="fw-bolder">Cycle Time Query</h1>
+      <hr>
     </div>
-    {% endif %}
-
-    <!-- Histogram Chart Canvas -->
-    <div>
+  </div>
+  <div class="row">
+    <!-- Form Column -->
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-header">
+          Enter Machine Data
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <table class="table table-borderless">
+              {{ form.as_table }}
+            </table>
+            <div class="mb-2 text-muted">Note: Only accepts a single machine at a time</div>
+            <button type="submit" class="btn btn-dark">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- Cycle Metrics Column -->
+    <div class="col-md-6">
+      {% if result and cycle_metrics %}
+      <div class="card mb-3">
+        <div class="card-header">
+          Cycle Metrics for {{ machine }}
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h5 class="card-title">Weighted Cycle Time</h5>
+            <p class="card-text">{{ cycle_metrics.weighted_cycle_time }} seconds</p>
+          </div>
+          <div>
+            <h5 class="card-title">Top 8 Cycle Times</h5>
+            <div class="row">
+              <div class="col-6">
+                <ul class="list-group list-group-flush">
+                  {% for ct, freq in cycle_metrics.top_eight|slice:":4" %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ ct }} seconds
+                    <span class="badge bg-warning rounded-pill">{{ freq }}</span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="col-6">
+                <ul class="list-group list-group-flush">
+                  {% for ct, freq in cycle_metrics.top_eight|slice:"4:" %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ ct }} seconds
+                    <span class="badge bg-warning rounded-pill">{{ freq }}</span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    
+  </div>
+  <!-- Histogram Chart Canvas -->
+  <div class="row my-4">
+    <div class="col-12">
       <canvas id="chart1"></canvas>
     </div>
-
-
-    <!-- Yearly Data Section -->
-    <div style="margin-top: 20px;">
+  </div>
+  <!-- Yearly Data Section -->
+  <div class="row my-4">
+    <div class="col-12">
       <h3 class="text-center">Daily Weighted Cycle Time (Past Year)</h3>
       <canvas id="yearlyChart"></canvas>
     </div>
-
-    <!-- Accordion for full cycle data table -->
-    <div class="accordion mb-4" id="accordionCycleData">
-      <div class="accordion-item">
-        <h2 class="accordion-header" id="headingCycleData">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCycleData" aria-expanded="false" aria-controls="collapseCycleData">
-            Cycle Data Table
-          </button>
-        </h2>
-        <div id="collapseCycleData" class="accordion-collapse collapse" aria-labelledby="headingCycleData" data-bs-parent="#accordionCycleData">
-          <div class="accordion-body">
-            <table class="table">
-              <tr>
-                <th scope="col">Cycle time in seconds</th>
-                <th scope="col">Number of occurrences</th>
-              </tr>
-              {% for res in result %}
-                <tr>
-                  <td>{{ res.0 }}</td>
-                  <td>{{ res.1 }}</td>
-                </tr>
-              {% endfor %}
-            </table>
+  </div>
+  <!-- Accordion for full cycle data table -->
+  {% if result %}
+  <div class="row my-4">
+    <div class="col-12">
+      <div class="accordion" id="accordionCycleData">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingCycleData">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCycleData" aria-expanded="false" aria-controls="collapseCycleData">
+              Cycle Data Table
+            </button>
+          </h2>
+          <div id="collapseCycleData" class="accordion-collapse collapse" aria-labelledby="headingCycleData" data-bs-parent="#accordionCycleData">
+            <div class="accordion-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Cycle time (seconds)</th>
+                    <th scope="col">Occurrences</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for res in result %}
+                  <tr>
+                    <td>{{ res.0 }}</td>
+                    <td>{{ res.1 }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-
-{% else %}
-    <div>No data</div>
-{% endif %}
+  </div>
+  {% else %}
+    <div class="row">
+      <div class="col-12">
+        <div class="alert alert-warning text-center" role="alert">
+          No data
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
 <!-- Histogram Chart Script -->
 {{ chartdata|json_script:"chartdata" }}
 <script>
-  // Parse chart data for the histogram
   const chartdata = JSON.parse(document.getElementById('chartdata').textContent);
   const ctx = document.getElementById('chart1').getContext('2d');
   new Chart(ctx, {
@@ -127,7 +176,6 @@
 <!-- Yearly Chart Script -->
 {{ yearly_chartdata|json_script:"yearly_chartdata" }}
 <script>
-  // Parse yearly chart data
   const yearlyData = JSON.parse(document.getElementById('yearly_chartdata').textContent);
   const ctxYearly = document.getElementById('yearlyChart').getContext('2d');
   new Chart(ctxYearly, {
@@ -150,7 +198,7 @@
             text: 'Weighted Cycle Time (seconds)'
           }
         }
-      },
+      }
     }
   });
 </script>
