@@ -15,10 +15,10 @@ Cycle Time
       <hr>
     </div>
   </div>
-  <div class="row">
+  <div class="row align-items-stretch">
     <!-- Form Column -->
     <div class="col-md-6">
-      <div class="card mb-3">
+      <div class="card mb-3 h-100">
         <div class="card-body">
           <form method="post" id="cycle-form">
             {% csrf_token %}
@@ -48,7 +48,7 @@ Cycle Time
     <!-- Cycle Metrics Column -->
     <div class="col-md-6">
       {% if result and cycle_metrics %}
-      <div class="card mb-3">
+      <div class="card mb-3 h-100">
         <div class="card-body">
           <h5 class="card-title">Weighted Cycle Time (Machine: {{ machine }})</h5>
           <p class="card-text">{{ start_datetime_str }} to {{ end_datetime_str }}</p>
@@ -127,6 +127,7 @@ Cycle Time
   </div>
   {% endif %}
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
