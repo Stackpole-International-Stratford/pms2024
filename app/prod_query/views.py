@@ -473,6 +473,7 @@ def get_cycle_metrics(cycle_data):
     }
 
 
+
 def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
     """
     Fetch cycle records for a machine between two timestamps and build a sorted
@@ -521,7 +522,6 @@ def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
 
     # Return a sorted list of (cycle_time, frequency) tuples (sorted by cycle_time)
     return sorted(times_dict.items(), key=lambda x: x[0])
-
 
 
 def cycle_times(request):
@@ -588,11 +588,6 @@ def cycle_times(request):
 
     return render(request, 'prod_query/cycle_query.html', context)
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> weighted_cycle
 # Combined fetch data function that both views can use
 def fetch_chart_data(machine, start, end, interval=5, group_by_shift=False):
     """
