@@ -542,7 +542,7 @@ def cycle_times(request):
             start_time = form.cleaned_data['start_time']
             end_date = form.cleaned_data['end_date']
             end_time = form.cleaned_data['end_time']
-            include_zeros = form.cleaned_data['include_zeros']
+            include_zeros = True
 
             # Combine into datetime objects for the shift query
             shift_start = datetime.combine(start_date, start_time)
@@ -585,7 +585,7 @@ def cycle_times(request):
             daily_dates = []
             daily_weighted_cycle = []
 
-            # Iterate day by day over the last year
+           # Iterate day by day over the last year
             current_day = one_year_ago
             while current_day <= today:
                 day_start = datetime.combine(current_day, datetime.min.time())
@@ -598,12 +598,16 @@ def cycle_times(request):
                 daily_metrics = get_cycle_metrics(daily_data)
                 daily_wct = daily_metrics['weighted_cycle_time']  # Weighted cycle time for this day
 
-                # Exclude days with a weighted cycle time over 5 minutes (300 seconds)
-                if daily_wct <= 600:
+                # Compute the total occurrences for the day
+                total_occurrences = sum(freq for _, freq in daily_data)
+
+                # Include the day only if it has at least 100 total cycle occurrences
+                if total_occurrences >= 300:
                     daily_dates.append(current_day.strftime("%Y-%m-%d"))
                     daily_weighted_cycle.append(daily_wct)
 
                 current_day += timedelta(days=1)
+
 
 
             # Prepare ChartJS data for the yearly line chart
