@@ -42,22 +42,34 @@
       </ul>
     </div>
     {% endif %}
-    <!-- Full table of cycle data -->
-    <table class="table">
-        <tr>
-            <th scope="col">Cycle time in seconds</th>
-            <th scope="col">Number of occurrences</th>
-        </tr>
-        {% for res in result %}
-            <tr>
-                <td>{{ res.0 }}</td>
-                <td>{{ res.1 }}</td>
-            </tr>
-        {% endfor %}
-    </table>
-    <div style="margin-bottom: 10px;">
-        {{ time }}
+    <div class="accordion mb-4" id="accordionCycleData">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingCycleData">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCycleData" aria-expanded="false" aria-controls="collapseCycleData">
+            Cycle Data Table
+          </button>
+        </h2>
+        <div id="collapseCycleData" class="accordion-collapse collapse" aria-labelledby="headingCycleData" data-bs-parent="#accordionCycleData">
+          <div class="accordion-body">
+            <!-- Full table of cycle data -->
+            <table class="table">
+              <tr>
+                <th scope="col">Cycle time in seconds</th>
+                <th scope="col">Number of occurrences</th>
+              </tr>
+              {% for res in result %}
+                <tr>
+                  <td>{{ res.0 }}</td>
+                  <td>{{ res.1 }}</td>
+                </tr>
+              {% endfor %}
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
+    
+    
 {% else %}
     <div>No data</div>
 {% endif %}
