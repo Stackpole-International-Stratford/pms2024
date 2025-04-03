@@ -16,13 +16,14 @@
 
 
 <form method="post">
-    {% csrf_token %}
-    <table>
-        {{ form.as_table }}
-    </table>
-    <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
-    <input type="submit" value="Submit">
+  {% csrf_token %}
+  <table>
+      {{ form.as_table }}
+  </table>
+  <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
+  <button type="submit" class="btn btn-dark">Submit</button>
 </form>
+
 
 
 {% if result %}
