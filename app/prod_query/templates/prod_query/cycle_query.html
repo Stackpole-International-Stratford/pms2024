@@ -211,16 +211,22 @@ Cycle Time
       mode: "range",
       inline: true,
       enableTime: true,
-      time_24hr: true,
-      dateFormat: "Y-m-d H:i",
+      time_24hr: false, // display in 12-hour mode
+      minuteIncrement: 1, // allow any minute value
+      dateFormat: "Y-m-d h:i K", // display format with AM/PM
       defaultDate: defaultDates,
       onChange: function(selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
+          // Convert to 24-hour format before submitting
           document.getElementById('start_datetime').value = instance.formatDate(selectedDates[0], "Y-m-d H:i");
           document.getElementById('end_datetime').value = instance.formatDate(selectedDates[1], "Y-m-d H:i");
         }
       }
     });
+    
+    
+    
+    
 
     // Attach submit listener to show spinner with a slight delay.
     const form = document.getElementById("cycle-form");
