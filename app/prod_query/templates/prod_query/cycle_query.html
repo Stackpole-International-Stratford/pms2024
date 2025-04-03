@@ -30,9 +30,9 @@
       <h4>Cycle Metrics for {{ machine }}</h4>
       <ul>
         <li>Weighted Cycle Time: {{ cycle_metrics.weighted_cycle_time }} seconds</li>
-        <li>Top 6 Cycle Times:
+        <li>Top 8 Cycle Times:
           <ul>
-            {% for ct, freq in cycle_metrics.top_six %}
+            {% for ct, freq in cycle_metrics.top_eight %}
               <li>{{ ct }} seconds: {{ freq }} occurrences</li>
             {% endfor %}
           </ul>

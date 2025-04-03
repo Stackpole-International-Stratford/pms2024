@@ -436,25 +436,26 @@ def get_cycle_metrics(cycle_data):
 
     Returns:
       A dictionary with:
-         - 'top_six': a list of the top 6 tuples (cycle_time, frequency) sorted by frequency descending,
-         - 'weighted_cycle_time': the weighted average of the top six cycle times (rounded to 3 decimals),
+         - 'top_eight': a list of the top 8 tuples (cycle_time, frequency) sorted by frequency descending,
+         - 'weighted_cycle_time': the weighted average of the top eight cycle times (rounded to 3 decimals),
          - 'histogram': the original cycle_data list.
     """
     if not cycle_data:
-        return {"top_six": [], "weighted_cycle_time": 0, "histogram": []}
+        return {"top_eight": [], "weighted_cycle_time": 0, "histogram": []}
 
-    # Get the top 6 cycle times by frequency (highest first)
-    top_six = sorted(cycle_data, key=lambda x: x[1], reverse=True)[:6]
+    # Get the top 8 cycle times by frequency (highest first)
+    top_eight = sorted(cycle_data, key=lambda x: x[1], reverse=True)[:8]
 
-    total_frequency = sum(freq for ct, freq in top_six)
-    weighted_sum = sum(ct * freq for ct, freq in top_six)
+    total_frequency = sum(freq for ct, freq in top_eight)
+    weighted_sum = sum(ct * freq for ct, freq in top_eight)
     weighted_cycle_time = round(weighted_sum / total_frequency, 3) if total_frequency else 0
 
     return {
-        "top_six": top_six,
+        "top_eight": top_eight,
         "weighted_cycle_time": weighted_cycle_time,
         "histogram": cycle_data
     }
+
 
 
 
