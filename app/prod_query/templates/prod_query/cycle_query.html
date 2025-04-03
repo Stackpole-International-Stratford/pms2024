@@ -69,6 +69,7 @@ Cycle Time
       {% endif %}
     </div>
   </div>
+  {% if result %}
   <!-- Histogram Chart Canvas -->
   <div class="row my-4">
     <div class="col-12">
@@ -82,6 +83,7 @@ Cycle Time
       <canvas id="yearlyChart" height="80"></canvas>
     </div>
   </div>
+  {% endif %}
   <!-- Accordion for full cycle data table -->
   {% if result %}
   <div class="row my-4">
@@ -118,16 +120,9 @@ Cycle Time
     </div>
   </div>
   {% else %}
-  <div class="row">
-    <div class="col-12">
-      <div class="alert alert-warning text-center" role="alert">
-        No data
-      </div>
-    </div>
-  </div>
+
   {% endif %}
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
@@ -223,10 +218,6 @@ Cycle Time
         }
       }
     });
-    
-    
-    
-    
 
     // Attach submit listener to show spinner with a slight delay.
     const form = document.getElementById("cycle-form");
