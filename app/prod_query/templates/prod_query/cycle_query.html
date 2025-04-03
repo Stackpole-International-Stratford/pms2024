@@ -27,8 +27,8 @@ Cycle Time
               <div id="calendar"></div>
             </div>
             <!-- Hidden inputs to store the selected start and end datetimes -->
-            <input type="hidden" name="start_datetime" id="start_datetime">
-            <input type="hidden" name="end_datetime" id="end_datetime">
+            <input type="hidden" name="start_datetime" id="start_datetime" value="{{ start_datetime_str|default:'' }}">
+            <input type="hidden" name="end_datetime" id="end_datetime" value="{{ end_datetime_str|default:'' }}">
             <!-- Machine Input -->
             <div class="mb-3">
               <label for="machine" class="form-label">Machine</label>
@@ -200,17 +200,19 @@ Cycle Time
 
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    // Initialize Flatpickr
+    // Build an array of default dates if both values exist; otherwise, use an empty array.
+    const startDate = "{{ start_datetime_str|default:'' }}";
+    const endDate = "{{ end_datetime_str|default:'' }}";
+    const defaultDates = (startDate && endDate) ? [startDate, endDate] : [];
+
+    // Initialize Flatpickr with persistent default dates.
     flatpickr("#calendar", {
       mode: "range",
       inline: true,
       enableTime: true,
       time_24hr: true,
       dateFormat: "Y-m-d H:i",
-      defaultDate: [
-        "{{ start_datetime_str|default:'' }}",
-        "{{ end_datetime_str|default:'' }}"
-      ],
+      defaultDate: defaultDates,
       onChange: function(selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
           document.getElementById('start_datetime').value = instance.formatDate(selectedDates[0], "Y-m-d H:i");
@@ -219,7 +221,7 @@ Cycle Time
       }
     });
 
-    // Attach submit listener to show spinner with a slight delay
+    // Attach submit listener to show spinner with a slight delay.
     const form = document.getElementById("cycle-form");
     form.addEventListener("submit", function() {
       setTimeout(() => {
