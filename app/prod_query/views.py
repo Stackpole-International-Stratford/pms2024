@@ -503,7 +503,7 @@ def cycle_times(request):
                 for row in rows[1:]:
                     current_ts = row[4]
                     cycle = round(current_ts - last_ts)
-                    if cycle > 0:
+                    if cycle >= 0:
                         times_dict[cycle] = times_dict.get(cycle, 0) + 1
                     last_ts = current_ts
 
