@@ -1,6 +1,5 @@
 {% extends "parent.html" %}
 
-
 {% block title %}Cycle Time{% endblock %}
 {% block extra_styles %}
 {% endblock %}
@@ -21,11 +20,13 @@
     <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
     <input type="submit" value="Submit">
 </form>
+
 {% if result %}
+    <!-- Chart Canvas -->
     <div>
         <canvas id="chart1"></canvas>
     </div>
-   <!-- Show cycle_metrics data if it exists -->
+    <!-- Show cycle_metrics data if it exists -->
     {% if cycle_metrics %}
     <div style="margin-top: 10px;">
       <h4>Cycle Metrics for {{ machine }}</h4>
@@ -41,6 +42,7 @@
       </ul>
     </div>
     {% endif %}
+    <!-- Full table of cycle data -->
     <table class="table">
         <tr>
             <th scope="col">Cycle time in seconds</th>
@@ -59,4 +61,50 @@
 {% else %}
     <div>No data</div>
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{{ chartdata|json_script:"chartdata" }}
+<script>
+  // Parse chart data passed from the view
+  const chartdata = JSON.parse(document.getElementById('chartdata').textContent);
+  
+  // Get the canvas context
+  const ctx = document.getElementById('chart1').getContext('2d');
+  
+  // Create a bar chart using ChartJS
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: chartdata.labels, // Cycle times (in seconds) filtered to remove outliers
+      datasets: [chartdata.dataset] // Frequencies for each cycle time
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Number of Occurrences'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Cycle Time (seconds)'
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        title: {
+          display: true,
+          text: 'Cycle Time Histogram'
+        }
+      }
+    }
+  });
+</script>
 {% endblock %}

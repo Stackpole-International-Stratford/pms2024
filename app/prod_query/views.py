@@ -519,32 +519,53 @@ def cycle_times(request):
                     current_ts = row[4]
                     cycle = round(current_ts - last_ts)
                     if include_zeros:
+                        # Include zero-second cycles if checkbox is checked.
                         if cycle >= 0:
                             times_dict[cycle] = times_dict.get(cycle, 0) + 1
                     else:
+                        # Otherwise, only include positive cycle times.
                         if cycle > 0:
                             times_dict[cycle] = times_dict.get(cycle, 0) + 1
                     last_ts = current_ts
 
-            # Sort times by cycle_time
+            # Sort times by cycle_time (ascending order)
             res = sorted(times_dict.items(), key=lambda x: x[0])  # (cycle_time, freq)
 
-            # Store the raw cycle distribution in the context
+            # Store the raw cycle distribution and machine in the context
             context['result'] = res
             context['machine'] = machine
 
-            # If we want to compute metrics, pass to get_cycle_metrics
-            if len(res) > 0:
+            # Compute metrics if data exists
+            if res:
                 cycle_metrics = get_cycle_metrics(res)
                 context['cycle_metrics'] = cycle_metrics
             else:
                 context['cycle_metrics'] = None
 
+            # Prepare chart data for ChartJS
+            # Filter out cycles with 0 seconds and those over 15 minutes (900 seconds)
+            filtered_chart_data = [(ct, freq) for ct, freq in res if ct <= 900]
+
+            # Build separate lists for labels (cycle times) and values (frequencies)
+            chart_labels = [ct for ct, freq in filtered_chart_data]
+            chart_values = [freq for ct, freq in filtered_chart_data]
+
+            # Create a dictionary for ChartJS; note that colors are defined here
+            context['chartdata'] = {
+                'labels': chart_labels,
+                'dataset': {
+                    'label': 'Cycle Occurrences',
+                    'data': chart_values,
+                    'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                    'borderColor': 'rgba(75, 192, 192, 1)',
+                    'borderWidth': 1,
+                }
+            }
         else:
-            # Form was invalid, re-render with errors
+            # Handle invalid form: re-render with errors
             pass
 
-    # Always keep form in context
+    # Always include the form in context
     context['form'] = form
 
     return render(request, 'prod_query/cycle_query.html', context)
