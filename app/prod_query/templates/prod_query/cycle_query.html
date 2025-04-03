@@ -1,8 +1,10 @@
 {% extends "parent.html" %}
 
+
 {% block title %}Cycle Time{% endblock %}
 {% block extra_styles %}
 {% endblock %}
+
 
 {% block content %}
 <div class="col-12">
@@ -12,14 +14,17 @@
     <hr>
 </div>
 
+
 <form method="post">
-    {% csrf_token %}
-    <table>
-        {{ form.as_table }}
-    </table>
-    <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
-    <input type="submit" value="Submit">
+  {% csrf_token %}
+  <table>
+      {{ form.as_table }}
+  </table>
+  <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
+  <button type="submit" class="btn btn-dark">Submit</button>
 </form>
+
+
 
 {% if result %}
     <!-- Show cycle_metrics data if it exists -->
@@ -43,6 +48,10 @@
       <canvas id="chart1"></canvas>
   </div>
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> weighted_cycle
     <div class="accordion mb-4" id="accordionCycleData">
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingCycleData">
@@ -69,22 +78,28 @@
         </div>
       </div>
     </div>
+<<<<<<< HEAD
     
     
+=======
+   
+   
+>>>>>>> weighted_cycle
 {% else %}
     <div>No data</div>
 {% endif %}
 {% endblock %}
+
 
 {% block extra_scripts %}
 {{ chartdata|json_script:"chartdata" }}
 <script>
   // Parse chart data passed from the view
   const chartdata = JSON.parse(document.getElementById('chartdata').textContent);
-  
+ 
   // Get the canvas context
   const ctx = document.getElementById('chart1').getContext('2d');
-  
+ 
   // Create a bar chart using ChartJS
   new Chart(ctx, {
     type: 'bar',
