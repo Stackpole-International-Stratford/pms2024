@@ -25,6 +25,10 @@ from django.http import JsonResponse
 from plant.models.setupfor_models import SetupFor, AssetCycleTimes
 
 
+from .forms import ShiftTotalsForm
+import time
+import numpy as np
+
 DAVE_HOST = settings.DAVE_HOST
 DAVE_USER = settings.DAVE_USER
 DAVE_PASSWORD = settings.DAVE_PASSWORD
@@ -532,7 +536,7 @@ def cycle_times(request):
     elif request.method == 'POST':
         form = CycleQueryForm(request.POST)
         if form.is_valid():
-            # Extract form data
+            # Extract form data from the submitted form
             machine = form.cleaned_data['machine']
             start_date = form.cleaned_data['start_date']
             start_time = form.cleaned_data['start_time']
@@ -540,35 +544,29 @@ def cycle_times(request):
             end_time = form.cleaned_data['end_time']
             include_zeros = form.cleaned_data['include_zeros']
 
-            # Combine into datetime objects
+            # Combine into datetime objects for the shift query
             shift_start = datetime.combine(start_date, start_time)
             shift_end = datetime.combine(end_date, end_time)
             start_ts = int(shift_start.timestamp())
             end_ts = int(shift_end.timestamp())
 
-            # Use the helper function to fetch cycle data
+            # Fetch cycle data for the shift
             res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros)
-
-            # Store the raw cycle distribution and machine in the context
             context['result'] = res
             context['machine'] = machine
 
-            # Compute metrics if data exists
+            # Compute cycle metrics for the shift if data exists
             if res:
                 cycle_metrics = get_cycle_metrics(res)
                 context['cycle_metrics'] = cycle_metrics
             else:
                 context['cycle_metrics'] = None
 
-            # Prepare chart data for ChartJS
-            # Filter out cycles with values over 15 minutes (900 seconds)
+            # Prepare ChartJS data for the histogram (bar chart)
+            # Filter out cycles longer than 15 minutes (900 seconds)
             filtered_chart_data = [(ct, freq) for ct, freq in res if ct <= 900]
-
-            # Build separate lists for labels (cycle times) and values (frequencies)
             chart_labels = [ct for ct, freq in filtered_chart_data]
             chart_values = [freq for ct, freq in filtered_chart_data]
-
-            # Create a dictionary for ChartJS; note that colors are defined here
             context['chartdata'] = {
                 'labels': chart_labels,
                 'dataset': {
@@ -579,13 +577,54 @@ def cycle_times(request):
                     'borderWidth': 1,
                 }
             }
+
+            # --- Now fetch data for the past year ---
+            # Define date range: from one year ago up to today
+            today = datetime.today().date()
+            one_year_ago = today - timedelta(days=365)
+            daily_dates = []
+            daily_weighted_cycle = []
+
+            # Iterate day by day over the last year
+            current_day = one_year_ago
+            while current_day <= today:
+                day_start = datetime.combine(current_day, datetime.min.time())
+                day_end = datetime.combine(current_day, datetime.max.time())
+                day_start_ts = int(day_start.timestamp())
+                day_end_ts = int(day_end.timestamp())
+
+                # Fetch daily cycle data and compute metrics
+                daily_data = fetch_cycle_data(machine, day_start_ts, day_end_ts, include_zeros)
+                daily_metrics = get_cycle_metrics(daily_data)
+                daily_wct = daily_metrics['weighted_cycle_time']  # Weighted cycle time for this day
+
+                # Exclude days with a weighted cycle time over 5 minutes (300 seconds)
+                if daily_wct <= 600:
+                    daily_dates.append(current_day.strftime("%Y-%m-%d"))
+                    daily_weighted_cycle.append(daily_wct)
+
+                current_day += timedelta(days=1)
+
+
+            # Prepare ChartJS data for the yearly line chart
+            context['yearly_chartdata'] = {
+                'labels': daily_dates,
+                'datasets': [
+                    {
+                        'label': 'Daily Weighted Cycle Time',
+                        'data': daily_weighted_cycle,
+                        'fill': False,
+                        'borderColor': 'rgba(255, 99, 132, 1)',
+                        'tension': 0.1,
+                    },
+                ]
+            }
         else:
-            # Handle invalid form: re-render with errors if needed
+            # Handle form errors if needed
             pass
 
     # Always include the form in context
     context['form'] = form
-
     return render(request, 'prod_query/cycle_query.html', context)
 
 # Combined fetch data function that both views can use
@@ -1489,9 +1528,7 @@ def get_production_data(machine, start_timestamp, times, part_list):
 
 
 # #views.py
-from .forms import ShiftTotalsForm
-import time
-import numpy as np
+
 
 def fetch_shift_totals_by_day_and_shift(machine_number, start_date, end_date):
     """

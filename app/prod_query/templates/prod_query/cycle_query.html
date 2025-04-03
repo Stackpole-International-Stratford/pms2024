@@ -1,10 +1,8 @@
 {% extends "parent.html" %}
 
-
 {% block title %}Cycle Time{% endblock %}
 {% block extra_styles %}
 {% endblock %}
-
 
 {% block content %}
 <div class="col-12">
@@ -14,7 +12,6 @@
     <hr>
 </div>
 
-
 <form method="post">
   {% csrf_token %}
   <table>
@@ -23,8 +20,6 @@
   <div style="margin-bottom: 2px;">Note: Only accepts a single machine at a time</div>
   <button type="submit" class="btn btn-dark">Submit</button>
 </form>
-
-
 
 {% if result %}
     <!-- Show cycle_metrics data if it exists -->
@@ -43,12 +38,13 @@
       </ul>
     </div>
     {% endif %}
-    <!-- Chart Canvas -->
+
+    <!-- Histogram Chart Canvas -->
     <div>
       <canvas id="chart1"></canvas>
-  </div>
+    </div>
 
-
+    <!-- Accordion for full cycle data table -->
     <div class="accordion mb-4" id="accordionCycleData">
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingCycleData">
@@ -58,7 +54,6 @@
         </h2>
         <div id="collapseCycleData" class="accordion-collapse collapse" aria-labelledby="headingCycleData" data-bs-parent="#accordionCycleData">
           <div class="accordion-body">
-            <!-- Full table of cycle data -->
             <table class="table">
               <tr>
                 <th scope="col">Cycle time in seconds</th>
@@ -75,29 +70,29 @@
         </div>
       </div>
     </div>
-   
-   
+
+    <!-- Yearly Data Section -->
+    <div style="margin-top: 20px;">
+      <h3 class="text-center">Daily Weighted Cycle Time (Past Year)</h3>
+      <canvas id="yearlyChart"></canvas>
+    </div>
 {% else %}
     <div>No data</div>
 {% endif %}
 {% endblock %}
 
-
 {% block extra_scripts %}
+<!-- Histogram Chart Script -->
 {{ chartdata|json_script:"chartdata" }}
 <script>
-  // Parse chart data passed from the view
+  // Parse chart data for the histogram
   const chartdata = JSON.parse(document.getElementById('chartdata').textContent);
- 
-  // Get the canvas context
   const ctx = document.getElementById('chart1').getContext('2d');
- 
-  // Create a bar chart using ChartJS
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: chartdata.labels, // Cycle times (in seconds) filtered to remove outliers
-      datasets: [chartdata.dataset] // Frequencies for each cycle time
+      labels: chartdata.labels,
+      datasets: [chartdata.dataset]
     },
     options: {
       scales: {
@@ -116,14 +111,43 @@
         }
       },
       plugins: {
-        legend: {
-          display: false
-        },
+        legend: { display: false },
         title: {
           display: true,
           text: 'Cycle Time Histogram'
         }
       }
+    }
+  });
+</script>
+
+<!-- Yearly Chart Script -->
+{{ yearly_chartdata|json_script:"yearly_chartdata" }}
+<script>
+  // Parse yearly chart data
+  const yearlyData = JSON.parse(document.getElementById('yearly_chartdata').textContent);
+  const ctxYearly = document.getElementById('yearlyChart').getContext('2d');
+  new Chart(ctxYearly, {
+    type: 'line',
+    data: {
+      labels: yearlyData.labels,
+      datasets: yearlyData.datasets
+    },
+    options: {
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Date'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Weighted Cycle Time (seconds)'
+          }
+        }
+      },
     }
   });
 </script>
