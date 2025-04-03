@@ -22,10 +22,6 @@
 </form>
 
 {% if result %}
-    <!-- Chart Canvas -->
-    <div>
-        <canvas id="chart1"></canvas>
-    </div>
     <!-- Show cycle_metrics data if it exists -->
     {% if cycle_metrics %}
     <div style="margin-top: 10px;">
@@ -42,6 +38,11 @@
       </ul>
     </div>
     {% endif %}
+    <!-- Chart Canvas -->
+    <div>
+      <canvas id="chart1"></canvas>
+  </div>
+
     <div class="accordion mb-4" id="accordionCycleData">
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingCycleData">
