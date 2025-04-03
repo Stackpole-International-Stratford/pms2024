@@ -62,6 +62,11 @@ class CycleQueryForm(forms.Form):
     start_time = forms.TimeField(widget=TimeInput(attrs={'type': 'time'}), initial='00:00')
     end_date = forms.DateField(widget=DateInput(attrs={'type': 'date'}))
     end_time = forms.TimeField(widget=TimeInput(attrs={'type': 'time'}), initial='23:59')
+    include_zeros = forms.BooleanField(
+        label='Include Zeros', 
+        required=False,
+        initial=True
+    )
 
 class ShiftLineForm(forms.Form):
   CHOICES = [

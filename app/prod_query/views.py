@@ -474,6 +474,8 @@ def cycle_times(request):
             start_time = form.cleaned_data['start_time']
             end_date = form.cleaned_data['end_date']
             end_time = form.cleaned_data['end_time']
+            include_zeros = form.cleaned_data['include_zeros']
+
 
             # Combine into datetime objects
             shift_start = datetime.combine(start_date, start_time)
@@ -503,8 +505,12 @@ def cycle_times(request):
                 for row in rows[1:]:
                     current_ts = row[4]
                     cycle = round(current_ts - last_ts)
-                    if cycle >= 0:
-                        times_dict[cycle] = times_dict.get(cycle, 0) + 1
+                    if include_zeros:
+                        if cycle >= 0:
+                            times_dict[cycle] = times_dict.get(cycle, 0) + 1
+                    else:
+                        if cycle > 0:
+                            times_dict[cycle] = times_dict.get(cycle, 0) + 1
                     last_ts = current_ts
 
             # Sort times by cycle_time
