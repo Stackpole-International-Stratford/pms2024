@@ -434,54 +434,42 @@ def get_cycle_metrics(cycle_data):
       cycle_data: A list of tuples (cycle_time_in_seconds, frequency),
                   sorted by ascending cycle_time.
 
-    Returns: A dict with keys:
-      - 'trimmed_average': (float) average cycle time excluding top & bottom 5%
-      - 'microstoppages_count': (int) how many cycles exceeded 300s
-      - 'downtime_minutes': (float) total downtime minutes (sum of cycles > 300s)
+
+    Returns:
+      A dictionary with:
+         - 'top_eight': a list of the top 8 tuples (cycle_time, frequency) sorted by frequency descending,
+         - 'weighted_cycle_time': the weighted average of the top eight cycle times (rounded to 3 decimals),
+         - 'histogram': the original cycle_data list.
     """
+    if not cycle_data:
+        return {"top_eight": [], "weighted_cycle_time": 0, "histogram": []}
 
-    # Flatten out the data so we can easily remove top/bottom cycles
-    expanded_cycles = []
-    for (ct, freq) in cycle_data:
-        expanded_cycles.extend([ct] * freq)
 
-    # Sort the list (in case it wasn't already sorted)
-    expanded_cycles.sort()
-    
-    total_cycles = len(expanded_cycles)
-    if total_cycles == 0:
-        return {
-            'trimmed_average': 0.0,
-            'microstoppages_count': 0,
-            'downtime_minutes': 0.0,
-        }
+    # Sort the cycle_data list by frequency in descending order (highest frequency first)
+    # and then take the first 8 entries. Each entry is a tuple: (cycle_time, frequency).
+    top_eight = sorted(cycle_data, key=lambda x: x[1], reverse=True)[:8]
 
-    # Compute how many cycles to remove at each end (5%)
-    remove_count = int(round(total_cycles * 0.05))
+    # Calculate the total frequency by summing the frequencies of the top eight cycle times.
+    # This gives us the total count of cycles among the top eight.
+    total_frequency = sum(freq for ct, freq in top_eight)
 
-    # Slice out the top & bottom
-    trimmed_array = expanded_cycles[remove_count : total_cycles - remove_count]
+    # Calculate the weighted sum by multiplying each cycle time (ct) by its frequency (freq)
+    # and then summing all these products. This sum reflects the overall 'weight' of the cycle times.
+    weighted_sum = sum(ct * freq for ct, freq in top_eight)
 
-    # Edge case: if removing top/bottom 5% kills all data, fallback
-    if len(trimmed_array) == 0:
-        trimmed_array = expanded_cycles
+    # Compute the weighted cycle time:
+    # Divide the weighted sum by the total frequency to get the average cycle time,
+    # weighted by how often each cycle time occurred.
+    # Round the result to 3 decimal places.
+    # If the total_frequency is zero (to avoid division by zero), return 0.
+    weighted_cycle_time = round(weighted_sum / total_frequency, 3) if total_frequency else 0
 
-    trimmed_sum = sum(trimmed_array)
-    trimmed_count = len(trimmed_array)
-    trimmed_average = trimmed_sum / trimmed_count  # in seconds
 
-    # Compute microstoppages count & total downtime
-    microstoppages_count = 0
-    downtime_seconds = 0
-    for (ct, freq) in cycle_data:
-        if ct > 300:  # 5 minutes
-            microstoppages_count += freq  # Counting occurrences
-            downtime_seconds += ct * freq  # Summing total downtime
 
     return {
-        'trimmed_average': trimmed_average,                # in seconds
-        'microstoppages_count': microstoppages_count,      # count of stoppages
-        'downtime_minutes': downtime_seconds / 60.0,       # total minutes lost
+        "top_eight": top_eight,
+        "weighted_cycle_time": weighted_cycle_time,
+        "histogram": cycle_data
     }
 
 
@@ -500,6 +488,7 @@ def cycle_times(request):
             start_time = form.cleaned_data['start_time']
             end_date = form.cleaned_data['end_date']
             end_time = form.cleaned_data['end_time']
+            include_zeros = form.cleaned_data['include_zeros']
 
             # Combine into datetime objects
             shift_start = datetime.combine(start_date, start_time)
@@ -529,8 +518,12 @@ def cycle_times(request):
                 for row in rows[1:]:
                     current_ts = row[4]
                     cycle = round(current_ts - last_ts)
-                    if cycle > 0:
-                        times_dict[cycle] = times_dict.get(cycle, 0) + 1
+                    if include_zeros:
+                        if cycle >= 0:
+                            times_dict[cycle] = times_dict.get(cycle, 0) + 1
+                    else:
+                        if cycle > 0:
+                            times_dict[cycle] = times_dict.get(cycle, 0) + 1
                     last_ts = current_ts
 
             # Sort times by cycle_time
