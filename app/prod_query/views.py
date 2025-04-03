@@ -474,6 +474,56 @@ def get_cycle_metrics(cycle_data):
 
 
 
+def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
+    """
+    Fetch cycle records for a machine between two timestamps and build a sorted
+    dictionary of cycle times (in seconds) to frequency.
+
+    Args:
+        machine (str): Machine identifier.
+        start_ts (int): Start timestamp.
+        end_ts (int): End timestamp.
+        include_zeros (bool): Whether to include cycles of 0 seconds.
+
+    Returns:
+        List[Tuple[int, int]]: Sorted list of (cycle_time, frequency) tuples.
+    """
+    # Build SQL query
+    sql = (
+        f"SELECT * "
+        f"FROM GFxPRoduction "
+        f"WHERE Machine = '{machine}' "
+        f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
+        f"ORDER BY TimeStamp"
+    )
+
+    # Execute the query
+    cursor = connections['prodrpt-md'].cursor()
+    cursor.execute(sql)
+    rows = cursor.fetchall()
+    cursor.close()
+
+    # Build a dict of {cycle_time_in_seconds -> frequency}
+    times_dict = {}
+    if rows:
+        last_ts = rows[0][4]  # Adjust index if needed
+        for row in rows[1:]:
+            current_ts = row[4]
+            cycle = round(current_ts - last_ts)
+            if include_zeros:
+                # Include zero-second cycles if checkbox is checked.
+                if cycle >= 0:
+                    times_dict[cycle] = times_dict.get(cycle, 0) + 1
+            else:
+                # Otherwise, only include positive cycle times.
+                if cycle > 0:
+                    times_dict[cycle] = times_dict.get(cycle, 0) + 1
+            last_ts = current_ts
+
+    # Return a sorted list of (cycle_time, frequency) tuples (sorted by cycle_time)
+    return sorted(times_dict.items(), key=lambda x: x[0])
+
+
 def cycle_times(request):
     context = {}
     if request.method == 'GET':
@@ -496,40 +546,8 @@ def cycle_times(request):
             start_ts = int(shift_start.timestamp())
             end_ts = int(shift_end.timestamp())
 
-            # SQL to fetch cycle records
-            sql = (
-                f"SELECT * "
-                f"FROM GFxPRoduction "
-                f"WHERE Machine = '{machine}' "
-                f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
-                f"ORDER BY TimeStamp"
-            )
-
-            # Execute the query
-            cursor = connections['prodrpt-md'].cursor()
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            cursor.close()
-
-            # Build a dict of {cycle_time_in_seconds -> frequency}
-            times_dict = {}
-            if rows:
-                last_ts = rows[0][4]  # Adjust index if needed
-                for row in rows[1:]:
-                    current_ts = row[4]
-                    cycle = round(current_ts - last_ts)
-                    if include_zeros:
-                        # Include zero-second cycles if checkbox is checked.
-                        if cycle >= 0:
-                            times_dict[cycle] = times_dict.get(cycle, 0) + 1
-                    else:
-                        # Otherwise, only include positive cycle times.
-                        if cycle > 0:
-                            times_dict[cycle] = times_dict.get(cycle, 0) + 1
-                    last_ts = current_ts
-
-            # Sort times by cycle_time (ascending order)
-            res = sorted(times_dict.items(), key=lambda x: x[0])  # (cycle_time, freq)
+            # Use the helper function to fetch cycle data
+            res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros)
 
             # Store the raw cycle distribution and machine in the context
             context['result'] = res
@@ -543,7 +561,7 @@ def cycle_times(request):
                 context['cycle_metrics'] = None
 
             # Prepare chart data for ChartJS
-            # Filter out cycles with 0 seconds and those over 15 minutes (900 seconds)
+            # Filter out cycles with values over 15 minutes (900 seconds)
             filtered_chart_data = [(ct, freq) for ct, freq in res if ct <= 900]
 
             # Build separate lists for labels (cycle times) and values (frequencies)
@@ -562,14 +580,13 @@ def cycle_times(request):
                 }
             }
         else:
-            # Handle invalid form: re-render with errors
+            # Handle invalid form: re-render with errors if needed
             pass
 
     # Always include the form in context
     context['form'] = form
 
     return render(request, 'prod_query/cycle_query.html', context)
-
 
 # Combined fetch data function that both views can use
 def fetch_chart_data(machine, start, end, interval=5, group_by_shift=False):
