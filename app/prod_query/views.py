@@ -549,6 +549,9 @@ def cycle_times(request):
             res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros)
             context['result'] = res
             context['machine'] = machine
+            # Pass the submitted datetime strings to the template for display
+            context['start_datetime_str'] = start_datetime_str
+            context['end_datetime_str'] = end_datetime_str
 
             # Compute cycle metrics for the shift if data exists
             if res:
@@ -574,13 +577,12 @@ def cycle_times(request):
             }
 
             # --- Now fetch data for the past year ---
-            # Define date range: from one year ago up to today
             today = datetime.today().date()
             one_year_ago = today - timedelta(days=365)
             daily_dates = []
             daily_weighted_cycle = []
 
-           # Iterate day by day over the last year
+            # Iterate day by day over the last year
             current_day = one_year_ago
             while current_day <= today:
                 day_start = datetime.combine(current_day, datetime.min.time())
@@ -591,19 +593,16 @@ def cycle_times(request):
                 # Fetch daily cycle data and compute metrics
                 daily_data = fetch_cycle_data(machine, day_start_ts, day_end_ts, include_zeros)
                 daily_metrics = get_cycle_metrics(daily_data)
-                daily_wct = daily_metrics['weighted_cycle_time']  # Weighted cycle time for this day
+                daily_wct = daily_metrics['weighted_cycle_time']
 
                 # Compute the total occurrences for the day
                 total_occurrences = sum(freq for _, freq in daily_data)
-
-                # Include the day only if it has at least 100 total cycle occurrences
+                # Include the day only if it has at least 300 total cycle occurrences
                 if total_occurrences >= 300:
                     daily_dates.append(current_day.strftime("%Y-%m-%d"))
                     daily_weighted_cycle.append(daily_wct)
 
                 current_day += timedelta(days=1)
-
-
 
             # Prepare ChartJS data for the yearly line chart
             context['yearly_chartdata'] = {
@@ -619,10 +618,11 @@ def cycle_times(request):
                 ]
             }
         else:
-            # Handle form errors if needed
-            pass
+            context['error'] = "Missing machine or datetime values."
 
     return render(request, 'prod_query/cycle_query.html', context)
+
+
 
 # Combined fetch data function that both views can use
 def fetch_chart_data(machine, start, end, interval=5, group_by_shift=False):

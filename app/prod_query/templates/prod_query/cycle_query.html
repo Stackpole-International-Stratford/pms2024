@@ -13,55 +13,54 @@
     </div>
   </div>
   <div class="row">
-    <!-- Form Column -->
-    <div class="col-md-6">
-      <div class="card mb-3">
-        <div class="card-body">
-          <form method="post" id="cycle-form">
-            {% csrf_token %}
-            <!-- Flatpickr Calendar for Date & Time Range -->
-            <div class="mb-3">
-              <div id="calendar"></div>
-            </div>
-            <!-- Hidden inputs to store the selected start and end datetimes -->
-            <input type="hidden" name="start_datetime" id="start_datetime">
-            <input type="hidden" name="end_datetime" id="end_datetime">
-            <!-- Machine Input (moved under the calendar) -->
-            <div class="mb-3">
-              <label for="machine" class="form-label">Machine</label>
-              <input type="text" name="machine" id="machine" class="form-control w-auto" style="max-width: 300px;" placeholder="Enter machine" required>
-            </div>
-            <button type="submit" class="btn btn-dark mt-3">Submit</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-   <!-- Cycle Metrics Column --> 
-  <div class="col-md-6">
-    {% if result and cycle_metrics %}
-    <div class="card mb-3">
-      <div class="card-body">
+   <!-- Form Column -->
+<div class="col-md-6">
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="post" id="cycle-form">
+        {% csrf_token %}
+        <!-- Flatpickr Calendar for Date & Time Range -->
         <div class="mb-3">
-          <h5 class="card-title">Weighted Cycle Time</h5>
-          <p class="card-text">{{ cycle_metrics.weighted_cycle_time }} seconds</p>
+          <div id="calendar"></div>
         </div>
-        <div>
-          <h5 class="card-title">Top 8 Cycle Times</h5>
-          <ul class="list-group list-group-flush">
-            {% for ct, freq in cycle_metrics.top_eight %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              {{ ct }} seconds
-              <span class="badge bg-warning rounded-pill">{{ freq }}</span>
-            </li>
-            {% endfor %}
-          </ul>
+        <!-- Hidden inputs to store the selected start and end datetimes -->
+        <input type="hidden" name="start_datetime" id="start_datetime">
+        <input type="hidden" name="end_datetime" id="end_datetime">
+        <!-- Machine Input (placed under the calendar) -->
+        <div class="mb-3">
+          <label for="machine" class="form-label">Machine</label>
+          <input type="text" name="machine" id="machine" class="form-control w-auto" style="max-width: 300px;" placeholder="Enter machine" value="{{ machine }}" required>
         </div>
+        <button type="submit" class="btn btn-dark mt-3">Submit</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Cycle Metrics Column -->
+<div class="col-md-6">
+  {% if result and cycle_metrics %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title">Weighted Cycle Time (Machine: {{ machine }})</h5>
+      <p class="card-text">{{ start_datetime_str }} to {{ end_datetime_str }}</p>
+      <p class="card-text">{{ cycle_metrics.weighted_cycle_time }} seconds</p>
+      <div>
+        <h5 class="card-title">Top 8 Cycle Times</h5>
+        <ul class="list-group list-group-flush">
+          {% for ct, freq in cycle_metrics.top_eight %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ ct }} seconds
+            <span class="badge bg-dark rounded-pill">{{ freq }}</span>
+          </li>
+          {% endfor %}
+        </ul>
       </div>
     </div>
-    {% endif %}
   </div>
-  </div>
+  {% endif %}
+</div>
+
 
   
   <!-- Histogram Chart Canvas -->
@@ -199,11 +198,13 @@
     const calendarInstance = flatpickr("#calendar", {
       mode: "range",
       inline: true,
-      enableTime: true,       // Enable time picker
-      time_24hr: true,        // 24-hour time format
-      dateFormat: "Y-m-d H:i",// Format with date and time
-      // Optionally set default dates:
-      // defaultDate: ["2025-01-01 23:00", "2025-01-02 23:00"],
+      enableTime: true,
+      time_24hr: true,
+      dateFormat: "Y-m-d H:i",
+      defaultDate: [
+        "{{ start_datetime_str|default:'' }}",
+        "{{ end_datetime_str|default:'' }}"
+      ],
       onChange: function(selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
           document.getElementById('start_datetime').value = instance.formatDate(selectedDates[0], "Y-m-d H:i");
@@ -211,6 +212,7 @@
         }
       }
     });
+    
   });
   </script>
   
