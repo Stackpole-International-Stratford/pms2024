@@ -530,23 +530,18 @@ def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
 
 def cycle_times(request):
     context = {}
-    if request.method == 'GET':
-        form = CycleQueryForm()
+    if request.method == 'POST':
+        # Capture the machine and datetime values from the request
+        machine = request.POST.get('machine')
+        start_datetime_str = request.POST.get('start_datetime')
+        end_datetime_str = request.POST.get('end_datetime')
+        include_zeros = True  # Adjust as needed
 
-    elif request.method == 'POST':
-        form = CycleQueryForm(request.POST)
-        if form.is_valid():
-            # Extract form data from the submitted form
-            machine = form.cleaned_data['machine']
-            start_date = form.cleaned_data['start_date']
-            start_time = form.cleaned_data['start_time']
-            end_date = form.cleaned_data['end_date']
-            end_time = form.cleaned_data['end_time']
-            include_zeros = True
-
-            # Combine into datetime objects for the shift query
-            shift_start = datetime.combine(start_date, start_time)
-            shift_end = datetime.combine(end_date, end_time)
+        # Check that all required values are present
+        if machine and start_datetime_str and end_datetime_str:
+            # Parse the datetime strings (assuming "Y-m-d H:i" format)
+            shift_start = datetime.strptime(start_datetime_str, "%Y-%m-%d %H:%M")
+            shift_end = datetime.strptime(end_datetime_str, "%Y-%m-%d %H:%M")
             start_ts = int(shift_start.timestamp())
             end_ts = int(shift_end.timestamp())
 
@@ -627,8 +622,6 @@ def cycle_times(request):
             # Handle form errors if needed
             pass
 
-    # Always include the form in context
-    context['form'] = form
     return render(request, 'prod_query/cycle_query.html', context)
 
 # Combined fetch data function that both views can use

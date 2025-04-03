@@ -20,17 +20,30 @@
           Enter Machine Data
         </div>
         <div class="card-body">
-          <form method="post">
+          <form method="post" id="cycle-form">
             {% csrf_token %}
-            <table class="table table-borderless">
-              {{ form.as_table }}
-            </table>
-            <div class="mb-2 text-muted">Note: Only accepts a single machine at a time</div>
-            <button type="submit" class="btn btn-dark">Submit</button>
+            <!-- Machine Input -->
+            <div class="mb-3">
+              <label for="machine" class="form-label">Machine</label>
+              <input type="text" name="machine" id="machine" class="form-control" placeholder="Enter machine" required>
+            </div>
+            <!-- Flatpickr Calendar for Date & Time Range -->
+            <div class="mb-3">
+              <label class="form-label">Select Date & Time Range</label>
+              <div id="calendar"></div>
+            </div>
+            <!-- Hidden inputs to store the selected start and end datetimes -->
+            <input type="hidden" name="start_datetime" id="start_datetime">
+            <input type="hidden" name="end_datetime" id="end_datetime">
+            <div class="mb-2 text-muted">
+              Note: Only accepts a single machine at a time
+            </div>
+            <button type="submit" class="btn btn-dark mt-3">Submit</button>
           </form>
         </div>
       </div>
     </div>
+    
     <!-- Cycle Metrics Column -->
     <div class="col-md-6">
       {% if result and cycle_metrics %}
@@ -202,4 +215,26 @@
     }
   });
 </script>
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const calendarInstance = flatpickr("#calendar", {
+      mode: "range",
+      inline: true,
+      enableTime: true,       // Enable time picker
+      time_24hr: true,        // 24-hour time format
+      dateFormat: "Y-m-d H:i",// Format with date and time
+      // Optionally set default dates:
+      // defaultDate: ["2025-01-01 23:00", "2025-01-02 23:00"],
+      onChange: function(selectedDates, dateStr, instance) {
+        if (selectedDates.length === 2) {
+          document.getElementById('start_datetime').value = instance.formatDate(selectedDates[0], "Y-m-d H:i");
+          document.getElementById('end_datetime').value = instance.formatDate(selectedDates[1], "Y-m-d H:i");
+        }
+      }
+    });
+  });
+  </script>
+  
 {% endblock %}
