@@ -16,77 +16,54 @@
     <!-- Form Column -->
     <div class="col-md-6">
       <div class="card mb-3">
-        <div class="card-header">
-          Enter Machine Data
-        </div>
         <div class="card-body">
           <form method="post" id="cycle-form">
             {% csrf_token %}
-            <!-- Machine Input -->
-            <div class="mb-3">
-              <label for="machine" class="form-label">Machine</label>
-              <input type="text" name="machine" id="machine" class="form-control" placeholder="Enter machine" required>
-            </div>
             <!-- Flatpickr Calendar for Date & Time Range -->
             <div class="mb-3">
-              <label class="form-label">Select Date & Time Range</label>
               <div id="calendar"></div>
             </div>
             <!-- Hidden inputs to store the selected start and end datetimes -->
             <input type="hidden" name="start_datetime" id="start_datetime">
             <input type="hidden" name="end_datetime" id="end_datetime">
-            <div class="mb-2 text-muted">
-              Note: Only accepts a single machine at a time
+            <!-- Machine Input (moved under the calendar) -->
+            <div class="mb-3">
+              <label for="machine" class="form-label">Machine</label>
+              <input type="text" name="machine" id="machine" class="form-control" placeholder="Enter machine" required>
             </div>
             <button type="submit" class="btn btn-dark mt-3">Submit</button>
           </form>
         </div>
       </div>
     </div>
-    
-    <!-- Cycle Metrics Column -->
-    <div class="col-md-6">
-      {% if result and cycle_metrics %}
-      <div class="card mb-3">
-        <div class="card-header">
-          Cycle Metrics for {{ machine }}
+
+   <!-- Cycle Metrics Column --> 
+  <div class="col-md-6">
+    {% if result and cycle_metrics %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="mb-3">
+          <h5 class="card-title">Weighted Cycle Time</h5>
+          <p class="card-text">{{ cycle_metrics.weighted_cycle_time }} seconds</p>
         </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <h5 class="card-title">Weighted Cycle Time</h5>
-            <p class="card-text">{{ cycle_metrics.weighted_cycle_time }} seconds</p>
-          </div>
-          <div>
-            <h5 class="card-title">Top 8 Cycle Times</h5>
-            <div class="row">
-              <div class="col-6">
-                <ul class="list-group list-group-flush">
-                  {% for ct, freq in cycle_metrics.top_eight|slice:":4" %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ ct }} seconds
-                    <span class="badge bg-warning rounded-pill">{{ freq }}</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-              </div>
-              <div class="col-6">
-                <ul class="list-group list-group-flush">
-                  {% for ct, freq in cycle_metrics.top_eight|slice:"4:" %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ ct }} seconds
-                    <span class="badge bg-warning rounded-pill">{{ freq }}</span>
-                  </li>
-                  {% endfor %}
-                </ul>
-              </div>
-            </div>
-          </div>
+        <div>
+          <h5 class="card-title">Top 8 Cycle Times</h5>
+          <ul class="list-group list-group-flush">
+            {% for ct, freq in cycle_metrics.top_eight %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ ct }} seconds
+              <span class="badge bg-warning rounded-pill">{{ freq }}</span>
+            </li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
-      {% endif %}
     </div>
-    
+    {% endif %}
   </div>
+  </div>
+
+  
   <!-- Histogram Chart Canvas -->
   <div class="row my-4">
     <div class="col-12">
