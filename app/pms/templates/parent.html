@@ -22,32 +22,26 @@
     <!-- Additional CSS -->
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
 
-
+    <style>
+        .btn-warning {
+          background-color: #FF9900 !important; /* Company orange */
+          border-color: #FF9900 !important;
+          color: white !important;
+        }
+      
+        .btn-warning:hover,
+        .btn-warning:focus {
+          background-color: #ffa31a !important; /* Lighter orange on hover */
+          border-color: #ffa31a !important;
+          color: white !important;
+        }
+      </style>
+      
+      
+      
 
     <style>
 
-        /* Override anchor tags */
-        a,
-        a:visited {
-            color: #333333; /* Dark gray for text */
-        }
-        
-        a:hover,
-        a:focus {
-            color: #555555; /* Slightly lighter on hover/focus */
-        }
-        
-        /* Override primary buttons */
-        .btn-primary {
-            background-color: #444444; /* A medium-dark gray */
-            border-color: #444444;
-        }
-        
-        .btn-primary:hover,
-        .btn-primary:focus {
-            background-color: #666666; /* Lighter gray on hover/focus */
-            border-color: #666666;
-        }
         
         /* Override accordion buttons */
         .accordion-button {

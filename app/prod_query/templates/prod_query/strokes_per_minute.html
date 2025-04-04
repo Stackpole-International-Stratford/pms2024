@@ -41,11 +41,22 @@
 <script>
   const chartdata = JSON.parse(document.getElementById('chartdata').textContent);
   const ctx = document.getElementById('chart1');
+
+  // Apply orange styling to the dataset
+  const styledDataset = {
+    ...chartdata.dataset,
+    borderColor: '#FF9933',           // Line color
+    pointBackgroundColor: '#FF9933',  // Point fill
+    pointBorderColor: '#FF9933',      // Point outline
+    backgroundColor: '#FF9933'        // Area fill (if fill: true is used)
+    // fill: true // Uncomment this line if you want area under the line filled
+  };
+
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: chartdata.labels,
-      datasets: [chartdata.dataset],
+      datasets: [styledDataset],
     },
     options: {
       aspectRatio: 5,
@@ -54,19 +65,20 @@
           beginAtZero: true
         },
         x: {
-            type: 'time',
+          type: 'time',
         }
       }, 
       plugins: {
         legend: {
-            display: false
+          display: false
         },
         title: {
-            display: true,
-            text: 'Strokes Per Minute',
+          display: true,
+          text: 'Strokes Per Minute',
         }
       }
     }
   });
 </script>
+
 {% endblock %}

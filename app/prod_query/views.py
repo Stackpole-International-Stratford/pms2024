@@ -25,6 +25,10 @@ from django.http import JsonResponse
 from plant.models.setupfor_models import SetupFor, AssetCycleTimes
 
 
+from .forms import ShiftTotalsForm
+import time
+import numpy as np
+
 DAVE_HOST = settings.DAVE_HOST
 DAVE_USER = settings.DAVE_USER
 DAVE_PASSWORD = settings.DAVE_PASSWORD
@@ -434,127 +438,190 @@ def get_cycle_metrics(cycle_data):
       cycle_data: A list of tuples (cycle_time_in_seconds, frequency),
                   sorted by ascending cycle_time.
 
-    Returns: A dict with keys:
-      - 'trimmed_average': (float) average cycle time excluding top & bottom 5%
-      - 'microstoppages_count': (int) how many cycles exceeded 300s
-      - 'downtime_minutes': (float) total downtime minutes (sum of cycles > 300s)
+
+    Returns:
+      A dictionary with:
+         - 'top_eight': a list of the top 8 tuples (cycle_time, frequency) sorted by frequency descending,
+         - 'weighted_cycle_time': the weighted average of the top eight cycle times (rounded to 3 decimals),
+         - 'histogram': the original cycle_data list.
     """
+    if not cycle_data:
+        return {"top_eight": [], "weighted_cycle_time": 0, "histogram": []}
 
-    # Flatten out the data so we can easily remove top/bottom cycles
-    expanded_cycles = []
-    for (ct, freq) in cycle_data:
-        expanded_cycles.extend([ct] * freq)
 
-    # Sort the list (in case it wasn't already sorted)
-    expanded_cycles.sort()
-    
-    total_cycles = len(expanded_cycles)
-    if total_cycles == 0:
-        return {
-            'trimmed_average': 0.0,
-            'microstoppages_count': 0,
-            'downtime_minutes': 0.0,
-        }
+    # Sort the cycle_data list by frequency in descending order (highest frequency first)
+    # and then take the first 8 entries. Each entry is a tuple: (cycle_time, frequency).
+    top_eight = sorted(cycle_data, key=lambda x: x[1], reverse=True)[:8]
 
-    # Compute how many cycles to remove at each end (5%)
-    remove_count = int(round(total_cycles * 0.05))
+    # Calculate the total frequency by summing the frequencies of the top eight cycle times.
+    # This gives us the total count of cycles among the top eight.
+    total_frequency = sum(freq for ct, freq in top_eight)
 
-    # Slice out the top & bottom
-    trimmed_array = expanded_cycles[remove_count : total_cycles - remove_count]
+    # Calculate the weighted sum by multiplying each cycle time (ct) by its frequency (freq)
+    # and then summing all these products. This sum reflects the overall 'weight' of the cycle times.
+    weighted_sum = sum(ct * freq for ct, freq in top_eight)
 
-    # Edge case: if removing top/bottom 5% kills all data, fallback
-    if len(trimmed_array) == 0:
-        trimmed_array = expanded_cycles
+    # Compute the weighted cycle time:
+    # Divide the weighted sum by the total frequency to get the average cycle time,
+    # weighted by how often each cycle time occurred.
+    # Round the result to 3 decimal places.
+    # If the total_frequency is zero (to avoid division by zero), return 0.
+    weighted_cycle_time = round(weighted_sum / total_frequency, 3) if total_frequency else 0
 
-    trimmed_sum = sum(trimmed_array)
-    trimmed_count = len(trimmed_array)
-    trimmed_average = trimmed_sum / trimmed_count  # in seconds
 
-    # Compute microstoppages count & total downtime
-    microstoppages_count = 0
-    downtime_seconds = 0
-    for (ct, freq) in cycle_data:
-        if ct > 300:  # 5 minutes
-            microstoppages_count += freq  # Counting occurrences
-            downtime_seconds += ct * freq  # Summing total downtime
 
     return {
-        'trimmed_average': trimmed_average,                # in seconds
-        'microstoppages_count': microstoppages_count,      # count of stoppages
-        'downtime_minutes': downtime_seconds / 60.0,       # total minutes lost
+        "top_eight": top_eight,
+        "weighted_cycle_time": weighted_cycle_time,
+        "histogram": cycle_data
     }
 
 
 
+def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
+    """
+    Fetch cycle records for a machine between two timestamps and build a sorted
+    dictionary of cycle times (in seconds) to frequency.
+
+    Args:
+        machine (str): Machine identifier.
+        start_ts (int): Start timestamp.
+        end_ts (int): End timestamp.
+        include_zeros (bool): Whether to include cycles of 0 seconds.
+
+    Returns:
+        List[Tuple[int, int]]: Sorted list of (cycle_time, frequency) tuples.
+    """
+    # Build SQL query
+    sql = (
+        f"SELECT * "
+        f"FROM GFxPRoduction "
+        f"WHERE Machine = '{machine}' "
+        f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
+        f"ORDER BY TimeStamp"
+    )
+
+    # Execute the query
+    cursor = connections['prodrpt-md'].cursor()
+    cursor.execute(sql)
+    rows = cursor.fetchall()
+    cursor.close()
+
+    # Build a dict of {cycle_time_in_seconds -> frequency}
+    times_dict = {}
+    if rows:
+        last_ts = rows[0][4]  # Adjust index if needed
+        for row in rows[1:]:
+            current_ts = row[4]
+            cycle = round(current_ts - last_ts)
+            if include_zeros:
+                # Include zero-second cycles if checkbox is checked.
+                if cycle >= 0:
+                    times_dict[cycle] = times_dict.get(cycle, 0) + 1
+            else:
+                # Otherwise, only include positive cycle times.
+                if cycle > 0:
+                    times_dict[cycle] = times_dict.get(cycle, 0) + 1
+            last_ts = current_ts
+
+    # Return a sorted list of (cycle_time, frequency) tuples (sorted by cycle_time)
+    return sorted(times_dict.items(), key=lambda x: x[0])
+
+
 def cycle_times(request):
     context = {}
-    if request.method == 'GET':
-        form = CycleQueryForm()
+    if request.method == 'POST':
+        # Capture the machine and datetime values from the request
+        machine = request.POST.get('machine')
+        start_datetime_str = request.POST.get('start_datetime')
+        end_datetime_str = request.POST.get('end_datetime')
+        include_zeros = True  # Adjust as needed
 
-    elif request.method == 'POST':
-        form = CycleQueryForm(request.POST)
-        if form.is_valid():
-            # Extract form data
-            machine = form.cleaned_data['machine']
-            start_date = form.cleaned_data['start_date']
-            start_time = form.cleaned_data['start_time']
-            end_date = form.cleaned_data['end_date']
-            end_time = form.cleaned_data['end_time']
-
-            # Combine into datetime objects
-            shift_start = datetime.combine(start_date, start_time)
-            shift_end = datetime.combine(end_date, end_time)
+        # Check that all required values are present
+        if machine and start_datetime_str and end_datetime_str:
+            # Parse the datetime strings (assuming "Y-m-d H:i" format)
+            shift_start = datetime.strptime(start_datetime_str, "%Y-%m-%d %H:%M")
+            shift_end = datetime.strptime(end_datetime_str, "%Y-%m-%d %H:%M")
             start_ts = int(shift_start.timestamp())
             end_ts = int(shift_end.timestamp())
 
-            # SQL to fetch cycle records
-            sql = (
-                f"SELECT * "
-                f"FROM GFxPRoduction "
-                f"WHERE Machine = '{machine}' "
-                f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
-                f"ORDER BY TimeStamp"
-            )
-
-            # Execute the query
-            cursor = connections['prodrpt-md'].cursor()
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            cursor.close()
-
-            # Build a dict of {cycle_time_in_seconds -> frequency}
-            times_dict = {}
-            if rows:
-                last_ts = rows[0][4]  # Adjust index if needed
-                for row in rows[1:]:
-                    current_ts = row[4]
-                    cycle = round(current_ts - last_ts)
-                    if cycle > 0:
-                        times_dict[cycle] = times_dict.get(cycle, 0) + 1
-                    last_ts = current_ts
-
-            # Sort times by cycle_time
-            res = sorted(times_dict.items(), key=lambda x: x[0])  # (cycle_time, freq)
-
-            # Store the raw cycle distribution in the context
+            # Fetch cycle data for the shift
+            res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros)
             context['result'] = res
             context['machine'] = machine
+            # Pass the submitted datetime strings to the template for display
+            context['start_datetime_str'] = start_datetime_str
+            context['end_datetime_str'] = end_datetime_str
 
-            # If we want to compute metrics, pass to get_cycle_metrics
-            if len(res) > 0:
+            # Compute cycle metrics for the shift if data exists
+            if res:
                 cycle_metrics = get_cycle_metrics(res)
                 context['cycle_metrics'] = cycle_metrics
             else:
                 context['cycle_metrics'] = None
 
-        else:
-            # Form was invalid, re-render with errors
-            pass
+            # Prepare ChartJS data for the histogram (bar chart)
+            # Filter out cycles longer than 15 minutes (900 seconds)
+            filtered_chart_data = [(ct, freq) for ct, freq in res if ct <= 900]
+            chart_labels = [ct for ct, freq in filtered_chart_data]
+            chart_values = [freq for ct, freq in filtered_chart_data]
+            context['chartdata'] = {
+                'labels': chart_labels,
+                'dataset': {
+                    'label': 'Cycle Occurrences',
+                    'data': chart_values,
+                    'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                    'borderColor': 'rgba(75, 192, 192, 1)',
+                    'borderWidth': 1,
+                }
+            }
 
-    # Always keep form in context
-    context['form'] = form
+            # --- Now fetch data for the past year ---
+            today = datetime.today().date()
+            one_year_ago = today - timedelta(days=365)
+            daily_dates = []
+            daily_weighted_cycle = []
+
+            # Iterate day by day over the last year
+            current_day = one_year_ago
+            while current_day <= today:
+                day_start = datetime.combine(current_day, datetime.min.time())
+                day_end = datetime.combine(current_day, datetime.max.time())
+                day_start_ts = int(day_start.timestamp())
+                day_end_ts = int(day_end.timestamp())
+
+                # Fetch daily cycle data and compute metrics
+                daily_data = fetch_cycle_data(machine, day_start_ts, day_end_ts, include_zeros)
+                daily_metrics = get_cycle_metrics(daily_data)
+                daily_wct = daily_metrics['weighted_cycle_time']
+
+                # Compute the total occurrences for the day
+                total_occurrences = sum(freq for _, freq in daily_data)
+                # Include the day only if it has at least 300 total cycle occurrences
+                if total_occurrences >= 300:
+                    daily_dates.append(current_day.strftime("%Y-%m-%d"))
+                    daily_weighted_cycle.append(daily_wct)
+
+                current_day += timedelta(days=1)
+
+            # Prepare ChartJS data for the yearly line chart
+            context['yearly_chartdata'] = {
+                'labels': daily_dates,
+                'datasets': [
+                    {
+                        'label': 'Daily Weighted Cycle Time',
+                        'data': daily_weighted_cycle,
+                        'fill': False,
+                        'borderColor': 'rgba(255, 99, 132, 1)',
+                        'tension': 0.1,
+                    },
+                ]
+            }
+        else:
+            context['error'] = "Missing machine or datetime values."
 
     return render(request, 'prod_query/cycle_query.html', context)
+
 
 
 # Combined fetch data function that both views can use
@@ -1458,9 +1525,7 @@ def get_production_data(machine, start_timestamp, times, part_list):
 
 
 # #views.py
-from .forms import ShiftTotalsForm
-import time
-import numpy as np
+
 
 def fetch_shift_totals_by_day_and_shift(machine_number, start_date, end_date):
     """
