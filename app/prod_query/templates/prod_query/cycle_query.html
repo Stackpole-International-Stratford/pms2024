@@ -135,7 +135,12 @@ Cycle Time
     type: 'bar',
     data: {
       labels: chartdata.labels,
-      datasets: [chartdata.dataset]
+      datasets: [{
+        ...chartdata.dataset,
+        backgroundColor: '#FF9933',
+        borderColor: '#FF9933'  // This removes the blue outline
+
+      }]
     },
     options: {
       scales: {
@@ -168,6 +173,16 @@ Cycle Time
 {{ yearly_chartdata|json_script:"yearly_chartdata" }}
 <script>
   const yearlyData = JSON.parse(document.getElementById('yearly_chartdata').textContent);
+
+  // Apply color styling to each dataset
+  yearlyData.datasets = yearlyData.datasets.map(dataset => ({
+    ...dataset,
+    borderColor: '#FF9933',           // Line color
+    backgroundColor: '#FF9933',       // Point fill or area fill if enabled
+    pointBackgroundColor: '#FF9933',  // Point fill
+    pointBorderColor: '#FF9933'       // Point border
+  }));
+
   const ctxYearly = document.getElementById('yearlyChart').getContext('2d');
   new Chart(ctxYearly, {
     type: 'line',
@@ -189,10 +204,18 @@ Cycle Time
             text: 'Weighted Cycle Time (seconds)'
           }
         }
+      },
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: 'Yearly Weighted Cycle Time'
+        }
       }
     }
   });
 </script>
+
 
 <script>
   document.addEventListener("DOMContentLoaded", function() {
