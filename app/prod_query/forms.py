@@ -102,6 +102,7 @@ class MachineInquiryForm(forms.Form):
   )
   parts = MultiStringListField(
     required=False,
+    label = "Parts (optional)",
     widget=forms.TextInput(attrs={"title":"A comma seperated list of Asset numbers"})
   )
   inquiry_date = forms.DateField(initial=datetime.date.today)
