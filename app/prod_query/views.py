@@ -6980,7 +6980,6 @@ def fetch_exclude_weekends_data(request):
         # Expecting the format "Y-m-d H:i"
         start_date_obj = datetime.datetime.strptime(start_date_str, "%Y-%m-%d %H:%M")
     except ValueError:
-        # Fallback to "Y-m-d" if time is not provided.
         start_date_obj = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
     previous_day_str = (start_date_obj.date() - timedelta(days=1)).strftime("%Y-%m-%d")
     
@@ -7027,7 +7026,7 @@ def fetch_exclude_weekends_data(request):
                     "downtime_events": [],
                     "planned_downtime_minutes": 0,
                     "unplanned_downtime_minutes": 0,
-                    "total_queried_minutes": 0  # New field to accumulate block queried minutes
+                    "total_queried_minutes": 0
                 }
 
     # Set up the DB connection.
@@ -7071,12 +7070,23 @@ def fetch_exclude_weekends_data(request):
                     )
                     aggregated_data[line_name][machine_number]["downtime_seconds"] += downtime_seconds
                     aggregated_data[line_name][machine_number]["downtime_minutes"] += int(downtime_seconds / 60)
-                    aggregated_data[line_name][machine_number]["downtime_events"].extend(downtime_events)
-                    downtime_totals_by_line[line_name] += downtime_seconds
                     
                     # Fetch PR downtime entries.
                     pr_entries = get_pr_downtime_entries(machine_number, block_start, block_end)
                     aggregated_data[line_name][machine_number]["pr_downtime_entries"].extend(pr_entries)
+                    
+                    # Annotate each downtime event with overlap info.
+                    for event in downtime_events:
+                        try:
+                            detail_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
+                            detail_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
+                            overlap_info = compute_overlap_label(detail_start, detail_end, pr_entries)
+                            event["overlap"] = overlap_info["overlap"]
+                            event["pr_id"] = overlap_info["pr_id"]
+                        except Exception as e:
+                            print(f"ERROR in exclude weekends for event {event['start']} - {event['end']}: {e}")
+                    aggregated_data[line_name][machine_number]["downtime_events"].extend(downtime_events)
+                    downtime_totals_by_line[line_name] += downtime_seconds
                     
                     # Calculate planned downtime.
                     planned_downtime = calculate_planned_downtime(downtime_events, pr_entries)
