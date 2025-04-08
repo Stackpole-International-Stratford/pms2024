@@ -6742,6 +6742,61 @@ def calculate_unplanned_downtime(total_downtime_minutes, planned_downtime_minute
     return total_downtime_minutes - planned_downtime_minutes
 
 
+def get_color_for_ratio(ratio):
+    """
+    Maps a normalized ratio (0 to 1) to a colour in a gradient:
+    0   => red (#FF0000)
+    0.5 => yellow (#FFFF00)
+    1   => green (#00FF00)
+    """
+    print(f"[get_color_for_ratio] Received ratio: {ratio}")
+    if ratio <= 0.5:
+        # Interpolate from red to yellow.
+        factor = ratio / 0.5  # Normalized factor between 0 and 1.
+        red = 255
+        green = int(255 * factor)
+        print(f"[get_color_for_ratio] (Red->Yellow) factor: {factor}, red: {red}, green: {green}")
+    else:
+        # Interpolate from yellow to green.
+        factor = (ratio - 0.5) / 0.5  # Normalized factor between 0 and 1.
+        red = int(255 * (1 - factor))
+        green = 255
+        print(f"[get_color_for_ratio] (Yellow->Green) factor: {factor}, red: {red}, green: {green}")
+    blue = 0
+    color_hex = '#{:02X}{:02X}{:02X}'.format(red, green, blue)
+    print(f"[get_color_for_ratio] Computed color: {color_hex} (red: {red}, green: {green}, blue: {blue})")
+    return color_hex
+
+
+def apply_color_gradient_to_line(machine_metrics, metric_key, color_key):
+    """
+    Applies a color gradient to machines in a single line.
+
+    :param machine_metrics: Dict with machine numbers as keys and metric dictionaries as values.
+    :param metric_key: The key for the metric (e.g., "P" or "A").
+    :param color_key: The key to store the resulting color hex (e.g., "P_color" or "A_color").
+    """
+    # Extract the values for the metric.
+    values = [data[metric_key] for data in machine_metrics.values() if data.get(metric_key) is not None]
+    if not values:
+        print(f"[apply_color_gradient_to_line] No values found for metric key: '{metric_key}'.")
+        return  # Nothing to do if the list is empty.
+    min_val = min(values)
+    max_val = max(values)
+    print(f"[apply_color_gradient_to_line] Metric '{metric_key}' -> min: {min_val}, max: {max_val}")
+    # Use 1 as the denominator if min and max are the same (avoid division by zero).
+    range_val = max_val - min_val if max_val != min_val else 1
+    for machine_id, data in machine_metrics.items():
+        if metric_key not in data:
+            print(f"[apply_color_gradient_to_line] Machine {machine_id} does not have metric '{metric_key}', skipping.")
+            continue
+        value = data[metric_key]
+        ratio = (value - min_val) / range_val
+        color_hex = get_color_for_ratio(ratio)
+        data[color_key] = color_hex
+        print(f"[apply_color_gradient_to_line] Machine {machine_id}: {metric_key} value = {value}, normalized ratio = {ratio}, {color_key} set to {color_hex}")
+
+
 def compute_machine_oee(machine_data, queried_minutes):
     """
     Calculate Availability (A) and Performance (P) for a single machine.
@@ -7017,6 +7072,8 @@ def stip_weekends(start_date_str, end_date_str):
             current = block_end
     return intervals
 
+
+
 # --- New View Function: Exclude Weekends, Aggregate Data, and Compute OEE ---
 def fetch_exclude_weekends_data(request):
     """
@@ -7188,11 +7245,18 @@ def fetch_exclude_weekends_data(request):
             scrap_totals_by_line[line_name] += scrap_val
         overall_scrap_total += scrap_total
     
-    # Compute machine-level OEE metrics for each machine.
+        # Compute machine-level OEE metrics for each machine.
     for line_name, machines in aggregated_data.items():
         for machine_number, machine_data in machines.items():
             machine_metrics = compute_machine_oee(machine_data, machine_data["total_queried_minutes"])
             aggregated_data[line_name][machine_number].update(machine_metrics)
+    
+    # <<--- New Code: Apply color gradients to each machine's "P" and "A" values --->
+    for line_name, machine_metrics in aggregated_data.items():
+        # Apply the color gradient for Performance ("P")
+        apply_color_gradient_to_line(machine_metrics, "P", "P_color")
+        # Apply the color gradient for Availability ("A")
+        apply_color_gradient_to_line(machine_metrics, "A", "A_color")
     
     # Compute overall OEE metrics.
     oee_metrics = compute_oee_metrics(
@@ -7209,6 +7273,7 @@ def fetch_exclude_weekends_data(request):
         unplanned_downtime_totals_by_line
     )
     
+    # Prepare the response data.
     response_data = {
         "production_data": aggregated_data,
         "totals_by_line": totals_by_line,
@@ -7233,4 +7298,5 @@ def fetch_exclude_weekends_data(request):
     cursor.close()
     conn.close()
     return JsonResponse(response_data)
+
 
