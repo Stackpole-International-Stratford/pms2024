@@ -6336,12 +6336,22 @@ def compute_oee_metrics(
     overall_run_time = overall_ppt - (overall_unplanned_downtime_minutes)
     overall_ideal_cycle_time = overall_ppt / overall_total_target if overall_total_target > 0 else 0.0
 
-    overall_adjusted_target = overall_total_target / (overall_total_potential_minutes / (overall_unplanned_downtime_minutes + overall_planned_downtime_minutes))
+
+    overall_runtime = overall_total_potential_minutes - overall_planned_downtime_minutes - overall_unplanned_downtime_minutes
+    overall_uptime_ratio = overall_runtime / overall_total_potential_minutes
+
+
+    overall_adjusted_target = overall_total_target * overall_uptime_ratio
 
 
     overall_availability = overall_run_time / overall_ppt if overall_ppt > 0 else 0.0
     # overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
-    overall_performance = overall_total_produced / overall_adjusted_target
+
+    if overall_adjusted_target == 0:
+        performance = 0
+    else:
+        overall_performance = overall_total_produced / overall_adjusted_target
+    
     overall_quality = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced > 0 else 0.0
     overall_oee = overall_availability * overall_performance * overall_quality
 
@@ -6367,11 +6377,18 @@ def compute_oee_metrics(
         ideal_cycle_time = ppt / target if target > 0 else 0.0
         
 
-        adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
+        runtime = potential - unplanned_downtime - planned_downtime
+        uptime_ratio = runtime / potential
+
+
+        adjusted_target = target * uptime_ratio
 
         availability = run_time / ppt if ppt > 0 else 0.0
         # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
-        performance = produced / adjusted_target
+        if adjusted_target == 0:
+            performance = 0
+        else:
+            performance = produced / adjusted_target
         quality = (produced - scrap) / produced if produced > 0 else 0.0
         oee = availability * performance * quality
         
@@ -6748,12 +6765,18 @@ def compute_machine_oee(machine_data, queried_minutes):
     if potential == 0 or downtime_total == 0:
         adjusted_target = target
     else:
-        adjusted_target = target / (potential / (unplanned_downtime + planned_downtime))
+        runtime = potential - unplanned_downtime - planned_downtime
+        uptime_ratio = runtime /potential     
+        adjusted_target = target * uptime_ratio
+        # adjusted_target = target / ((unplanned_downtime + planned_downtime) / potential)
 
     ideal_cycle_time = ppt / target if target > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 0.0
     # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
-    performance = produced / adjusted_target
+    if adjusted_target == 0:
+        performance = 0
+    else:
+        performance = produced / adjusted_target
     
     return {"A": availability, "P": performance}
 
