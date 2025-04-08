@@ -166,6 +166,7 @@
       </div>
     </div>
   </div>
+  
 
   <!-- Production Data Cards -->
   <div class="accordion" id="productionData">
@@ -179,68 +180,84 @@
       <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#productionData">
         <div class="accordion-body">
           {% for operation in line.operations %}
-          <h3 class="h6 mt-3">Operation: {{ operation.op }}</h3>
-          <div class="row">
-            {% for machine in operation.machines %}
-            <div class="col-md-4 mb-3">
-              <!-- Machine Card Content -->
-              <div class="card h-100">
-                <div class="card-body">
-                  <p class="mb-2"><strong>Machine Number:</strong> {{ machine.number }}</p>
-                  <p class="mb-2">
-                    <strong>Target:</strong>
-                    <span class="target" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
-                      {{ machine.target }}
-                    </span>
-                  </p>
-                  {% if machine.part_numbers %}
-                  <p class="mb-2"><strong>Part Numbers:</strong> {{ machine.part_numbers|join:", " }}</p>
-                  {% endif %}
-                  <p class="mb-2">
-                    <strong>Parts:</strong>
+            <h3 class="h6 mt-3">Operation: {{ operation.op }}</h3>
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Machine</th>
+                  <th>Parts</th>
+                  <th>Target</th>
+                  <th>Downtime</th>
+                  <th>Planned Downtime</th>
+                  <th>Unplanned Downtime</th>
+                  <th>Performance</th>
+                  <th>Availability</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for machine in operation.machines %}
+                <tr>
+                  <td>
+                    <strong>{{ machine.number }}</strong>
+                    {% if machine.part_numbers %}
+                      <br><small>{{ machine.part_numbers|join:", " }}</small>
+                    {% endif %}
+                  </td>
+                  <td>
                     <span class="produced" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
-                  </p>
-                  <p class="mb-2">
-                    <strong>Downtime:</strong>
+                  </td>
+                  <td>
+                    <span class="target" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                      {{ machine.target }}
+                    </span>
+                  </td>
+                  <td>
                     <span class="downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
-                  </p>
-                  <p class="mb-2">
-                    <strong>Planned Downtime:</strong>
+                  </td>
+                  <td>
                     <span class="planned-downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
-                  </p>
-                  <p class="mb-2">
-                    <strong>Unplanned Downtime:</strong>
+                  </td>
+                  <td>
                     <span class="unplanned-downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
-                  </p>
-                  <p class="mb-2"><strong>Availability:</strong>
-                    <span class="availability" data-line="{{ line.line }}" data-machine="{{ machine.number }}">Loading...</span>
-                  </p>
-                  <p class="mb-2"><strong>Performance:</strong>
-                    <span class="performance" data-line="{{ line.line }}" data-machine="{{ machine.number }}">Loading...</span>
-                  </p>                  
-                  <!-- Detailed Downtime Button -->
-                  <button type="button" class="btn btn-warning detailed-downtime-btn" data-line="{{ line.line }}" data-machine="{{ machine.number }}" data-bs-toggle="modal" data-bs-target="#downtimeModal">
-                    Detailed Downtime
-                  </button>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
+                  </td>
+                  <td>
+                    <span class="performance" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                      Loading...
+                    </span>
+                  </td>
+                  <td>
+                    <span class="availability" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                      Loading...
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" class="btn btn-warning detailed-downtime-btn" data-line="{{ line.line }}" data-machine="{{ machine.number }}" data-bs-toggle="modal" data-bs-target="#downtimeModal">
+                      Detailed Downtime
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           {% endfor %}
         </div>
       </div>
     </div>
     {% endfor %}
   </div>
+  
+
+
+
 </div>
 
 <!-- Downtime Modal -->
