@@ -28,6 +28,8 @@ from plant.models.setupfor_models import SetupFor, AssetCycleTimes
 from .forms import ShiftTotalsForm
 import time
 import numpy as np
+from collections import Counter
+
 
 DAVE_HOST = settings.DAVE_HOST
 DAVE_USER = settings.DAVE_USER
@@ -481,7 +483,10 @@ def get_cycle_metrics(cycle_data):
 def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
     """
     Fetch cycle records for a machine between two timestamps and build a sorted
-    dictionary of cycle times (in seconds) to frequency.
+    list of (adjusted_cycle_time, frequency) tuples. The adjustment divides the raw
+    cycle time (difference between groups of records) by the mode of the observed
+    batch sizes (i.e. how many rows have the same timestamp), thereby converting the
+    cycle time to a per-part value.
 
     Args:
         machine (str): Machine identifier.
@@ -490,7 +495,7 @@ def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
         include_zeros (bool): Whether to include cycles of 0 seconds.
 
     Returns:
-        List[Tuple[int, int]]: Sorted list of (cycle_time, frequency) tuples.
+        List[Tuple[int, int]]: Sorted list of (adjusted_cycle_time, frequency) tuples.
     """
     # Build SQL query
     sql = (
@@ -507,26 +512,47 @@ def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
     rows = cursor.fetchall()
     cursor.close()
 
-    # Build a dict of {cycle_time_in_seconds -> frequency}
-    times_dict = {}
+    # Group rows by timestamp and record the batch size for each group.
+    # Each group is a tuple: (timestamp, count)
+    groups = []
     if rows:
-        last_ts = rows[0][4]  # Adjust index if needed
+        current_group_ts = rows[0][4]  # Assuming TimeStamp is at index 4
+        current_group_count = 1
         for row in rows[1:]:
-            current_ts = row[4]
-            cycle = round(current_ts - last_ts)
-            if include_zeros:
-                # Include zero-second cycles if checkbox is checked.
-                if cycle >= 0:
-                    times_dict[cycle] = times_dict.get(cycle, 0) + 1
+            ts = row[4]
+            if ts == current_group_ts:
+                current_group_count += 1
             else:
-                # Otherwise, only include positive cycle times.
-                if cycle > 0:
-                    times_dict[cycle] = times_dict.get(cycle, 0) + 1
-            last_ts = current_ts
+                groups.append((current_group_ts, current_group_count))
+                # Reset for the new group.
+                current_group_ts = ts
+                current_group_count = 1
+        # Append the final group.
+        groups.append((current_group_ts, current_group_count))
 
-    # Return a sorted list of (cycle_time, frequency) tuples (sorted by cycle_time)
+    # Build a list of all batch sizes from the groups.
+    batch_sizes = [count for (_, count) in groups]
+    # Determine the mode (most common value) of the batch sizes.
+    # This represents the typical number of parts produced per cycle.
+    mode_value = Counter(batch_sizes).most_common(1)[0][0] if batch_sizes else 1
+
+    # Compute raw cycle times from consecutive unique groups and adjust by dividing
+    # by the mode_value. This gives the cycle time per part.
+    times_dict = {}
+    for i in range(1, len(groups)):
+        # Raw cycle time is the difference between consecutive unique timestamps.
+        raw_cycle = groups[i][0] - groups[i - 1][0]
+        # Adjust the cycle time by the typical number of parts.
+        adjusted_cycle = round(raw_cycle / mode_value)
+        if include_zeros:
+            if adjusted_cycle >= 0:
+                times_dict[adjusted_cycle] = times_dict.get(adjusted_cycle, 0) + 1
+        else:
+            if adjusted_cycle > 0:
+                times_dict[adjusted_cycle] = times_dict.get(adjusted_cycle, 0) + 1
+
+    # Return the sorted list of (adjusted_cycle_time, frequency) tuples.
     return sorted(times_dict.items(), key=lambda x: x[0])
-
 
 def cycle_times(request):
     context = {}
