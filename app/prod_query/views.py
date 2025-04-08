@@ -586,6 +586,7 @@ def cycle_times(request):
             res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros, part_number)
             context['result'] = res
             context['machine'] = machine
+            context['part_number'] = part_number
             # Pass the submitted datetime strings to the template for display
             context['start_datetime_str'] = start_datetime_str
             context['end_datetime_str'] = end_datetime_str
