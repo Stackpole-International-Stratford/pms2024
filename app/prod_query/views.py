@@ -480,7 +480,7 @@ def get_cycle_metrics(cycle_data):
 
 
 
-def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
+def fetch_cycle_data(machine, start_ts, end_ts, include_zeros, part_number):
     """
     Fetch cycle records for a machine between two timestamps and build a sorted
     list of (adjusted_cycle_time, frequency) tuples. The adjustment divides the raw
@@ -498,13 +498,23 @@ def fetch_cycle_data(machine, start_ts, end_ts, include_zeros):
         List[Tuple[int, int]]: Sorted list of (adjusted_cycle_time, frequency) tuples.
     """
     # Build SQL query
-    sql = (
-        f"SELECT * "
-        f"FROM GFxPRoduction "
-        f"WHERE Machine = '{machine}' "
-        f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
-        f"ORDER BY TimeStamp"
+    if part_number:
+        sql = (
+            f"SELECT * "
+            f"FROM GFxPRoduction "
+            f"WHERE Machine = '{machine}' "
+            f"AND Part = '{part_number}' "
+            f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
+            f"ORDER BY TimeStamp"
     )
+    else:
+        sql = (
+            f"SELECT * "
+            f"FROM GFxPRoduction "
+            f"WHERE Machine = '{machine}' "
+            f"AND TimeStamp BETWEEN {start_ts} AND {end_ts} "
+            f"ORDER BY TimeStamp"
+        )
 
     # Execute the query
     cursor = connections['prodrpt-md'].cursor()
@@ -561,6 +571,7 @@ def cycle_times(request):
         machine = request.POST.get('machine')
         start_datetime_str = request.POST.get('start_datetime')
         end_datetime_str = request.POST.get('end_datetime')
+        part_number = request.POST.get('part_number')
         include_zeros = True  # Adjust as needed
 
         # Check that all required values are present
@@ -572,7 +583,7 @@ def cycle_times(request):
             end_ts = int(shift_end.timestamp())
 
             # Fetch cycle data for the shift
-            res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros)
+            res = fetch_cycle_data(machine, start_ts, end_ts, include_zeros, part_number)
             context['result'] = res
             context['machine'] = machine
             # Pass the submitted datetime strings to the template for display
@@ -617,7 +628,7 @@ def cycle_times(request):
                 day_end_ts = int(day_end.timestamp())
 
                 # Fetch daily cycle data and compute metrics
-                daily_data = fetch_cycle_data(machine, day_start_ts, day_end_ts, include_zeros)
+                daily_data = fetch_cycle_data(machine, day_start_ts, day_end_ts, include_zeros, part_number)
                 daily_metrics = get_cycle_metrics(daily_data)
                 daily_wct = daily_metrics['weighted_cycle_time']
 

@@ -29,11 +29,19 @@ Cycle Time
             <!-- Hidden inputs to store the selected start and end datetimes -->
             <input type="hidden" name="start_datetime" id="start_datetime" value="{{ start_datetime_str|default:'' }}">
             <input type="hidden" name="end_datetime" id="end_datetime" value="{{ end_datetime_str|default:'' }}">
-            <!-- Machine Input -->
-            <div class="mb-3">
-              <label for="machine" class="form-label">Machine</label>
-              <input type="text" name="machine" id="machine" class="form-control w-auto" style="max-width: 300px;" placeholder="Enter machine" value="{{ machine }}" required>
+            
+            <!-- Machine and Part Number Inputs Side-by-Side -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="machine" class="form-label">Machine</label>
+                <input type="text" name="machine" id="machine" class="form-control" placeholder="Enter machine" value="{{ machine }}" required>
+              </div>
+              <div class="col-md-6">
+                <label for="part_number" class="form-label">Part Number (optional)</label>
+                <input type="text" name="part_number" id="part_number" class="form-control" placeholder="Enter part number" value="{{ part_number|default:'' }}">
+              </div>
             </div>
+            
             <button type="submit" class="btn btn-dark mt-3">Submit</button>
           </form>
         </div>
@@ -138,8 +146,7 @@ Cycle Time
       datasets: [{
         ...chartdata.dataset,
         backgroundColor: '#FF9933',
-        borderColor: '#FF9933'  // This removes the blue outline
-
+        borderColor: '#FF9933'
       }]
     },
     options: {
@@ -174,13 +181,12 @@ Cycle Time
 <script>
   const yearlyData = JSON.parse(document.getElementById('yearly_chartdata').textContent);
 
-  // Apply color styling to each dataset
   yearlyData.datasets = yearlyData.datasets.map(dataset => ({
     ...dataset,
-    borderColor: '#FF9933',           // Line color
-    backgroundColor: '#FF9933',       // Point fill or area fill if enabled
-    pointBackgroundColor: '#FF9933',  // Point fill
-    pointBorderColor: '#FF9933'       // Point border
+    borderColor: '#FF9933',
+    backgroundColor: '#FF9933',
+    pointBackgroundColor: '#FF9933',
+    pointBorderColor: '#FF9933'
   }));
 
   const ctxYearly = document.getElementById('yearlyChart').getContext('2d');
@@ -216,33 +222,28 @@ Cycle Time
   });
 </script>
 
-
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    // Build an array of default dates if both values exist; otherwise, use an empty array.
     const startDate = "{{ start_datetime_str|default:'' }}";
     const endDate = "{{ end_datetime_str|default:'' }}";
     const defaultDates = (startDate && endDate) ? [startDate, endDate] : [];
 
-    // Initialize Flatpickr with persistent default dates.
     flatpickr("#calendar", {
       mode: "range",
       inline: true,
       enableTime: true,
-      time_24hr: false, // display in 12-hour mode
-      minuteIncrement: 1, // allow any minute value
-      dateFormat: "Y-m-d h:i K", // display format with AM/PM
+      time_24hr: false,
+      minuteIncrement: 1,
+      dateFormat: "Y-m-d h:i K",
       defaultDate: defaultDates,
       onChange: function(selectedDates, dateStr, instance) {
         if (selectedDates.length === 2) {
-          // Convert to 24-hour format before submitting
           document.getElementById('start_datetime').value = instance.formatDate(selectedDates[0], "Y-m-d H:i");
           document.getElementById('end_datetime').value = instance.formatDate(selectedDates[1], "Y-m-d H:i");
         }
       }
     });
 
-    // Attach submit listener to show spinner with a slight delay.
     const form = document.getElementById("cycle-form");
     form.addEventListener("submit", function() {
       setTimeout(() => {
