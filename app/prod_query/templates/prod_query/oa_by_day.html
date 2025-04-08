@@ -584,18 +584,24 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         }
 
-        // Update Availability values.
-        document.querySelectorAll('.availability').forEach(function(elem) {
-          var lineName = elem.getAttribute('data-line');
-          var machineNumber = elem.getAttribute('data-machine');
-          if (window.productionData[lineName] && window.productionData[lineName][machineNumber] &&
-              window.productionData[lineName][machineNumber].A !== undefined) {
-            // Multiply by 100 to convert to a percentage.
-            elem.innerText = (window.productionData[lineName][machineNumber].A * 100).toFixed(2) + "%";
-          } else {
-            elem.innerText = "N/A";
+      // Update Availability values.
+      document.querySelectorAll('.availability').forEach(function(elem) {
+        var lineName = elem.getAttribute('data-line');
+        var machineNumber = elem.getAttribute('data-machine');
+        if (window.productionData[lineName] && window.productionData[lineName][machineNumber] &&
+            window.productionData[lineName][machineNumber].A !== undefined) {
+          var machineData = window.productionData[lineName][machineNumber];
+          // Multiply by 100 to convert to a percentage.
+          elem.innerText = (machineData.A * 100).toFixed(2) + "%";
+          // Set the inline style color based on the computed color.
+          if (machineData.A_color) {
+            elem.style.color = machineData.A_color;
           }
-        });
+        } else {
+          elem.innerText = "N/A";
+        }
+      });
+
 
 
         // Update Performance values.
@@ -872,7 +878,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
     
 
-    
+
     // Update Performance values.
     document.querySelectorAll('.performance').forEach(function(elem) {
       var lineName = elem.getAttribute('data-line');

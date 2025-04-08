@@ -6870,6 +6870,8 @@ def fetch_oa_by_day_production_data(request):
     """
     Combined view that fetches production data, downtime events,
     scrap data, and PR downtime entries for each machine over a given date range.
+    It also computes machine-level OEE metrics and applies a color gradient for 
+    Performance (P) and Availability (A) based on their relative ranking.
     """
     # Parse the date/time range from the request.
     start_time, end_time, start_timestamp, end_timestamp, queried_minutes, previous_day_str = parse_date_range(request)
@@ -6886,7 +6888,7 @@ def fetch_oa_by_day_production_data(request):
     production_data = {}
     downtime_totals_by_line = {}
 
-    # NEW: Initialize accumulators for planned and unplanned downtime.
+    # Initialize accumulators for planned and unplanned downtime.
     planned_downtime_totals_by_line = {}
     unplanned_downtime_totals_by_line = {}
     overall_planned_downtime_minutes = 0
@@ -6898,7 +6900,6 @@ def fetch_oa_by_day_production_data(request):
         line_name = line["line"]
         production_data.setdefault(line_name, {})
         downtime_totals_by_line.setdefault(line_name, 0)
-        # NEW: Initialize per-line accumulators.
         planned_downtime_totals_by_line.setdefault(line_name, 0)
         unplanned_downtime_totals_by_line.setdefault(line_name, 0)
 
@@ -6908,11 +6909,16 @@ def fetch_oa_by_day_production_data(request):
                 machine_number = machine["number"]
 
                 # Get production parts data for this machine.
-                prod_data = get_production_data_for_machine(cursor, machine, machine_number, start_timestamp, end_timestamp, op, queried_minutes, line_name)
+                prod_data = get_production_data_for_machine(
+                    cursor, machine, machine_number,
+                    start_timestamp, end_timestamp, op, queried_minutes, line_name
+                )
                 production_data[line_name][machine_number] = prod_data
 
                 # Calculate downtime events.
-                downtime_seconds, downtime_events = calculate_downtime_events(cursor, machine_number, start_timestamp, end_timestamp)
+                downtime_seconds, downtime_events = calculate_downtime_events(
+                    cursor, machine_number, start_timestamp, end_timestamp
+                )
                 production_data[line_name][machine_number]["downtime_seconds"] = downtime_seconds
                 production_data[line_name][machine_number]["downtime_minutes"] = int(downtime_seconds / 60)
                 production_data[line_name][machine_number]["downtime_events"] = downtime_events
@@ -6945,11 +6951,9 @@ def fetch_oa_by_day_production_data(request):
                 overall_planned_downtime_minutes += planned_downtime
                 overall_unplanned_downtime_minutes += unplanned_downtime
 
-
                 # For each machine, compute machine-level OEE metrics.
                 machine_metrics = compute_machine_oee(prod_data, queried_minutes)
                 production_data[line_name][machine_number].update(machine_metrics)
-
 
     # Fetch scrap data.
     scrap_totals_by_line, overall_scrap_total = fetch_daily_scrap_data(cursor, start_time, end_time)
@@ -6996,12 +7000,11 @@ def fetch_oa_by_day_production_data(request):
         "overall_scrap_total": overall_scrap_total,
         "previous_day": previous_day_str,
     }
-
     # Include the downtime breakdown per line.
     response_data["planned_downtime_totals_by_line"] = planned_downtime_totals_by_line
     response_data["unplanned_downtime_totals_by_line"] = unplanned_downtime_totals_by_line
 
-    # Compute the OEE metrics.
+    # Compute the overall OEE metrics.
     oee_metrics = compute_oee_metrics(
         totals_by_line,
         overall_total_produced,
@@ -7015,9 +7018,14 @@ def fetch_oa_by_day_production_data(request):
         planned_downtime_totals_by_line,
         unplanned_downtime_totals_by_line
     )
-
-
     response_data["oee_metrics"] = oee_metrics
+
+    # <<-- NEW: Apply color gradients for machine Performance and Availability -->
+    for line_name, machine_metrics in production_data.items():
+        # Apply the color gradient for Performance ("P")
+        apply_color_gradient_to_line(machine_metrics, "P", "P_color")
+        # Apply the color gradient for Availability ("A")
+        apply_color_gradient_to_line(machine_metrics, "A", "A_color")
 
     cursor.close()
     conn.close()
