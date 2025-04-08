@@ -393,7 +393,8 @@ document.addEventListener("DOMContentLoaded", function() {
     time_24hr: true,          // Use 24-hour time format
     dateFormat: "Y-m-d H:i",  // Include time in the format
     // Default to 11pm for both start and end dates.
-    defaultDate: ["{{ start_date }} 7:00", "{{ end_date }} 7:00"],
+    defaultDate: ["{{ start_date }}", "{{ end_date }}"],
+
   });
 
   // Listen for button clicks.

@@ -53,8 +53,12 @@ urlpatterns = [
 
 
     path('oa_by_day/', views.oa_by_day, name='oa_by_day'),
-    path('fetch_oa_by_day_production_data/', views.fetch_oa_by_day_production_data, name='fetch_oa_by_day_production_data'),
-    path('fetch_exclude_weekends_data/', views.fetch_exclude_weekends_data, name='fetch_exclude_weekends_data'),
+    # path('fetch_oa_by_day_production_data/', views.fetch_oa_by_day_production_data, name='fetch_oa_by_day_production_data'),
+    # path('fetch_exclude_weekends_data/', views.fetch_exclude_weekends_data, name='fetch_exclude_weekends_data'),
+
+
+    path('fetch_oa_by_day_production_data/', views.fetch_combined_production_data, name='fetch_oa_by_day_production_data'),
+    path('fetch_exclude_weekends_data/', views.fetch_combined_production_data, name='fetch_exclude_weekends_data'),
 
 
 ]
