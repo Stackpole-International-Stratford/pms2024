@@ -6873,7 +6873,7 @@ def compute_machine_oee(machine_data, queried_minutes):
 
 
 # --- Main Function ---
-def fetch_combined_production_data(request):
+def fetch_combined_oee_production_data(request):
     """
     A unified view that always excludes weekends from the production data. It parses
     the date range from GET parameters, splits the range into valid (non-weekend) intervals,
