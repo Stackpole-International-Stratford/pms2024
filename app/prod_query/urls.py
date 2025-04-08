@@ -57,7 +57,4 @@ urlpatterns = [
     path('fetch_exclude_weekends_data/', views.fetch_exclude_weekends_data, name='fetch_exclude_weekends_data'),
 
 
-    path('api/oee-metrics/', views.oee_metrics_view, name='oee_metrics_view'),
-
-
 ]

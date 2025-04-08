@@ -6245,64 +6245,6 @@ def oa_by_day(request):
     return render(request, 'prod_query/oa_by_day.html', context)
 
 
-@require_GET
-def oee_metrics_view(request):
-    """
-    API endpoint that returns different values based on query parameters:
-    - `?oee=1` → Returns the OEE number for yesterday.
-    - `?column=1` → Returns the column NUMBER for yesterday.
-    - `?row=1` → Returns the row NUMBER for yesterday.
-    
-    Example responses:
-    - "63"  (if `?oee=1` is passed)
-    - "48"  (if `?column=1` is passed)
-    - "19"  (if `?row=1` is passed)
-    """
-
-    # Always use yesterday's date
-    yesterday_date = datetime.now() - timedelta(days=1)
-    yesterday_day = yesterday_date.strftime('%d')  # Extracts the day number as a string (e.g., "18")
-
-    # Date-to-Cell Mapping (Row, Column)
-    date_to_cell_map = {
-        '1': (13, 56), '2': (15, 44), '3': (15, 46), '4': (15, 48), '5': (15, 50), '6': (15, 52), '7': (15, 54),
-        '8': (15, 56), '9': (17, 44), '10': (17, 46), '11': (17, 48), '12': (17, 50), '13': (17, 52), '14': (17, 54),
-        '15': (17, 56), '16': (19, 44), '17': (19, 46), '18': (19, 48), '19': (19, 50), '20': (19, 52), '21': (19, 54),
-        '22': (19, 56), '23': (21, 44), '24': (21, 46), '25': (21, 48), '26': (21, 50), '27': (21, 52), '28': (21, 54),
-        '29': (21, 56), '30': (23, 44), '31': (23, 46)
-    }
-
-    # Get the correct (row, column) tuple for yesterday
-    cell = date_to_cell_map.get(yesterday_day)
-
-    # Check if the user is requesting 'oee', 'column', or 'row'
-    if 'oee' in request.GET:
-        # Fetch full production JSON
-        full_response = fetch_oa_by_day_production_data(request)
-        data = json.loads(full_response.content.decode('utf-8'))
-
-        # Extract 'overall.OEE' value safely
-        overall_oee = data.get("oee_metrics", {}).get("overall", {}).get("OEE", None)
-
-        if overall_oee is not None:
-            oee_number = round(overall_oee * 100, 2)  # Convert to a number (e.g., 0.63 → 63)
-            return HttpResponse(str(oee_number), content_type="text/plain")
-        else:
-            return HttpResponse("N/A", content_type="text/plain")  # Return "N/A" if no OEE data
-
-    elif 'column' in request.GET:
-        if cell:
-            return HttpResponse(str(cell[1]), content_type="text/plain")  # Return column number
-        return HttpResponse("UNKNOWN", content_type="text/plain")
-
-    elif 'row' in request.GET:
-        if cell:
-            return HttpResponse(str(cell[0]), content_type="text/plain")  # Return row number
-        return HttpResponse("UNKNOWN", content_type="text/plain")
-
-    # If no valid parameter is found, return an error
-    return HttpResponse("Invalid request. Use ?oee=1, ?column=1, or ?row=1", content_type="text/plain", status=400)
-
 
 def compute_oee_metrics(
     totals_by_line,
@@ -6750,19 +6692,19 @@ def get_color_for_ratio(ratio):
       1   => dark green
     The brightness factor scales down the computed RGB values.
     """
-    print(f"[get_color_for_ratio] Received ratio: {ratio}")
+    # print(f"[get_color_for_ratio] Received ratio: {ratio}")
     if ratio <= 0.5:
         # Interpolate from red to yellow.
         factor = ratio / 0.5  # Normalized factor between 0 and 1.
         red = 255
         green = int(255 * factor)
-        print(f"[get_color_for_ratio] (Red->Yellow) factor: {factor}, red: {red}, green: {green}")
+        # print(f"[get_color_for_ratio] (Red->Yellow) factor: {factor}, red: {red}, green: {green}")
     else:
         # Interpolate from yellow to green.
         factor = (ratio - 0.5) / 0.5  # Normalized factor between 0 and 1.
         red = int(255 * (1 - factor))
         green = 255
-        print(f"[get_color_for_ratio] (Yellow->Green) factor: {factor}, red: {red}, green: {green}")
+        # print(f"[get_color_for_ratio] (Yellow->Green) factor: {factor}, red: {red}, green: {green}")
     blue = 0
 
     # Apply brightness factor to darken the color.
@@ -6771,7 +6713,7 @@ def get_color_for_ratio(ratio):
     green = int(green * brightness)
     blue = int(blue * brightness)  # (remains 0)
     color_hex = '#{:02X}{:02X}{:02X}'.format(red, green, blue)
-    print(f"[get_color_for_ratio] Computed color: {color_hex} (red: {red}, green: {green}, blue: {blue})")
+    # print(f"[get_color_for_ratio] Computed color: {color_hex} (red: {red}, green: {green}, blue: {blue})")
     return color_hex
 
 
@@ -6794,7 +6736,7 @@ def apply_color_gradient_to_line(machine_metrics, metric_key, color_key):
     # For performance and availability, higher values are better.
     items.sort(key=lambda x: x[1])
     total = len(items)
-    print(f"[apply_color_gradient_to_line] Ranking for metric '{metric_key}': total machines = {total}")
+    # print(f"[apply_color_gradient_to_line] Ranking for metric '{metric_key}': total machines = {total}")
 
     # Assign each machine a normalized ratio based on its rank.
     for rank, (machine_id, value) in enumerate(items):
@@ -6802,7 +6744,7 @@ def apply_color_gradient_to_line(machine_metrics, metric_key, color_key):
         ratio = rank / (total - 1) if total > 1 else 0.5
         color_hex = get_color_for_ratio(ratio)
         machine_metrics[machine_id][color_key] = color_hex
-        print(f"[apply_color_gradient_to_line] Machine {machine_id}: {metric_key} value = {value}, rank = {rank}, ratio = {ratio}, {color_key} set to {color_hex}")
+        # print(f"[apply_color_gradient_to_line] Machine {machine_id}: {metric_key} value = {value}, rank = {rank}, ratio = {ratio}, {color_key} set to {color_hex}")
 
 
 
