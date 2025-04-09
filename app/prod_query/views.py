@@ -7262,5 +7262,3 @@ def fetch_combined_oee_production_data(request):
     cursor.close()
     conn.close()
     return JsonResponse(response_data)
-
-
