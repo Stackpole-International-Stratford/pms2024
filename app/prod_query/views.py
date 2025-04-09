@@ -6891,6 +6891,74 @@ def compute_machine_downtime_percentage(machine_data):
     return {"downtime_percentage": percentage}
 
 
+
+
+def calculate_operaton_P_and_A_from_totals(
+        line_name, op_name, produced_parts, target, downtime_minutes,
+        planned_downtime, unplanned_downtime, total_queried_minutes):
+    """
+    Calculate the Availability (A) and Performance (P) for an operation,
+    using aggregated totals for all machines in the operation.
+    
+    Assumptions:
+      - The operation's potential minutes equals the total queried minutes.
+      - Downtime values are aggregated from all machines.
+    
+    Parameters:
+      line_name (str): Identifier for the production line.
+      op_name (str): The operation name or number.
+      produced_parts (int or float): Total produced parts for the operation.
+      target (int or float): Total target for the operation.
+      downtime_minutes (int or float): Total downtime minutes (aggregated, not used directly).
+      planned_downtime (int or float): Aggregated planned downtime minutes.
+      unplanned_downtime (int or float): Aggregated unplanned downtime minutes.
+      total_queried_minutes (int or float): Total potential minutes for the operation.
+    
+    Formulas:
+      potential = total_queried_minutes
+      Planned Production Time (PPT) = potential - planned_downtime
+      Run Time = PPT - unplanned_downtime
+      If potential > 0 and total downtime > 0, then:
+          uptime_ratio = (potential - (planned_downtime + unplanned_downtime)) / potential
+          adjusted_target = target * uptime_ratio
+      Else:
+          adjusted_target = target
+      Availability (A) = Run Time / PPT    (if PPT > 0)
+      Performance (P) = produced_parts / adjusted_target    (if adjusted_target > 0)
+    
+    Returns:
+      dict: A dictionary with the following keys:
+            "line": line_name,
+            "op": op_name,
+            "A": calculated Availability,
+            "P": calculated Performance
+    """
+    potential = total_queried_minutes
+    ppt = potential - planned_downtime
+    run_time = ppt - unplanned_downtime
+    downtime_total = planned_downtime + unplanned_downtime
+
+    if potential == 0 or downtime_total == 0:
+        adjusted_target = target
+    else:
+        runtime = potential - downtime_total
+        uptime_ratio = runtime / potential
+        adjusted_target = target * uptime_ratio
+
+    availability = run_time / ppt if ppt > 0 else 0.0
+    if adjusted_target == 0:
+        performance = 0
+    else:
+        performance = produced_parts / adjusted_target
+
+    return {
+        "line": line_name,
+        "op": op_name,
+        "A": availability,
+        "P": performance
+    }
+
+
 # --- Main Function ---
 def fetch_combined_oee_production_data(request):
     """
@@ -7101,7 +7169,18 @@ def fetch_combined_oee_production_data(request):
                 print(f"  Planned Downtime Minutes: {op_total_planned_downtime}")
                 print(f"  Unplanned Downtime Minutes: {op_total_unplanned_downtime}")
                 print(f"  Total Potential Minutes: {op_total_queried_minutes}")
-                calculate_operaton_P_and_A_from_totals()
+                # Compute the operation's OEE factors.
+                results = calculate_operaton_P_and_A_from_totals(
+                    line_name=line_name,
+                    op_name=op_name,
+                    produced_parts=op_total_parts,
+                    target=op_total_target,
+                    downtime_minutes=op_total_downtime_minutes,
+                    planned_downtime=op_total_planned_downtime,
+                    unplanned_downtime=op_total_unplanned_downtime,
+                    total_queried_minutes=op_total_queried_minutes
+                )
+                print(f"Operation {op_name} on line {line_name} -> Availability (A): {results['A']:.2f}, Performance (P): {results['P']:.2f}")
 
 
         # Fetch and accumulate scrap data for the interval.
