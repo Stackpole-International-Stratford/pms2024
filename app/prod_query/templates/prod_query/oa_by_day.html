@@ -75,8 +75,8 @@
         <ul>
           <li><strong>Planned Production Time (PPT)</strong> = Total Potential Minutes − Planned Downtime</li>
           <li><strong>Run Time</strong> = PPT − Unplanned Downtime</li>
-          <li><strong>Ideal Cycle Time</strong> = PPT / Target Parts</li>
-          <li><strong>Adjusted Target</strong> = Target / (Total Potential Minutes / Total Downtime Minutes)</li>
+          <li><strong>Uptime Ratio</strong> = Runtime / Potential Minutes</li>
+          <li><strong>Adjusted Target</strong> = Target * Uptime Ratio</li>
           <li><strong>Availability (A)</strong> = Run Time / PPT</li>
           <li><strong>Performance (P)</strong> = Total Produced / Adjusted Target</li>
           <li><strong>Quality (Q)</strong> = (Produced Parts − Scrap) / Produced Parts</li>
@@ -87,9 +87,9 @@
         <h5>Important Notes</h5>
         <ul>
           <li><strong>Planned vs. Unplanned Downtime:</strong> This page distinguishes between planned and unplanned downtime, which improves the accuracy of the underlying Availability and Performance metrics. <strong>Planned downtime is considered</strong> any downtime event over 4 hours that does not overlap with a <code>PR_downtime entry</code></li>
-          <li><strong>Ideal Cycle Time</strong> is dynamically calculated using the target part count and available production time</li>
           <li><strong>Downtime</strong> are gaps over 5 minutes between produced parts allowing us to capture both micro and macro stoppages.</li>
           <li><strong>Targets</strong> are adjusted to match the selected time range and are based on a 5-day (7200-minute) baseline week from the database table (<code>prod_query_oamachinetargets</code>).</li>
+          <li><strong>Weekends (Friday 11pm - Sunday 11pm)</strong> are automatically excluded from the calculations.</li>
         </ul>
       </div>
     </div>
