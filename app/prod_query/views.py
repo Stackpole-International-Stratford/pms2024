@@ -6925,47 +6925,62 @@ def fetch_combined_oee_production_data(request):
         # Process production and downtime per machine for this interval.
         for line in lines:
             line_name = line["line"]
+            # Loop through each operation on the current line.
             for operation in line.get("operations", []):
                 op_name = operation["op"]
+                # Initialize the production accumulator for this operation.
+                op_total_parts = 0
+
+                # Process each machine within the operation.
                 for machine in operation.get("machines", []):
                     machine_number = machine["number"]
+
                     # Initialize machine data for the current line if not already present.
-                    machine_data = production_data[line_name].setdefault(machine_number, {
-                        "produced_parts": 0,
-                        "target": 0,
-                        "downtime_seconds": 0,
-                        "downtime_minutes": 0,
-                        "pr_downtime_entries": [],
-                        "downtime_events": [],
-                        "planned_downtime_minutes": 0,
-                        "unplanned_downtime_minutes": 0,
-                        "total_queried_minutes": 0,
-                    })
-                    # Accumulate total queried minutes (used later for machine OEE and downtime percentage).
+                    machine_data = production_data[line_name].setdefault(
+                        machine_number, {
+                            "produced_parts": 0,
+                            "target": 0,
+                            "downtime_seconds": 0,
+                            "downtime_minutes": 0,
+                            "pr_downtime_entries": [],
+                            "downtime_events": [],
+                            "planned_downtime_minutes": 0,
+                            "unplanned_downtime_minutes": 0,
+                            "total_queried_minutes": 0,
+                        }
+                    )
+
+                    # Accumulate the total queried minutes.
                     machine_data["total_queried_minutes"] += block_queried_minutes
-                    
-                    # Fetch production data for the block.
+
+                    # Fetch production data for the current machine.
                     prod_data = get_production_data_for_machine(
                         cursor, machine, machine_number,
                         block_start_timestamp, block_end_timestamp,
                         op_name, block_queried_minutes, line_name
                     )
-                    machine_data["produced_parts"] += prod_data.get("produced_parts", 0)
+
+                    # Update machine production and target values.
+                    produced = prod_data.get("produced_parts", 0)
+                    machine_data["produced_parts"] += produced
                     machine_data["target"] += prod_data.get("target", 0)
-                    
-                    # Calculate downtime events.
+
+                    # Accumulate the produced parts for the current operation.
+                    op_total_parts += produced
+
+                    # Calculate downtime events for the machine.
                     downtime_seconds, downtime_events = calculate_downtime_events(
                         cursor, machine_number, block_start_timestamp, block_end_timestamp
                     )
                     machine_data["downtime_seconds"] += downtime_seconds
                     machine_data["downtime_minutes"] += int(downtime_seconds / 60)
                     downtime_totals_by_line[line_name] += downtime_seconds
-                    
-                    # Fetch PR downtime entries.
+
+                    # Fetch the PR downtime entries.
                     pr_entries = get_pr_downtime_entries(machine_number, block_start, block_end)
                     machine_data["pr_downtime_entries"].extend(pr_entries)
-                    
-                    # Annotate downtime events with overlap info.
+
+                    # Annotate downtime events with overlap details.
                     for event in downtime_events:
                         try:
                             detail_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
@@ -6976,21 +6991,26 @@ def fetch_combined_oee_production_data(request):
                         except Exception as e:
                             print(f"Error annotating downtime event {event}: {e}")
                     machine_data["downtime_events"].extend(downtime_events)
-                    
-                    # Calculate planned downtime (e.g., based on events longer than 4 hours that lack overlap).
+
+                    # Calculate and update planned downtime.
                     planned = calculate_planned_downtime(downtime_events, pr_entries)
                     machine_data["planned_downtime_minutes"] += planned
-                    
+
                     # Calculate unplanned downtime.
                     total_downtime = int(downtime_seconds / 60)
                     unplanned = calculate_unplanned_downtime(total_downtime, planned)
                     machine_data["unplanned_downtime_minutes"] += unplanned
 
-                    # Update per-line and overall accumulators.
+                    # Update the per-line and overall accumulators.
                     planned_downtime_totals_by_line[line_name] += planned
                     unplanned_downtime_totals_by_line[line_name] += unplanned
                     overall_planned_downtime_minutes += planned
                     overall_unplanned_downtime_minutes += unplanned
+
+                # After processing all machines for the current operation,
+                # op_total_parts holds the total produced parts for that operation.
+                # print(f"Total produced parts for operation {op_name} on line {line_name}: {op_total_parts}")
+
 
         # Fetch and accumulate scrap data for the interval.
         scrap_by_line, scrap_total = fetch_daily_scrap_data(cursor, block_start, block_end)
