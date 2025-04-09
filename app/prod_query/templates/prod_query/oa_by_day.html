@@ -522,19 +522,23 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         });
 
-        // Update downtime percentage values.
+        // Updated: Update downtime percentage values and apply color.
         document.querySelectorAll('.downtime-percentage').forEach(function(elem) {
           var lineName = elem.getAttribute('data-line');
           var machineNumber = elem.getAttribute('data-machine');
-          if (window.productionData[lineName] &&
-              window.productionData[lineName][machineNumber] &&
-              window.productionData[lineName][machineNumber].downtime_percentage !== undefined) {
-            // Convert the value to a percentage string with two decimals.
-            elem.innerText = parseFloat(window.productionData[lineName][machineNumber].downtime_percentage).toFixed(2) + "%";
+          var machineData = window.productionData[lineName] ? window.productionData[lineName][machineNumber] : null;
+          if (machineData && machineData.downtime_percentage !== undefined) {
+            // Display the raw downtime percentage with two decimals.
+            elem.innerText = parseFloat(machineData.downtime_percentage).toFixed(2) + "%";
+            // Apply the color gradient from the backend if available.
+            if (machineData.downtime_percentage_color) {
+              elem.style.color = machineData.downtime_percentage_color;
+            }
           } else {
             elem.innerText = "0%";
           }
         });
+
 
 
         // Update overall totals.
@@ -807,15 +811,18 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     });
 
-    // Update downtime percentage values.
+    // Updated: Update downtime percentage values and apply color.
     document.querySelectorAll('.downtime-percentage').forEach(function(elem) {
       var lineName = elem.getAttribute('data-line');
       var machineNumber = elem.getAttribute('data-machine');
-      if (window.productionData[lineName] &&
-          window.productionData[lineName][machineNumber] &&
-          window.productionData[lineName][machineNumber].downtime_percentage !== undefined) {
-        // Convert the value to a percentage string with two decimals.
-        elem.innerText = parseFloat(window.productionData[lineName][machineNumber].downtime_percentage).toFixed(2) + "%";
+      var machineData = window.productionData[lineName] ? window.productionData[lineName][machineNumber] : null;
+      if (machineData && machineData.downtime_percentage !== undefined) {
+        // Display the raw downtime percentage with two decimals.
+        elem.innerText = parseFloat(machineData.downtime_percentage).toFixed(2) + "%";
+        // Apply the color gradient from the backend if available.
+        if (machineData.downtime_percentage_color) {
+          elem.style.color = machineData.downtime_percentage_color;
+        }
       } else {
         elem.innerText = "0%";
       }
