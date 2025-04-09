@@ -6872,17 +6872,46 @@ def compute_machine_oee(machine_data, queried_minutes):
 
 
 
+# --- New Helper Function ---
+def compute_machine_downtime_percentage(machine_data):
+    """
+    Calculate the downtime percentage for a given machine.
+    
+    The downtime percentage is computed as the ratio of downtime minutes to the total queried minutes,
+    multiplied by 100 to yield a percentage value. If total queried minutes is zero, the percentage will be zero.
+    
+    Parameters:
+      machine_data (dict): Dictionary containing machine performance data. Expected keys include:
+                           - "downtime_minutes" (int): The machine's downtime in minutes.
+                           - "total_queried_minutes" (int): The total minutes that were queried for the machine.
+    
+    Returns:
+      dict: A dictionary with the key "downtime_percentage" and the computed percentage as its value.
+    """
+    total_minutes = machine_data.get("total_queried_minutes", 0)
+    downtime_minutes = machine_data.get("downtime_minutes", 0)
+    if total_minutes > 0:
+        percentage = (downtime_minutes / total_minutes) * 100
+    else:
+        percentage = 0
+    return {"downtime_percentage": percentage}
+
+
 # --- Main Function ---
 def fetch_combined_oee_production_data(request):
     """
     A unified view that always excludes weekends from the production data. It parses
     the date range from GET parameters, splits the range into valid (non-weekend) intervals,
     and aggregates production, downtime, scrap, and OEE metrics over these intervals.
+    
+    In addition, it computes a downtime percentage for each machine so that the front-end
+    can display this metric between the unplanned downtime and performance columns.
     """
     
     from django.http import JsonResponse
     import datetime, os, importlib
     from datetime import timedelta
+
     # Get date range from GET parameters.
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
@@ -6972,7 +7001,7 @@ def fetch_combined_oee_production_data(request):
                         "unplanned_downtime_minutes": 0,
                         "total_queried_minutes": 0,
                     })
-                    # Accumulate total queried minutes (used later for machine OEE).
+                    # Accumulate total queried minutes (used later for machine OEE and downtime percentage).
                     machine_data["total_queried_minutes"] += block_queried_minutes
                     
                     # Fetch production data for the block.
@@ -7043,12 +7072,17 @@ def fetch_combined_oee_production_data(request):
     # Compute machine-level OEE metrics for each machine.
     for line_name, machines in production_data.items():
         for machine_number, machine_data in machines.items():
-            # Use the accumulated queried minutes (or block duration) for this machine.
             machine_metrics = compute_machine_oee(
                 machine_data,
                 machine_data.get("total_queried_minutes", 0)
             )
             machine_data.update(machine_metrics)
+    
+    # Compute machine downtime percentage for each machine.
+    for line_name, machines in production_data.items():
+        for machine_number, machine_data in machines.items():
+            downtime_metrics = compute_machine_downtime_percentage(machine_data)
+            machine_data.update(downtime_metrics)
 
     # Apply color gradients for Performance (P) and Availability (A) for each machine.
     for line_name, machines in production_data.items():

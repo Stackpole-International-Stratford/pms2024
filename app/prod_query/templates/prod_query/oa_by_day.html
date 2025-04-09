@@ -190,6 +190,7 @@
                   <th>Downtime</th>
                   <th>Planned Downtime</th>
                   <th>Unplanned Downtime</th>
+                  <th>Downtime %</th>   <!-- NEW COLUMN -->
                   <th>Performance</th>
                   <th>Availability</th>
                   <th>Actions</th>
@@ -228,6 +229,10 @@
                     <span class="unplanned-downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                       Loading...
                     </span>
+                  </td>
+                      <!-- NEW downtime percentage column -->
+                  <td>
+                    <span class="downtime-percentage" data-line="{{ line.line }}" data-machine="{{ machine.number }}">Loading...</span>
                   </td>
                   <td>
                     <span class="performance" data-line="{{ line.line }}" data-machine="{{ machine.number }}"
@@ -517,6 +522,21 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         });
 
+        // Update downtime percentage values.
+        document.querySelectorAll('.downtime-percentage').forEach(function(elem) {
+          var lineName = elem.getAttribute('data-line');
+          var machineNumber = elem.getAttribute('data-machine');
+          if (window.productionData[lineName] &&
+              window.productionData[lineName][machineNumber] &&
+              window.productionData[lineName][machineNumber].downtime_percentage !== undefined) {
+            // Convert the value to a percentage string with two decimals.
+            elem.innerText = parseFloat(window.productionData[lineName][machineNumber].downtime_percentage).toFixed(2) + "%";
+          } else {
+            elem.innerText = "0%";
+          }
+        });
+
+
         // Update overall totals.
         if (data.overall_totals) {
           document.getElementById('overall-produced').innerText = data.overall_totals.total_produced;
@@ -786,6 +806,21 @@ document.addEventListener("DOMContentLoaded", function() {
         elem.innerText = '0 min';
       }
     });
+
+    // Update downtime percentage values.
+    document.querySelectorAll('.downtime-percentage').forEach(function(elem) {
+      var lineName = elem.getAttribute('data-line');
+      var machineNumber = elem.getAttribute('data-machine');
+      if (window.productionData[lineName] &&
+          window.productionData[lineName][machineNumber] &&
+          window.productionData[lineName][machineNumber].downtime_percentage !== undefined) {
+        // Convert the value to a percentage string with two decimals.
+        elem.innerText = parseFloat(window.productionData[lineName][machineNumber].downtime_percentage).toFixed(2) + "%";
+      } else {
+        elem.innerText = "0%";
+      }
+    });
+
   
     // Update overall totals.
     if (data.overall_totals) {
