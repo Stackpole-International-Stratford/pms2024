@@ -6959,20 +6959,12 @@ def calculate_operaton_P_and_A_from_totals(
     }
 
 
+
 # --- Main Function ---
 def fetch_combined_oee_production_data(request):
     """
-    A unified view that always excludes weekends from the production data. It parses
-    the date range from GET parameters, splits the range into valid (non-weekend) intervals,
-    and aggregates production, downtime, scrap, and OEE metrics over these intervals.
-    
-    In addition, it computes a downtime percentage for each machine so that the front-end
-    can display this metric between the unplanned downtime and performance columns.
-    It also applies a color gradient to the adjusted downtime percentage (computed as 
-    100 - downtime_percentage) so that lower downtime percentages (better performance)
-    are shown in green, in line with the other metrics.
+    A unified view that always excludes weekends from the production data...
     """
-    
     from django.http import JsonResponse
     import datetime, os, importlib
     from datetime import timedelta
@@ -6983,14 +6975,13 @@ def fetch_combined_oee_production_data(request):
     if not start_date_str or not end_date_str:
         return JsonResponse({"error": "start_date and end_date must be provided in GET parameters."})
     
-    # Compute a previous day string for display (assumes format "Y-m-d H:i").
     try:
         start_date_obj = datetime.datetime.strptime(start_date_str, "%Y-%m-%d %H:%M")
     except ValueError:
         start_date_obj = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
     previous_day_str = (start_date_obj.date() - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # Set up the database connection from your settings.
+    # Set up the database connection.
     settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
     spec = importlib.util.spec_from_file_location("settings", settings_path)
     settings = importlib.util.module_from_spec(spec)
@@ -7016,7 +7007,10 @@ def fetch_combined_oee_production_data(request):
     overall_scrap_total = 0
     overall_total_potential_minutes = 0
 
-    # Assume that "lines" is a global structure (as in your current code).
+    # A new data structure to store per-operation metrics.
+    # You can choose a list of dicts or a dict keyed by line. Here we use a list.
+    operation_oee_metrics = []
+
     global lines
     for line in lines:
         line_name = line["line"]
@@ -7028,7 +7022,7 @@ def fetch_combined_oee_production_data(request):
         scrap_totals_by_line.setdefault(line_name, 0)
         potential_minutes_by_line.setdefault(line_name, 0)
 
-    # ALWAYS exclude weekends: split the given date range into valid intervals.
+    # Always exclude weekends: split the date range into valid intervals.
     intervals = stip_weekends(start_date_str, end_date_str)
     if not intervals:
         cursor.close()
@@ -7041,7 +7035,7 @@ def fetch_combined_oee_production_data(request):
         block_start_timestamp = int(block_start.timestamp())
         block_end_timestamp = int(block_end.timestamp())
         
-        # Update potential minutes per line (machine count * block duration).
+        # Update potential minutes per line.
         for line in lines:
             line_name = line["line"]
             machine_count = sum(len(op.get("machines", [])) for op in line.get("operations", []))
@@ -7051,7 +7045,7 @@ def fetch_combined_oee_production_data(request):
         for line in lines:
             line_name = line["line"]
 
-            # Optionally, initialize line-level accumulators if needed for later use.
+            # Initialize line-level accumulators.
             line_total_parts = 0
             line_total_target = 0
             line_total_downtime_minutes = 0
@@ -7161,15 +7155,7 @@ def fetch_combined_oee_production_data(request):
                     overall_planned_downtime_minutes += planned
                     overall_unplanned_downtime_minutes += unplanned
 
-                # After processing all machines for the current operation, print the totals for the operation.
-                print(f"Operation {op_name} on line {line_name} Totals:")
-                print(f"  Produced Parts: {op_total_parts}")
-                print(f"  Target: {op_total_target}")
-                print(f"  Downtime Minutes: {op_total_downtime_minutes}")
-                print(f"  Planned Downtime Minutes: {op_total_planned_downtime}")
-                print(f"  Unplanned Downtime Minutes: {op_total_unplanned_downtime}")
-                print(f"  Total Potential Minutes: {op_total_queried_minutes}")
-                # Compute the operation's OEE factors.
+                # After processing all machines for the current operation, compute its OEE factors.
                 results = calculate_operaton_P_and_A_from_totals(
                     line_name=line_name,
                     op_name=op_name,
@@ -7180,9 +7166,21 @@ def fetch_combined_oee_production_data(request):
                     unplanned_downtime=op_total_unplanned_downtime,
                     total_queried_minutes=op_total_queried_minutes
                 )
-                print(f"Operation {op_name} on line {line_name} -> Availability (A): {results['A']:.2f}, Performance (P): {results['P']:.2f}")
+                # (Optional) Augment the result with additional details if desired.
+                results.update({
+                    "produced_parts": op_total_parts,
+                    "target": op_total_target,
+                    "downtime_minutes": op_total_downtime_minutes,
+                    "planned_downtime_minutes": op_total_planned_downtime,
+                    "unplanned_downtime_minutes": op_total_unplanned_downtime,
+                    "total_queried_minutes": op_total_queried_minutes,
+                })
+                # Append the operation metrics to our list.
+                operation_oee_metrics.append(results)
 
-
+            # (Optional) You might also want to update line-level totals here.
+            # For example, update totals_by_line or similar structures.
+        
         # Fetch and accumulate scrap data for the interval.
         scrap_by_line, scrap_total = fetch_daily_scrap_data(cursor, block_start, block_end)
         for line_name, scrap_val in scrap_by_line.items():
@@ -7214,11 +7212,9 @@ def fetch_combined_oee_production_data(request):
         for machine_number, machine_data in machines.items():
             downtime_metrics = compute_machine_downtime_percentage(machine_data)
             machine_data.update(downtime_metrics)
-            # Compute an adjusted downtime percentage where lower downtime is better.
-            # For example, if downtime_percentage is 20, then adjusted value = 80.
             machine_data["adjusted_downtime_percentage"] = 100 - machine_data.get("downtime_percentage", 0)
 
-    # Apply color gradients for Performance (P), Availability (A), and Downtime Percentage.
+    # Apply color gradients.
     for line_name, machines in production_data.items():
         apply_color_gradient_to_line(machines, "P", "P_color")
         apply_color_gradient_to_line(machines, "A", "A_color")
@@ -7239,7 +7235,7 @@ def fetch_combined_oee_production_data(request):
         unplanned_downtime_totals_by_line
     )
 
-    # Build the response payload.
+    # Build the response payload, including our new operation-level OEE metrics.
     response_data = {
         "production_data": production_data,
         "totals_by_line": totals_by_line,
@@ -7261,6 +7257,7 @@ def fetch_combined_oee_production_data(request):
         "planned_downtime_totals_by_line": planned_downtime_totals_by_line,
         "unplanned_downtime_totals_by_line": unplanned_downtime_totals_by_line,
         "oee_metrics": oee_metrics,
+        "operation_oee_metrics": operation_oee_metrics,  # <---- New key for op-level metrics.
     }
     cursor.close()
     conn.close()
