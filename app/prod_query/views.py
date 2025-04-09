@@ -6237,7 +6237,7 @@ def oa_by_day(request):
 
     # For display in header, compute previous_day (for example, the day before start_date)
     start_date_obj = datetime.datetime.strptime(start_date_str, '%Y-%m-%d %H:%M')
-    previous_day_str = (start_date_obj.date() - timedelta(days=1)).strftime('%Y-%m-%d')
+    previous_day_str = (start_date_obj.date() - timedelta(days=0)).strftime('%Y-%m-%d')
 
     context = {
         'start_date': start_date_str,  # e.g. "2025-04-07 07:00"
