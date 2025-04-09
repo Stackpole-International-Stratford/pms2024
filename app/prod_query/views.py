@@ -6805,6 +6805,63 @@ def compute_machine_oee(machine_data, queried_minutes):
     return {"A": availability, "P": performance}
 
 
+# --- Helper Color Gradient Functions ---
+
+def get_color_for_ratio(ratio):
+    """
+    Maps a normalized ratio (0 to 1) to a color in a gradient, then applies a brightness factor:
+      0   => dark red   (darker than full red #FF0000)
+      0.5 => dark yellow
+      1   => dark green
+    The brightness factor scales down the computed RGB values.
+    """
+    if ratio <= 0.5:
+        # Interpolate from red to yellow.
+        factor = ratio / 0.5  # Normalized factor between 0 and 1.
+        red = 255
+        green = int(255 * factor)
+    else:
+        # Interpolate from yellow to green.
+        factor = (ratio - 0.5) / 0.5  # Normalized factor between 0 and 1.
+        red = int(255 * (1 - factor))
+        green = 255
+    blue = 0
+
+    # Apply brightness factor to darken the color.
+    brightness = 0.7  # Adjust this value between 0 and 1 for desired brightness.
+    red = int(red * brightness)
+    green = int(green * brightness)
+    blue = int(blue * brightness)
+    color_hex = '#{:02X}{:02X}{:02X}'.format(red, green, blue)
+    return color_hex
+
+
+def apply_color_gradient_to_line(machine_metrics, metric_key, color_key):
+    """
+    Applies a color gradient to machines in a single line based on their ranking,
+    ensuring an even distribution of colors (red for worst, green for best).
+
+    :param machine_metrics: Dict with machine IDs as keys and metric dictionaries as values.
+    :param metric_key: The key for the metric (e.g., "P", "A", or "adjusted_downtime_percentage").
+    :param color_key: The key to store the resulting color hex (e.g., "P_color", "A_color", or "downtime_percentage_color").
+    """
+    # Gather (machine_id, value) pairs for machines that have the metric.
+    items = [(machine_id, data[metric_key]) for machine_id, data in machine_metrics.items() if data.get(metric_key) is not None]
+    if not items:
+        print(f"[apply_color_gradient_to_line] No values found for metric key: '{metric_key}'.")
+        return
+
+    # Sort the list by metric value (ascending).
+    items.sort(key=lambda x: x[1])
+    total = len(items)
+
+    # Assign each machine a normalized ratio based on its rank.
+    for rank, (machine_id, value) in enumerate(items):
+        # Normalize rank from 0 to 1. If total is 1, default to 0.5.
+        ratio = rank / (total - 1) if total > 1 else 0.5
+        color_hex = get_color_for_ratio(ratio)
+        machine_metrics[machine_id][color_key] = color_hex
+
 
 
 
@@ -7044,6 +7101,7 @@ def fetch_combined_oee_production_data(request):
                 print(f"  Planned Downtime Minutes: {op_total_planned_downtime}")
                 print(f"  Unplanned Downtime Minutes: {op_total_unplanned_downtime}")
                 print(f"  Total Potential Minutes: {op_total_queried_minutes}")
+                calculate_operaton_P_and_A_from_totals()
 
 
         # Fetch and accumulate scrap data for the interval.
@@ -7129,61 +7187,4 @@ def fetch_combined_oee_production_data(request):
     conn.close()
     return JsonResponse(response_data)
 
-
-# --- Helper Color Gradient Functions ---
-
-def get_color_for_ratio(ratio):
-    """
-    Maps a normalized ratio (0 to 1) to a color in a gradient, then applies a brightness factor:
-      0   => dark red   (darker than full red #FF0000)
-      0.5 => dark yellow
-      1   => dark green
-    The brightness factor scales down the computed RGB values.
-    """
-    if ratio <= 0.5:
-        # Interpolate from red to yellow.
-        factor = ratio / 0.5  # Normalized factor between 0 and 1.
-        red = 255
-        green = int(255 * factor)
-    else:
-        # Interpolate from yellow to green.
-        factor = (ratio - 0.5) / 0.5  # Normalized factor between 0 and 1.
-        red = int(255 * (1 - factor))
-        green = 255
-    blue = 0
-
-    # Apply brightness factor to darken the color.
-    brightness = 0.7  # Adjust this value between 0 and 1 for desired brightness.
-    red = int(red * brightness)
-    green = int(green * brightness)
-    blue = int(blue * brightness)
-    color_hex = '#{:02X}{:02X}{:02X}'.format(red, green, blue)
-    return color_hex
-
-
-def apply_color_gradient_to_line(machine_metrics, metric_key, color_key):
-    """
-    Applies a color gradient to machines in a single line based on their ranking,
-    ensuring an even distribution of colors (red for worst, green for best).
-
-    :param machine_metrics: Dict with machine IDs as keys and metric dictionaries as values.
-    :param metric_key: The key for the metric (e.g., "P", "A", or "adjusted_downtime_percentage").
-    :param color_key: The key to store the resulting color hex (e.g., "P_color", "A_color", or "downtime_percentage_color").
-    """
-    # Gather (machine_id, value) pairs for machines that have the metric.
-    items = [(machine_id, data[metric_key]) for machine_id, data in machine_metrics.items() if data.get(metric_key) is not None]
-    if not items:
-        print(f"[apply_color_gradient_to_line] No values found for metric key: '{metric_key}'.")
-        return
-
-    # Sort the list by metric value (ascending).
-    items.sort(key=lambda x: x[1])
-    total = len(items)
-
-    # Assign each machine a normalized ratio based on its rank.
-    for rank, (machine_id, value) in enumerate(items):
-        # Normalize rank from 0 to 1. If total is 1, default to 0.5.
-        ratio = rank / (total - 1) if total > 1 else 0.5
-        color_hex = get_color_for_ratio(ratio)
-        machine_metrics[machine_id][color_key] = color_hex
 
