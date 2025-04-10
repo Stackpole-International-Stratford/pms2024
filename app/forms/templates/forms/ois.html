@@ -759,12 +759,18 @@
                                             title: {
                                                 display: true,
                                                 text: 'Time (last 24 hours)'
+                                            },
+                                            grid: {
+                                                display: false  // 🔥 This removes the X-axis gridlines
                                             }
                                         },
                                         y: {
                                             title: {
                                                 display: true,
                                                 text: 'Answer Value'
+                                            },
+                                            grid: {
+                                                display: false  // 🔥 This removes the X-axis gridlines
                                             },
                                             suggestedMin: minValue - Math.abs(nominal - minValue) * 0.2,
                                             suggestedMax: maxValue + Math.abs(maxValue - nominal) * 0.2
