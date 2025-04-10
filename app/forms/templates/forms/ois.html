@@ -723,4 +723,145 @@
                                 // Increase the radius to make points bigger
                                 pointRadius: 8, // Adjust this value as needed
                                 // Make points darker by using a darker color
-                       
+                                pointBackgroundColor: 'rgba(75, 100, 100, 0.9)', // darker shade than the default
+                                // Optionally, adjust the border color too
+                                pointBorderColor: 'rgba(50, 80, 80, 1)',
+                                fill: false,
+                                borderColor: 'rgb(75, 192, 192)',
+                                showLine: false, // Ensures the chart shows only points
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            plugins: {
+                                annotation: {
+                                    annotations: {
+                                        // Adjust xMin and xMax to numeric values matching the scatter data
+                                        redZoneLower: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 0,
+                                            yMax: 20,
+                                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        yellowZoneLower: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 20,
+                                            yMax: 40,
+                                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        greenZone: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 40,
+                                            yMax: 60,
+                                            backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        yellowZoneUpper: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 60,
+                                            yMax: 80,
+                                            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+                                            borderWidth: 0
+                                        },
+                                        redZoneUpper: {
+                                            type: 'box',
+                                            xScaleID: 'x',
+                                            yScaleID: 'y',
+                                            xMin: 1,
+                                            xMax: 7,
+                                            yMin: 80,
+                                            yMax: 100,
+                                            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                            borderWidth: 0
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    type: 'linear', // Set x-axis to linear
+                                    position: 'bottom'
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100  // Ensures the full range is visible
+                                }
+                            }
+                        }
+                    });
+        
+                    // Initialize and show the modal using Bootstrap's Modal API
+                    var modalElement = document.getElementById('questionModal');
+                    modalElement.addEventListener('shown.bs.modal', function () {
+                        if (window.sampleChartInstance) {
+                            window.sampleChartInstance.update();
+                        }
+                    });
+        
+                    var questionModal = new bootstrap.Modal(modalElement);
+                    questionModal.show();
+                });
+            });
+        });
+        </script>
+        
+
+<style>
+/* Change the cursor on table row hover */
+.col-md-6:first-child table tbody tr:hover {
+    cursor: pointer;
+}
+
+/* Ensure the chart canvas has an appropriate height */
+#sampleChart {
+    max-width: 100%;
+    height: 300px;
+}
+</style>
+
+<!-- Question Modal -->
+<div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">  <!-- Using a larger modal to accommodate the chart -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="questionModalLabel">Question Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Question details -->
+                <p id="questionIdDisplay"></p>
+                <div id="questionAnswersDisplay"></div>
+                <!-- Canvas for the sample line chart with annotated bands -->
+                <canvas id="sampleChart"></canvas>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    
+
+  
+        
+</body>
+</html>
