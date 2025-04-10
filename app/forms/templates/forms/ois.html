@@ -646,200 +646,181 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Select all table rows in the left column
+            // Select all table rows in the left column that represent questions
             var tableRows = document.querySelectorAll('.col-md-6:first-child table tbody tr');
         
             // Add click event listener to each row
             tableRows.forEach(function(row) {
                 row.addEventListener('click', function() {
-                    // Get the question ID from the data attribute
+                    // Get the question_id from the data attribute
                     var questionId = row.getAttribute('data-question-id');
         
-                    // Display the question ID in the modal header (or any designated element)
-                    document.getElementById('questionIdDisplay').textContent = "Question ID: " + questionId;
-        
-                    // Fetch question details and answers
+                    // Fetch question details and answers for the selected question ID
                     fetch('/forms/ois-answer-chart/?question_id=' + encodeURIComponent(questionId))
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Answers:", data.answers);
-                        
-                        // Build an HTML list for the answers (optional, if you wish to display them)
-                        var answersHtml = "";
-                        if (data.answers && data.answers.length > 0) {
-                            answersHtml = "<ul>";
-                            data.answers.forEach(function(answer) {
-                                answersHtml += "<li>" + answer + "</li>";
-                            });
-                            answersHtml += "</ul>";
-                        } else {
-                            answersHtml = "<p>No answers in the last week.</p>";
-                        }
-                        document.getElementById('questionAnswersDisplay').innerHTML = answersHtml;
+                        .then(response => response.json())
+                        .then(function(data) {
+                            // Build scatter data points from the answers array (using index as x value)
+                            var scatterData = [];
+                            if (data.answers && data.answers.length > 0) {
+                                data.answers.forEach(function(answer, index) {
+                                    // Ensure numeric conversion; adjust if your data format differs
+                                    scatterData.push({ x: index, y: parseFloat(answer) });
+                                });
+                            }
         
-                        // Convert answers to scatter plot data points (using the answer index as x value)
-                        var scatterData = [];
-                        if (data.answers && data.answers.length > 0) {
-                            data.answers.forEach(function(answer, index) {
-                                // Convert the answer to a float; adjust if your data format is different
-                                scatterData.push({ x: index, y: parseFloat(answer) });
-                            });
-                        }
+                            // Extract specification values for the horizontal reference lines
+                            var specs = data.question_specs || {};
+                            var nominal = parseFloat(specs.nominal) || 0;
+                            var upperControlLimit = parseFloat(specs.upper_control_limit) || 0;
+                            var lowerControlLimit = parseFloat(specs.lower_control_limit) || 0;
+                            var minValue = parseFloat(specs.min) || 0;
+                            var maxValue = parseFloat(specs.max) || 0;
         
-                        // Extract the specification values from the question details.
-                        // Expected keys: nominal, upper_control_limit, lower_control_limit, min, max
-                        var specs = data.question_specs || {};
-                        var nominal = parseFloat(specs.nominal) || 0;
-                        var upperControlLimit = parseFloat(specs.upper_control_limit) || 0;
-                        var lowerControlLimit = parseFloat(specs.lower_control_limit) || 0;
-                        var minValue = parseFloat(specs.min) || 0;
-                        var maxValue = parseFloat(specs.max) || 0;
+                            // Define the x-axis range based on the answer count
+                            var xMin = 0;
+                            var xMax = scatterData.length > 0 ? scatterData.length - 1 : 10;
         
-                        // Determine the x-axis range based on the number of answers
-                        var xMin = 0;
-                        var xMax = scatterData.length > 0 ? scatterData.length - 1 : 10;
+                            // Destroy any existing chart to avoid duplicates
+                            if (window.sampleChartInstance) {
+                                window.sampleChartInstance.destroy();
+                            }
         
-                        // Destroy any existing chart instance to avoid duplicate charts
-                        if (window.sampleChartInstance) {
-                            window.sampleChartInstance.destroy();
-                        }
+                            // Get the 2D context of the canvas
+                            var ctx = document.getElementById("sampleChart").getContext("2d");
         
-                        // Get the 2D context of the canvas element
-                        var ctx = document.getElementById("sampleChart").getContext("2d");
-        
-                        // Create a new Chart.js instance
-                        window.sampleChartInstance = new Chart(ctx, {
-                            type: 'scatter',
-                            data: {
-                                datasets: [
-                                    // Scatter dataset for the answers
-                                    {
-                                        label: "Answers (last week)",
-                                        data: scatterData,
-                                        backgroundColor: 'rgba(75, 192, 192, 1)',
-                                        pointRadius: 4,
-                                    },
-                                    // Horizontal line at the Nominal value
-                                    {
-                                        type: 'line',
-                                        label: 'Nominal',
-                                        data: [
-                                            { x: xMin, y: nominal },
-                                            { x: xMax, y: nominal }
-                                        ],
-                                        borderColor: 'black',
-                                        borderDash: [5, 5],
-                                        fill: false,
-                                        borderWidth: 2,
-                                        pointRadius: 0,
-                                    },
-                                    // Horizontal line at the Upper Control Limit
-                                    {
-                                        type: 'line',
-                                        label: 'Upper Control Limit',
-                                        data: [
-                                            { x: xMin, y: upperControlLimit },
-                                            { x: xMax, y: upperControlLimit }
-                                        ],
-                                        borderColor: 'orange',
-                                        borderDash: [5, 5],
-                                        fill: false,
-                                        borderWidth: 2,
-                                        pointRadius: 0,
-                                    },
-                                    // Horizontal line at the Lower Control Limit
-                                    {
-                                        type: 'line',
-                                        label: 'Lower Control Limit',
-                                        data: [
-                                            { x: xMin, y: lowerControlLimit },
-                                            { x: xMax, y: lowerControlLimit }
-                                        ],
-                                        borderColor: 'orange',
-                                        borderDash: [5, 5],
-                                        fill: false,
-                                        borderWidth: 2,
-                                        pointRadius: 0,
-                                    },
-                                    // Horizontal line at the Min value
-                                    {
-                                        type: 'line',
-                                        label: 'Min Value',
-                                        data: [
-                                            { x: xMin, y: minValue },
-                                            { x: xMax, y: minValue }
-                                        ],
-                                        borderColor: 'red',
-                                        borderDash: [5, 5],
-                                        fill: false,
-                                        borderWidth: 2,
-                                        pointRadius: 0,
-                                    },
-                                    // Horizontal line at the Max value
-                                    {
-                                        type: 'line',
-                                        label: 'Max Value',
-                                        data: [
-                                            { x: xMin, y: maxValue },
-                                            { x: xMax, y: maxValue }
-                                        ],
-                                        borderColor: 'red',
-                                        borderDash: [5, 5],
-                                        fill: false,
-                                        borderWidth: 2,
-                                        pointRadius: 0,
-                                    }
-                                ]
-                            },
-                            options: {
-                                scales: {
-                                    x: {
-                                        type: 'linear',
-                                        title: {
-                                            display: true,
-                                            text: 'Index'
+                            // Create the Chart.js scatter plot with annotated horizontal lines
+                            window.sampleChartInstance = new Chart(ctx, {
+                                type: 'scatter',
+                                data: {
+                                    datasets: [
+                                        // Dataset for the answer points
+                                        {
+                                            label: "Answers (last week)",
+                                            data: scatterData,
+                                            backgroundColor: 'rgba(75, 192, 192, 1)',
+                                            pointRadius: 4,
                                         },
-                                        suggestedMin: xMin,
-                                        suggestedMax: xMax
-                                    },
-                                    y: {
-                                        title: {
-                                            display: true,
-                                            text: 'Answer Value'
+                                        // Horizontal line at Nominal
+                                        {
+                                            type: 'line',
+                                            label: 'Nominal (' + nominal + ')',
+                                            data: [
+                                                { x: xMin, y: nominal },
+                                                { x: xMax, y: nominal }
+                                            ],
+                                            borderColor: 'black',
+                                            borderDash: [5, 5],
+                                            fill: false,
+                                            borderWidth: 2,
+                                            pointRadius: 0,
                                         },
-                                        // Provide padding around the y-axis based on the specs
-                                        suggestedMin: minValue - (Math.abs(nominal - minValue) * 0.2),
-                                        suggestedMax: maxValue + (Math.abs(maxValue - nominal) * 0.2)
-                                    }
+                                        // Horizontal line at Upper Control Limit
+                                        {
+                                            type: 'line',
+                                            label: 'Upper Control Limit (' + upperControlLimit + ')',
+                                            data: [
+                                                { x: xMin, y: upperControlLimit },
+                                                { x: xMax, y: upperControlLimit }
+                                            ],
+                                            borderColor: 'orange',
+                                            borderDash: [5, 5],
+                                            fill: false,
+                                            borderWidth: 2,
+                                            pointRadius: 0,
+                                        },
+                                        // Horizontal line at Lower Control Limit
+                                        {
+                                            type: 'line',
+                                            label: 'Lower Control Limit (' + lowerControlLimit + ')',
+                                            data: [
+                                                { x: xMin, y: lowerControlLimit },
+                                                { x: xMax, y: lowerControlLimit }
+                                            ],
+                                            borderColor: 'orange',
+                                            borderDash: [5, 5],
+                                            fill: false,
+                                            borderWidth: 2,
+                                            pointRadius: 0,
+                                        },
+                                        // Horizontal line at Min value
+                                        {
+                                            type: 'line',
+                                            label: 'Min Value (' + minValue + ')',
+                                            data: [
+                                                { x: xMin, y: minValue },
+                                                { x: xMax, y: minValue }
+                                            ],
+                                            borderColor: 'red',
+                                            borderDash: [5, 5],
+                                            fill: false,
+                                            borderWidth: 2,
+                                            pointRadius: 0,
+                                        },
+                                        // Horizontal line at Max value
+                                        {
+                                            type: 'line',
+                                            label: 'Max Value (' + maxValue + ')',
+                                            data: [
+                                                { x: xMin, y: maxValue },
+                                                { x: xMax, y: maxValue }
+                                            ],
+                                            borderColor: 'red',
+                                            borderDash: [5, 5],
+                                            fill: false,
+                                            borderWidth: 2,
+                                            pointRadius: 0,
+                                        }
+                                    ]
                                 },
-                                plugins: {
-                                    legend: {
-                                        display: true
+                                options: {
+                                    scales: {
+                                        x: {
+                                            type: 'linear',
+                                            title: {
+                                                display: true,
+                                                text: 'Index'
+                                            },
+                                            suggestedMin: xMin,
+                                            suggestedMax: xMax
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'Answer Value'
+                                            },
+                                            // Provide padding around the y-axis based on your spec values
+                                            suggestedMin: minValue - Math.abs(nominal - minValue) * 0.2,
+                                            suggestedMax: maxValue + Math.abs(maxValue - nominal) * 0.2
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            display: true
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
         
-                        // Update or redraw the chart when the modal is shown
-                        var modalElement = document.getElementById('questionModal');
-                        modalElement.addEventListener('shown.bs.modal', function () {
-                            if (window.sampleChartInstance) {
-                                window.sampleChartInstance.update();
-                            }
-                        });
+                            // Update the chart when the modal is shown (helpful if the modal was hidden)
+                            var modalElement = document.getElementById('questionModal');
+                            modalElement.addEventListener('shown.bs.modal', function () {
+                                if (window.sampleChartInstance) {
+                                    window.sampleChartInstance.update();
+                                }
+                            });
         
-                        // Initialize and show the modal using Bootstrap's Modal API
-                        var questionModal = new bootstrap.Modal(modalElement);
-                        questionModal.show();
-                    })
-                    .catch(error => {
-                        console.error("Error fetching answers:", error);
-                        document.getElementById('questionAnswersDisplay').innerHTML = "<p>Error fetching answers.</p>";
-                    });
+                            // Initialize and show the modal using Bootstrap's Modal API
+                            var questionModal = new bootstrap.Modal(modalElement);
+                            questionModal.show();
+                        })
+                        .catch(function(error) {
+                            console.error("Error fetching answers:", error);
+                        });
                 });
             });
         });
         </script>
+        
         
 
         
@@ -858,28 +839,22 @@
 }
 </style>
 
-<!-- Question Modal -->
+<!-- Modal HTML (only includes the canvas for the chart) -->
 <div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">  <!-- Using a larger modal to accommodate the chart -->
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="questionModalLabel">Question Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Question details -->
-                <p id="questionIdDisplay"></p>
-                <div id="questionAnswersDisplay"></div>
-                <!-- Canvas for the sample line chart with annotated bands -->
-                <canvas id="sampleChart"></canvas>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
+    <div class="modal-dialog modal-lg">  <!-- Larger modal to accommodate the chart -->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="questionModalLabel">Question Chart</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <div class="modal-body">
+          <!-- Canvas for the chart -->
+          <canvas id="sampleChart"></canvas>
+        </div>
+      </div>
     </div>
-</div>
-
+  </div>
+  
     
 
   
