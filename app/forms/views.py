@@ -517,41 +517,42 @@ def print_out_of_spec_answers(answers):
 
 def ois_answer_chart_view(request):
     """
-    Fetch all answers for a given question (specified by GET parameter 'question_id')
-    in the last week. Each answer is stored as a JSON object in the FormAnswer model;
-    this view extracts the value under the key "answer" from each record.
-    
-    It also retrieves the corresponding question and extracts its "min", "nominal", "max",
-    "lower_control_limit", and "upper_control_limit" values from the specifications (if available),
-    and returns these along with additional details (e.g., created_at and form_id).
+    Fetch all answers for a given question in the last 24 hours.
+    Each answer includes the value under the key "answer" and its timestamp.
+    Also includes the question's spec info for chart overlays.
     """
-    # Get question_id from GET parameters.
     question_id = request.GET.get('question_id')
     if not question_id:
         return JsonResponse({"error": "No question_id provided."}, status=400)
-    
+
     try:
         question_id = int(question_id)
     except ValueError:
         return JsonResponse({"error": "Invalid question_id provided."}, status=400)
-    
-    # Determine the time limit (one week ago).
-    one_week_ago = timezone.now() - timedelta(days=7)
-    
-    # Query answers from the past week for the given question_id.
+
+    # Last 24 hours
+    twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
+
+    # Fetch recent answers
     answers_qs = FormAnswer.objects.filter(
         question_id=question_id,
-        created_at__gte=one_week_ago
+        created_at__gte=twenty_four_hours_ago
     ).order_by('created_at')
-    
-    # Extract the answer value from each record.
+
+    import pytz
+
+    eastern = pytz.timezone('US/Eastern')
+
     answers_list = []
     for ans in answers_qs:
-        # If the answer is a dict, get the value under the "answer" key.
         answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
-        answers_list.append(answer_value)
-    
-    # Fetch the question record and extract specifications.
+        created_at_est = ans.created_at.astimezone(eastern)
+        answers_list.append({
+            "answer": answer_value,
+            "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M")
+        })
+
+    # Fetch question specs
     try:
         question_obj = FormQuestion.objects.get(id=question_id)
     except FormQuestion.DoesNotExist:
@@ -559,29 +560,26 @@ def ois_answer_chart_view(request):
         question_details = {}
     else:
         specs = question_obj.question.get('specifications')
-        if isinstance(specs, dict):
-            question_specs = {
-                'min': specs.get('min'),
-                'nominal': specs.get('nominal'),
-                'max': specs.get('max'),
-                'lower_control_limit': specs.get('lower_control_limit'),
-                'upper_control_limit': specs.get('upper_control_limit'),
-            }
-        else:
-            question_specs = {}
-        
+        question_specs = {
+            'min': specs.get('min'),
+            'nominal': specs.get('nominal'),
+            'max': specs.get('max'),
+            'lower_control_limit': specs.get('lower_control_limit'),
+            'upper_control_limit': specs.get('upper_control_limit'),
+        } if isinstance(specs, dict) else {}
+
         question_details = {
             'question': question_obj.question,
-            'created_at': question_obj.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'created_at': question_obj.created_at.strftime("%Y-%m-%d %H:%M"),
             'form_id': question_obj.form.id,
         }
-    
-    # Return the answers and question details as JSON.
+
     return JsonResponse({
         "answers": answers_list,
         "question_specs": question_specs,
         "question_details": question_details,
     })
+
 
 
 def submit_ois_answers(formset, request, questions, machine):
