@@ -584,14 +584,15 @@ def ois_answer_chart_view(request):
             )
 
             if out_of_spec:
-                print(f"Out-of-spec answer detected: value={numeric_answer}, min={min_val}, max={max_val}, timestamp={ans.created_at}")
+                print(f"Out-of-spec answer filtered out: value={numeric_answer}, min={min_val}, max={max_val}, timestamp={ans.created_at}")
+                continue  # Skip adding to the response
 
             created_at_est = ans.created_at.astimezone(eastern)
             answers_list.append({
                 "answer": answer_value,
-                "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M"),
-                "out_of_spec": out_of_spec
+                "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M")
             })
+
 
 
     return JsonResponse({
