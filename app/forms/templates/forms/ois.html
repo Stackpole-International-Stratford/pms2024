@@ -829,12 +829,42 @@
                                                     return `(${formatted}, ${y})`;
                                                 }
                                             }
+                                        },
+                                        annotation: {
+                                            annotations: {
+                                                controlLimitRange: {
+                                                    type: 'box',
+                                                    yMin: lowerControlLimit,
+                                                    yMax: upperControlLimit,
+                                                    backgroundColor: 'rgba(0, 255, 0, 0.1)', // light transparent green
+                                                    borderWidth: 0
+                                                }
+                                            }
                                         }
                                                   
                                     }
                                 }
                             });
         
+
+                            // Handle out-of-spec answers
+                            const outOfSpecList = document.getElementById("outOfSpecList");
+                            outOfSpecList.innerHTML = ''; // Clear previous items
+
+                            if (data.out_of_spec_answers && data.out_of_spec_answers.length > 0) {
+                                data.out_of_spec_answers.forEach(function (item) {
+                                    const li = document.createElement('li');
+                                    li.classList.add('list-group-item', 'list-group-item-warning');
+                                    li.textContent = `${item.created_at} – Value: ${item.answer}`;
+                                    outOfSpecList.appendChild(li);
+                                });
+                            } else {
+                                const li = document.createElement('li');
+                                li.classList.add('list-group-item');
+                                li.textContent = "No out-of-spec answers in the last 24 hours.";
+                                outOfSpecList.appendChild(li);
+                            }
+
                             const modalElement = document.getElementById('questionModal');
                             modalElement.addEventListener('shown.bs.modal', function () {
                                 if (window.sampleChartInstance) {

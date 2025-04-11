@@ -521,6 +521,7 @@ def ois_answer_chart_view(request):
     Each answer includes the value under the key "answer" and its timestamp.
     Also includes the question's spec info for chart overlays and a flag for out-of-spec answers.
     """
+    out_of_spec_answers_list = []
     question_id = request.GET.get('question_id')
     if not question_id:
         return JsonResponse({"error": "No question_id provided."}, status=400)
@@ -564,42 +565,50 @@ def ois_answer_chart_view(request):
             'form_id': question_obj.form.id,
         }
 
-        # Process answers and check for out-of-spec
-        answers_list = []
-        for ans in answers_qs:
-            answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
-            try:
-                numeric_answer = float(answer_value)
-            except (ValueError, TypeError):
-                numeric_answer = None
+    # Process answers and check for out-of-spec
+    answers_list = []
+    for ans in answers_qs:
+        answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
+        try:
+            numeric_answer = float(answer_value)
+        except (ValueError, TypeError):
+            numeric_answer = None
 
-            min_val = question_specs.get('min')
-            max_val = question_specs.get('max')
+        min_val = question_specs.get('min')
+        max_val = question_specs.get('max')
 
-            out_of_spec = (
-                numeric_answer is not None and (
-                    (min_val is not None and numeric_answer < min_val) or
-                    (max_val is not None and numeric_answer > max_val)
-                )
+        created_at_est = ans.created_at.astimezone(eastern)  # ✅ move this up
+
+        out_of_spec = (
+            numeric_answer is not None and (
+                (min_val is not None and numeric_answer < min_val) or
+                (max_val is not None and numeric_answer > max_val)
             )
+        )
 
-            if out_of_spec:
-                print(f"Out-of-spec answer filtered out: value={numeric_answer}, min={min_val}, max={max_val}, timestamp={ans.created_at}")
-                continue  # Skip adding to the response
-
-            created_at_est = ans.created_at.astimezone(eastern)
-            answers_list.append({
+        if out_of_spec:
+            print(f"Out-of-spec answer filtered out: value={numeric_answer}, min={min_val}, max={max_val}, timestamp={created_at_est}")
+            out_of_spec_answers_list.append({
                 "answer": answer_value,
-                "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M")
+                "created_at": created_at_est.strftime("%B %d, %Y at %I:%M %p")
             })
+            continue
+
+        answers_list.append({
+            "answer": answer_value,
+            "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M")
+        })
 
 
+    out_of_spec_answers_list.reverse()
 
     return JsonResponse({
         "answers": answers_list,
+        "out_of_spec_answers": out_of_spec_answers_list,
         "question_specs": question_specs,
         "question_details": question_details,
     })
+
 
 
 
