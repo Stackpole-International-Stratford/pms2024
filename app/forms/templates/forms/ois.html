@@ -705,7 +705,8 @@
                                             borderColor: 'black',
                                             borderDash: [5, 5],
                                             borderWidth: 2,
-                                            pointRadius: 0
+                                            pointRadius: 1,
+                                            pointHoverRadius: 6
                                         },
                                         {
                                             type: 'line',
@@ -714,7 +715,8 @@
                                             borderColor: 'orange',
                                             borderDash: [5, 5],
                                             borderWidth: 2,
-                                            pointRadius: 0
+                                            pointRadius: 1,
+                                            pointHoverRadius: 6
                                         },
                                         {
                                             type: 'line',
@@ -723,7 +725,8 @@
                                             borderColor: 'orange',
                                             borderDash: [5, 5],
                                             borderWidth: 2,
-                                            pointRadius: 0
+                                            pointRadius: 1,
+                                            pointHoverRadius: 6
                                         },
                                         {
                                             type: 'line',
@@ -732,7 +735,8 @@
                                             borderColor: 'red',
                                             borderDash: [5, 5],
                                             borderWidth: 2,
-                                            pointRadius: 0
+                                            pointRadius: 1,
+                                            pointHoverRadius: 6
                                         },
                                         {
                                             type: 'line',
@@ -741,7 +745,8 @@
                                             borderColor: 'red',
                                             borderDash: [5, 5],
                                             borderWidth: 2,
-                                            pointRadius: 0
+                                            pointRadius: 1,
+                                            pointHoverRadius: 6
                                         }
                                     ]
                                 },
@@ -783,6 +788,13 @@
                                         tooltip: {
                                             callbacks: {
                                                 label: function (context) {
+                                                    const datasetLabel = context.dataset.label || '';
+                                                    const y = context.raw.y;
+                                        
+                                                    if (context.dataset.type === 'line') {
+                                                        return `${datasetLabel}: ${y}`;
+                                                    }
+                                        
                                                     const date = new Date(context.raw.x);
                                                     const formatted = date.toLocaleString([], {
                                                         year: 'numeric',
@@ -792,11 +804,11 @@
                                                         minute: '2-digit',
                                                         hour12: true
                                                     });
-                                                    const y = context.raw.y;
                                                     return `(${formatted}, ${y})`;
                                                 }
                                             }
-                                        }                  
+                                        }
+                                                  
                                     }
                                 }
                             });
