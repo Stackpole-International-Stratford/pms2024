@@ -519,7 +519,7 @@ def ois_answer_chart_view(request):
     """
     Fetch all answers for a given question in the last 24 hours.
     Each answer includes the value under the key "answer" and its timestamp.
-    Also includes the question's spec info for chart overlays.
+    Also includes the question's spec info for chart overlays and a flag for out-of-spec answers.
     """
     question_id = request.GET.get('question_id')
     if not question_id:
@@ -540,17 +540,7 @@ def ois_answer_chart_view(request):
     ).order_by('created_at')
 
     import pytz
-
     eastern = pytz.timezone('US/Eastern')
-
-    answers_list = []
-    for ans in answers_qs:
-        answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
-        created_at_est = ans.created_at.astimezone(eastern)
-        answers_list.append({
-            "answer": answer_value,
-            "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M")
-        })
 
     # Fetch question specs
     try:
@@ -573,6 +563,36 @@ def ois_answer_chart_view(request):
             'created_at': question_obj.created_at.strftime("%Y-%m-%d %H:%M"),
             'form_id': question_obj.form.id,
         }
+
+        # Process answers and check for out-of-spec
+        answers_list = []
+        for ans in answers_qs:
+            answer_value = ans.answer.get('answer') if isinstance(ans.answer, dict) else ans.answer
+            try:
+                numeric_answer = float(answer_value)
+            except (ValueError, TypeError):
+                numeric_answer = None
+
+            min_val = question_specs.get('min')
+            max_val = question_specs.get('max')
+
+            out_of_spec = (
+                numeric_answer is not None and (
+                    (min_val is not None and numeric_answer < min_val) or
+                    (max_val is not None and numeric_answer > max_val)
+                )
+            )
+
+            if out_of_spec:
+                print(f"Out-of-spec answer detected: value={numeric_answer}, min={min_val}, max={max_val}, timestamp={ans.created_at}")
+
+            created_at_est = ans.created_at.astimezone(eastern)
+            answers_list.append({
+                "answer": answer_value,
+                "created_at": created_at_est.strftime("%Y-%m-%dT%H:%M"),
+                "out_of_spec": out_of_spec
+            })
+
 
     return JsonResponse({
         "answers": answers_list,
