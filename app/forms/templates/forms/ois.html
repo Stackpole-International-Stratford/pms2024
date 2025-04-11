@@ -832,15 +832,54 @@
                                         },
                                         annotation: {
                                             annotations: {
+                                                // ✅ In-control zone (green)
                                                 controlLimitRange: {
                                                     type: 'box',
                                                     yMin: lowerControlLimit,
                                                     yMax: upperControlLimit,
-                                                    backgroundColor: 'rgba(0, 255, 0, 0.1)', // light transparent green
+                                                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                                                    borderWidth: 0
+                                                },
+                                        
+                                                // ⚠️ Upper warning zone (yellow)
+                                                upperWarningZone: {
+                                                    type: 'box',
+                                                    yMin: upperControlLimit,
+                                                    yMax: maxValue,
+                                                    backgroundColor: 'rgba(255, 204, 0, 0.2)',
+                                                    borderWidth: 0
+                                                },
+                                        
+                                                // ⚠️ Lower warning zone (yellow)
+                                                lowerWarningZone: {
+                                                    type: 'box',
+                                                    yMin: minValue,
+                                                    yMax: lowerControlLimit,
+                                                    backgroundColor: 'rgba(255, 204, 0, 0.2)',
+                                                    borderWidth: 0
+                                                },
+                                        
+                                                // 🔴 Above max (out of spec)
+                                                aboveMaxZone: {
+                                                    type: 'box',
+                                                    yMin: maxValue,
+                                                    yMax: maxValue + (maxValue - nominal) * 0.5,  // stretch it a bit beyond max
+                                                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                                                    borderWidth: 0
+                                                },
+                                        
+                                                // 🔴 Below min (out of spec)
+                                                belowMinZone: {
+                                                    type: 'box',
+                                                    yMin: minValue - (nominal - minValue) * 0.5,  // stretch below min
+                                                    yMax: minValue,
+                                                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
                                                     borderWidth: 0
                                                 }
                                             }
                                         }
+                                        
+                                        
                                                   
                                     }
                                 }
