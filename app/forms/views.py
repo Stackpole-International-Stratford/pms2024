@@ -587,6 +587,10 @@ def submit_ois_answers(formset, request, questions, machine):
     inspection_type = request.POST.get('inspection_type', 'OIS')
     operator_number = request.POST.get('operator_number', '')
     spindle_nest = request.POST.get('spindle_nests', 'N/A')  # New: Get spindle nest
+    supervisor_clock_id = request.POST.get('supervisor_clock_id', '').strip()
+    incident_description = request.POST.get('incident_description', '').strip()
+    reaction_plan = request.POST.get('reaction_plan', '').strip()
+
 
     print("\n--- Collecting OIS Answers ---")
 
@@ -648,6 +652,12 @@ def submit_ois_answers(formset, request, questions, machine):
                 'min': min_value,
                 'max': max_value
             }
+
+            # If out of spec, include modal fields
+            if out_of_spec:
+                answer_json['supervisor_clock_id'] = supervisor_clock_id
+                answer_json['incident_description'] = incident_description
+                answer_json['reaction_plan'] = reaction_plan
 
             FormAnswer.objects.create(
                 question=question,
