@@ -802,16 +802,11 @@
                                             }
                                         },
                                         y: {
-                                            title: {
-                                                display: true,
-                                                text: 'Answer Value'
-                                            },
-                                            grid: {
-                                                display: false  //This removes the X-axis gridlines
-                                            },
-                                            suggestedMin: minValue - Math.abs(nominal - minValue) * 0.2,
-                                            suggestedMax: maxValue + Math.abs(maxValue - nominal) * 0.2
-                                        }
+                                            title: { display: true, text: 'Answer Value' },
+                                            grid: { display: false },
+                                            min: minValue - (nominal - minValue) * 0.7,  // fully extend the lower range
+                                            max: maxValue + (maxValue - nominal) * 0.7   // fully extend the upper range
+                                        }                                        
                                     },
                                     plugins: {
                                         legend: {
@@ -873,7 +868,7 @@
                                                 aboveMaxZone: {
                                                     type: 'box',
                                                     yMin: maxValue,
-                                                    yMax: maxValue + (maxValue - nominal) * 0.5,  // stretch it a bit beyond max
+                                                    yMax: maxValue + (maxValue - nominal) * 0.7,  // stretch it a bit beyond max
                                                     backgroundColor: 'rgba(255, 0, 0, 0.2)',
                                                     borderWidth: 0
                                                 },
@@ -881,7 +876,7 @@
                                                 // 🔴 Below min (out of spec)
                                                 belowMinZone: {
                                                     type: 'box',
-                                                    yMin: minValue - (nominal - minValue) * 0.5,  // stretch below min
+                                                    yMin: minValue - (nominal - minValue) * 0.7,  // stretch below min
                                                     yMax: minValue,
                                                     backgroundColor: 'rgba(255, 0, 0, 0.2)',
                                                     borderWidth: 0

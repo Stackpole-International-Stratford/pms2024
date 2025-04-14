@@ -592,7 +592,7 @@ def ois_answer_chart_view(request):
                 "answer": answer_value,
                 "created_at": created_at_est.strftime("%B %d, %Y at %I:%M %p")
             })
-            continue
+            # continue
 
         answers_list.append({
             "answer": answer_value,
