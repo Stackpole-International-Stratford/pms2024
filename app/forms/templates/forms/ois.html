@@ -719,16 +719,17 @@
                             };
         
                             window.sampleChartInstance = new Chart(ctx, {
-                                type: 'scatter',
+                                type: 'line',
                                 data: {
                                     datasets: [
                                         {
                                             label: "Answers (last 24h)",
                                             data: scatterData,
                                             backgroundColor: 'rgba(54, 162, 235, 1)',
+                                            borderColor: 'rgba(0, 0, 0, 1)',  // Darker line (black)
                                             pointRadius: 6,
                                             pointHoverRadius: 8,
-                                            borderWidth: 1
+                                            borderWidth: 3   // Thicker line
                                         },
                                         {
                                             type: 'line',
