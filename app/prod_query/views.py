@@ -6370,7 +6370,7 @@ def compute_oee_metrics(
     # overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
 
     if overall_adjusted_target == 0:
-        performance = 0
+        overall_performance = 0
     else:
         overall_performance = overall_total_produced / overall_adjusted_target
     
