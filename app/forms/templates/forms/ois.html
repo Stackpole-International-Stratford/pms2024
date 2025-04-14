@@ -12,6 +12,8 @@
     <script src={% static "chart.js/chartjs-adapter-moment.min.js" %}></script>
     <script src="{% static 'chart.js/chartjs-plugin-regression.min.js' %}"></script> <!-- Added this line -->
     <script src="{% static 'chart.js/chartjs-plugin-annotation.min.js' %}"></script> <!-- Added this line -->
+    <script src="{% static 'chart.js/chartjs-plugin-crosshair.min.js' %}"></script> <!-- Added this line -->
+
 
     <title>{{ form_instance.name }}</title>
     <style>
@@ -799,30 +801,32 @@
                                                 text: 'Time (last 24 hours)'
                                             },
                                             grid: {
-                                                display: false  //This removes the X-axis gridlines
+                                                display: false  // Remove the X-axis gridlines
                                             }
                                         },
                                         y: {
                                             title: { display: true, text: 'Answer Value' },
                                             grid: { display: false },
-                                            min: minValue - (nominal - minValue) * 0.7,  // fully extend the lower range
-                                            max: maxValue + (maxValue - nominal) * 0.7   // fully extend the upper range
-                                        }                                        
+                                            min: minValue - (nominal - minValue) * 0.7,  // Extend the lower range
+                                            max: maxValue + (maxValue - nominal) * 0.7   // Extend the upper range
+                                        }
                                     },
                                     plugins: {
                                         legend: {
                                             display: true
                                         },
                                         tooltip: {
+                                            mode: 'index',       // Use "index" mode so all points at the x position are fetched
+                                            intersect: false,    // Do not require the mouse to be exactly over a point
                                             callbacks: {
                                                 label: function (context) {
                                                     const datasetLabel = context.dataset.label || '';
                                                     const y = context.raw.y;
-                                        
+                                                    
                                                     if (context.dataset.type === 'line') {
                                                         return `${datasetLabel}: ${y}`;
                                                     }
-                                        
+                                                    
                                                     const date = new Date(context.raw.x);
                                                     const formatted = date.toLocaleString([], {
                                                         year: 'numeric',
@@ -836,6 +840,21 @@
                                                 }
                                             }
                                         },
+                                        crosshair: {
+                                            line: {
+                                                color: '#000',    // Darker vertical line (black)
+                                                width: 2          // Thicker line
+                                            },
+                                            sync: {
+                                                enabled: false    // Disable sync if not needed
+                                            },
+                                            zoom: {
+                                                enabled: false    // Disable zooming if not required
+                                            },
+                                            snap: {
+                                                enabled: true     // Snap to data points if available
+                                            }
+                                        },
                                         annotation: {
                                             annotations: {
                                                 // ✅ In-control zone (green)
@@ -846,7 +865,6 @@
                                                     backgroundColor: 'rgba(0, 255, 0, 0.1)',
                                                     borderWidth: 0
                                                 },
-                                        
                                                 // ⚠️ Upper warning zone (yellow)
                                                 upperWarningZone: {
                                                     type: 'box',
@@ -855,7 +873,6 @@
                                                     backgroundColor: 'rgba(255, 204, 0, 0.2)',
                                                     borderWidth: 0
                                                 },
-                                        
                                                 // ⚠️ Lower warning zone (yellow)
                                                 lowerWarningZone: {
                                                     type: 'box',
@@ -864,33 +881,28 @@
                                                     backgroundColor: 'rgba(255, 204, 0, 0.2)',
                                                     borderWidth: 0
                                                 },
-                                        
                                                 // 🔴 Above max (out of spec)
                                                 aboveMaxZone: {
                                                     type: 'box',
                                                     yMin: maxValue,
-                                                    yMax: maxValue + (maxValue - nominal) * 0.7,  // stretch it a bit beyond max
+                                                    yMax: maxValue + (maxValue - nominal) * 0.7,
                                                     backgroundColor: 'rgba(255, 0, 0, 0.2)',
                                                     borderWidth: 0
                                                 },
-                                        
                                                 // 🔴 Below min (out of spec)
                                                 belowMinZone: {
                                                     type: 'box',
-                                                    yMin: minValue - (nominal - minValue) * 0.7,  // stretch below min
+                                                    yMin: minValue - (nominal - minValue) * 0.7,
                                                     yMax: minValue,
                                                     backgroundColor: 'rgba(255, 0, 0, 0.2)',
                                                     borderWidth: 0
                                                 }
                                             }
                                         }
-                                        
-                                        
-                                                  
                                     }
                                 }
                             });
-        
+                            
 
                             // Handle out-of-spec answers
                             const outOfSpecList = document.getElementById("outOfSpecList");
