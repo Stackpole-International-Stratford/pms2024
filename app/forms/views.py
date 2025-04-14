@@ -621,7 +621,6 @@ def submit_ois_answers(formset, request, questions, machine):
     incident_description = request.POST.get('incident_description', '').strip()
     reaction_plan = request.POST.get('reaction_plan', '').strip()
 
-
     print("\n--- Collecting OIS Answers ---")
 
     # Loop through each question to collect its answers
@@ -629,10 +628,10 @@ def submit_ois_answers(formset, request, questions, machine):
     for i, question in enumerate(questions):
         sample_size_value = question.question.get("sample_size", 1)
         sample_size = int(sample_size_value) if str(sample_size_value).isdigit() else 1
-        
+
         answers = []
         is_checkmark = question.question.get('checkmark', False)
-        
+
         if is_checkmark:
             answer_key = f"answer_{question.id}"
             answer_data = request.POST.get(answer_key)
@@ -650,11 +649,18 @@ def submit_ois_answers(formset, request, questions, machine):
                         'answer': answer_data,
                         'type': 'text'
                     })
-        
-        for answer in answers:
+
+        # Print a message if there are multiple answers for the same question
+        if len(answers) > 1:
+            print(f"Multiple answers being submitted for question {question.id}: {len(answers)} answers")
+            # Set a base time for multiple answers; each subsequent answer is 1 minute apart
+            base_time = timezone.now()
+
+        # Loop through collected answers; using enumerate to create a minute gap for each if needed
+        for index, answer in enumerate(answers):
             out_of_spec = False
             min_value, max_value = None, None
-            
+
             if answer['type'] == 'text':
                 is_range_based = question.question.get('specification_type', 'N/A') == 'range'
                 if is_range_based:
@@ -689,11 +695,17 @@ def submit_ois_answers(formset, request, questions, machine):
                 answer_json['incident_description'] = incident_description
                 answer_json['reaction_plan'] = reaction_plan
 
+            # Determine created_at time; for multiple answers, increment by one minute for each answer
+            if len(answers) > 1:
+                created_at = base_time + timedelta(minutes=index)
+            else:
+                created_at = timezone.now()
+
             FormAnswer.objects.create(
                 question=question,
                 answer=answer_json,  # Save as JSON for easier processing later
                 operator_number=operator_number,
-                created_at=timezone.now()
+                created_at=created_at
             )
 
             all_answers.append({
@@ -708,7 +720,6 @@ def submit_ois_answers(formset, request, questions, machine):
 
     print("\n--- All Answers Saved Successfully ---")
     print_out_of_spec_answers(all_answers)
-
 
 
 
