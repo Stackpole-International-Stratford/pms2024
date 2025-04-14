@@ -6528,7 +6528,13 @@ def fetch_machine_target(machine_id, line_name, effective_timestamp):
         .order_by('-effective_date_unix')
         .first()
     )
-    return target_record.target if target_record else None
+
+    if target_record is None:
+        print(f"DEBUG: No target found for machine_id: {machine_id}, line: {line_name}, effective_timestamp: {effective_timestamp}")
+        return None
+
+    return target_record.target
+
 
 
 def fetch_daily_scrap_data(cursor, start_time, end_time):
