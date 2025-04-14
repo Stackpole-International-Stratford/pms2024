@@ -119,7 +119,7 @@
                                 </thead>
                                 <tbody>
                                     {% for question_id, question in seven_day_data.questions_dict.items %}
-                                    <tr data-question-id="{{ question.id }}">
+                                    <tr data-question-id="{{ question.id }}" data-bs-toggle="tooltip" title="Click to view live chart">
                                         <td>{{ question.Composite }}</td>
                                         <td>{{ question.Specifications }}</td>
                                         <td>{{ question.SampleSize }}</td>
@@ -284,6 +284,16 @@
         </div>
     </div>
 
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+        });
+        </script>
+        
     <!-- Scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
