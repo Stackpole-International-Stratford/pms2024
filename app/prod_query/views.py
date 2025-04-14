@@ -6992,7 +6992,7 @@ def fetch_combined_oee_production_data(request):
     spec = importlib.util.spec_from_file_location("settings", settings_path)
     settings = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(settings)
-    get_db_connection = settings.get_db_connection
+    get_db_connection = settings.get_db_connection_new
     conn = get_db_connection()
     cursor = conn.cursor()
 

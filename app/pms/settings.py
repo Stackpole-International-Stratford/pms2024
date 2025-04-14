@@ -363,6 +363,15 @@ def get_db_connection():
         db="prodrptdb"
     )
 
+
+def get_db_connection_new():
+    return MySQLdb.connect(
+        host="10.4.1.245",
+        user="stuser",
+        passwd="stp383",
+        db="prodrptdb"
+    )
+
 DAVE_HOST = "10.4.1.224"
 DAVE_USER = "stuser"
 DAVE_PASSWORD = "stp383"
