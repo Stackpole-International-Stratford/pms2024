@@ -52,5 +52,6 @@ urlpatterns = [
 
     path('ois-answer-chart/', ois_answer_chart_view, name='ois_answer_chart'),
 
+    path('out-of-spec-lockout-email-event/', out_of_spec_lockout_email_event, name='out_of_spec_lockout_email_event'),
 
 ]

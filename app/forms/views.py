@@ -451,6 +451,32 @@ def test_send_email(request):
 
 
 
+@csrf_exempt  # Only for demonstration; ensure to properly handle CSRF in production
+def out_of_spec_lockout_email_event(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            answer_ids = data.get('answer_ids', '')
+            machine = data.get('machine', '')
+            part_number = data.get('part_number', '')
+            operation = data.get('operation', '')
+            
+            # For demonstration, we simply print the received values.
+            # In production, you may trigger an email event or another action.
+            print("Out-of-spec lockout email event received:")
+            print("Answer IDs:", answer_ids)
+            print("Machine:", machine)
+            print("Part Number:", part_number)
+            print("Operation:", operation)
+            
+            return JsonResponse({"status": "success", "message": "Data received."})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method."}, status=405)
+
+
+
 def print_out_of_spec_answers(answers):
     """
     Checks submitted answers for out-of-range values and prints relevant information.
