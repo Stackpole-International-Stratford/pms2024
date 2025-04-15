@@ -589,91 +589,95 @@
     </script>
 
     <!-- Out-of-Spec Modal Functionality -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const form = document.getElementById('ois-form');
-            const outOfSpecModalEl = document.getElementById('outOfSpecModal');
-            const outOfSpecModal = new bootstrap.Modal(outOfSpecModalEl, { backdrop: 'static', keyboard: false });
-            
-            // Flag indicating the modal was triggered
-            let modalTriggered = false;
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById('ois-form');
         
-            // Listen for form submission and check for out-of-spec answers
-            form.addEventListener('submit', function (e) {
-                let outOfSpecWarnings = [];
-                const inputs = document.querySelectorAll('.input-cell input[type="text"]');
-                inputs.forEach(function (input) {
-                    const value = input.value.trim();
-                    if (value !== "") {
-                        const numericValue = parseFloat(value);
-                        const min = input.getAttribute('data-min');
-                        const max = input.getAttribute('data-max');
-                        if (min !== null && !isNaN(parseFloat(min)) && numericValue < parseFloat(min)) {
-                            outOfSpecWarnings.push(`"${value}" is below the minimum (${min}) for ${input.getAttribute('placeholder')}`);
-                        }
-                        if (max !== null && !isNaN(parseFloat(max)) && numericValue > parseFloat(max)) {
-                            outOfSpecWarnings.push(`"${value}" is above the maximum (${max}) for ${input.getAttribute('placeholder')}`);
-                        }
+        // Get the modal element and the unique list element in the out-of-spec modal
+        const outOfSpecModalEl = document.getElementById("outOfSpecModal");
+        const modalOutOfSpecList = document.getElementById("modalOutOfSpecList");
+        
+        // Create a new Bootstrap modal instance for the out-of-spec modal
+        const outOfSpecModal = new bootstrap.Modal(outOfSpecModalEl, { backdrop: 'static', keyboard: false });
+        
+        // Flag indicating the modal was triggered
+        let modalTriggered = false;
+    
+        // Listen for form submission and check for out-of-spec answers
+        form.addEventListener('submit', function (e) {
+            let outOfSpecWarnings = [];
+            const inputs = document.querySelectorAll('.input-cell input[type="text"]');
+            inputs.forEach(function (input) {
+                const value = input.value.trim();
+                if (value !== "") {
+                    const numericValue = parseFloat(value);
+                    const min = input.getAttribute('data-min');
+                    const max = input.getAttribute('data-max');
+                    if (min !== null && !isNaN(parseFloat(min)) && numericValue < parseFloat(min)) {
+                        outOfSpecWarnings.push(`"${value}" is below the minimum (${min}) for ${input.getAttribute('placeholder')}`);
                     }
+                    if (max !== null && !isNaN(parseFloat(max)) && numericValue > parseFloat(max)) {
+                        outOfSpecWarnings.push(`"${value}" is above the maximum (${max}) for ${input.getAttribute('placeholder')}`);
+                    }
+                }
+            });
+    
+            if (outOfSpecWarnings.length > 0) {
+                // Prevent the default form submission and mark that the modal was triggered
+                e.preventDefault();
+                modalTriggered = true;
+    
+                // Populate the out-of-spec modal with the warnings
+                modalOutOfSpecList.innerHTML = "";  // Clear previous list items
+                outOfSpecWarnings.forEach(function (msg) {
+                    const li = document.createElement('li');
+                    li.textContent = msg;
+                    li.style.marginLeft = '20px'; // Adds a 20px margin to the left of each warning
+                    modalOutOfSpecList.appendChild(li);
                 });
-                
-                if (outOfSpecWarnings.length > 0) {
-                    // Prevent the default form submission
-                    e.preventDefault();
-                    modalTriggered = true;
-        
-                    // Populate the out-of-spec modal with the warnings
-                    const listEl = document.getElementById('outOfSpecList');
-                    listEl.innerHTML = "";  // Clear previous list items
-                    outOfSpecWarnings.forEach(function (msg) {
-                        const li = document.createElement('li');
-                        li.textContent = msg;
-                        listEl.appendChild(li);
-                    });
-        
-                    // Show the modal
-                    outOfSpecModal.show();
-                }
-            });
-        
-            // Attach a click listener to the confirm (Dealt With) button
-            document.getElementById('confirmSubmit').addEventListener('click', function () {
-                // Only run if the modal was triggered (to avoid interfering with normal submissions)
-                if (!modalTriggered) return;
-        
-                const supervisorChecked = document.getElementById('confirmSupervisor').checked;
-                const processChecked = document.getElementById('confirmProcessStopped').checked;
-                const supervisorId = document.getElementById('supervisorId').value.trim();
-                const incident = document.getElementById('incidentComments').value.trim();
-                const plan = document.getElementById('planComments').value.trim();
-        
-                if (!supervisorChecked || !processChecked || !supervisorId || !incident || !plan) {
-                    alert("⚠️ All checklist items and fields must be completed before submitting.");
-                    return;
-                }
-        
-                // Create hidden input fields for the modal values
-                const hiddenFields = {
-                    supervisor_clock_id: supervisorId,
-                    incident_description: incident,
-                    reaction_plan: plan
-                };
-                for (const [name, value] of Object.entries(hiddenFields)) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = value;
-                    form.appendChild(input);
-                }
-        
-                // Hide the modal and submit the form
-                outOfSpecModal.hide();
-                modalTriggered = false;
-                form.submit();
-            });
+    
+                // Show the modal
+                outOfSpecModal.show();
+            }
         });
-        
-        </script>
+    
+        // Attach a click listener to the confirm (Dealt With) button
+        document.getElementById('confirmSubmit').addEventListener('click', function () {
+            // Only run if the modal was triggered (to avoid interfering with normal submissions)
+            if (!modalTriggered) return;
+    
+            const supervisorChecked = document.getElementById('confirmSupervisor').checked;
+            const processChecked = document.getElementById('confirmProcessStopped').checked;
+            const supervisorId = document.getElementById('supervisorId').value.trim();
+            const incident = document.getElementById('incidentComments').value.trim();
+            const plan = document.getElementById('planComments').value.trim();
+    
+            if (!supervisorChecked || !processChecked || !supervisorId || !incident || !plan) {
+                alert("⚠️ All checklist items and fields must be completed before submitting.");
+                return;
+            }
+    
+            // Create hidden input fields for the modal values
+            const hiddenFields = {
+                supervisor_clock_id: supervisorId,
+                incident_description: incident,
+                reaction_plan: plan
+            };
+            for (const [name, value] of Object.entries(hiddenFields)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
+    
+            // Hide the modal, reset the flag, and submit the form
+            outOfSpecModal.hide();
+            modalTriggered = false;
+            form.submit();
+        });
+    });
+    </script>
         
 
 
@@ -984,53 +988,54 @@
 <!-- Out-of-Spec Modal HTML (inside the page) -->
 <div class="modal fade" id="outOfSpecModal" tabindex="-1" aria-labelledby="outOfSpecModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="outOfSpecModalLabel">Out-of-Spec Answers</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="outOfSpecModalLabel">Out-of-Spec Answers</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>The following answers are out of spec:</p>
+                <!-- Unique out-of-spec list for the modal -->
+                <ul id="modalOutOfSpecList" class="list-group"></ul>
+                <hr>
+                <p style="color: red; font-weight: bold; font-size: 1.5rem;">⚠️ Contact your supervisor</p>
+                <p style="color: red; font-weight: bold; font-size: 1.5rem;">⛔ Stop process immediately</p>
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" id="confirmSupervisor">
+                    <label class="form-check-label" for="confirmSupervisor">
+                        I have contacted my supervisor
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmProcessStopped">
+                    <label class="form-check-label" for="confirmProcessStopped">
+                        I have stopped the process immediately
+                    </label>
+                </div>
+                <div class="mb-3 mt-3">
+                    <label for="supervisorId" class="form-label fw-bold">Supervisor Clock ID:</label>
+                    <input type="text" class="form-control" id="supervisorId" required>
+                </div>
+                <div class="mb-3">
+                    <label for="incidentComments" class="form-label fw-bold">
+                        What happened to the process to make the non-conforming part (what was the issue):
+                    </label>
+                    <textarea class="form-control" id="incidentComments" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="planComments" class="form-label fw-bold">
+                        What is the reaction plan before proceeding:
+                    </label>
+                    <textarea class="form-control" id="planComments" rows="3" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancelSubmit" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmSubmit" class="btn btn-warning">Dealt With</button>
+            </div>
         </div>
-        <div class="modal-body">
-          <p>The following answers are out of spec:</p>
-          <ul id="outOfSpecList"></ul>
-          <hr>
-          <p style="color: red; font-weight: bold; font-size: 1.5rem;">⚠️ Contact your supervisor</p>
-          <p style="color: red; font-weight: bold; font-size: 1.5rem;">⛔ Stop process immediately</p>
-          <div class="form-check mt-3">
-            <input class="form-check-input" type="checkbox" id="confirmSupervisor">
-            <label class="form-check-label" for="confirmSupervisor">
-              I have contacted my supervisor
-            </label>
-          </div>
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="confirmProcessStopped">
-            <label class="form-check-label" for="confirmProcessStopped">
-              I have stopped the process immediately
-            </label>
-          </div>
-          <div class="mb-3 mt-3">
-            <label for="supervisorId" class="form-label fw-bold">Supervisor Clock ID:</label>
-            <input type="text" class="form-control" id="supervisorId" required>
-          </div>
-          <div class="mb-3">
-            <label for="incidentComments" class="form-label fw-bold">
-              What happened to the process to make the non-conforming part (what was the issue):
-            </label>
-            <textarea class="form-control" id="incidentComments" rows="3" required></textarea>
-          </div>
-          <div class="mb-3">
-            <label for="planComments" class="form-label fw-bold">
-              What is the reaction plan before proceeding:
-            </label>
-            <textarea class="form-control" id="planComments" rows="3" required></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" id="cancelSubmit" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" id="confirmSubmit" class="btn btn-warning">Dealt With</button>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
   
         
 </body>
