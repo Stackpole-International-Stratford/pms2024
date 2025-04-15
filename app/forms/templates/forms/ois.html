@@ -605,234 +605,227 @@
     </script>
 
  
-<!-- Hidden inputs containing the necessary values -->
-<input type="hidden" id="answerIDs" name="answer_ids" value="123,456,789">
-<input type="hidden" id="machine" name="machine" value="Machine_A">
-<input type="hidden" id="partNumber" name="part_number" value="PN-00123">
-<input type="hidden" id="operation" name="operation" value="Welding">
-
 <!-- Out-of-Spec Modal Functionality -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById('ois-form');
-
-    // Get modal element and its inner parts
-    const outOfSpecModalEl = document.getElementById("outOfSpecModal");
-    const outOfSpecModal = new bootstrap.Modal(outOfSpecModalEl, { backdrop: 'static', keyboard: false });
-
-    // Pre-confirmation section elements
-    const preModalContent = document.getElementById("preModalContent");
-    const modalOutOfSpecList = document.getElementById("modalOutOfSpecList");
-    const remeasureBtn = document.getElementById("remeasureBtn");
-    const confirmValuesBtn = document.getElementById("confirmValuesBtn");
-
-    // Detailed confirmation section elements
-    const detailsModalContent = document.getElementById("detailsModalContent");
-    const detailCancelBtn = document.getElementById("detailCancelBtn");
-    const confirmSubmitBtn = document.getElementById("confirmSubmit");
-
-    // Flag indicating the modal was triggered
-    let modalTriggered = false;
-
-    // Listen for form submission and check for out-of-spec answers
-    form.addEventListener('submit', function (e) {
-        let outOfSpecWarnings = [];
-        const inputs = document.querySelectorAll('.input-cell input[type="text"]');
-        
-        inputs.forEach(function (input) {
-            const value = input.value.trim();
-            if (value !== "") {
-                const numericValue = parseFloat(value);
-                const min = input.getAttribute('data-min');
-                const max = input.getAttribute('data-max');
-                if (min !== null && !isNaN(parseFloat(min)) && numericValue < parseFloat(min)) {
-                    outOfSpecWarnings.push(`"${value}" is below the minimum (${min}) for ${input.getAttribute('placeholder')}`);
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById('ois-form');
+    
+        // Get modal element and its inner parts
+        const outOfSpecModalEl = document.getElementById("outOfSpecModal");
+        const outOfSpecModal = new bootstrap.Modal(outOfSpecModalEl, { backdrop: 'static', keyboard: false });
+    
+        // Pre-confirmation section elements
+        const preModalContent = document.getElementById("preModalContent");
+        const modalOutOfSpecList = document.getElementById("modalOutOfSpecList");
+        const remeasureBtn = document.getElementById("remeasureBtn");
+        const confirmValuesBtn = document.getElementById("confirmValuesBtn");
+    
+        // Detailed confirmation section elements (if you want to include additional supervisor confirmation)
+        const detailsModalContent = document.getElementById("detailsModalContent");
+        const detailCancelBtn = document.getElementById("detailCancelBtn");
+        const confirmSubmitBtn = document.getElementById("confirmSubmit");
+    
+        // Flag indicating the modal was triggered
+        let modalTriggered = false;
+    
+        // Listen for form submission and check for out-of-spec answers
+        form.addEventListener('submit', function (e) {
+            let outOfSpecWarnings = [];
+            // Loop over all text inputs within .input-cell
+            const inputs = document.querySelectorAll('.input-cell input[type="text"]');
+            inputs.forEach(function (input) {
+                const value = input.value.trim();
+                if (value !== "") {
+                    const numericValue = parseFloat(value);
+                    const minAttr = input.getAttribute('data-min');
+                    const maxAttr = input.getAttribute('data-max');
+                    let min = (minAttr !== null) ? parseFloat(minAttr) : null;
+                    let max = (maxAttr !== null) ? parseFloat(maxAttr) : null;
+    
+                    // Compare value against min or max if valid numbers are provided
+                    if (min !== null && !isNaN(min) && numericValue < min) {
+                        outOfSpecWarnings.push(`"${value}" is below the minimum (${min}) for ${input.getAttribute('placeholder')}`);
+                    }
+                    if (max !== null && !isNaN(max) && numericValue > max) {
+                        outOfSpecWarnings.push(`"${value}" is above the maximum (${max}) for ${input.getAttribute('placeholder')}`);
+                    }
                 }
-                if (max !== null && !isNaN(parseFloat(max)) && numericValue > parseFloat(max)) {
-                    outOfSpecWarnings.push(`"${value}" is above the maximum (${max}) for ${input.getAttribute('placeholder')}`);
-                }
+            });
+    
+            if (outOfSpecWarnings.length > 0) {
+                // Prevent normal form submission and mark that the modal was triggered
+                e.preventDefault();
+                modalTriggered = true;
+    
+                // Populate the pre-confirmation list with warnings
+                modalOutOfSpecList.innerHTML = "";  // Clear previous items
+                outOfSpecWarnings.forEach(function (msg) {
+                    const li = document.createElement('li');
+                    li.textContent = msg;
+                    li.style.marginLeft = '20px';
+                    modalOutOfSpecList.appendChild(li);
+                });
+    
+                // Show pre-confirmation view and hide detailed confirmation view
+                preModalContent.style.display = "block";
+                detailsModalContent.style.display = "none";
+    
+                // Show the modal
+                outOfSpecModal.show();
             }
         });
-        
-        if (outOfSpecWarnings.length > 0) {
-            // Prevent the normal form submission and mark that the modal was triggered
-            e.preventDefault();
-            modalTriggered = true;
-
-            // Populate the pre-confirmation list with warnings
-            modalOutOfSpecList.innerHTML = "";  // Clear previous list items
-            outOfSpecWarnings.forEach(function (msg) {
-                const li = document.createElement('li');
-                li.textContent = msg;
-                li.style.marginLeft = '20px';
-                modalOutOfSpecList.appendChild(li);
+    
+        // When "Remeasure" is clicked, simply hide the modal so the user can adjust the answers
+        remeasureBtn.addEventListener("click", function () {
+            outOfSpecModal.hide();
+        });
+    
+        // When "Confirm Values" is clicked, switch view to detailed confirmation (if applicable)
+        // and send a POST request with only the question id and answer value for every input that is out-of-spec.
+        confirmValuesBtn.addEventListener("click", function () {
+            // Optionally switch to the detailed confirmation view (if needed)
+            preModalContent.style.display = "none";
+            detailsModalContent.style.display = "block";
+    
+            // Gather the answers that are out-of-spec
+            let answersToSend = [];
+            // Again, loop over the answer inputs
+            const inputs = document.querySelectorAll('.input-cell input[type="text"]');
+            inputs.forEach(function (input) {
+                const value = input.value.trim();
+                if (value !== "") {
+                    const numericValue = parseFloat(value);
+                    const minAttr = input.getAttribute('data-min');
+                    const maxAttr = input.getAttribute('data-max');
+                    let min = (minAttr !== null) ? parseFloat(minAttr) : null;
+                    let max = (maxAttr !== null) ? parseFloat(maxAttr) : null;
+                    
+                    // Check if this value is out-of-spec
+                    if ((min !== null && !isNaN(min) && numericValue < min) ||
+                        (max !== null && !isNaN(max) && numericValue > max)) {
+                        
+                        // Extract the question id from the input's name.
+                        // Assumes name is "answer_{questionId}_{index}"
+                        const nameParts = input.name.split("_");
+                        if (nameParts.length >= 2) {
+                            const questionId = nameParts[1];  // the second part is the question id
+                            answersToSend.push({
+                                question_id: questionId,
+                                answer: value
+                            });
+                        }
+                    }
+                }
             });
-
-            // Display the pre-confirmation content and hide detailed confirmation
-            preModalContent.style.display = "block";
-            detailsModalContent.style.display = "none";
-
-            // Show the modal
-            outOfSpecModal.show();
-        }
-    });
-
-    // When "Remeasure" is clicked, close the modal so the user can adjust their answers
-    remeasureBtn.addEventListener("click", function () {
-        outOfSpecModal.hide();
-    });
-
-    // When "Confirm Values" is clicked, switch view to the detailed confirmation and
-    // send a POST request with the additional hidden values.
-    confirmValuesBtn.addEventListener("click", function () {
-        preModalContent.style.display = "none";
-        detailsModalContent.style.display = "block";
-
-        // Retrieve the additional values from hidden inputs
-        const answerIDs = document.getElementById('answerIDs').value;
-        const machine = document.getElementById('machine').value;
-        const partNumber = document.getElementById('partNumber').value;
-        const operation = document.getElementById('operation').value;
-
-        // Build the data payload
-        const postData = {
-            answer_ids: answerIDs,
-            machine: machine,
-            part_number: partNumber,
-            operation: operation
-        };
-
-        // Send a POST request to the designated endpoint
-        fetch('/forms/out-of-spec-lockout-email-event/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-                // If using CSRF protection, include the token here:
-                // 'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(postData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server response:', data);
-            // Optionally, handle success feedback here.
-        })
-        .catch((error) => {
-            console.error('Error posting data:', error);
+    
+            // Send the POST request with the answers mapping.
+            fetch('/forms/out-of-spec-lockout-email-event/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                    // If using CSRF protection, include the token here:
+                    // 'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ answers: answersToSend })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Server response:', data);
+                // Optionally, show a success message or proceed with further actions.
+            })
+            .catch((error) => {
+                console.error('Error posting data:', error);
+            });
+        });
+    
+        // The following buttons in the detailed confirmation (e.g., Cancel or Dealt With)
+        // can be used as needed.
+        detailCancelBtn.addEventListener("click", function () {
+            outOfSpecModal.hide();
+        });
+    
+        confirmSubmitBtn.addEventListener('click', function () {
+            if (!modalTriggered) return;
+            
+            // If additional details (like supervisor confirmation) are required,
+            // do final processing and finally submit the form.
+            // For this example, we simply hide the modal and submit the form.
+            outOfSpecModal.hide();
+            modalTriggered = false;
+            form.submit();
         });
     });
-
-    // In the detailed confirmation view, the Cancel button hides the modal
-    detailCancelBtn.addEventListener("click", function () {
-        outOfSpecModal.hide();
-    });
-
-    // When "Dealt With" is clicked, validate the detailed inputs and submit the form
-    confirmSubmitBtn.addEventListener('click', function () {
-        if (!modalTriggered) return;
-        
-        const supervisorChecked = document.getElementById('confirmSupervisor').checked;
-        const processChecked = document.getElementById('confirmProcessStopped').checked;
-        const supervisorId = document.getElementById('supervisorId').value.trim();
-        const incident = document.getElementById('incidentComments').value.trim();
-        const plan = document.getElementById('planComments').value.trim();
-        
-        if (!supervisorChecked || !processChecked || !supervisorId || !incident || !plan) {
-            alert("⚠️ All checklist items and fields must be completed before submitting.");
-            return;
-        }
-        
-        // Create hidden input fields for the modal values so they can be processed on the server
-        const hiddenFields = {
-            supervisor_clock_id: supervisorId,
-            incident_description: incident,
-            reaction_plan: plan
-        };
-        for (const [name, value] of Object.entries(hiddenFields)) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            input.value = value;
-            form.appendChild(input);
-        }
-        
-        // Hide the modal and submit the form
-        outOfSpecModal.hide();
-        modalTriggered = false;
-        form.submit();
-    });
-});
-</script>
-
-<!-- Out-of-Spec Modal HTML (inside the page) -->
-<div class="modal fade" id="outOfSpecModal" tabindex="-1" aria-labelledby="outOfSpecModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <!-- Modal Header -->
-        <div class="modal-header">
-          <h5 class="modal-title" id="outOfSpecModalLabel">Out-of-Spec Answers</h5>
-        </div>
-        <!-- Modal Body with Two Sections -->
-        <div class="modal-body">
-          <!-- Pre-confirmation Section: Professional Message + Out-of-Spec List -->
-          <div id="preModalContent">
-            <p>
-                It appears that the <strong>following answers</strong> fall outside the <strong>specified range</strong>.<br>
-                Please <strong>review</strong> them carefully.<br>
-                If these discrepancies are due to a <strong>measurement error</strong>, <strong>remeasure</strong> the values.<br>
-                Otherwise, if the values are <strong>accurate</strong>, please <strong>confirm</strong> that they are correct.
-              </p>
-              <br>
-            <ul id="modalOutOfSpecList" class="list-group"></ul>
-            <div class="mt-3">
-              <button type="button" id="remeasureBtn" class="btn btn-dark me-2">Remeasure</button>
-              <button type="button" id="confirmValuesBtn" class="btn btn-warning">Confirm Values</button>
+    </script>
+    
+    <!-- Out-of-Spec Modal HTML (inside the page) -->
+    <div class="modal fade" id="outOfSpecModal" tabindex="-1" aria-labelledby="outOfSpecModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+              <h5 class="modal-title" id="outOfSpecModalLabel">Out-of-Spec Answers</h5>
             </div>
-          </div>
-          
-          <!-- Detailed Confirmation Section: Supervisor Checklist & Additional Information -->
-          <div id="detailsModalContent" style="display: none;">
-            <hr>
-            <p style="color: red; font-weight: bold; font-size: 1.5rem;">⚠️ Contact your supervisor</p>
-            <p style="color: red; font-weight: bold; font-size: 1.5rem;">⛔ Stop process immediately</p>
-            <div class="form-check mt-3">
-              <input class="form-check-input" type="checkbox" id="confirmSupervisor">
-              <label class="form-check-label" for="confirmSupervisor">
-                I have contacted my supervisor
-              </label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="confirmProcessStopped">
-              <label class="form-check-label" for="confirmProcessStopped">
-                I have stopped the process immediately
-              </label>
-            </div>
-            <div class="mb-3 mt-3">
-              <label for="supervisorId" class="form-label fw-bold">Supervisor Clock ID:</label>
-              <input type="text" class="form-control" id="supervisorId" required>
-            </div>
-            <div class="mb-3">
-              <label for="incidentComments" class="form-label fw-bold">
-                Please describe the issue:
-              </label>
-              <textarea class="form-control" id="incidentComments" rows="3" required></textarea>
-            </div>
-            <div class="mb-3">
-              <label for="planComments" class="form-label fw-bold">
-                What is the reaction plan before proceeding:
-              </label>
-              <textarea class="form-control" id="planComments" rows="3" required></textarea>
-            </div>
-            <div class="mt-3">
-              <button type="button" id="detailCancelBtn" class="btn btn-secondary me-2">Cancel</button>
-              <button type="button" id="confirmSubmit" class="btn btn-warning">Dealt With</button>
+            <!-- Modal Body with Two Sections -->
+            <div class="modal-body">
+              <!-- Pre-confirmation Section: Professional Message + Out-of-Spec List -->
+              <div id="preModalContent">
+                <p>
+                    It appears that the <strong>following answers</strong> fall outside the <strong>specified range</strong>.<br>
+                    Please <strong>review</strong> them carefully.<br>
+                    If the discrepancies are due to a <strong>measurement error</strong>, please <strong>remeasure</strong> your answers.<br>
+                    Otherwise, if the values are accurate, click <strong>Confirm Values</strong> to proceed.
+                  </p>
+                  <br>
+                <ul id="modalOutOfSpecList" class="list-group"></ul>
+                <div class="mt-3">
+                  <button type="button" id="remeasureBtn" class="btn btn-dark me-2">Remeasure</button>
+                  <button type="button" id="confirmValuesBtn" class="btn btn-warning">Confirm Values</button>
+                </div>
+              </div>
+              
+              <!-- Detailed Confirmation Section: (Optional additional details or supervisor checklist) -->
+              <div id="detailsModalContent" style="display: none;">
+                <hr>
+                <p style="color: red; font-weight: bold; font-size: 1.5rem;">⚠️ Contact your supervisor</p>
+                <p style="color: red; font-weight: bold; font-size: 1.5rem;">⛔ Stop process immediately</p>
+                <div class="form-check mt-3">
+                  <input class="form-check-input" type="checkbox" id="confirmSupervisor">
+                  <label class="form-check-label" for="confirmSupervisor">
+                    I have contacted my supervisor
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="confirmProcessStopped">
+                  <label class="form-check-label" for="confirmProcessStopped">
+                    I have stopped the process immediately
+                  </label>
+                </div>
+                <div class="mb-3 mt-3">
+                  <label for="supervisorId" class="form-label fw-bold">Supervisor Clock ID:</label>
+                  <input type="text" class="form-control" id="supervisorId" required>
+                </div>
+                <div class="mb-3">
+                  <label for="incidentComments" class="form-label fw-bold">
+                    Please describe the issue:
+                  </label>
+                  <textarea class="form-control" id="incidentComments" rows="3" required></textarea>
+                </div>
+                <div class="mb-3">
+                  <label for="planComments" class="form-label fw-bold">
+                    What is the reaction plan before proceeding:
+                  </label>
+                  <textarea class="form-control" id="planComments" rows="3" required></textarea>
+                </div>
+                <div class="mt-3">
+                  <button type="button" id="detailCancelBtn" class="btn btn-secondary me-2">Cancel</button>
+                  <button type="button" id="confirmSubmit" class="btn btn-warning">Dealt With</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
     </div>
-</div>
-
+    
     
 
 
