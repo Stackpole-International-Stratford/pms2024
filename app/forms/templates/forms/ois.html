@@ -15,6 +15,22 @@
     <script src="{% static 'chart.js/chartjs-plugin-crosshair.min.js' %}"></script> <!-- Added this line -->
 
 
+
+    <style>
+        .btn-warning {
+          background-color: #FF9900 !important; /* Company orange */
+          border-color: #FF9900 !important;
+          color: white !important;
+        }
+      
+        .btn-warning:hover,
+        .btn-warning:focus {
+          background-color: #ffa31a !important; /* Lighter orange on hover */
+          border-color: #ffa31a !important;
+          color: white !important;
+        }
+      </style>
+
     <title>{{ form_instance.name }}</title>
     <style>
         body {
