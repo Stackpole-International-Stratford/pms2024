@@ -264,20 +264,8 @@
             </tbody>
           </table>
           
- <!-- Totals Card -->
- <div class="card my-3">
-  <div class="card-header">
-    Totals for Operation {{ operation.op }}
-  </div>
-  <div class="card-body">
-    <p><strong>Total Parts:</strong> {{ operation.totals.total_parts }}</p>
-    <p><strong>Total Target:</strong> {{ operation.totals.total_target }}</p>
-    <p><strong>Total Downtime:</strong> {{ operation.totals.total_downtime }} min</p>
-    <p><strong>Total Planned Downtime:</strong> {{ operation.totals.total_planned_downtime }} min</p>
-    <p><strong>Total Unplanned Downtime:</strong> {{ operation.totals.total_unplanned_downtime }} min</p>
-    <p><strong>Downtime %:</strong> {{ operation.totals.downtime_percentage|floatformat:2 }}%</p>
-  </div>
-</div>
+<!-- NEW: Container for Operation Totals coming from the backend -->
+<div id="op-totals-container"></div>
 
 
         {% endfor %}
@@ -749,6 +737,37 @@ document.addEventListener("DOMContentLoaded", function() {
           oeeLineContentDiv.appendChild(table);
         }
 
+
+
+        // NEW: Update Operation Totals (op-level)
+        if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
+          var opTotalsContainer = document.getElementById('op-totals-container');
+          // Clear any previous content
+          opTotalsContainer.innerHTML = '';
+          // Loop through each operation metric set and create a card.
+          data.operation_oee_metrics.forEach(function(opMetrics) {
+            // Here we assume the backend includes an 'op' property for the operation name.
+            var card = document.createElement('div');
+            card.classList.add('card', 'my-3');
+            card.innerHTML = `
+              <div class="card-header">
+                Totals for Operation ${opMetrics.op || 'Unknown'}
+              </div>
+              <div class="card-body">
+                <p><strong>Total Parts:</strong> ${opMetrics.total_parts}</p>
+                <p><strong>Total Target:</strong> ${opMetrics.total_target}</p>
+                <p><strong>Total Downtime:</strong> ${opMetrics.total_downtime} min</p>
+                <p><strong>Total Planned Downtime:</strong> ${opMetrics.total_planned_downtime} min</p>
+                <p><strong>Total Unplanned Downtime:</strong> ${opMetrics.total_unplanned_downtime} min</p>
+                <p><strong>Downtime:</strong> ${parseFloat(opMetrics.downtime_percentage).toFixed(2)}%</p>
+              </div>
+            `;
+            opTotalsContainer.appendChild(card);
+          });
+        }
+
+
+
         // At the end of the fetch callback, remove any remaining loading classes.
         document.querySelectorAll('.loading').forEach(function(elem) {
           elem.classList.remove('loading');
@@ -1042,6 +1061,40 @@ document.addEventListener("DOMContentLoaded", function() {
       oeeLineContentDiv.appendChild(table);
     }
   
+
+
+
+    // NEW: Update Operation Totals (op-level)
+    if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
+      var opTotalsContainer = document.getElementById('op-totals-container');
+      // Clear any previous content
+      opTotalsContainer.innerHTML = '';
+      // Loop through each operation metric set and create a card.
+      data.operation_oee_metrics.forEach(function(opMetrics) {
+        // Here we assume the backend includes an 'op' property for the operation name.
+        var card = document.createElement('div');
+        card.classList.add('card', 'my-3');
+        card.innerHTML = `
+          <div class="card-header">
+            Totals for Operation ${opMetrics.op || 'Unknown'}
+          </div>
+          <div class="card-body">
+            <p><strong>Total Parts:</strong> ${opMetrics.total_parts}</p>
+            <p><strong>Total Target:</strong> ${opMetrics.total_target}</p>
+            <p><strong>Total Downtime:</strong> ${opMetrics.total_downtime} min</p>
+            <p><strong>Total Planned Downtime:</strong> ${opMetrics.total_planned_downtime} min</p>
+            <p><strong>Total Unplanned Downtime:</strong> ${opMetrics.total_unplanned_downtime} min</p>
+            <p><strong>Downtime:</strong> ${parseFloat(opMetrics.downtime_percentage).toFixed(2)}%</p>
+          </div>
+        `;
+        opTotalsContainer.appendChild(card);
+      });
+    }
+
+
+
+
+
     // Remove any remaining loading classes.
     document.querySelectorAll('.loading').forEach(function(elem) {
       elem.classList.remove('loading');
