@@ -7389,39 +7389,6 @@ def fetch_combined_oee_production_data(request):
 # ========== htmx try ==================
 # ======================================
 
-# views.py
-from django.shortcuts import render
-from django.utils import timezone
-import datetime
-
 def oee_dashboard(request):
-    # Use your logic (or defaults) for date range.
-    now = timezone.now()
-    default_end = now.replace(hour=7, minute=0, second=0, microsecond=0)
-    if now < default_end:
-        default_end -= datetime.timedelta(days=1)
-    default_start = default_end - datetime.timedelta(days=1)
-    
-    context = {
-        "start_date": default_start.strftime("%Y-%m-%d %H:%M"),
-        "end_date": default_end.strftime("%Y-%m-%d %H:%M")
-    }
-    return render(request, "prod_query/oee_dashboard.html", context)
-
-
-
-# views.py continued
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-
-def oee_data_partial(request):
-    # Use the same query params you already use.
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-    # (You can use your existing view logic to get the data.)
-    data = fetch_combined_oee_production_data(request).json()
-    
-    # Render a partial HTML fragment that includes overall metrics,
-    # line totals, and the production table.
-    html = render_to_string("prod_query/partials/_oee_data.html", data)
-    return HttpResponse(html)
+    # Render the oee_dashboard.html template
+    return render(request, "prod_query/oee_dashboard.html")
