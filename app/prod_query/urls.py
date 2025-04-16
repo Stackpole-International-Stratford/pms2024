@@ -60,6 +60,5 @@ urlpatterns = [
     path('fetch_oa_by_day_production_data/', views.fetch_combined_oee_production_data, name='fetch_oa_by_day_production_data'),
     path('fetch_exclude_weekends_data/', views.fetch_combined_oee_production_data, name='fetch_exclude_weekends_data'),
 
-    path("oee/", views.oee_dashboard, name="oee_dashboard"),
 
 ]

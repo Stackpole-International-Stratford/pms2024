@@ -7382,29 +7382,3 @@ def fetch_combined_oee_production_data(request):
     return JsonResponse(response_data)
 
 
-
-
-
-# ======================================
-# ========== htmx try ==================
-# ======================================
-
-
-@csrf_exempt
-def oee_dashboard(request):
-    if request.method == "POST":
-        daterange = request.POST.get("daterange")
-        
-        # Flatpickr returns a string like "2025-04-16 10:00 to 2025-04-16 12:00"
-        try:
-            start_str, end_str = daterange.split(" to ")
-            start_dt = datetime.strptime(start_str.strip(), "%Y-%m-%d %H:%M")
-            end_dt = datetime.strptime(end_str.strip(), "%Y-%m-%d %H:%M")
-        except (ValueError, AttributeError) as e:
-            return HttpResponse("Invalid date format.")
-        
-        response = (f"Start: {start_dt.strftime('%A, %d %B %Y %I:%M %p')}<br>"
-                    f"End: {end_dt.strftime('%A, %d %B %Y %I:%M %p')}")
-        return HttpResponse(response)
-    
-    return render(request, "prod_query/oee_dashboard.html")
