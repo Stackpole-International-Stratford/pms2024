@@ -56,6 +56,11 @@
       </div>
     </div>
   </div>
+  
+  <div id="operation-oee-metrics"></div>
+
+  
+
 
   <!-- OEE Notes Accordion -->
 <div class="accordion mb-4" id="oeeNotesAccordion">
@@ -734,6 +739,75 @@ document.addEventListener("DOMContentLoaded", function() {
           oeeLineContentDiv.appendChild(table);
         }
 
+// Update Operation OEE Metrics grouped by line.
+if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
+  var opMetricsContainer = document.getElementById('operation-oee-metrics');
+  if (opMetricsContainer) {
+    // Create a grouping object. Use your actual property name (e.g. op.line, op.line_name).
+    var metricsByLine = {};
+    data.operation_oee_metrics.forEach(function(op) {
+      // Adjust the key property as needed.
+      var lineName = op.line || op.line_name || 'Unknown';
+      if (!metricsByLine[lineName]) {
+        metricsByLine[lineName] = [];
+      }
+      metricsByLine[lineName].push(op);
+    });
+
+    // Clear any existing content.
+    opMetricsContainer.innerHTML = '';
+
+    // Loop through each line grouping.
+    for (var line in metricsByLine) {
+      // Create a card for this line.
+      var lineCard = document.createElement('div');
+      lineCard.className = 'card shadow-sm mb-4';
+
+      // Header for the card with the line name.
+      var header = document.createElement('div');
+      header.className = 'card-header bg-light';
+      header.innerHTML = '<h2 class="h5 mb-0">Line: ' + line + '</h2>';
+      lineCard.appendChild(header);
+
+      // Create a body container for the line card.
+      var body = document.createElement('div');
+      body.className = 'card-body';
+
+      // Loop through each operation metric in the current line.
+      metricsByLine[line].forEach(function(op) {
+        var opDiv = document.createElement('div');
+        opDiv.classList.add("op-total");
+        // Inline styles for visual separation (adjust or replace with CSS as desired).
+        opDiv.style.border = "1px solid #ccc";
+        opDiv.style.padding = "10px";
+        opDiv.style.marginBottom = "10px";
+
+        // Use op.op_name (or adjust to your key that holds the operation name).
+        var opName = op.op_name || op.op || "N/A";
+        opDiv.innerHTML = `
+          <h3>Operation: ${opName}</h3>
+          <ul>
+            <li><strong>Total Parts Produced:</strong> ${op.total_parts}</li>
+            <li><strong>Total Target:</strong> ${op.total_target}</li>
+            <li><strong>Downtime Minutes:</strong> ${op.total_downtime}</li>
+            <li><strong>Planned Downtime:</strong> ${op.total_planned_downtime}</li>
+            <li><strong>Unplanned Downtime:</strong> ${op.total_unplanned_downtime}</li>
+            <li><strong>Total Queried Minutes:</strong> ${op.total_queried_minutes}</li>
+            <li><strong>Downtime Percentage:</strong> ${Number(op.downtime_percentage).toFixed(2)}%</li>
+          </ul>
+        `;
+        body.appendChild(opDiv);
+      });
+
+      lineCard.appendChild(body);
+      opMetricsContainer.appendChild(lineCard);
+    }
+  } else {
+    console.error('Element with id "operation-oee-metrics" not found in the DOM.');
+  }
+}
+
+
         // At the end of the fetch callback, remove any remaining loading classes.
         document.querySelectorAll('.loading').forEach(function(elem) {
           elem.classList.remove('loading');
@@ -1026,6 +1100,76 @@ document.addEventListener("DOMContentLoaded", function() {
       
       oeeLineContentDiv.appendChild(table);
     }
+
+// Update Operation OEE Metrics grouped by line.
+if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
+  var opMetricsContainer = document.getElementById('operation-oee-metrics');
+  if (opMetricsContainer) {
+    // Create a grouping object. Use your actual property name (e.g. op.line, op.line_name).
+    var metricsByLine = {};
+    data.operation_oee_metrics.forEach(function(op) {
+      // Adjust the key property as needed.
+      var lineName = op.line || op.line_name || 'Unknown';
+      if (!metricsByLine[lineName]) {
+        metricsByLine[lineName] = [];
+      }
+      metricsByLine[lineName].push(op);
+    });
+
+    // Clear any existing content.
+    opMetricsContainer.innerHTML = '';
+
+    // Loop through each line grouping.
+    for (var line in metricsByLine) {
+      // Create a card for this line.
+      var lineCard = document.createElement('div');
+      lineCard.className = 'card shadow-sm mb-4';
+
+      // Header for the card with the line name.
+      var header = document.createElement('div');
+      header.className = 'card-header bg-light';
+      header.innerHTML = '<h2 class="h5 mb-0">Line: ' + line + '</h2>';
+      lineCard.appendChild(header);
+
+      // Create a body container for the line card.
+      var body = document.createElement('div');
+      body.className = 'card-body';
+
+      // Loop through each operation metric in the current line.
+      metricsByLine[line].forEach(function(op) {
+        var opDiv = document.createElement('div');
+        opDiv.classList.add("op-total");
+        // Inline styles for visual separation (adjust or replace with CSS as desired).
+        opDiv.style.border = "1px solid #ccc";
+        opDiv.style.padding = "10px";
+        opDiv.style.marginBottom = "10px";
+
+        // Use op.op_name (or adjust to your key that holds the operation name).
+        var opName = op.op_name || op.op || "N/A";
+        opDiv.innerHTML = `
+          <h3>Operation: ${opName}</h3>
+          <ul>
+            <li><strong>Total Parts Produced:</strong> ${op.total_parts}</li>
+            <li><strong>Total Target:</strong> ${op.total_target}</li>
+            <li><strong>Downtime Minutes:</strong> ${op.total_downtime}</li>
+            <li><strong>Planned Downtime:</strong> ${op.total_planned_downtime}</li>
+            <li><strong>Unplanned Downtime:</strong> ${op.total_unplanned_downtime}</li>
+            <li><strong>Total Queried Minutes:</strong> ${op.total_queried_minutes}</li>
+            <li><strong>Downtime Percentage:</strong> ${Number(op.downtime_percentage).toFixed(2)}%</li>
+          </ul>
+        `;
+        body.appendChild(opDiv);
+      });
+
+      lineCard.appendChild(body);
+      opMetricsContainer.appendChild(lineCard);
+    }
+  } else {
+    console.error('Element with id "operation-oee-metrics" not found in the DOM.');
+  }
+}
+
+
   
     // Remove any remaining loading classes.
     document.querySelectorAll('.loading').forEach(function(elem) {
