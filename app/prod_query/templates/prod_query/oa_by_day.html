@@ -848,6 +848,73 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
 
 
 
+  // — call this at the end of your fetchProductionData .then(data => { … }) callback —
+  if (data.operation_oee_metrics && data.operation_oee_metrics.length) {
+    // 1) build a lookup: opTotalsByLine[lineName][opName] = opTotals
+    const opTotalsByLine = {};
+    data.operation_oee_metrics.forEach(op => {
+      const lineName = op.line || op.line_name || 'Unknown';
+      const opName   = (op.op_name || op.op || '').trim();
+      opTotalsByLine[lineName] = opTotalsByLine[lineName] || {};
+      opTotalsByLine[lineName][opName] = op;
+    });
+
+    // 2) for each line accordion-item…
+    document
+      .querySelectorAll('#productionData .accordion-item')
+      .forEach(item => {
+        // grab the line name from its header button
+        const lineBtn = item.querySelector('.accordion-button');
+        if (!lineBtn) return;
+        const lineName = lineBtn.textContent.trim();
+
+        // 3) for each operation under that line
+        item.querySelectorAll('h3.h6').forEach(opHeader => {
+          // “Operation: Foo” → “Foo”
+          const opName = opHeader.textContent.replace(/^Operation:\s*/, '').trim();
+          const totals = (opTotalsByLine[lineName] || {})[opName];
+          if (!totals) return;
+
+          // find the very next table and its tbody
+          const table = opHeader.nextElementSibling;
+          if (!table || table.tagName !== 'TABLE') return;
+          const tbody = table.querySelector('tbody');
+          if (!tbody) return;
+
+          // avoid double‑inserting
+          if (tbody.querySelector('tr.totals-row')) return;
+
+          // 4) build the row (10 cells to match your machine table)
+          const tr = document.createElement('tr');
+          tr.classList.add('table-secondary', 'totals-row');
+
+          // [Machine, Parts, Target, Downtime, Planned, Unplanned, Downtime%, Performance, Availability, Actions]
+          const cells = [
+            'Totals',
+            totals.total_parts,
+            totals.total_target,
+            (totals.total_downtime        || 0) + ' min',
+            (totals.total_planned_downtime  || 0) + ' min',
+            (totals.total_unplanned_downtime|| 0) + ' min',
+            parseFloat(totals.downtime_percentage || 0).toFixed(2) + '%',
+            'N/A',  // you can swap in totals.P*100 etc. if you have them
+            'N/A',  // or leave blank strings ''
+            ''      // no actions button on a total row
+          ];
+
+          cells.forEach(txt => {
+            const td = document.createElement('td');
+            td.innerText = txt;
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      });
+  }
+
+
+
 
         // At the end of the fetch callback, remove any remaining loading classes.
         document.querySelectorAll('.loading').forEach(function(elem) {
@@ -1224,6 +1291,74 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   }
 }
 
+
+
+
+
+  // — call this at the end of your fetchProductionData .then(data => { … }) callback —
+  if (data.operation_oee_metrics && data.operation_oee_metrics.length) {
+    // 1) build a lookup: opTotalsByLine[lineName][opName] = opTotals
+    const opTotalsByLine = {};
+    data.operation_oee_metrics.forEach(op => {
+      const lineName = op.line || op.line_name || 'Unknown';
+      const opName   = (op.op_name || op.op || '').trim();
+      opTotalsByLine[lineName] = opTotalsByLine[lineName] || {};
+      opTotalsByLine[lineName][opName] = op;
+    });
+
+    // 2) for each line accordion-item…
+    document
+      .querySelectorAll('#productionData .accordion-item')
+      .forEach(item => {
+        // grab the line name from its header button
+        const lineBtn = item.querySelector('.accordion-button');
+        if (!lineBtn) return;
+        const lineName = lineBtn.textContent.trim();
+
+        // 3) for each operation under that line
+        item.querySelectorAll('h3.h6').forEach(opHeader => {
+          // “Operation: Foo” → “Foo”
+          const opName = opHeader.textContent.replace(/^Operation:\s*/, '').trim();
+          const totals = (opTotalsByLine[lineName] || {})[opName];
+          if (!totals) return;
+
+          // find the very next table and its tbody
+          const table = opHeader.nextElementSibling;
+          if (!table || table.tagName !== 'TABLE') return;
+          const tbody = table.querySelector('tbody');
+          if (!tbody) return;
+
+          // avoid double‑inserting
+          if (tbody.querySelector('tr.totals-row')) return;
+
+          // 4) build the row (10 cells to match your machine table)
+          const tr = document.createElement('tr');
+          tr.classList.add('table-secondary', 'totals-row');
+
+          // [Machine, Parts, Target, Downtime, Planned, Unplanned, Downtime%, Performance, Availability, Actions]
+          const cells = [
+            'Totals',
+            totals.total_parts,
+            totals.total_target,
+            (totals.total_downtime        || 0) + ' min',
+            (totals.total_planned_downtime  || 0) + ' min',
+            (totals.total_unplanned_downtime|| 0) + ' min',
+            parseFloat(totals.downtime_percentage || 0).toFixed(2) + '%',
+            'N/A',  // you can swap in totals.P*100 etc. if you have them
+            'N/A',  // or leave blank strings ''
+            ''      // no actions button on a total row
+          ];
+
+          cells.forEach(txt => {
+            const td = document.createElement('td');
+            td.innerText = txt;
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      });
+  }
 
 
   
