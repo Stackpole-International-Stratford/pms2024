@@ -275,7 +275,34 @@
 </div>
 
 
-<div id="operation-oee-metrics" style="margin-top: 20px;"></div>
+<!-- Accordion wrapper -->
+<div class="accordion mt-4" id="operationTotalsAccordion">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingOperationTotals">
+      <button
+        class="accordion-button collapsed"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#collapseOperationTotals"
+        aria-expanded="false"
+        aria-controls="collapseOperationTotals"
+      >
+        Operation Totals
+      </button>
+    </h2>
+    <div
+      id="collapseOperationTotals"
+      class="accordion-collapse collapse"
+      aria-labelledby="headingOperationTotals"
+      data-bs-parent="#operationTotalsAccordion"
+    >
+      <div class="accordion-body">
+        <!-- Your metrics will be injected here -->
+        <div id="operation-oee-metrics"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
   
   
@@ -739,14 +766,13 @@ document.addEventListener("DOMContentLoaded", function() {
           oeeLineContentDiv.appendChild(table);
         }
 
-// Update Operation OEE Metrics grouped by line.
+// Update Operation OEE Metrics grouped by line, injecting into the accordion body.
 if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   var opMetricsContainer = document.getElementById('operation-oee-metrics');
   if (opMetricsContainer) {
     // Group metrics by line.
     var metricsByLine = {};
     data.operation_oee_metrics.forEach(function(op) {
-      // Use op.line or op.line_name; fall back to 'Unknown' if not present.
       var lineName = op.line || op.line_name || 'Unknown';
       if (!metricsByLine[lineName]) {
         metricsByLine[lineName] = [];
@@ -759,20 +785,16 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
 
     // Iterate over each line grouping.
     for (var line in metricsByLine) {
-      // Create a section for each line.
       var section = document.createElement('div');
       section.style.marginBottom = '20px';
 
-      // Create and append a heading for the line.
       var heading = document.createElement('h2');
       heading.textContent = 'Line: ' + line;
       section.appendChild(heading);
 
-      // Create the table element.
       var table = document.createElement('table');
-      table.className = 'table table-bordered'; // You can adjust or remove CSS classes as desired.
+      table.className = 'table table-bordered';
 
-      // Create the table header row.
       var thead = document.createElement('thead');
       var headerRow = document.createElement('tr');
       var headers = [
@@ -793,15 +815,10 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       thead.appendChild(headerRow);
       table.appendChild(thead);
 
-      // Create the table body.
       var tbody = document.createElement('tbody');
-
-      // Iterate through each operation in the current line group and build table rows.
       metricsByLine[line].forEach(function(op) {
         var row = document.createElement('tr');
-        // Determine the operation name.
         var opName = op.op_name || op.op || 'N/A';
-        // Create an array for the cell values.
         var cells = [
           opName,
           op.total_parts,
@@ -812,7 +829,6 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
           op.total_queried_minutes,
           Number(op.downtime_percentage).toFixed(2) + '%'
         ];
-        // Create and append table cells.
         cells.forEach(function(cellValue) {
           var td = document.createElement('td');
           td.textContent = cellValue;
@@ -822,9 +838,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       });
       table.appendChild(tbody);
 
-      // Append the table to the line's section.
       section.appendChild(table);
-      // Finally, append the section to the main container.
       opMetricsContainer.appendChild(section);
     }
   } else {
@@ -1128,14 +1142,15 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       oeeLineContentDiv.appendChild(table);
     }
 
-// Update Operation OEE Metrics grouped by line.
+
+
+// Update Operation OEE Metrics grouped by line, injecting into the accordion body.
 if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   var opMetricsContainer = document.getElementById('operation-oee-metrics');
   if (opMetricsContainer) {
     // Group metrics by line.
     var metricsByLine = {};
     data.operation_oee_metrics.forEach(function(op) {
-      // Use op.line or op.line_name; fall back to 'Unknown' if not present.
       var lineName = op.line || op.line_name || 'Unknown';
       if (!metricsByLine[lineName]) {
         metricsByLine[lineName] = [];
@@ -1148,20 +1163,16 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
 
     // Iterate over each line grouping.
     for (var line in metricsByLine) {
-      // Create a section for each line.
       var section = document.createElement('div');
       section.style.marginBottom = '20px';
 
-      // Create and append a heading for the line.
       var heading = document.createElement('h2');
       heading.textContent = 'Line: ' + line;
       section.appendChild(heading);
 
-      // Create the table element.
       var table = document.createElement('table');
-      table.className = 'table table-bordered'; // You can adjust or remove CSS classes as desired.
+      table.className = 'table table-bordered';
 
-      // Create the table header row.
       var thead = document.createElement('thead');
       var headerRow = document.createElement('tr');
       var headers = [
@@ -1182,15 +1193,10 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       thead.appendChild(headerRow);
       table.appendChild(thead);
 
-      // Create the table body.
       var tbody = document.createElement('tbody');
-
-      // Iterate through each operation in the current line group and build table rows.
       metricsByLine[line].forEach(function(op) {
         var row = document.createElement('tr');
-        // Determine the operation name.
         var opName = op.op_name || op.op || 'N/A';
-        // Create an array for the cell values.
         var cells = [
           opName,
           op.total_parts,
@@ -1201,7 +1207,6 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
           op.total_queried_minutes,
           Number(op.downtime_percentage).toFixed(2) + '%'
         ];
-        // Create and append table cells.
         cells.forEach(function(cellValue) {
           var td = document.createElement('td');
           td.textContent = cellValue;
@@ -1211,9 +1216,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       });
       table.appendChild(tbody);
 
-      // Append the table to the line's section.
       section.appendChild(table);
-      // Finally, append the section to the main container.
       opMetricsContainer.appendChild(section);
     }
   } else {
