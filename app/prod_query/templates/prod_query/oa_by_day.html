@@ -264,6 +264,22 @@
             </tbody>
           </table>
           
+ <!-- Totals Card -->
+ <div class="card my-3">
+  <div class="card-header">
+    Totals for Operation {{ operation.op }}
+  </div>
+  <div class="card-body">
+    <p><strong>Total Parts:</strong> {{ operation.totals.total_parts }}</p>
+    <p><strong>Total Target:</strong> {{ operation.totals.total_target }}</p>
+    <p><strong>Total Downtime:</strong> {{ operation.totals.total_downtime }} min</p>
+    <p><strong>Total Planned Downtime:</strong> {{ operation.totals.total_planned_downtime }} min</p>
+    <p><strong>Total Unplanned Downtime:</strong> {{ operation.totals.total_unplanned_downtime }} min</p>
+    <p><strong>Downtime %:</strong> {{ operation.totals.downtime_percentage|floatformat:2 }}%</p>
+  </div>
+</div>
+
+
         {% endfor %}
       </div>
     </div>
