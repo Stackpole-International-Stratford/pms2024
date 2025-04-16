@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<h2>OEE Dashboard</h2>
+<h2>OEE Dashboard with Range Picker</h2>
 
 <form
     id="dateForm"
@@ -10,35 +10,28 @@
     hx-target="#result"
     hx-swap="innerHTML"
 >
-    <label for="start">Start datetime:</label>
-    <input
-        type="text"
-        id="start"
-        name="start"
-        class="datetime"
-        required
-    >
+    <!-- Inline calendar container -->
+    <div id="daterange-container"></div>
+    <!-- Hidden input storing the selected date range -->
+    <input type="hidden" name="daterange" id="daterange" required>
 
-    <label for="end">End datetime:</label>
-    <input
-        type="text"
-        id="end"
-        name="end"
-        class="datetime"
-        required
-    >
-
-    <button type="submit">Submit</button>
+    <!-- Bootstrap styled submit button -->
+    <button type="submit" class="btn btn-dark mt-3">Submit</button>
 </form>
 
 <div id="result" style="margin-top: 20px;"></div>
 
-
 <script>
-    flatpickr(".datetime", {
-        enableTime: true,
+    flatpickr("#daterange-container", {
+        mode: "range",         // Enable range mode
+        inline: true,          // Always display the calendar
+        enableTime: true,      // Allow time selection
         dateFormat: "Y-m-d H:i",
-        time_24hr: true
+        time_24hr: true,
+        // Update the hidden input field whenever the user selects a date range
+        onChange: function(selectedDates, dateStr, instance) {
+            document.getElementById("daterange").value = dateStr;
+        }
     });
 </script>
 {% endblock %}
