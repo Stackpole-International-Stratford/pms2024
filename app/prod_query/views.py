@@ -7389,6 +7389,23 @@ def fetch_combined_oee_production_data(request):
 # ========== htmx try ==================
 # ======================================
 
+
+@csrf_exempt
 def oee_dashboard(request):
-    # Render the oee_dashboard.html template
+    from datetime import datetime
+    if request.method == "POST":
+        start = request.POST.get("start")
+        end = request.POST.get("end")
+
+        try:
+            start_dt = datetime.strptime(start, "%Y-%m-%d %H:%M")
+            end_dt = datetime.strptime(end, "%Y-%m-%d %H:%M")
+            print(f"Start: {start_dt}, End: {end_dt}")  # This prints to the console/log
+
+        except ValueError:
+            return HttpResponse("Invalid date format.")
+
+        return HttpResponse(f"Start: {start_dt.strftime('%A, %d %B %Y %I:%M %p')}<br>"
+                            f"End: {end_dt.strftime('%A, %d %B %Y %I:%M %p')}")
+
     return render(request, "prod_query/oee_dashboard.html")
