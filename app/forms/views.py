@@ -790,22 +790,26 @@ def format_specifications(spec):
 
 def populate_answers_with_range_check(questions_dict, answers, date_hour_range, est):
     """
-    Populate all answers into the corresponding date-hour slots for each question,
-    and tag range-based answers that are out of spec.
-
-    Now, questions_dict is keyed by the question's database id.
+    Populate each question's answer slots (one per hour) from the answers queryset.
+    For range-based questions, compare the answer to the min/max boundaries and tag
+    answers that fall outside the allowed range.
+    
+    - questions_dict: an OrderedDict keyed by question ID, where each value has an 'Answers' list.
+    - answers: queryset of FormAnswer objects.
+    - date_hour_range: a list of hour strings (e.g. "2025-04-15 13:00") to fill.
+    - est: the timezone (e.g., America/New_York) used for formatting timestamps.
     """
     for question_id, question_data in questions_dict.items():
-        # Filter answers that belong to this question using the database id.
+        # Filter answers that match the current question by its DB id.
         question_answers = [answer for answer in answers if answer.question.id == question_id]
 
-        # Determine if the question is range-based.
+        # Determine if the question is expecting range-based answers.
         is_range_based = (
             question_answers and
             question_answers[0].question.question.get('specification_type', 'N/A') == 'range'
         )
-        
-        # If range-based, extract min and max values from the specifications.
+
+        # If range-based, try to extract min and max values.
         if is_range_based:
             specifications = question_answers[0].question.question.get('specifications', {})
             try:
@@ -819,39 +823,61 @@ def populate_answers_with_range_check(questions_dict, answers, date_hour_range, 
         else:
             min_value = max_value = None
 
-        # For each hour in the 7-day range, collect matching answers.
+        # For every hour slot in the provided range, collect answers.
         for date_hour in date_hour_range:
-            hourly_answers = [
-                {
-                    'value': answer.answer.get('answer', '') if isinstance(answer.answer, dict) else answer.answer,
-                    'inspection_type': answer.answer.get('inspection_type', 'N/A') if isinstance(answer.answer, dict) else 'N/A'
-                }
-                for answer in question_answers
-                if answer.created_at.astimezone(est).strftime('%Y-%m-%d %H:00') == date_hour
-            ]
+            hourly_answers = []
+            for answer in question_answers:
+                # Format the answer's timestamp to match the hour slot.
+                answer_hour = answer.created_at.astimezone(est).strftime('%Y-%m-%d %H:00')
+                if answer_hour == date_hour:
+                    # Extract the answer value.
+                    # If the answer is stored as a dict, extract the inner value using the key "answer"
+                    if isinstance(answer.answer, dict):
+                        raw_value = answer.answer.get('answer', '')
+                        inspection_type = answer.answer.get('inspection_type', 'N/A')
+                    else:
+                        raw_value = answer.answer
+                        inspection_type = 'N/A'
+                    hourly_answers.append({
+                        'value': raw_value,
+                        'inspection_type': inspection_type
+                    })
 
-            tagged_answers = []  # To store processed answers for this date_hour
-
-            # If range-based, compare each answer value against the min and max.
+            tagged_answers = []
             if is_range_based and hourly_answers:
                 for ans in hourly_answers:
+                    value = ans['value']
+                    inspection_type = ans['inspection_type']
+                    # If the answer value is still a dict, try to extract the actual numeric value.
+                    if isinstance(value, dict):
+                        value = value.get('answer', '')
                     try:
-                        ans_float = float(ans['value'])
+                        ans_float = float(value)
                         if min_value is not None and ans_float < min_value:
-                            tagged_answers.append(f'<span class="out-of-range">{ans["value"]} ({ans["inspection_type"]})</span>')
+                            tagged_answers.append(
+                                f'<span class="out-of-range">{value} ({inspection_type})</span>'
+                            )
                         elif max_value is not None and ans_float > max_value:
-                            tagged_answers.append(f'<span class="out-of-range">{ans["value"]} ({ans["inspection_type"]})</span>')
+                            tagged_answers.append(
+                                f'<span class="out-of-range">{value} ({inspection_type})</span>'
+                            )
                         else:
-                            tagged_answers.append(f'{ans["value"]} ({ans["inspection_type"]})')
-                    except ValueError:
-                        tagged_answers.append(f'<span class="invalid-answer">{ans["value"]} ({ans["inspection_type"]})</span>')
+                            tagged_answers.append(f'{value} ({inspection_type})')
+                    except (ValueError, TypeError):
+                        tagged_answers.append(
+                            f'<span class="invalid-answer">{value} ({inspection_type})</span>'
+                        )
             else:
                 # For non-range-based answers, just format them with the inspection type.
-                tagged_answers = [f'{ans["value"]} ({ans["inspection_type"]})' for ans in hourly_answers]
+                tagged_answers = [
+                    f'{ans["value"]} ({ans["inspection_type"]})'
+                    for ans in hourly_answers
+                ]
 
-            # Join answers for this hour or use a placeholder if none exist.
+            # Join the answers for this hour slot or use a placeholder if none exist.
             formatted_answers = ", ".join(tagged_answers) if tagged_answers else "-"
             question_data['Answers'].append(formatted_answers)
+
 
 
 
