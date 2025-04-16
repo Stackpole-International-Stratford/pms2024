@@ -264,8 +264,8 @@
             </tbody>
           </table>
           
-<!-- NEW: Container for Operation Totals coming from the backend -->
-<div id="op-totals-container"></div>
+  <!-- New: a container per operation with a unique identifier -->
+  <div class="op-totals-container" data-op="{{ operation.op }}"></div>
 
 
         {% endfor %}
@@ -741,30 +741,41 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // NEW: Update Operation Totals (op-level)
         if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
-          var opTotalsContainer = document.getElementById('op-totals-container');
-          // Clear any previous content
-          opTotalsContainer.innerHTML = '';
-          // Loop through each operation metric set and create a card.
-          data.operation_oee_metrics.forEach(function(opMetrics) {
-            // Here we assume the backend includes an 'op' property for the operation name.
-            var card = document.createElement('div');
-            card.classList.add('card', 'my-3');
-            card.innerHTML = `
-              <div class="card-header">
-                Totals for Operation ${opMetrics.op || 'Unknown'}
-              </div>
-              <div class="card-body">
-                <p><strong>Total Parts:</strong> ${opMetrics.total_parts}</p>
-                <p><strong>Total Target:</strong> ${opMetrics.total_target}</p>
-                <p><strong>Total Downtime:</strong> ${opMetrics.total_downtime} min</p>
-                <p><strong>Total Planned Downtime:</strong> ${opMetrics.total_planned_downtime} min</p>
-                <p><strong>Total Unplanned Downtime:</strong> ${opMetrics.total_unplanned_downtime} min</p>
-                <p><strong>Downtime:</strong> ${parseFloat(opMetrics.downtime_percentage).toFixed(2)}%</p>
-              </div>
-            `;
-            opTotalsContainer.appendChild(card);
+          // For each op-specific container on the page:
+          document.querySelectorAll('.op-totals-container').forEach(function(container) {
+            // Get the operation identifier from the data attribute.
+            var opName = container.getAttribute('data-op');
+        
+            // Find the corresponding op metric from the data (assuming 'op' property holds the operation name).
+            var opMetrics = data.operation_oee_metrics.find(function(metric) {
+              return metric.op === opName;
+            });
+        
+            // If opMetrics found, create the card.
+            if (opMetrics) {
+              var cardHtml = `
+                <div class="card my-3">
+                  <div class="card-header">
+                    Totals for Operation ${opMetrics.op || 'Unknown'}
+                  </div>
+                  <div class="card-body">
+                    <p><strong>Total Parts:</strong> ${opMetrics.total_parts}</p>
+                    <p><strong>Total Target:</strong> ${opMetrics.total_target}</p>
+                    <p><strong>Total Downtime:</strong> ${opMetrics.total_downtime} min</p>
+                    <p><strong>Total Planned Downtime:</strong> ${opMetrics.total_planned_downtime} min</p>
+                    <p><strong>Total Unplanned Downtime:</strong> ${opMetrics.total_unplanned_downtime} min</p>
+                    <p><strong>Downtime:</strong> ${parseFloat(opMetrics.downtime_percentage).toFixed(2)}%</p>
+                  </div>
+                </div>
+              `;
+              // Append the card HTML to this operation's container.
+              container.innerHTML = cardHtml;
+            } else {
+              container.innerHTML = "<p>No op totals data available.</p>";
+            }
           });
         }
+        
 
 
 
@@ -1066,30 +1077,41 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // NEW: Update Operation Totals (op-level)
     if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
-      var opTotalsContainer = document.getElementById('op-totals-container');
-      // Clear any previous content
-      opTotalsContainer.innerHTML = '';
-      // Loop through each operation metric set and create a card.
-      data.operation_oee_metrics.forEach(function(opMetrics) {
-        // Here we assume the backend includes an 'op' property for the operation name.
-        var card = document.createElement('div');
-        card.classList.add('card', 'my-3');
-        card.innerHTML = `
-          <div class="card-header">
-            Totals for Operation ${opMetrics.op || 'Unknown'}
-          </div>
-          <div class="card-body">
-            <p><strong>Total Parts:</strong> ${opMetrics.total_parts}</p>
-            <p><strong>Total Target:</strong> ${opMetrics.total_target}</p>
-            <p><strong>Total Downtime:</strong> ${opMetrics.total_downtime} min</p>
-            <p><strong>Total Planned Downtime:</strong> ${opMetrics.total_planned_downtime} min</p>
-            <p><strong>Total Unplanned Downtime:</strong> ${opMetrics.total_unplanned_downtime} min</p>
-            <p><strong>Downtime:</strong> ${parseFloat(opMetrics.downtime_percentage).toFixed(2)}%</p>
-          </div>
-        `;
-        opTotalsContainer.appendChild(card);
+      // For each op-specific container on the page:
+      document.querySelectorAll('.op-totals-container').forEach(function(container) {
+        // Get the operation identifier from the data attribute.
+        var opName = container.getAttribute('data-op');
+    
+        // Find the corresponding op metric from the data (assuming 'op' property holds the operation name).
+        var opMetrics = data.operation_oee_metrics.find(function(metric) {
+          return metric.op === opName;
+        });
+    
+        // If opMetrics found, create the card.
+        if (opMetrics) {
+          var cardHtml = `
+            <div class="card my-3">
+              <div class="card-header">
+                Totals for Operation ${opMetrics.op || 'Unknown'}
+              </div>
+              <div class="card-body">
+                <p><strong>Total Parts:</strong> ${opMetrics.total_parts}</p>
+                <p><strong>Total Target:</strong> ${opMetrics.total_target}</p>
+                <p><strong>Total Downtime:</strong> ${opMetrics.total_downtime} min</p>
+                <p><strong>Total Planned Downtime:</strong> ${opMetrics.total_planned_downtime} min</p>
+                <p><strong>Total Unplanned Downtime:</strong> ${opMetrics.total_unplanned_downtime} min</p>
+                <p><strong>Downtime:</strong> ${parseFloat(opMetrics.downtime_percentage).toFixed(2)}%</p>
+              </div>
+            </div>
+          `;
+          // Append the card HTML to this operation's container.
+          container.innerHTML = cardHtml;
+        } else {
+          container.innerHTML = "<p>No op totals data available.</p>";
+        }
       });
     }
+    
 
 
 
