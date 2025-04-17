@@ -1261,48 +1261,80 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       var table = document.createElement('table');
       table.className = 'table table-bordered';
 
-      var thead = document.createElement('thead');
-      var headerRow = document.createElement('tr');
-      var headers = [
-        'Operation',
-        'Total Parts Produced',
-        'Total Target',
-        'Downtime Minutes',
-        'Planned Downtime',
-        'Unplanned Downtime',
-        'Total Queried Minutes',
-        'Downtime Percentage'
-      ];
-      headers.forEach(function(headerText) {
-        var th = document.createElement('th');
-        th.textContent = headerText;
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+    // 1) build the header
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    var headers = [
+      'Operation',
+      'Total Parts Produced',
+      'Total Target',
+      'Downtime Minutes',
+      'Planned Downtime',
+      'Unplanned Downtime',
+      'Total Queried Minutes',
+      'Downtime Percentage',
+      'Performance',
+      'Availability',
+      'PxA'           // ← new column
+    ];
+    headers.forEach(function(headerText) {
+      var th = document.createElement('th');
+      th.textContent = headerText;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
-      var tbody = document.createElement('tbody');
-      metricsByLine[line].forEach(function(op) {
-        var row = document.createElement('tr');
-        var opName = op.op_name || op.op || 'N/A';
-        var cells = [
-          opName,
-          op.total_parts,
-          op.total_target,
-          op.total_downtime,
-          op.total_planned_downtime,
-          op.total_unplanned_downtime,
-          op.total_queried_minutes,
-          Number(op.downtime_percentage).toFixed(2) + '%'
-        ];
-        cells.forEach(function(cellValue) {
-          var td = document.createElement('td');
-          td.textContent = cellValue;
-          row.appendChild(td);
-        });
-        tbody.appendChild(row);
+    // 2) build the body
+    var tbody = document.createElement('tbody');
+    metricsByLine[line].forEach(function(op) {
+      var row = document.createElement('tr');
+      var opName = op.op_name || op.op || 'N/A';
+
+      // format your percentages
+      var perfPct  = (op.P  * 100).toFixed(2) + '%';
+      var availPct = (op.A  * 100).toFixed(2) + '%';
+      var paPct    = (op.PA * 100).toFixed(2) + '%';
+
+      var cells = [
+        opName,
+        op.total_parts,
+        op.total_target,
+        op.total_downtime,
+        op.total_planned_downtime,
+        op.total_unplanned_downtime,
+        op.total_queried_minutes,
+        Number(op.downtime_percentage).toFixed(2) + '%',
+        perfPct,   // Performance
+        availPct,  // Availability
+        paPct      // P×A
+      ];
+
+      // build a parallel array of cell‐background colors (null = no color)
+      var colors = [
+        null, null, null, null, null, null, null,
+        op.downtime_percentage_color,
+        op.P_color,
+        op.A_color,
+        op.PA_color
+      ];
+
+      cells.forEach(function(cellValue, idx) {
+        var td = document.createElement('td');
+        td.textContent = cellValue;
+      
+        // if a font-color was computed, apply it
+        if (colors[idx]) {
+          td.style.color = colors[idx];
+        }
+      
+        row.appendChild(td);
       });
-      table.appendChild(tbody);
+
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+
 
       section.appendChild(table);
       opMetricsContainer.appendChild(section);
