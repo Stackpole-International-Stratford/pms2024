@@ -6873,6 +6873,35 @@ def apply_color_gradient_to_line(machine_metrics, metric_key, color_key):
         machine_metrics[machine_id][color_key] = color_hex
 
 
+def apply_color_gradient_to_line_reversed(machine_metrics, metric_key, color_key):
+    """
+    Same as apply_color_gradient_to_line, but inverts the ratio so that
+    higher metric values map to red and lower to green.
+    :param machine_metrics: Dict with IDs → metric dicts
+    :param metric_key: which value to rank (e.g. "downtime_percentage")
+    :param color_key: where to store the hex (e.g. "downtime_percentage_color")
+    """
+    # Gather (id, value) pairs
+    items = [
+        (mid, data[metric_key])
+        for mid, data in machine_metrics.items()
+        if data.get(metric_key) is not None
+    ]
+    if not items:
+        print(f"[apply_color_gradient_to_line_reversed] No '{metric_key}' values found.")
+        return
+
+    # Sort ascending by value
+    items.sort(key=lambda x: x[1])
+    total = len(items)
+
+    # For each rank, compute inverted ratio and assign color
+    for rank, (machine_id, value) in enumerate(items):
+        # standard 0→1 ratio
+        ratio = rank / (total - 1) if total > 1 else 0.5
+        # invert it: worst (highest value) now gets ratio=0, best=1
+        inv_ratio = 1 - ratio
+        machine_metrics[machine_id][color_key] = get_color_for_ratio(inv_ratio)
 
 
 
@@ -7394,7 +7423,7 @@ def fetch_combined_oee_production_data(request):
         op_map = { op["op"]: op for op in ops }
 
         # apply your color helper to each metric
-        apply_color_gradient_to_line(op_map, "downtime_percentage", "downtime_percentage_color")
+        apply_color_gradient_to_line_reversed(op_map, "downtime_percentage", "downtime_percentage_color")
         apply_color_gradient_to_line(op_map, "P",                      "P_color")
         apply_color_gradient_to_line(op_map, "A",                      "A_color")
         apply_color_gradient_to_line(op_map, "PA",                     "PA_color")
