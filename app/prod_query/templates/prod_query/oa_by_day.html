@@ -7,7 +7,7 @@
   <div class="row mb-4">
     <div class="col-12 text-center">
       <h1 class="display-5">
-        <span id="selected-date-display">7am {{ previous_day }} to 7am {{ end_date }}</span>
+        <span id="selected-date-display">7am {{ previous_day }} to {{ end_date }}</span>
       </h1>
     </div>
   </div>
@@ -79,10 +79,11 @@
         <ul>
           <li><strong>Planned Production Time (PPT)</strong> = Total Potential Minutes − Planned Downtime</li>
           <li><strong>Run Time</strong> = PPT − Unplanned Downtime</li>
-          <li><strong>Uptime Ratio</strong> = Runtime / Potential Minutes</li>
-          <li><strong>Adjusted Target</strong> = Target * Uptime Ratio</li>
+          <!-- <li><strong>Uptime Ratio</strong> = Runtime / Potential Minutes</li> -->
+          <li><strong>Ideal Cycle Time</strong> = PPT / Target Parts</li>
+          <!-- <li><strong>Adjusted Target</strong> = Target * Uptime Ratio</li> -->
           <li><strong>Availability (A)</strong> = Run Time / PPT</li>
-          <li><strong>Performance (P)</strong> = Total Produced / Adjusted Target</li>
+          <li><strong>Performance (P)</strong> = (Ideal Cycle Time x Produced Parts) / Run Time</li>
           <li><strong>Quality (Q)</strong> = (Produced Parts − Scrap) / Produced Parts</li>
           <li><strong>OEE</strong> = A × P × Q</li>
         </ul>
