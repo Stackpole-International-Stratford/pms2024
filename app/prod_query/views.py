@@ -6807,6 +6807,10 @@ def compute_machine_oee(machine_data, queried_minutes):
         performance = 0
     else:
         performance = produced / adjusted_target
+
+    if potential - (planned_downtime + unplanned_downtime) == 0:
+        availaibility = 0
+        performance = 1
     
     return {"A": availability, "P": performance}
 
@@ -7306,60 +7310,66 @@ def fetch_combined_oee_production_data(request):
     )
 
 
-    # Final pass: Aggregate operation-level totals from the machine-level data.
+    # --- Final pass: Aggregate operation-level totals and compute A & P via compute_machine_oee ---
     for line in lines:
         line_name = line["line"]
         for operation in line.get("operations", []):
+            # Step 1: build your op_totals as before
             op_totals = {
-                "total_parts": 0,
-                "total_target": 0,
-                "total_downtime": 0,
-                "total_planned_downtime": 0,
-                "total_unplanned_downtime": 0,
-                "total_queried_minutes": 0,
+                "total_parts":               0,
+                "total_target":              0,
+                "total_downtime":            0,
+                "total_planned_downtime":    0,
+                "total_unplanned_downtime":  0,
+                "total_queried_minutes":     0,
             }
             for machine in operation.get("machines", []):
                 machine_number = machine["number"]
-                machine_data = production_data[line_name].get(machine_number, {})
-                op_totals["total_parts"] += machine_data.get("produced_parts", 0)
-                op_totals["total_target"] += machine_data.get("target", 0)
-                op_totals["total_downtime"] += machine_data.get("downtime_minutes", 0)
-                op_totals["total_planned_downtime"] += machine_data.get("planned_downtime_minutes", 0)
-                op_totals["total_unplanned_downtime"] += machine_data.get("unplanned_downtime_minutes", 0)
-                op_totals["total_queried_minutes"] += machine_data.get("total_queried_minutes", 0)
-            
-            op_metrics = calculate_operaton_P_and_A_from_totals(
-                line_name=line_name,
-                op_name=operation["op"],
-                produced_parts=op_totals["total_parts"],
-                target=op_totals["total_target"],
-                downtime_minutes=op_totals["total_downtime"],
-                planned_downtime=op_totals["total_planned_downtime"],
-                unplanned_downtime=op_totals["total_unplanned_downtime"],
-                total_queried_minutes=op_totals["total_queried_minutes"]
-            )
-            # Update the op_metrics with raw totals.
-            op_metrics.update(op_totals)
+                data = production_data[line_name][machine_number]
+                op_totals["total_parts"]              += data.get("produced_parts", 0)
+                op_totals["total_target"]             += data.get("target", 0)
+                op_totals["total_downtime"]           += data.get("downtime_minutes", 0)
+                op_totals["total_planned_downtime"]   += data.get("planned_downtime_minutes", 0)
+                op_totals["total_unplanned_downtime"] += data.get("unplanned_downtime_minutes", 0)
+                op_totals["total_queried_minutes"]    += data.get("total_queried_minutes", 0)
 
-            # Compute downtime percentage if queried minutes are available.
+            # Step 2: shape it like a single-machine payload
+            op_data = {
+                "produced_parts":            op_totals["total_parts"],
+                "target":                    op_totals["total_target"],
+                "planned_downtime_minutes":  op_totals["total_planned_downtime"],
+                "unplanned_downtime_minutes":op_totals["total_unplanned_downtime"],
+            }
+
+            # Step 3: reuse compute_machine_oee
+            op_oee = compute_machine_oee(
+                op_data,
+                op_totals["total_queried_minutes"]
+            )
+            # op_oee is a dict { "A": ..., "P": ... }
+
+            # Step 4: assemble the final op_metrics
+            op_metrics = {
+                "line": line_name,
+                "op":   operation["op"],
+                **op_oee,     # adds "A" and "P"
+                **op_totals,  # adds your raw totals
+            }
+
+            # Step 5: downtime percentage (unchanged)
             if op_totals["total_queried_minutes"] > 0:
-                op_metrics["downtime_percentage"] = (op_totals["total_downtime"] / op_totals["total_queried_minutes"]) * 100
+                op_metrics["downtime_percentage"] = (
+                    op_totals["total_downtime"]
+                    / op_totals["total_queried_minutes"]
+                ) * 100
             else:
                 op_metrics["downtime_percentage"] = 0
 
-            # Attach these totals to the operation dict for the frontend.
+            # Step 6: attach for frontend and collect
             operation["totals"] = op_metrics
             operation_oee_metrics.append(op_metrics)
 
-            # Operation-level debug print:
-            # print(f"[DEBUG] Operation {operation['op']} on Line {line_name} Totals:")
-            # print(f"         Produced = {op_totals['total_parts']}, "
-            #       f"Target = {op_totals['total_target']}, "
-            #       f"Downtime = {op_totals['total_downtime']} min, "
-            #       f"Planned = {op_totals['total_planned_downtime']} min, "
-            #       f"Unplanned = {op_totals['total_unplanned_downtime']} min, "
-            #       f"Queried Minutes = {op_totals['total_queried_minutes']}, "
-            #       f"Downtime % = {op_metrics['downtime_percentage']:.2f}%")
+
 
 
     # Build the response payload.

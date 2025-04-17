@@ -797,6 +797,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
 // Update Operation OEE Metrics grouped by line, injecting into the accordion body.
+// Update Operation OEE Metrics grouped by line, injecting into the accordion body.
 if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   var opMetricsContainer = document.getElementById('operation-oee-metrics');
   if (opMetricsContainer) {
@@ -825,6 +826,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       var table = document.createElement('table');
       table.className = 'table table-bordered';
 
+      // 1) build the header
       var thead = document.createElement('thead');
       var headerRow = document.createElement('tr');
       var headers = [
@@ -835,7 +837,10 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         'Planned Downtime',
         'Unplanned Downtime',
         'Total Queried Minutes',
-        'Downtime Percentage'
+        'Downtime Percentage',
+        'Performance',          // NEW
+        'Availability',         // NEW
+
       ];
       headers.forEach(function(headerText) {
         var th = document.createElement('th');
@@ -845,10 +850,16 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       thead.appendChild(headerRow);
       table.appendChild(thead);
 
+      // 2) build the body
       var tbody = document.createElement('tbody');
       metricsByLine[line].forEach(function(op) {
         var row = document.createElement('tr');
         var opName = op.op_name || op.op || 'N/A';
+
+        // If A and P are ratios (0–1), multiply by 100 to show percentages:
+        var availPct = (op.A * 100).toFixed(2) + '%';
+        var perfPct  = (op.P * 100).toFixed(2) + '%';
+
         var cells = [
           opName,
           op.total_parts,
@@ -857,8 +868,11 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
           op.total_planned_downtime,
           op.total_unplanned_downtime,
           op.total_queried_minutes,
-          Number(op.downtime_percentage).toFixed(2) + '%'
+          Number(op.downtime_percentage).toFixed(2) + '%',
+          perfPct,        // Performance
+          availPct,       // Availability
         ];
+
         cells.forEach(function(cellValue) {
           var td = document.createElement('td');
           td.textContent = cellValue;
@@ -875,6 +889,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
     console.error('Element with id "operation-oee-metrics" not found in the DOM.');
   }
 }
+
 
 
 
