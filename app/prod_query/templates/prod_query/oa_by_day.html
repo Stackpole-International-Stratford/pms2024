@@ -27,7 +27,7 @@
           </div>
           <button id="submit-dates" class="btn btn-dark mt-3">Submit Dates</button>
         </div>
-        
+    
         <!-- OEE Metrics Column -->
         <div class="col-md-6 d-flex flex-column justify-content-center">
           <div class="card text-center">
@@ -76,18 +76,8 @@
       <div class="accordion-body">
         <h5>Formula Used for OEE Calculation</h5>
         <p>We use the following formulas based on standard OEE methodology, adapted to our available data:</p>
-        <ul>
-          <li><strong>Planned Production Time (PPT)</strong> = Total Potential Minutes − Planned Downtime</li>
-          <li><strong>Run Time</strong> = PPT − Unplanned Downtime</li>
-          <!-- <li><strong>Uptime Ratio</strong> = Runtime / Potential Minutes</li> -->
-          <li><strong>Ideal Cycle Time</strong> = PPT / Target Parts</li>
-          <!-- <li><strong>Adjusted Target</strong> = Target * Uptime Ratio</li> -->
-          <li><strong>Availability (A)</strong> = Run Time / PPT</li>
-          <li><strong>Performance (P)</strong> = (Ideal Cycle Time x Produced Parts) / Run Time</li>
-          <li><strong>Quality (Q)</strong> = (Produced Parts − Scrap) / Produced Parts</li>
-          <li><strong>OEE</strong> = A × P × Q</li>
-        </ul>
-        <p>Source: <a href="https://www.oee.com/calculating-oee/" target="_blank">OEE.com</a></p>
+        <img src="{% static 'images/JE_oee.png' %}" alt="JE Logo">
+        <p>Source: <a href="https://jehl.sharepoint.com/sites/JEInMotion/sitepages/cpk-2.0-as-the-driver-for-oee-quality-and-ct-improvement.aspx" target="_blank">JE OEE</a></p>
 
         <h5>Important Notes</h5>
         <ul>
