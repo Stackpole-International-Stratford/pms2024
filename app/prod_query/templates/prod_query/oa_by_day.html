@@ -912,7 +912,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
 
 
 
-
+appendOpTotalsRows();
 
 
 
@@ -1347,7 +1347,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
 
 
 
-
+appendOpTotalsRows();
 
 
   
@@ -1406,5 +1406,46 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   });
 });
 </script>
+
+<script>
+  // pulled out so you can call it from your fetch callback
+  function appendOpTotalsRows() {
+    const opTables  = Array.from(document.querySelectorAll('#productionData table.table-striped'));
+    const totalRows = Array.from(document.querySelectorAll('#operation-oee-metrics table.table-bordered tbody tr'));
+  
+    opTables.forEach((table, idx) => {
+      const srcRow = totalRows[idx];
+      if (!srcRow) return;
+  
+      // 1) clone the summary row
+      const clone = srcRow.cloneNode(true);
+  
+      // 2) pull out its cells
+      const cells = clone.querySelectorAll('td');
+  
+      // 3) rename first cell to "Total"
+      if (cells[0]) cells[0].innerText = 'Total';
+  
+      // 4) remove the 7th cell (zero‑based index 6 = "Total Queried Minutes")
+      if (cells[6]) cells[6].remove();
+  
+      // 5) override any inherited colors and force black text
+      clone.querySelectorAll('td').forEach(td => {
+        td.style.color = 'black';
+      });
+  
+      // 6) append into the <tbody> of the matching op table
+      table.querySelector('tbody').appendChild(clone);
+    });
+  }
+  
+  // …and at the very end of your fetchProductionData(...).then(data=>{…}) callback:
+  appendOpTotalsRows();
+  </script>
+  
+  
+  
+  
+  
 
 {% endblock %}
