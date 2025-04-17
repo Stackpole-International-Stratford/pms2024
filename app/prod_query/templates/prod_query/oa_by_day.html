@@ -1420,11 +1420,20 @@ appendOpTotalsRows();
     const totalRows = Array.from(document.querySelectorAll('#operation-oee-metrics table.table-bordered tbody tr'));
   
     opTables.forEach((table, idx) => {
+      // ——————————————————————————
+      // 0) remove any previously appended total rows
+      table
+        .querySelectorAll('tbody tr.appended-total')
+        .forEach(oldRow => oldRow.remove());
+      // ——————————————————————————
+  
       const srcRow = totalRows[idx];
       if (!srcRow) return;
   
       // 1) clone the summary row
       const clone = srcRow.cloneNode(true);
+      // mark it so we can remove it next time
+      clone.classList.add('appended-total');
   
       // 2) pull out its cells
       const cells = clone.querySelectorAll('td');
@@ -1442,7 +1451,6 @@ appendOpTotalsRows();
   
       // 6) append an extra empty <td> so this row isn't one cell short
       const emptyCell = document.createElement('td');
-      // use a non‑breaking space so it still takes up minimal width
       emptyCell.innerHTML = '&nbsp;';
       clone.appendChild(emptyCell);
   
@@ -1454,6 +1462,7 @@ appendOpTotalsRows();
   // …and at the very end of your fetchProductionData(...).then(data=>{…}) callback:
   appendOpTotalsRows();
 </script>
+
 
   
   
