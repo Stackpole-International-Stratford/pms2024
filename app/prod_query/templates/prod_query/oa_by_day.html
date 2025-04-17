@@ -819,35 +819,54 @@ document.addEventListener("DOMContentLoaded", function() {
 // Update Operation OEE Metrics grouped by line, injecting into the accordion body.
 if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   var opMetricsContainer = document.getElementById('operation-oee-metrics');
-  if (opMetricsContainer) {
-    // Group metrics by line.
-    var metricsByLine = {};
-    data.operation_oee_metrics.forEach(function(op) {
-      var lineName = op.line || op.line_name || 'Unknown';
-      if (!metricsByLine[lineName]) {
-        metricsByLine[lineName] = [];
-      }
-      metricsByLine[lineName].push(op);
-    });
+  if (!opMetricsContainer) {
+    console.error('Element with id "operation-oee-metrics" not found in the DOM.');
+    return;
+  }
 
-    // Clear existing content.
-    opMetricsContainer.innerHTML = '';
+  // 1) Group metrics by line
+  var metricsByLine = {};
+  data.operation_oee_metrics.forEach(function(op) {
+    var lineName = op.line || op.line_name || 'Unknown';
+    if (!metricsByLine[lineName]) metricsByLine[lineName] = [];
+    metricsByLine[lineName].push(op);
+  });
 
-    // Iterate over each line grouping.
-    for (var line in metricsByLine) {
-      var section = document.createElement('div');
-      section.style.marginBottom = '20px';
+  // 2) Clear existing content
+  opMetricsContainer.innerHTML = '';
 
-      var heading = document.createElement('h2');
-      heading.textContent = 'Line: ' + line;
-      section.appendChild(heading);
+  // 3) Create & insert the “Export All Lines to CSV” button
+  var exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'btn btn-sm btn-outline-secondary mb-3 export-csv-all-btn';
+  exportBtn.setAttribute('data-bs-toggle', 'tooltip');
+  exportBtn.setAttribute('data-bs-placement', 'top');
+  exportBtn.title = 'Export to CSV';
+  exportBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+        width="16" height="16" fill="currentColor"
+        class="bi bi-download me-1" viewBox="0 0 16 16">
+      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 
+              1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 
+              0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 
+              1 .5-.5"/>
+      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 
+              0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 
+              0-1 0v8.793L5.354 8.146a.5.5 0 1 
+              0-.708.708z"/>
+    </svg>
+    Export All Lines
+  `;
+  opMetricsContainer.appendChild(exportBtn);
 
-      var table = document.createElement('table');
-      table.className = 'table table-bordered';
+  // 4) Wire up the download logic
+  exportBtn.addEventListener('click', function() {
+    // helper to CSV-escape
+    var escapeCell = function(v) {
+      return '"' + String(v).replace(/"/g, '""') + '"';
+    };
 
-    // 1) build the header
-    var thead = document.createElement('thead');
-    var headerRow = document.createElement('tr');
+    // column headers
     var headers = [
       'Operation',
       'Total Parts Produced',
@@ -859,29 +878,104 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       'Downtime Percentage',
       'Performance',
       'Availability',
-      'PxA'           // ← new column
+      'PxA'
     ];
-    headers.forEach(function(headerText) {
+
+    var lines = [];
+    lines.push('Operation Totals'); // title row
+
+    var lineNames = Object.keys(metricsByLine);
+    lineNames.forEach(function(lineName, idx) {
+      // Line header
+      lines.push('Line: ' + lineName);
+      // column header
+      lines.push(headers.map(escapeCell).join(','));
+
+      // each op row
+      metricsByLine[lineName].forEach(function(op) {
+        var perfPct  = (op.P  * 100).toFixed(2) + '%';
+        var availPct = (op.A  * 100).toFixed(2) + '%';
+        var paPct    = (op.PA * 100).toFixed(2) + '%';
+
+        var row = [
+          op.op_name || op.op || '',
+          op.total_parts,
+          op.total_target,
+          op.total_downtime,
+          op.total_planned_downtime,
+          op.total_unplanned_downtime,
+          op.total_queried_minutes,
+          Number(op.downtime_percentage).toFixed(2) + '%',
+          perfPct,
+          availPct,
+          paPct
+        ];
+
+        lines.push(row.map(escapeCell).join(','));
+      });
+
+      // blank line between groups (except after last)
+      if (idx < lineNames.length - 1) lines.push('');
+    });
+
+    // build & trigger download
+    var blob = new Blob([ lines.join('\r\n') ], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href     = URL.createObjectURL(blob);
+    link.download = 'operation_totals.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  });
+
+  // 5) Now render each line’s table
+  Object.keys(metricsByLine).forEach(function(lineName) {
+    var section = document.createElement('div');
+    section.style.marginBottom = '20px';
+
+    // Line heading
+    var heading = document.createElement('h2');
+    heading.textContent = 'Line: ' + lineName;
+    section.appendChild(heading);
+
+    // Table skeleton
+    var table = document.createElement('table');
+    table.className = 'table table-bordered';
+
+    // 5a) Thead
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    [
+      'Operation',
+      'Total Parts Produced',
+      'Total Target',
+      'Downtime Minutes',
+      'Planned Downtime',
+      'Unplanned Downtime',
+      'Total Queried Minutes',
+      'Downtime Percentage',
+      'Performance',
+      'Availability',
+      'PxA'
+    ].forEach(function(txt) {
       var th = document.createElement('th');
-      th.textContent = headerText;
+      th.textContent = txt;
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // 2) build the body
+    // 5b) Tbody
     var tbody = document.createElement('tbody');
-    metricsByLine[line].forEach(function(op) {
-      var row = document.createElement('tr');
-      var opName = op.op_name || op.op || 'N/A';
-
-      // format your percentages
+    metricsByLine[lineName].forEach(function(op) {
+      var tr = document.createElement('tr');
       var perfPct  = (op.P  * 100).toFixed(2) + '%';
       var availPct = (op.A  * 100).toFixed(2) + '%';
       var paPct    = (op.PA * 100).toFixed(2) + '%';
 
-      var cells = [
-        opName,
+      var values = [
+        op.op_name || op.op || '',
         op.total_parts,
         op.total_target,
         op.total_downtime,
@@ -889,12 +983,11 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         op.total_unplanned_downtime,
         op.total_queried_minutes,
         Number(op.downtime_percentage).toFixed(2) + '%',
-        perfPct,   // Performance
-        availPct,  // Availability
-        paPct      // P×A
+        perfPct,
+        availPct,
+        paPct
       ];
 
-      // build a parallel array of cell‐background colors (null = no color)
       var colors = [
         null, null, null, null, null, null, null,
         op.downtime_percentage_color,
@@ -903,29 +996,20 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         op.PA_color
       ];
 
-      cells.forEach(function(cellValue, idx) {
+      values.forEach(function(val, i) {
         var td = document.createElement('td');
-        td.textContent = cellValue;
-      
-        // if a font-color was computed, apply it
-        if (colors[idx]) {
-          td.style.color = colors[idx];
-        }
-      
-        row.appendChild(td);
+        td.textContent = val;
+        if (colors[i]) td.style.color = colors[i];
+        tr.appendChild(td);
       });
 
-      tbody.appendChild(row);
+      tbody.appendChild(tr);
     });
     table.appendChild(tbody);
 
-
-      section.appendChild(table);
-      opMetricsContainer.appendChild(section);
-    }
-  } else {
-    console.error('Element with id "operation-oee-metrics" not found in the DOM.');
-  }
+    section.appendChild(table);
+    opMetricsContainer.appendChild(section);
+  });
 }
 
 
@@ -1254,35 +1338,54 @@ appendOpTotalsRows();
 // Update Operation OEE Metrics grouped by line, injecting into the accordion body.
 if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   var opMetricsContainer = document.getElementById('operation-oee-metrics');
-  if (opMetricsContainer) {
-    // Group metrics by line.
-    var metricsByLine = {};
-    data.operation_oee_metrics.forEach(function(op) {
-      var lineName = op.line || op.line_name || 'Unknown';
-      if (!metricsByLine[lineName]) {
-        metricsByLine[lineName] = [];
-      }
-      metricsByLine[lineName].push(op);
-    });
+  if (!opMetricsContainer) {
+    console.error('Element with id "operation-oee-metrics" not found in the DOM.');
+    return;
+  }
 
-    // Clear existing content.
-    opMetricsContainer.innerHTML = '';
+  // 1) Group metrics by line
+  var metricsByLine = {};
+  data.operation_oee_metrics.forEach(function(op) {
+    var lineName = op.line || op.line_name || 'Unknown';
+    if (!metricsByLine[lineName]) metricsByLine[lineName] = [];
+    metricsByLine[lineName].push(op);
+  });
 
-    // Iterate over each line grouping.
-    for (var line in metricsByLine) {
-      var section = document.createElement('div');
-      section.style.marginBottom = '20px';
+  // 2) Clear existing content
+  opMetricsContainer.innerHTML = '';
 
-      var heading = document.createElement('h2');
-      heading.textContent = 'Line: ' + line;
-      section.appendChild(heading);
+  // 3) Create & insert the “Export All Lines to CSV” button
+  var exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'btn btn-sm btn-outline-secondary mb-3 export-csv-all-btn';
+  exportBtn.setAttribute('data-bs-toggle', 'tooltip');
+  exportBtn.setAttribute('data-bs-placement', 'top');
+  exportBtn.title = 'Export to CSV';
+  exportBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+        width="16" height="16" fill="currentColor"
+        class="bi bi-download me-1" viewBox="0 0 16 16">
+      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 
+              1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 
+              0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 
+              1 .5-.5"/>
+      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 
+              0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 
+              0-1 0v8.793L5.354 8.146a.5.5 0 1 
+              0-.708.708z"/>
+    </svg>
+    Export All Lines
+  `;
+  opMetricsContainer.appendChild(exportBtn);
 
-      var table = document.createElement('table');
-      table.className = 'table table-bordered';
+  // 4) Wire up the download logic
+  exportBtn.addEventListener('click', function() {
+    // helper to CSV-escape
+    var escapeCell = function(v) {
+      return '"' + String(v).replace(/"/g, '""') + '"';
+    };
 
-    // 1) build the header
-    var thead = document.createElement('thead');
-    var headerRow = document.createElement('tr');
+    // column headers
     var headers = [
       'Operation',
       'Total Parts Produced',
@@ -1294,29 +1397,104 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       'Downtime Percentage',
       'Performance',
       'Availability',
-      'PxA'           // ← new column
+      'PxA'
     ];
-    headers.forEach(function(headerText) {
+
+    var lines = [];
+    lines.push('Operation Totals'); // title row
+
+    var lineNames = Object.keys(metricsByLine);
+    lineNames.forEach(function(lineName, idx) {
+      // Line header
+      lines.push('Line: ' + lineName);
+      // column header
+      lines.push(headers.map(escapeCell).join(','));
+
+      // each op row
+      metricsByLine[lineName].forEach(function(op) {
+        var perfPct  = (op.P  * 100).toFixed(2) + '%';
+        var availPct = (op.A  * 100).toFixed(2) + '%';
+        var paPct    = (op.PA * 100).toFixed(2) + '%';
+
+        var row = [
+          op.op_name || op.op || '',
+          op.total_parts,
+          op.total_target,
+          op.total_downtime,
+          op.total_planned_downtime,
+          op.total_unplanned_downtime,
+          op.total_queried_minutes,
+          Number(op.downtime_percentage).toFixed(2) + '%',
+          perfPct,
+          availPct,
+          paPct
+        ];
+
+        lines.push(row.map(escapeCell).join(','));
+      });
+
+      // blank line between groups (except after last)
+      if (idx < lineNames.length - 1) lines.push('');
+    });
+
+    // build & trigger download
+    var blob = new Blob([ lines.join('\r\n') ], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href     = URL.createObjectURL(blob);
+    link.download = 'operation_totals.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  });
+
+  // 5) Now render each line’s table
+  Object.keys(metricsByLine).forEach(function(lineName) {
+    var section = document.createElement('div');
+    section.style.marginBottom = '20px';
+
+    // Line heading
+    var heading = document.createElement('h2');
+    heading.textContent = 'Line: ' + lineName;
+    section.appendChild(heading);
+
+    // Table skeleton
+    var table = document.createElement('table');
+    table.className = 'table table-bordered';
+
+    // 5a) Thead
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    [
+      'Operation',
+      'Total Parts Produced',
+      'Total Target',
+      'Downtime Minutes',
+      'Planned Downtime',
+      'Unplanned Downtime',
+      'Total Queried Minutes',
+      'Downtime Percentage',
+      'Performance',
+      'Availability',
+      'PxA'
+    ].forEach(function(txt) {
       var th = document.createElement('th');
-      th.textContent = headerText;
+      th.textContent = txt;
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // 2) build the body
+    // 5b) Tbody
     var tbody = document.createElement('tbody');
-    metricsByLine[line].forEach(function(op) {
-      var row = document.createElement('tr');
-      var opName = op.op_name || op.op || 'N/A';
-
-      // format your percentages
+    metricsByLine[lineName].forEach(function(op) {
+      var tr = document.createElement('tr');
       var perfPct  = (op.P  * 100).toFixed(2) + '%';
       var availPct = (op.A  * 100).toFixed(2) + '%';
       var paPct    = (op.PA * 100).toFixed(2) + '%';
 
-      var cells = [
-        opName,
+      var values = [
+        op.op_name || op.op || '',
         op.total_parts,
         op.total_target,
         op.total_downtime,
@@ -1324,12 +1502,11 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         op.total_unplanned_downtime,
         op.total_queried_minutes,
         Number(op.downtime_percentage).toFixed(2) + '%',
-        perfPct,   // Performance
-        availPct,  // Availability
-        paPct      // P×A
+        perfPct,
+        availPct,
+        paPct
       ];
 
-      // build a parallel array of cell‐background colors (null = no color)
       var colors = [
         null, null, null, null, null, null, null,
         op.downtime_percentage_color,
@@ -1338,30 +1515,22 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         op.PA_color
       ];
 
-      cells.forEach(function(cellValue, idx) {
+      values.forEach(function(val, i) {
         var td = document.createElement('td');
-        td.textContent = cellValue;
-      
-        // if a font-color was computed, apply it
-        if (colors[idx]) {
-          td.style.color = colors[idx];
-        }
-      
-        row.appendChild(td);
+        td.textContent = val;
+        if (colors[i]) td.style.color = colors[i];
+        tr.appendChild(td);
       });
 
-      tbody.appendChild(row);
+      tbody.appendChild(tr);
     });
     table.appendChild(tbody);
 
-
-      section.appendChild(table);
-      opMetricsContainer.appendChild(section);
-    }
-  } else {
-    console.error('Element with id "operation-oee-metrics" not found in the DOM.');
-  }
+    section.appendChild(table);
+    opMetricsContainer.appendChild(section);
+  });
 }
+
 
 
 
