@@ -796,7 +796,7 @@ document.addEventListener("DOMContentLoaded", function() {
           oeeLineContentDiv.appendChild(table);
         }
 
-// Update Operation OEE Metrics grouped by line, injecting into the accordion body.
+
 // Update Operation OEE Metrics grouped by line, injecting into the accordion body.
 if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
   var opMetricsContainer = document.getElementById('operation-oee-metrics');
@@ -859,7 +859,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       // format your percentages
       var perfPct  = (op.P  * 100).toFixed(2) + '%';
       var availPct = (op.A  * 100).toFixed(2) + '%';
-      var paPct    = (op.PA * 100).toFixed(2) + '%';  // ← now comes from backend
+      var paPct    = (op.PA * 100).toFixed(2) + '%';
 
       var cells = [
         opName,
@@ -870,19 +870,36 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         op.total_unplanned_downtime,
         op.total_queried_minutes,
         Number(op.downtime_percentage).toFixed(2) + '%',
-        perfPct,        // Performance
-        availPct,       // Availability
-        paPct           // PxA
+        perfPct,   // Performance
+        availPct,  // Availability
+        paPct      // P×A
       ];
 
-        cells.forEach(function(cellValue) {
-          var td = document.createElement('td');
-          td.textContent = cellValue;
-          row.appendChild(td);
-        });
-        tbody.appendChild(row);
+      // build a parallel array of cell‐background colors (null = no color)
+      var colors = [
+        null, null, null, null, null, null, null,
+        op.downtime_percentage_color,
+        op.P_color,
+        op.A_color,
+        op.PA_color
+      ];
+
+      cells.forEach(function(cellValue, idx) {
+        var td = document.createElement('td');
+        td.textContent = cellValue;
+      
+        // if a font-color was computed, apply it
+        if (colors[idx]) {
+          td.style.color = colors[idx];
+        }
+      
+        row.appendChild(td);
       });
-      table.appendChild(tbody);
+
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+
 
       section.appendChild(table);
       opMetricsContainer.appendChild(section);

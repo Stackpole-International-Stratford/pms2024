@@ -7379,6 +7379,27 @@ def fetch_combined_oee_production_data(request):
 
 
 
+    # --- After you've built operation_oee_metrics but before you build response_data ---
+
+    from collections import defaultdict
+
+    # 1) Group all ops by line
+    ops_by_line = defaultdict(list)
+    for op in operation_oee_metrics:
+        ops_by_line[op["line"]].append(op)
+
+    # 2) For each line, build a dict of op → metrics and apply gradients
+    for line_name, ops in ops_by_line.items():
+        # map operation name to its metrics dict
+        op_map = { op["op"]: op for op in ops }
+
+        # apply your color helper to each metric
+        apply_color_gradient_to_line(op_map, "downtime_percentage", "downtime_percentage_color")
+        apply_color_gradient_to_line(op_map, "P",                      "P_color")
+        apply_color_gradient_to_line(op_map, "A",                      "A_color")
+        apply_color_gradient_to_line(op_map, "PA",                     "PA_color")
+
+
 
     # Build the response payload.
     response_data = {
