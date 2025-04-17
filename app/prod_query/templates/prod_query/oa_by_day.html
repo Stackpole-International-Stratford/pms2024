@@ -184,6 +184,12 @@
     </h2>
     <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#productionData">
       <div class="accordion-body">
+        <!-- per-line CSV export button -->
+        <button type="button"
+        class="btn btn-sm btn-outline-secondary mb-3 export-csv-btn"
+        data-line="{{ line.line }}">
+    Export “{{ line.line }}” to CSV
+        </button>
         {% for operation in line.operations %}
           <h3 class="h6 mt-3">Operation: {{ operation.op }}</h3>
           <table class="table table-striped">
@@ -1464,6 +1470,107 @@ appendOpTotalsRows();
 </script>
 
 
+  
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const escapeCell = v => `"${v.replace(/"/g, '""')}"`;
+  
+    document.querySelectorAll('.export-csv-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lineName  = btn.dataset.line.trim();
+        const container = btn.closest('.accordion-item');
+  
+        // exactly the columns you asked for
+        const headers = [
+          'Line',
+          'Operation',
+          'Machine',
+          'Parts',
+          'Target',
+          'Downtime',
+          'Planned Downtime',
+          'Unplanned Downtime',
+          'Downtime %',
+          'Performance',
+          'Availability',
+          'PxA'
+        ];
+  
+        const dataRows = [];
+  
+        // for each Operation under this Line…
+        container.querySelectorAll('.accordion-body h3.h6').forEach(opHdr => {
+          const opName = opHdr.textContent.replace(/^Operation:\s*/, '').trim();
+          const table  = opHdr.nextElementSibling;
+          if (!table || table.tagName.toLowerCase() !== 'table') return;
+  
+          table.querySelectorAll('tbody tr').forEach(row => {
+            let machine, parts, target, downtime, planned, unplanned, downPct, perf, avail, pxA;
+  
+            if (row.classList.contains('appended-total')) {
+              // cloned Total‐row: grab by cell index, then ignore any extra blank at the end
+              const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+              // [0]=“Total”, [1]=Parts, [2]=Target, [3]=Downtime, [4]=Planned, [5]=Unplanned,
+              // [6]=Downtime %, [7]=Performance, [8]=Availability, [9]=PxA
+              machine    = cells[0];
+              parts      = cells[1];
+              target     = cells[2];
+              downtime   = cells[3];
+              planned    = cells[4];
+              unplanned  = cells[5];
+              downPct    = cells[6];
+              perf       = cells[7];
+              avail      = cells[8];
+              pxA        = cells[9];
+            } else {
+              // regular row: use your span/class hooks
+              machine   = row.querySelector('strong')?.textContent.trim()        || '';
+              parts     = row.querySelector('.produced')?.textContent.trim()     || '';
+              target    = row.querySelector('.target')?.textContent.trim()       || '';
+              downtime  = row.querySelector('.downtime')?.textContent.trim()     || '';
+              planned   = row.querySelector('.planned-downtime')?.textContent.trim()   || '';
+              unplanned = row.querySelector('.unplanned-downtime')?.textContent.trim() || '';
+              downPct   = row.querySelector('.downtime-percentage')?.textContent.trim()|| '';
+              perf      = row.querySelector('.performance')?.textContent.trim()   || '';
+              avail     = row.querySelector('.availability')?.textContent.trim()  || '';
+              pxA       = row.querySelector('.pa')?.textContent.trim()           || '';
+            }
+  
+            dataRows.push([
+              lineName,
+              opName,
+              machine,
+              parts,
+              target,
+              downtime,
+              planned,
+              unplanned,
+              downPct,
+              perf,
+              avail,
+              pxA
+            ]);
+          });
+        });
+  
+        // build and download the CSV
+        const csvContent = [
+          headers.map(escapeCell).join(','),
+          ...dataRows.map(r => r.map(escapeCell).join(','))
+        ].join('\r\n');
+  
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href     = URL.createObjectURL(blob);
+        link.download = `${lineName.replace(/\s+/g, '_')}_production.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      });
+    });
+  });
+  </script>
   
   
   
