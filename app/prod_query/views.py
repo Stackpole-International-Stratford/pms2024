@@ -7259,27 +7259,36 @@ def fetch_combined_oee_production_data(request):
     overall_downtime_minutes = int(overall_downtime_seconds + sum(downtime_totals_by_line.values()) / 60)
     overall_total_potential_minutes = sum(potential_minutes_by_line.values())
 
-    # Compute machine-level OEE metrics for each machine.
+    # --- Compute machine-level OEE metrics and P×A for each machine. ---
     for line_name, machines in production_data.items():
         for machine_number, machine_data in machines.items():
+            # existing A & P calculation
             machine_metrics = compute_machine_oee(
                 machine_data,
                 machine_data.get("total_queried_minutes", 0)
             )
             machine_data.update(machine_metrics)
-    
-    # Compute machine downtime percentage for each machine.
+
+            # new: calculate the P×A metric
+            machine_data["PA"] = machine_data.get("P", 0.0) * machine_data.get("A", 0.0)
+
+
+    # --- Compute machine downtime percentage for each machine. ---
     for line_name, machines in production_data.items():
         for machine_number, machine_data in machines.items():
             downtime_metrics = compute_machine_downtime_percentage(machine_data)
             machine_data.update(downtime_metrics)
             machine_data["adjusted_downtime_percentage"] = 100 - machine_data.get("downtime_percentage", 0)
 
-    # Apply color gradients.
+
+    # --- Apply color gradients (now including P×A) ---
     for line_name, machines in production_data.items():
-        apply_color_gradient_to_line(machines, "P", "P_color")
-        apply_color_gradient_to_line(machines, "A", "A_color")
+        apply_color_gradient_to_line(machines, "P",  "P_color")
+        apply_color_gradient_to_line(machines, "A",  "A_color")
         apply_color_gradient_to_line(machines, "adjusted_downtime_percentage", "downtime_percentage_color")
+        # new: color for P×A
+        apply_color_gradient_to_line(machines, "PA", "PA_color")
+
 
     # Compute the overall OEE metrics.
     oee_metrics = compute_oee_metrics(

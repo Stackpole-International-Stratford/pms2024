@@ -197,6 +197,7 @@
                 <th>Downtime %</th>
                 <th>Performance</th>
                 <th>Availability</th>
+                <th>P × A</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -247,6 +248,14 @@
                   <span class="availability" data-line="{{ line.line }}" data-machine="{{ machine.number }}"
                         style="color: {{ machine.A_color }};">
                         {{ machine.A }}
+                  </span>
+                </td>
+                <td>
+                  <span class="pa"
+                        data-line="{{ line.line }}"
+                        data-machine="{{ machine.number }}"
+                        style="color: {{ machine.PA_color }};">
+                    {{ machine.PA|floatformat:2 }}
                   </span>
                 </td>
                 <td>
@@ -687,6 +696,27 @@ document.addEventListener("DOMContentLoaded", function() {
         });
 
         
+        // Update P×A values.
+        document.querySelectorAll('.pa').forEach(function(elem) {
+          var lineName      = elem.getAttribute('data-line');
+          var machineNumber = elem.getAttribute('data-machine');
+          var m = window.productionData[lineName] && window.productionData[lineName][machineNumber];
+          if (m && m.PA !== undefined) {
+            // Show as a percentage, just like A and P:
+            elem.innerText = (m.PA * 100).toFixed(2) + "%";
+            // Apply color if provided
+            if (m.PA_color) {
+              elem.style.color = m.PA_color;
+            }
+          } else {
+            elem.innerText = "0%";
+          }
+          // Remove loading state if you’re using one
+          elem.classList.remove('loading');
+        });
+
+
+
 
         // Scrap totals by line.
         if (data.scrap_totals_by_line) {
@@ -1063,6 +1093,28 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
         elem.innerText = "N/A";
       }
     });
+
+
+
+      // Update P×A values.
+      document.querySelectorAll('.pa').forEach(function(elem) {
+        var lineName      = elem.getAttribute('data-line');
+        var machineNumber = elem.getAttribute('data-machine');
+        var m = window.productionData[lineName] && window.productionData[lineName][machineNumber];
+        if (m && m.PA !== undefined) {
+          // Show as a percentage, just like A and P:
+          elem.innerText = (m.PA * 100).toFixed(2) + "%";
+          // Apply color if provided
+          if (m.PA_color) {
+            elem.style.color = m.PA_color;
+          }
+        } else {
+          elem.innerText = "0%";
+        }
+        // Remove loading state if you’re using one
+        elem.classList.remove('loading');
+      });
+
 
     // Scrap totals by line.
     if (data.scrap_totals_by_line) {
