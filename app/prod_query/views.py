@@ -6367,12 +6367,12 @@ def compute_oee_metrics(
 
 
     overall_availability = overall_run_time / overall_ppt if overall_ppt > 0 else 0.0
-    # overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
+    overall_performance = (overall_ideal_cycle_time * overall_total_produced) / overall_run_time if overall_run_time > 0 else 0.0
 
-    if overall_adjusted_target == 0:
-        overall_performance = 0
-    else:
-        overall_performance = overall_total_produced / overall_adjusted_target
+    # if overall_adjusted_target == 0:
+    #     overall_performance = 0
+    # else:
+    #     overall_performance = overall_total_produced / overall_adjusted_target
     
     overall_quality = (overall_total_produced - overall_scrap_total) / overall_total_produced if overall_total_produced > 0 else 0.0
     overall_oee = overall_availability * overall_performance * overall_quality
@@ -6406,11 +6406,11 @@ def compute_oee_metrics(
         adjusted_target = target * uptime_ratio
 
         availability = run_time / ppt if ppt > 0 else 0.0
-        # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
-        if adjusted_target == 0:
-            performance = 0
-        else:
-            performance = produced / adjusted_target
+        performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+        # if adjusted_target == 0:
+        #     performance = 0
+        # else:
+        #     performance = produced / adjusted_target
         quality = (produced - scrap) / produced if produced > 0 else 0.0
         oee = availability * performance * quality
         
@@ -6802,11 +6802,11 @@ def compute_machine_oee(machine_data, queried_minutes):
 
     ideal_cycle_time = ppt / target if target > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 0.0
-    # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
-    if adjusted_target == 0:
-        performance = 0
-    else:
-        performance = produced / adjusted_target
+    performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
+    # if adjusted_target == 0:
+    #     performance = 0
+    # else:
+    #     performance = produced / adjusted_target
 
     if potential - (planned_downtime + unplanned_downtime) == 0:
         availaibility = 0
