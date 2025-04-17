@@ -1412,6 +1412,7 @@ appendOpTotalsRows();
 });
 </script>
 
+
 <script>
   // pulled out so you can call it from your fetch callback
   function appendOpTotalsRows() {
@@ -1439,15 +1440,21 @@ appendOpTotalsRows();
         td.style.color = 'black';
       });
   
-      // 6) append into the <tbody> of the matching op table
+      // 6) append an extra empty <td> so this row isn't one cell short
+      const emptyCell = document.createElement('td');
+      // use a non‑breaking space so it still takes up minimal width
+      emptyCell.innerHTML = '&nbsp;';
+      clone.appendChild(emptyCell);
+  
+      // 7) append into the <tbody> of the matching op table
       table.querySelector('tbody').appendChild(clone);
     });
   }
   
   // …and at the very end of your fetchProductionData(...).then(data=>{…}) callback:
   appendOpTotalsRows();
-  </script>
-  
+</script>
+
   
   
   
