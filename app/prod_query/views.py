@@ -6784,7 +6784,7 @@ def compute_machine_oee(machine_data, queried_minutes):
     # target = 1000
     # planned_downtime = 0
     # unplanned_downtime = 3600
-    d
+    
     # For each machine, potential minutes is simply the queried minutes.
     potential = queried_minutes
     ppt = potential - planned_downtime
