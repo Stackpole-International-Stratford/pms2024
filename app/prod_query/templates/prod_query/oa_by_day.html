@@ -826,52 +826,54 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       var table = document.createElement('table');
       table.className = 'table table-bordered';
 
-      // 1) build the header
-      var thead = document.createElement('thead');
-      var headerRow = document.createElement('tr');
-      var headers = [
-        'Operation',
-        'Total Parts Produced',
-        'Total Target',
-        'Downtime Minutes',
-        'Planned Downtime',
-        'Unplanned Downtime',
-        'Total Queried Minutes',
-        'Downtime Percentage',
-        'Performance',          // NEW
-        'Availability',         // NEW
+    // 1) build the header
+    var thead = document.createElement('thead');
+    var headerRow = document.createElement('tr');
+    var headers = [
+      'Operation',
+      'Total Parts Produced',
+      'Total Target',
+      'Downtime Minutes',
+      'Planned Downtime',
+      'Unplanned Downtime',
+      'Total Queried Minutes',
+      'Downtime Percentage',
+      'Performance',
+      'Availability',
+      'PxA'           // ← new column
+    ];
+    headers.forEach(function(headerText) {
+      var th = document.createElement('th');
+      th.textContent = headerText;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
+    // 2) build the body
+    var tbody = document.createElement('tbody');
+    metricsByLine[line].forEach(function(op) {
+      var row = document.createElement('tr');
+      var opName = op.op_name || op.op || 'N/A';
+
+      // format your percentages
+      var perfPct  = (op.P  * 100).toFixed(2) + '%';
+      var availPct = (op.A  * 100).toFixed(2) + '%';
+      var paPct    = (op.PA * 100).toFixed(2) + '%';  // ← now comes from backend
+
+      var cells = [
+        opName,
+        op.total_parts,
+        op.total_target,
+        op.total_downtime,
+        op.total_planned_downtime,
+        op.total_unplanned_downtime,
+        op.total_queried_minutes,
+        Number(op.downtime_percentage).toFixed(2) + '%',
+        perfPct,        // Performance
+        availPct,       // Availability
+        paPct           // PxA
       ];
-      headers.forEach(function(headerText) {
-        var th = document.createElement('th');
-        th.textContent = headerText;
-        headerRow.appendChild(th);
-      });
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-
-      // 2) build the body
-      var tbody = document.createElement('tbody');
-      metricsByLine[line].forEach(function(op) {
-        var row = document.createElement('tr');
-        var opName = op.op_name || op.op || 'N/A';
-
-        // If A and P are ratios (0–1), multiply by 100 to show percentages:
-        var availPct = (op.A * 100).toFixed(2) + '%';
-        var perfPct  = (op.P * 100).toFixed(2) + '%';
-
-        var cells = [
-          opName,
-          op.total_parts,
-          op.total_target,
-          op.total_downtime,
-          op.total_planned_downtime,
-          op.total_unplanned_downtime,
-          op.total_queried_minutes,
-          Number(op.downtime_percentage).toFixed(2) + '%',
-          perfPct,        // Performance
-          availPct,       // Availability
-        ];
 
         cells.forEach(function(cellValue) {
           var td = document.createElement('td');
