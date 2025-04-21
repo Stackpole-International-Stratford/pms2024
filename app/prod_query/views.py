@@ -7298,20 +7298,33 @@ def fetch_combined_oee_production_data(request):
     # --- Compute machine-level OEE metrics and P×A for each machine. ---
     for line_name, machines in production_data.items():
         for machine_number, machine_data in machines.items():
-            potential = machine_data.get("total_queried_minutes", 0)
-            planned    = machine_data.get("planned_downtime_minutes", 0)
-            # PPT = Planned Production Time, in minutes
-            machine_data["ppt"] = max(0, potential - planned)
+                potential = machine_data.get("total_queried_minutes", 0)
+                planned   = machine_data.get("planned_downtime_minutes", 0)
+                unplanned = machine_data.get("unplanned_downtime_minutes", 0)
+                target    = machine_data.get("target", 0)
 
-            # existing A & P calculation
-            machine_metrics = compute_machine_oee(
-                machine_data,
-                machine_data.get("total_queried_minutes", 0)
-            )
-            machine_data.update(machine_metrics)
+                # 1) PPT = potential – planned
+                ppt = max(0, potential - planned)
+                machine_data["ppt"] = ppt
 
-            # new: calculate the P×A metric
-            machine_data["PA"] = machine_data.get("P", 0.0) * machine_data.get("A", 0.0)
+                # 2) Runtime = PPT – unplanned
+                machine_data["runtime"] = max(0, ppt - unplanned)
+
+                # 3) Ideal Cycle Time = minutes of PPT per part
+                if target > 0:
+                    machine_data["ideal_cycle_time"] = ppt / target
+                else:
+                    machine_data["ideal_cycle_time"] = 0.0
+
+                # existing A & P calculation
+                machine_metrics = compute_machine_oee(
+                    machine_data,
+                    machine_data.get("total_queried_minutes", 0)
+                )
+                machine_data.update(machine_metrics)
+
+                # new: calculate the P×A metric
+                machine_data["PA"] = machine_data.get("P", 0.0) * machine_data.get("A", 0.0)
 
 
     # --- Compute machine downtime percentage for each machine. ---
@@ -7346,11 +7359,11 @@ def fetch_combined_oee_production_data(request):
         unplanned_downtime_totals_by_line
     )
 
-    # --- Final pass: Aggregate operation-level totals and compute A, P, and P×A via compute_machine_oee ---
+    # --- Final pass: Aggregate operation-level totals and compute A, P, P×A, plus PPT, Runtime, SCT ---
     for line in lines:
         line_name = line["line"]
         for operation in line.get("operations", []):
-            # 1) build your per-op totals as before
+            # 1) Build per-op raw totals
             op_totals = {
                 "total_parts":               0,
                 "total_target":              0,
@@ -7360,47 +7373,66 @@ def fetch_combined_oee_production_data(request):
                 "total_queried_minutes":     0,
             }
             for machine in operation.get("machines", []):
-                machine_number = machine["number"]
-                data = production_data[line_name][machine_number]
-                op_totals["total_parts"]               += data.get("produced_parts", 0)
-                op_totals["total_target"]              += data.get("target", 0)
-                op_totals["total_downtime"]            += data.get("downtime_minutes", 0)
-                op_totals["total_planned_downtime"]    += data.get("planned_downtime_minutes", 0)
-                op_totals["total_unplanned_downtime"]  += data.get("unplanned_downtime_minutes", 0)
-                op_totals["total_queried_minutes"]     += data.get("total_queried_minutes", 0)
+                mnum = machine["number"]
+                data = production_data[line_name][mnum]
+                op_totals["total_parts"]              += data.get("produced_parts", 0)
+                op_totals["total_target"]             += data.get("target", 0)
+                op_totals["total_downtime"]           += data.get("downtime_minutes", 0)
+                op_totals["total_planned_downtime"]   += data.get("planned_downtime_minutes", 0)
+                op_totals["total_unplanned_downtime"] += data.get("unplanned_downtime_minutes", 0)
+                op_totals["total_queried_minutes"]    += data.get("total_queried_minutes", 0)
 
-            # 2) shape it just like a machine_data dict
+            # 2) Compute PPT, Runtime, and SCT (Standard Cycle Time)
+            potential   = op_totals["total_queried_minutes"]
+            planned     = op_totals["total_planned_downtime"]
+            unplanned   = op_totals["total_unplanned_downtime"]
+            total_target = op_totals["total_target"]
+
+            # Planned Production Time = potential minus planned downtime
+            ppt = max(0, potential - planned)
+
+            # Runtime (Operating Time) = PPT minus unplanned downtime
+            runtime = max(0, ppt - unplanned)
+
+            # SCT = Standard Cycle Time = PPT minutes per part target
+            if total_target > 0:
+                sct = ppt / total_target
+            else:
+                sct = 0.0
+
+            # 3) Compute A & P via your helper
             op_data = {
-                "produced_parts":             op_totals["total_parts"],
-                "target":                     op_totals["total_target"],
-                "planned_downtime_minutes":   op_totals["total_planned_downtime"],
+                "produced_parts":           op_totals["total_parts"],
+                "target":                   op_totals["total_target"],
+                "planned_downtime_minutes": op_totals["total_planned_downtime"],
                 "unplanned_downtime_minutes": op_totals["total_unplanned_downtime"],
             }
-
-            # 3) compute A & P
             op_oee = compute_machine_oee(
                 op_data,
                 op_totals["total_queried_minutes"]
             )
-            # op_oee == {"A": ..., "P": ...}
-
-            # 4) compute P×A
+            # 4) Compute P×A
             op_pa = op_oee.get("P", 0.0) * op_oee.get("A", 0.0)
 
-            # 5) assemble your final metrics dict
+            # 5) Assemble final metrics dict, including the three new fields
             op_metrics = {
                 "line": line_name,
                 "op":   operation["op"],
 
+                # new time‐based fields
+                "ppt":                     ppt,
+                "runtime":                 runtime,
+                "standard_cycle_time":     sct,
+
                 # core OEE values
-                **op_oee,     # adds "A" and "P"
-                "PA": op_pa,  # adds "PA"
+                **op_oee,    # adds "A" and "P"
+                "PA": op_pa,
 
                 # raw totals
                 **op_totals,
             }
 
-            # 6) downtime percentage
+            # 6) Downtime percentage
             if op_totals["total_queried_minutes"] > 0:
                 op_metrics["downtime_percentage"] = (
                     op_totals["total_downtime"]
@@ -7409,9 +7441,10 @@ def fetch_combined_oee_production_data(request):
             else:
                 op_metrics["downtime_percentage"] = 0
 
-            # 7) attach for frontend & collect
+            # 7) Attach to operation and collect
             operation["totals"] = op_metrics
             operation_oee_metrics.append(op_metrics)
+
 
 
 
