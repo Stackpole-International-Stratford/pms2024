@@ -1795,94 +1795,107 @@ appendOpTotalsRows();
 
 
   
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const stripMin     = v => v ? v.replace(/\s*min$/i, '').trim() : '';
-    const stripPercent = v => v ? v.replace(/%/g, '').trim() : '';
-    const escapeCell   = v => `"${v.replace(/"/g, '""')}"`;
-  
-    document.querySelectorAll('.export-csv-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const lineName  = btn.dataset.line.trim();
-        const container = btn.closest('.accordion-item');
-  
-        const headers = [
-          'Line','Operation','Machine','Parts','Target',
-          'Downtime','Planned Downtime','Unplanned Downtime',
-          'Downtime %','Performance','Availability','PxA'
-        ];
-  
-        const dataRows = [];
-  
-        // grab all the operation headings up‐front so we can detect "last"
-        const ops = Array.from(container.querySelectorAll('.accordion-body h3.h6'));
-        ops.forEach((opHdr, idx) => {
-          const opName = opHdr.textContent.replace(/^Operation:\s*/, '').trim();
-          const table  = opHdr.nextElementSibling;
-          if (!table || table.tagName !== 'TABLE') return;
-  
-          // 1) push every machine row (including your appended-total)
-          table.querySelectorAll('tbody tr').forEach(row => {
-            let machine, parts, target,
-                downtime, planned, unplanned,
-                downPct, perf, avail, pxA;
-  
-            if (row.classList.contains('appended-total')) {
-              const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
-              machine   = cells[0];
-              parts     = cells[1];
-              target    = cells[2];
-              downtime  = stripMin(cells[3]);
-              planned   = stripMin(cells[4]);
-              unplanned = stripMin(cells[5]);
-              downPct   = stripPercent(cells[6]);
-              perf      = stripPercent(cells[7]);
-              avail     = stripPercent(cells[8]);
-              pxA       = stripPercent(cells[9]);
-            } else {
-              machine   = row.querySelector('strong')?.textContent.trim()          || '';
-              parts     = row.querySelector('.produced')?.textContent.trim()       || '';
-              target    = row.querySelector('.target')?.textContent.trim()         || '';
-              downtime  = stripMin(row.querySelector('.downtime')?.textContent.trim());
-              planned   = stripMin(row.querySelector('.planned-downtime')?.textContent.trim());
-              unplanned = stripMin(row.querySelector('.unplanned-downtime')?.textContent.trim());
-              downPct   = stripPercent(row.querySelector('.downtime-percentage')?.textContent.trim());
-              perf      = stripPercent(row.querySelector('.performance')?.textContent.trim());
-              avail     = stripPercent(row.querySelector('.availability')?.textContent.trim());
-              pxA       = stripPercent(row.querySelector('.pa')?.textContent.trim());
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const stripMin     = v => v ? v.replace(/\s*min$/i, '').trim() : '';
+      const stripPercent = v => v ? v.replace(/%/g, '').trim() : '';
+      const escapeCell   = v => `"${v.replace(/"/g, '""')}"`;
+    
+      document.querySelectorAll('.export-csv-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lineName  = btn.dataset.line.trim();
+          const container = btn.closest('.accordion-item');
+    
+          // 1) new header row:
+          const headers = [
+            'Line','Operation','Machine','Parts','Target',
+            'Downtime','PPT (min)','Operating Time (min)','SCT (min/part)',
+            'Planned Downtime','Unplanned Downtime',
+            'Downtime %','Performance','Availability','P × A'
+          ];
+    
+          let dataRows = [];
+    
+          // find each operation section under this line
+          const ops = Array.from(container.querySelectorAll('.accordion-body h3.h6'));
+          ops.forEach((opHdr, idx) => {
+            const opName = opHdr.textContent.replace(/^Operation:\s*/, '').trim();
+            const table  = opHdr.nextElementSibling;
+            if (!table || table.tagName !== 'TABLE') return;
+    
+            // for each TR (including appended-total)
+            table.querySelectorAll('tbody tr').forEach(row => {
+              let machine, parts, target,
+                  downtime, ppt, runtime, sct,
+                  planned, unplanned,
+                  downPct, perf, avail, pxa;
+    
+              if (row.classList.contains('appended-total')) {
+                // pulled from the cloned total row
+                const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+                machine   = cells[0];
+                parts     = cells[1];
+                target    = cells[2];
+                downtime  = stripMin(cells[3]);
+                ppt       = stripMin(cells[4]);
+                runtime   = stripMin(cells[5]);
+                sct       = stripPercent(cells[6]);
+                planned   = stripMin(cells[7]);
+                unplanned = stripMin(cells[8]);
+                downPct   = stripPercent(cells[9]);
+                perf      = stripPercent(cells[10]);
+                avail     = stripPercent(cells[11]);
+                pxa       = stripPercent(cells[12]);
+              } else {
+                // regular machine row
+                machine   = row.querySelector('strong')?.textContent.trim() || '';
+                parts     = row.querySelector('.produced')?.textContent.trim()    || '';
+                target    = row.querySelector('.target')?.textContent.trim()      || '';
+                downtime  = stripMin(row.querySelector('.downtime')?.textContent);
+                ppt       = stripMin(row.querySelector('.ppt')?.textContent);
+                runtime   = stripMin(row.querySelector('.runtime')?.textContent);
+                sct       = stripPercent(row.querySelector('.ideal-cycle-time')?.textContent);
+                planned   = stripMin(row.querySelector('.planned-downtime')?.textContent);
+                unplanned = stripMin(row.querySelector('.unplanned-downtime')?.textContent);
+                downPct   = stripPercent(row.querySelector('.downtime-percentage')?.textContent);
+                perf      = stripPercent(row.querySelector('.performance')?.textContent);
+                avail     = stripPercent(row.querySelector('.availability')?.textContent);
+                pxa       = stripPercent(row.querySelector('.pa')?.textContent);
+              }
+    
+              dataRows.push([
+                lineName, opName,
+                machine, parts, target,
+                downtime, ppt, runtime, sct,
+                planned, unplanned,
+                downPct, perf, avail, pxa
+              ]);
+            });
+    
+            // blank line between ops
+            if (idx < ops.length - 1) {
+              dataRows.push(Array(headers.length).fill(''));
             }
-  
-            dataRows.push([
-              lineName, opName,
-              machine, parts, target,
-              downtime, planned, unplanned,
-              downPct, perf, avail, pxA
-            ]);
           });
-  
-          // 2) if this isn’t the last operation, insert a blank line
-          if (idx < ops.length - 1) {
-            dataRows.push( Array(headers.length).fill('') );
-          }
+    
+          // 3) build & trigger download
+          const csvLines = [
+            headers.map(escapeCell).join(','),
+            ...dataRows.map(r => r.map(escapeCell).join(','))
+          ];
+          const blob = new Blob([ csvLines.join('\r\n') ], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          link.href     = URL.createObjectURL(blob);
+          link.download = `${lineName.replace(/\s+/g,'_')}_production.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(link.href);
         });
-  
-        // 3) build & download CSV
-        const csvLines = [
-          headers.map(escapeCell).join(','),
-          ...dataRows.map(row => row.map(escapeCell).join(','))
-        ];
-        const blob = new Blob([ csvLines.join('\r\n') ], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href     = URL.createObjectURL(blob);
-        link.download = `${lineName.replace(/\s+/g,'_')}_production.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
       });
     });
-  });
-  </script>
+    </script>
+    
   
   
   
