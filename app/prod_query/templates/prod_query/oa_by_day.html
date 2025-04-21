@@ -206,6 +206,7 @@
                 <th>Parts</th>
                 <th>Target</th>
                 <th>Downtime</th>
+                <th>PPT (min)</th>
                 <th>Planned Downtime</th>
                 <th>Unplanned Downtime</th>
                 <th>Downtime %</th>
@@ -237,6 +238,11 @@
                 <td>
                   <span class="downtime" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
                     Loading...
+                  </span>
+                </td>
+                <td>                         <!-- ← new -->
+                  <span class="ppt" data-line="{{ line.line }}" data-machine="{{ machine.number }}">
+                    Loading…
                   </span>
                 </td>
                 <td>
@@ -554,6 +560,20 @@ document.addEventListener("DOMContentLoaded", function() {
             elem.innerText = '0 min';
           }
         });
+
+        // Update PPT (Planned Production Time)
+        document.querySelectorAll('.ppt').forEach(elem => {
+          const lineName      = elem.getAttribute('data-line');
+          const machineNumber = elem.getAttribute('data-machine');
+          const m = window.productionData[lineName] && window.productionData[lineName][machineNumber];
+          if (m && m.ppt != null) {
+            elem.innerText = m.ppt.toFixed(0) + " min";
+          } else {
+            elem.innerText = "0 min";
+          }
+          elem.classList.remove('loading');
+        });
+
 
         // Update planned downtime values.
         document.querySelectorAll('.planned-downtime').forEach(function(elem) {
@@ -1154,6 +1174,20 @@ appendOpTotalsRows();
       }
     }
   
+
+    // Update PPT (Planned Production Time)
+    document.querySelectorAll('.ppt').forEach(elem => {
+      const lineName      = elem.getAttribute('data-line');
+      const machineNumber = elem.getAttribute('data-machine');
+      const m = window.productionData[lineName] && window.productionData[lineName][machineNumber];
+      if (m && m.ppt != null) {
+        elem.innerText = m.ppt.toFixed(0) + " min";
+      } else {
+        elem.innerText = "0 min";
+      }
+      elem.classList.remove('loading');
+    });
+
     // Planned downtime totals by line.
     if (data.planned_downtime_totals_by_line) {
       var plannedByLineDiv = document.getElementById('planned-downtime-by-line');
