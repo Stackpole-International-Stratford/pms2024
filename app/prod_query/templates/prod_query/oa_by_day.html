@@ -979,7 +979,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
       
           op.ppt,                             // ← new
           op.runtime,                         // ← new
-          op.standard_cycle_time.toFixed(2),  // ← new
+          op.standard_cycle_time.toFixed(4),  // ← new
       
           op.total_planned_downtime,
           op.total_unplanned_downtime,
@@ -1064,7 +1064,7 @@ if (data.operation_oee_metrics && data.operation_oee_metrics.length > 0) {
     
       op.ppt,                             // ← new
       op.runtime,                         // ← new
-      (op.standard_cycle_time * 1).toFixed(2),  // ← new
+      (op.standard_cycle_time * 1).toFixed(4),  // ← new
     
       op.total_planned_downtime,
       op.total_unplanned_downtime,
@@ -1748,54 +1748,50 @@ appendOpTotalsRows();
 
 
 <script>
-  // pulled out so you can call it from your fetch callback
   function appendOpTotalsRows() {
     const opTables  = Array.from(document.querySelectorAll('#productionData table.table-striped'));
     const totalRows = Array.from(document.querySelectorAll('#operation-oee-metrics table.table-bordered tbody tr'));
   
     opTables.forEach((table, idx) => {
-      // ——————————————————————————
       // 0) remove any previously appended total rows
       table
         .querySelectorAll('tbody tr.appended-total')
         .forEach(oldRow => oldRow.remove());
-      // ——————————————————————————
   
       const srcRow = totalRows[idx];
       if (!srcRow) return;
   
       // 1) clone the summary row
       const clone = srcRow.cloneNode(true);
-      // mark it so we can remove it next time
       clone.classList.add('appended-total');
   
-      // 2) pull out its cells
+      // 2) rename first cell to "Total"
       const cells = clone.querySelectorAll('td');
-  
-      // 3) rename first cell to "Total"
       if (cells[0]) cells[0].innerText = 'Total';
   
-      // 4) remove the 7th cell (zero‑based index 6 = "Total Queried Minutes")
-      if (cells[6]) cells[6].remove();
+      // 3) remove the **Total Queried Minutes** cell (now at index 9)
+      if (cells[9]) cells[9].remove();
   
-      // 5) override any inherited colors and force black text
+      // 4) force black text on all remaining cells
       clone.querySelectorAll('td').forEach(td => {
         td.style.color = 'black';
       });
   
-      // 6) append an extra empty <td> so this row isn't one cell short
+      // 5) add an empty cell for the "Actions" column
       const emptyCell = document.createElement('td');
       emptyCell.innerHTML = '&nbsp;';
       clone.appendChild(emptyCell);
   
-      // 7) append into the <tbody> of the matching op table
+      // 6) append into the matching <tbody>
       table.querySelector('tbody').appendChild(clone);
     });
   }
   
-  // …and at the very end of your fetchProductionData(...).then(data=>{…}) callback:
+  // call this after you inject your data
+  // e.g. at the end of your fetchProductionData callback:
   appendOpTotalsRows();
-</script>
+  </script>
+  
 
 
   
