@@ -45,7 +45,7 @@
             <td class="col-machine">{{ t.machine_id }}</td>
             <td class="col-line">{{ t.line|default:"—" }}</td>
             <td class="col-cycle">{{ t.cycle_time_seconds|floatformat:2 }}</td>
-            <td class="col-effective">{{ t.effective_date_est|date:"Y‑m‑d" }}</td>
+            <td class="col-effective">{{ t.effective_date_est|date:"Y-m-d" }}</td>
             <td class="col-created">{{ t.created_at|date:"Y‑m‑d H:i" }}</td>
             <td class="col-comment">{{ t.comment|default:"—" }}</td>
             <td>
