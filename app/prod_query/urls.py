@@ -60,5 +60,6 @@ urlpatterns = [
     path('api/oee-metrics/', views.oee_metrics_view, name='oee_metrics_view'),
 
     path('targets/', views.targets_list, name='targets_list'),
+    path('targets/new/', views.target_create_ajax, name='target_create_ajax'),
 
 ]

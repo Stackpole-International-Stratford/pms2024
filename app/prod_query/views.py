@@ -6,6 +6,8 @@ import mysql.connector
 
 from datetime import datetime, date, timedelta
 import time
+from zoneinfo import ZoneInfo
+from django.views.decorators.http import require_POST
 
 from .forms import MachineInquiryForm
 from .forms import CycleQueryForm
@@ -7250,12 +7252,10 @@ def fetch_exclude_weekends_data(request):
 
 
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from django.shortcuts import render
-from .models import OAMachineTargets
+
 
 def targets_list(request):
+    from zoneinfo import ZoneInfo
     # fetch and order
     qs = OAMachineTargets.objects.all().order_by(
         '-effective_date_unix',
@@ -7282,6 +7282,39 @@ def targets_list(request):
     return render(request, 'prod_query/targets_list.html', {
         'targets': qs,
     })
+
+
+
+
+
+@require_POST
+def target_create_ajax(request):
+    try:
+        data = json.loads(request.body)
+        machine = data['machine']
+        line    = data['line']
+        cycle   = float(data['cycle_time'])
+        date_str = data['effective_date']
+
+        # parse date and compute Unix timestamp at UTC midnight
+        eff_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        dt_utc = datetime(eff_date.year, eff_date.month, eff_date.day, tzinfo=ZoneInfo("UTC"))
+        eff_unix = int(dt_utc.timestamp())
+
+        # convert cycle‑time back to weekly target
+        total_seconds = 7200 * 60
+        target_val = int(total_seconds / cycle) if cycle > 0 else 0
+
+        t = OAMachineTargets.objects.create(
+            machine_id = machine,
+            line       = line,
+            target     = target_val,
+            effective_date_unix = eff_unix
+        )
+
+        return JsonResponse({ 'success': True, 'id': t.id })
+    except Exception as e:
+        return JsonResponse({ 'success': False, 'error': str(e) }, status=400)
 
 
 
