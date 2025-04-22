@@ -3,9 +3,13 @@ from django.shortcuts import render
 from django.db import connections
 import mysql.connector
 # import mysql.connector
+from django.template.loader import render_to_string
+
 
 from datetime import datetime, date, timedelta
 import time
+from zoneinfo import ZoneInfo
+from django.views.decorators.http import require_POST
 
 from .forms import MachineInquiryForm
 from .forms import CycleQueryForm
@@ -7499,4 +7503,126 @@ def fetch_combined_oee_production_data(request):
     conn.close()
     return JsonResponse(response_data)
 
+# ===========================================================================
+# ===========================================================================
+# ============================== Target CRUD ================================
+# ===========================================================================
+# ===========================================================================
 
+PAGE_SIZE = 500
+
+def annotate_targets(qs):
+    """Add .effective_date_est and .cycle_time_seconds on each."""
+    est = ZoneInfo("America/New_York")
+    total_seconds = 7200 * 60
+    for t in qs:
+        dt_utc = datetime.fromtimestamp(t.effective_date_unix, tz=ZoneInfo("UTC"))
+        t.effective_date_est = dt_utc.astimezone(est)
+        t.cycle_time_seconds = (total_seconds / t.target) if t.target else None
+    return qs
+
+def targets_list(request):
+    # first page only
+    offset = 0
+    qs_all = OAMachineTargets.objects.filter(isDeleted=False) \
+    .order_by('-effective_date_unix', 'machine_id')
+    total = qs_all.count()
+    page_qs = qs_all[:PAGE_SIZE]
+    annotate_targets(page_qs)
+
+    return render(request, 'prod_query/targets_list.html', {
+        'targets': page_qs,
+        'offset': PAGE_SIZE,
+        'total': total,
+        'page_size': PAGE_SIZE,
+    })
+
+def targets_load_more_ajax(request):
+    # expects ?offset=<int>
+    offset = int(request.GET.get('offset', 0))
+    qs_all = OAMachineTargets.objects.filter(isDeleted=False) \
+    .order_by('-effective_date_unix', 'machine_id')
+    next_batch = qs_all[offset:offset + PAGE_SIZE]
+    annotate_targets(next_batch)
+
+    html = render_to_string('prod_query/_targets_rows.html', {
+        'targets': next_batch
+    }, request)
+
+    has_more = offset + PAGE_SIZE < qs_all.count()
+    return JsonResponse({'html': html, 'has_more': has_more})
+
+def _parse_date_to_unix(date_str):
+    """Treat user’s date as EST‐midnight, convert to UTC timestamp."""
+    eff_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    est = ZoneInfo("America/New_York")
+    dt_est_mid = datetime(eff_date.year, eff_date.month, eff_date.day,
+                          0, 0, 0, tzinfo=est)
+    dt_utc = dt_est_mid.astimezone(ZoneInfo("UTC"))
+    return int(dt_utc.timestamp())
+
+@require_POST
+def target_create_ajax(request):
+    try:
+        data = json.loads(request.body)
+        machine = data['machine']
+        line    = data['line']
+        cycle   = float(data['cycle_time'])
+        date_str= data['effective_date']
+        comment = data.get('comment', '').strip()
+
+        eff_unix = _parse_date_to_unix(date_str)
+
+        total_seconds = 7200 * 60
+        target_val = int(total_seconds / cycle) if cycle > 0 else 0
+
+        t = OAMachineTargets.objects.create(
+            machine_id=machine,
+            line=line,
+            target=target_val,
+            effective_date_unix=eff_unix,
+            comment=comment
+        )
+        return JsonResponse({'success': True, 'id': t.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+@require_POST
+def target_edit_ajax(request, pk):
+    try:
+        data = json.loads(request.body)
+        machine = data['machine']
+        line    = data['line']
+        cycle   = float(data['cycle_time'])
+        date_str= data['effective_date']
+        comment = data.get('comment', '').strip()
+
+        eff_unix = _parse_date_to_unix(date_str)
+
+        total_seconds = 7200 * 60
+        target_val = int(total_seconds / cycle) if cycle > 0 else 0
+
+        obj = OAMachineTargets.objects.get(pk=pk)
+        obj.machine_id           = machine
+        obj.line                 = line
+        obj.target               = target_val
+        obj.effective_date_unix  = eff_unix
+        obj.comment              = comment
+        obj.full_clean()  # run model validators
+        obj.save()
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+@require_POST
+def target_delete_ajax(request, pk):
+    try:
+        obj = OAMachineTargets.objects.get(pk=pk)
+        obj.isDeleted = True
+        obj.save(update_fields=['isDeleted'])
+        return JsonResponse({'success': True})
+    except OAMachineTargets.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

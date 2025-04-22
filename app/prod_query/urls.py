@@ -60,5 +60,11 @@ urlpatterns = [
     path('fetch_oa_by_day_production_data/', views.fetch_combined_oee_production_data, name='fetch_oa_by_day_production_data'),
     path('fetch_exclude_weekends_data/', views.fetch_combined_oee_production_data, name='fetch_exclude_weekends_data'),
 
+    path('targets/', views.targets_list, name='targets_list'),
+    path('targets/load-more/', views.targets_load_more_ajax, name='targets_load_more_ajax'),
+    path('targets/new/', views.target_create_ajax, name='target_create_ajax'),
+    path('targets/<int:pk>/edit/', views.target_edit_ajax, name='target_edit_ajax'),
+    path('targets/<int:pk>/delete/', views.target_delete_ajax, name='target_delete_ajax'),
+
 
 ]
