@@ -1,4 +1,89 @@
+{# templates/prod_query/targets_list.html #}
 {% extends "parent.html" %}
+
 {% block content %}
-Hi there
+  <h1>OAE Machine Targets</h1>
+
+  {% if targets %}
+    <table id="targets-table" class="table table-striped">
+      <thead>
+        <tr>
+          <th>Machine ID</th>
+          <th>Line</th>
+          <th>Target</th>
+          <th>Effective (Unix)</th>
+          <th>Created At</th>
+        </tr>
+        <!-- filter inputs -->
+        <tr>
+          <th>
+            <input type="text"
+                   class="column-filter form-control"
+                   data-column="0"
+                   placeholder="Filter Machine…">
+          </th>
+          <th>
+            <input type="text"
+                   class="column-filter form-control"
+                   data-column="1"
+                   placeholder="Filter Line…">
+          </th>
+          <th>
+            <input type="text"
+                   class="column-filter form-control"
+                   data-column="2"
+                   placeholder="Filter Target…">
+          </th>
+          <th>
+            <input type="text"
+                   class="column-filter form-control"
+                   data-column="3"
+                   placeholder="Filter Effective…">
+          </th>
+          <th>
+            <input type="text"
+                   class="column-filter form-control"
+                   data-column="4"
+                   placeholder="Filter Created…">
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for t in targets %}
+          <tr>
+            <td>{{ t.machine_id }}</td>
+            <td>{{ t.line|default:"—" }}</td>
+            <td>{{ t.target }}</td>
+            <td>{{ t.effective_date_unix }}</td>
+            <td>{{ t.created_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const table = document.getElementById('targets-table');
+      const filters = table.querySelectorAll('.column-filter');
+
+      function filterTable() {
+        const values = Array.from(filters).map(f => f.value.trim().toLowerCase());
+        Array.from(table.tBodies[0].rows).forEach(row => {
+          const cells = row.cells;
+          const visible = values.every((val, i) =>
+            !val || cells[i].textContent.toLowerCase().includes(val)
+          );
+          row.style.display = visible ? '' : 'none';
+        });
+      }
+
+      filters.forEach(input => {
+        input.addEventListener('input', filterTable);
+      });
+    });
+    </script>
+  {% else %}
+    <p>No targets have been set yet.</p>
+  {% endif %}
 {% endblock %}

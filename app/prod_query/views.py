@@ -7251,7 +7251,11 @@ def fetch_exclude_weekends_data(request):
 
 
 def targets_list(request):
-    return render(request, 'prod_query/targets_list.html')
+    # pull all targets, newest first by effective_date_unix
+    targets = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+    return render(request, 'prod_query/targets_list.html', {
+        'targets': targets,
+    })
 
 
 
