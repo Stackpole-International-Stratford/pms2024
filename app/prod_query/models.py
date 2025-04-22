@@ -39,6 +39,13 @@ class OAMachineTargets(models.Model):
     line = models.CharField(max_length=50, null=True, blank=True)
     comment = models.TextField(blank=True, null=True)  # NEW
 
+
+    # New “soft‐delete” flag: 0 = visible, 1 = deleted
+    isDeleted = models.BooleanField(
+        default=False,
+        help_text="Soft‑delete flag; set to True to hide this record"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
