@@ -59,5 +59,6 @@ urlpatterns = [
 
     path('api/oee-metrics/', views.oee_metrics_view, name='oee_metrics_view'),
 
+    path('targets/', views.targets_list, name='targets_list'),
 
 ]
