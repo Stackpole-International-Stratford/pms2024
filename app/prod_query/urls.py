@@ -63,5 +63,7 @@ urlpatterns = [
     path('targets/load-more/', views.targets_load_more_ajax, name='targets_load_more_ajax'),
     path('targets/new/', views.target_create_ajax, name='target_create_ajax'),
     path('targets/<int:pk>/edit/', views.target_edit_ajax, name='target_edit_ajax'),
+    path('targets/<int:pk>/delete/', views.target_delete_ajax, name='target_delete_ajax'),
+
 
 ]

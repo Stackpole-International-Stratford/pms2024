@@ -7363,3 +7363,18 @@ def target_edit_ajax(request, pk):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+
+
+@require_POST
+def target_delete_ajax(request, pk):
+    try:
+        obj = OAMachineTargets.objects.get(pk=pk)
+        obj.isDeleted = True
+        obj.save(update_fields=['isDeleted'])
+        return JsonResponse({'success': True})
+    except OAMachineTargets.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
