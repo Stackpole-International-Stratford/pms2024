@@ -7250,11 +7250,26 @@ def fetch_exclude_weekends_data(request):
 
 
 
+
+ # Python 3.9+; use 'pytz' if you prefer
+
+
 def targets_list(request):
-    # pull all targets, newest first by effective_date_unix
-    targets = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+    from zoneinfo import ZoneInfo 
+    # fetch and order
+    qs = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+
+    # prepare Eastern timezone
+    est = ZoneInfo("America/New_York")
+
+    # attach a datetime property on each instance
+    for t in qs:
+        # interpret the Unix ts as UTC, then convert to EST
+        dt_utc = datetime.fromtimestamp(t.effective_date_unix, tz=ZoneInfo("UTC"))
+        t.effective_date_est = dt_utc.astimezone(est)
+
     return render(request, 'prod_query/targets_list.html', {
-        'targets': targets,
+        'targets': qs,
     })
 
 

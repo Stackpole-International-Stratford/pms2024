@@ -11,7 +11,7 @@
           <th>Machine ID</th>
           <th>Line</th>
           <th>Target</th>
-          <th>Effective (Unix)</th>
+          <th>Effective (EST)</th>
           <th>Created At</th>
         </tr>
         <!-- filter inputs -->
@@ -55,7 +55,7 @@
             <td>{{ t.machine_id }}</td>
             <td>{{ t.line|default:"—" }}</td>
             <td>{{ t.target }}</td>
-            <td>{{ t.effective_date_unix }}</td>
+            <td>{{ t.effective_date_est|date:"Y‑m‑d" }}</td>
             <td>{{ t.created_at }}</td>
           </tr>
         {% endfor %}
