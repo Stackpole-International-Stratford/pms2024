@@ -4,7 +4,7 @@
 {% block content %}
   <h1>Machine Targets</h1>
 
-  <!-- Add New button -->
+  <!-- Add New Target Button -->
   <button id="add-target-btn"
           class="btn btn-success mb-3"
           data-bs-toggle="modal"
@@ -18,17 +18,19 @@
         <tr>
           <th>Machine ID</th>
           <th>Line</th>
-          <th>Target Cycle Time (s)</th>
+          <th>Cycle Time (s)</th>
           <th>Effective (EST)</th>
           <th>Created At</th>
+          <th>Comment</th>
           <th>Actions</th>
         </tr>
         <tr>
-          <th><input type="text" class="column-filter form-control" data-column="0" placeholder="Filter Machine…"></th>
-          <th><input type="text" class="column-filter form-control" data-column="1" placeholder="Filter Line…"></th>
-          <th><input type="text" class="column-filter form-control" data-column="2" placeholder="Filter Cycle…"></th>
-          <th><input type="text" class="column-filter form-control" data-column="3" placeholder="Filter Effective…"></th>
-          <th><input type="text" class="column-filter form-control" data-column="4" placeholder="Filter Created…"></th>
+          <th><input class="column-filter form-control" data-column="0" placeholder="Filter Machine…"></th>
+          <th><input class="column-filter form-control" data-column="1" placeholder="Filter Line…"></th>
+          <th><input class="column-filter form-control" data-column="2" placeholder="Filter Cycle…"></th>
+          <th><input class="column-filter form-control" data-column="3" placeholder="Filter Effective…"></th>
+          <th><input class="column-filter form-control" data-column="4" placeholder="Filter Created…"></th>
+          <th><input class="column-filter form-control" data-column="5" placeholder="Filter Comment…"></th>
           <th></th>
         </tr>
       </thead>
@@ -40,6 +42,7 @@
             <td class="col-cycle">{{ t.cycle_time_seconds|floatformat:2 }}</td>
             <td class="col-effective">{{ t.effective_date_est|date:"Y‑m‑d" }}</td>
             <td class="col-created">{{ t.created_at|date:"Y‑m‑d H:i:s" }}</td>
+            <td class="col-comment">{{ t.comment|default:"—" }}</td>
             <td>
               <button class="btn btn-sm btn-primary edit-btn"
                       data-bs-toggle="modal"
@@ -55,7 +58,7 @@
     <p>No targets have been set yet.</p>
   {% endif %}
 
-  {# ————————— Add New Modal ————————— #}
+  {# ─────────── Add New Modal ─────────── #}
   <div class="modal fade" id="targetModal" tabindex="-1" aria-labelledby="targetModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <form id="target-form" class="modal-content">
@@ -89,6 +92,16 @@
             <label for="date-input" class="form-label">Effective Date</label>
             <input type="date" id="date-input" class="form-control" value="{% now 'Y-m-d' %}" required>
           </div>
+          <div class="mb-3">
+            <label for="comment-input" class="form-label">Comment</label>
+            <textarea id="comment-input"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Up to 100 words…"></textarea>
+            <div class="form-text">
+              <span id="add-word-count">0</span>/100 words
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -98,12 +111,12 @@
     </div>
   </div>
 
-  {# ————————— Edit Modal ————————— #}
-  <div class="modal fade" id="editTargetModal" tabindex="-1" aria-hidden="true">
+  {# ─────────── Edit Modal ─────────── #}
+  <div class="modal fade" id="editTargetModal" tabindex="-1" aria-labelledby="editTargetModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <form id="edit-target-form" class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Edit Target</h5>
+          <h5 class="modal-title" id="editTargetModalLabel">Edit Target</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -133,6 +146,16 @@
             <label for="edit-date" class="form-label">Effective Date</label>
             <input type="date" id="edit-date" class="form-control" required>
           </div>
+          <div class="mb-3">
+            <label for="edit-comment" class="form-label">Comment</label>
+            <textarea id="edit-comment"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Up to 100 words…"></textarea>
+            <div class="form-text">
+              <span id="edit-word-count">0</span>/100 words
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -143,98 +166,123 @@
   </div>
 
   <script>
-  // CSRF helper (Django)
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      document.cookie.split(';').forEach(c => {
-        c = c.trim();
-        if (c.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(c.slice(name.length + 1));
+    // CSRF helper
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(c => {
+          c = c.trim();
+          if (c.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(c.slice(name.length + 1));
+          }
+        });
+      }
+      return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const table = document.getElementById('targets-table');
+      const filters = table?.querySelectorAll('.column-filter') || [];
+
+      // Live‐filter logic
+      function filterTable() {
+        const vals = Array.from(filters).map(f => f.value.trim().toLowerCase());
+        Array.from(table.tBodies[0].rows).forEach(row => {
+          const cells = row.cells;
+          const show = vals.every((v, i) =>
+            !v || cells[i].textContent.toLowerCase().includes(v)
+          );
+          row.style.display = show ? '' : 'none';
+        });
+      }
+      filters.forEach(inp => inp.addEventListener('input', filterTable));
+
+      // Word‐limit enforcement
+      function enforceWordLimit(txtEl, counterEl) {
+        txtEl.addEventListener('input', () => {
+          let words = txtEl.value.trim().split(/\s+/).filter(w => w);
+          if (words.length > 100) {
+            txtEl.value = words.slice(0, 100).join(' ');
+            words = words.slice(0, 100);
+          }
+          counterEl.textContent = words.length;
+        });
+      }
+      enforceWordLimit(
+        document.getElementById('comment-input'),
+        document.getElementById('add-word-count')
+      );
+      enforceWordLimit(
+        document.getElementById('edit-comment'),
+        document.getElementById('edit-word-count')
+      );
+
+      // Add‐new AJAX
+      document.getElementById('target-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = {
+          machine: document.getElementById('machine-input').value,
+          line: document.getElementById('line-select').value,
+          cycle_time: document.getElementById('cycle-input').value,
+          effective_date: document.getElementById('date-input').value,
+          comment: document.getElementById('comment-input').value
+        };
+        const resp = await fetch("/prod-query/targets/new/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken
+          },
+          body: JSON.stringify(data),
+        });
+        if (resp.ok) {
+          location.reload();
+        } else {
+          const err = await resp.json();
+          alert("Error: " + (err.error || "Unknown"));
         }
       });
-    }
-    return cookieValue;
-  }
-  const csrftoken = getCookie('csrftoken');
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Live‐filter logic
-    const table = document.getElementById('targets-table');
-    const filters = table?.querySelectorAll('.column-filter') || [];
-    function filterTable() {
-      const vals = Array.from(filters).map(f => f.value.trim().toLowerCase());
-      Array.from(table.tBodies[0].rows).forEach(row => {
-        const cells = row.cells;
-        const show = vals.every((v, i) =>
-          !v || cells[i].textContent.toLowerCase().includes(v)
-        );
-        row.style.display = show ? '' : 'none';
+      // Populate Edit Modal
+      table.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const row = e.target.closest('tr');
+          document.getElementById('edit-id').value = row.dataset.id;
+          document.getElementById('edit-machine').value = row.querySelector('.col-machine').textContent.trim();
+          document.getElementById('edit-line').value = row.querySelector('.col-line').textContent.trim();
+          document.getElementById('edit-cycle').value = row.querySelector('.col-cycle').textContent.trim();
+          document.getElementById('edit-date').value = row.querySelector('.col-effective').textContent.trim();
+          document.getElementById('edit-comment').value = row.querySelector('.col-comment').textContent.trim();
+        });
       });
-    }
-    filters.forEach(inp => inp.addEventListener('input', filterTable));
 
-    // Add‐new AJAX
-    document.getElementById('target-form').addEventListener('submit', async e => {
-      e.preventDefault();
-      const data = {
-        machine: document.getElementById('machine-input').value,
-        line: document.getElementById('line-select').value,
-        cycle_time: document.getElementById('cycle-input').value,
-        effective_date: document.getElementById('date-input').value
-      };
-      const resp = await fetch("/prod-query/targets/new/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrftoken
-        },
-        body: JSON.stringify(data),
-      });
-      if (resp.ok) {
-        location.reload();
-      } else {
-        const err = await resp.json();
-        alert("Error: " + (err.error || "Unknown"));
-      }
-    });
-
-    // Populate & handle edit
-    table.querySelectorAll('.edit-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        const row = e.target.closest('tr');
-        document.getElementById('edit-id').value      = row.dataset.id;
-        document.getElementById('edit-machine').value = row.querySelector('.col-machine').textContent.trim();
-        document.getElementById('edit-line').value    = row.querySelector('.col-line').textContent.trim();
-        document.getElementById('edit-cycle').value   = row.querySelector('.col-cycle').textContent.trim();
-        document.getElementById('edit-date').value    = row.querySelector('.col-effective').textContent.trim();
+      // Edit‐AJAX
+      document.getElementById('edit-target-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const data = {
+          machine: document.getElementById('edit-machine').value,
+          line: document.getElementById('edit-line').value,
+          cycle_time: document.getElementById('edit-cycle').value,
+          effective_date: document.getElementById('edit-date').value,
+          comment: document.getElementById('edit-comment').value
+        };
+        const resp = await fetch(`/prod-query/targets/${id}/edit/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken
+          },
+          body: JSON.stringify(data)
+        });
+        if (resp.ok) {
+          location.reload();
+        } else {
+          const err = await resp.json();
+          alert("Error: " + (err.error || "Unknown"));
+        }
       });
     });
-
-    document.getElementById('edit-target-form').addEventListener('submit', async e => {
-      e.preventDefault();
-      const id = document.getElementById('edit-id').value;
-      const data = {
-        machine: document.getElementById('edit-machine').value,
-        line: document.getElementById('edit-line').value,
-        cycle_time: document.getElementById('edit-cycle').value,
-        effective_date: document.getElementById('edit-date').value
-      };
-      const resp = await fetch(`/prod-query/targets/${id}/edit/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrftoken
-        },
-        body: JSON.stringify(data)
-      });
-      if (resp.ok) {
-        location.reload();
-      } else {
-        const err = await resp.json();
-        alert("Error: " + (err.error || "Unknown"));
-      }
-    });
-  });
   </script>
 {% endblock %}

@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 from django.db import models
+from django.core.exceptions import ValidationError
+
 
 # Create your models here.
 # id, part, week, year, goal
@@ -32,11 +34,23 @@ class Weekly_Production_Goal(models.Model):
 
 class OAMachineTargets(models.Model):
     machine_id = models.CharField(max_length=50)
-    effective_date_unix = models.BigIntegerField()  # For Unix timestamps
+    effective_date_unix = models.BigIntegerField()
     target = models.IntegerField()
-    line = models.CharField(max_length=50, null=True, blank=True)  # New column for line
+    line = models.CharField(max_length=50, null=True, blank=True)
+    comment = models.TextField(blank=True, null=True)  # NEW
 
-    created_at = models.DateTimeField(auto_now_add=True)  # Auto timestamp for record creation
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        super().clean()
+        if self.comment:
+            # simple word count
+            word_count = len(self.comment.split())
+            if word_count > 100:
+                raise ValidationError({
+                    'comment': f'Comment cannot exceed 100 words (you have {word_count}).'
+                })
 
     def __str__(self):
-        return f"Machine {self.machine_id}, Target {self.target}, Line {self.line}, Effective {self.effective_date_unix}"
+        return (f"Machine {self.machine_id}, Target {self.target}, "
+                f"Line {self.line}, Effective {self.effective_date_unix}")

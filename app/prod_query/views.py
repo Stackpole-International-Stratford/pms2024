@@ -7287,6 +7287,15 @@ def targets_list(request):
 
 
 
+def _parse_date_to_unix(date_str):
+    """Treat user’s date as EST‐midnight, convert to UTC timestamp."""
+    eff_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    est = ZoneInfo("America/New_York")
+    dt_est_mid = datetime(eff_date.year, eff_date.month, eff_date.day,
+                          0, 0, 0, tzinfo=est)
+    dt_utc = dt_est_mid.astimezone(ZoneInfo("UTC"))
+    return int(dt_utc.timestamp())
+
 @require_POST
 def target_create_ajax(request):
     try:
@@ -7294,21 +7303,11 @@ def target_create_ajax(request):
         machine = data['machine']
         line    = data['line']
         cycle   = float(data['cycle_time'])
-        date_str = data['effective_date']
+        date_str= data['effective_date']
+        comment = data.get('comment', '').strip()
 
-        # parse user date
-        eff_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        eff_unix = _parse_date_to_unix(date_str)
 
-        # EST‑midnight → UTC timestamp
-        est = ZoneInfo("America/New_York")
-        dt_est_midnight = datetime(
-            eff_date.year, eff_date.month, eff_date.day,
-            0, 0, 0, tzinfo=est
-        )
-        dt_utc = dt_est_midnight.astimezone(ZoneInfo("UTC"))
-        eff_unix = int(dt_utc.timestamp())
-
-        # compute weekly target
         total_seconds = 7200 * 60
         target_val = int(total_seconds / cycle) if cycle > 0 else 0
 
@@ -7316,17 +7315,12 @@ def target_create_ajax(request):
             machine_id=machine,
             line=line,
             target=target_val,
-            effective_date_unix=eff_unix
+            effective_date_unix=eff_unix,
+            comment=comment
         )
-
         return JsonResponse({'success': True, 'id': t.id})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-
-
-
-
-
 
 @require_POST
 def target_edit_ajax(request, pk):
@@ -7336,29 +7330,20 @@ def target_edit_ajax(request, pk):
         line    = data['line']
         cycle   = float(data['cycle_time'])
         date_str= data['effective_date']
+        comment = data.get('comment', '').strip()
 
-        # parse user date
-        eff_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        eff_unix = _parse_date_to_unix(date_str)
 
-        # EST‑midnight → UTC timestamp
-        est = ZoneInfo("America/New_York")
-        dt_est_midnight = datetime(
-            eff_date.year, eff_date.month, eff_date.day,
-            0, 0, 0, tzinfo=est
-        )
-        dt_utc = dt_est_midnight.astimezone(ZoneInfo("UTC"))
-        eff_unix = int(dt_utc.timestamp())
+        total_seconds = 7200 * 60
+        target_val = int(total_seconds / cycle) if cycle > 0 else 0
 
-        # recalc weekly target
-        total_secs = 7200 * 60
-        target_val = int(total_secs / cycle) if cycle > 0 else 0
-
-        # update
         obj = OAMachineTargets.objects.get(pk=pk)
-        obj.machine_id          = machine
-        obj.line                = line
-        obj.target              = target_val
-        obj.effective_date_unix = eff_unix
+        obj.machine_id           = machine
+        obj.line                 = line
+        obj.target               = target_val
+        obj.effective_date_unix  = eff_unix
+        obj.comment              = comment
+        obj.full_clean()  # run model validators
         obj.save()
 
         return JsonResponse({'success': True})
