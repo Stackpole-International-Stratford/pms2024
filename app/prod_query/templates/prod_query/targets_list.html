@@ -78,7 +78,7 @@
         
         <!-- Delete button with inline SVG -->
         <button type="button"
-        class="btn btn-sm btn-outline-dark delete-btn p-1 ms-1"
+        class="btn btn-sm btn delete-btn p-1 ms-1"
         data-bs-toggle="modal"
         data-bs-target="#deleteTargetModal"
         title="Delete Target"
@@ -233,7 +233,7 @@
   </div>
 
 
-  <!-- Delete Confirmation Modal -->
+<!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteTargetModal" tabindex="-1" aria-labelledby="deleteTargetModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form id="delete-target-form" class="modal-content">
@@ -242,21 +242,17 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p>Please type <strong>DELETE</strong> in all caps to confirm.</p>
-        <input type="text"
-               id="delete-confirm-input"
-               class="form-control mb-2"
-               placeholder="Type DELETE here"
-               required>
+        <p>Are you sure you want to delete this target?</p>
         <input type="hidden" id="delete-id">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-danger" id="confirm-delete-btn" disabled>Delete</button>
+        <button type="submit" class="btn btn-danger">Delete</button>
       </div>
     </form>
   </div>
 </div>
+
 
 
   <script>
@@ -420,49 +416,33 @@
   </script>
 
   <script>
-
-    // Populate & control the delete‐confirmation modal
-document.querySelectorAll('.delete-btn').forEach(btn => {
-  btn.addEventListener('click', e => {
-    const id = e.currentTarget.dataset.id;
-    document.getElementById('delete-id').value = id;
-    const input = document.getElementById('delete-confirm-input');
-    const confirmBtn = document.getElementById('confirm-delete-btn');
-
-    // reset
-    input.value = '';
-    confirmBtn.disabled = true;
-  });
-});
-
-// Enable the Delete button only when they type exactly "DELETE"
-document.getElementById('delete-confirm-input').addEventListener('input', e => {
-  document.getElementById('confirm-delete-btn').disabled =
-    e.target.value !== 'DELETE';
-});
-
-// Submit the delete form via AJAX
-document.getElementById('delete-target-form').addEventListener('submit', async e => {
-  e.preventDefault();
-  const id = document.getElementById('delete-id').value;
-  const resp = await fetch(`/prod-query/targets/${id}/delete/`, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': csrftoken,
-      'Content-Type': 'application/json'
-    },
-  });
-
-  const json = await resp.json();
-  if (resp.ok && json.success) {
-    // Option A: reload the page
-    location.reload();
-    // Option B: remove the row in-place
-    // document.querySelector(`tr[data-id="${id}"]`).remove();
-  } else {
-    alert('Delete failed: ' + (json.error || 'Unknown error'));
-  }
-});
-
+    // Populate the hidden ID when you click any trash‑can button
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        document.getElementById('delete-id').value =
+          e.currentTarget.dataset.id;
+      });
+    });
+  
+    // Submit the delete form via AJAX
+    document.getElementById('delete-target-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const id = document.getElementById('delete-id').value;
+      const resp = await fetch(`/prod-query/targets/${id}/delete/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Content-Type': 'application/json'
+        },
+      });
+  
+      const json = await resp.json();
+      if (resp.ok && json.success) {
+        location.reload(); // or remove the row in-place
+      } else {
+        alert('Delete failed: ' + (json.error || 'Unknown error'));
+      }
+    });
   </script>
+  
 {% endblock %}
