@@ -61,5 +61,6 @@ urlpatterns = [
 
     path('targets/', views.targets_list, name='targets_list'),
     path('targets/new/', views.target_create_ajax, name='target_create_ajax'),
+    path('targets/<int:pk>/edit/', views.target_edit_ajax, name='target_edit_ajax'),
 
 ]

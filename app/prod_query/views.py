@@ -7296,26 +7296,71 @@ def target_create_ajax(request):
         cycle   = float(data['cycle_time'])
         date_str = data['effective_date']
 
-        # parse date and compute Unix timestamp at UTC midnight
+        # parse user date
         eff_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        dt_utc = datetime(eff_date.year, eff_date.month, eff_date.day, tzinfo=ZoneInfo("UTC"))
+
+        # EST‑midnight → UTC timestamp
+        est = ZoneInfo("America/New_York")
+        dt_est_midnight = datetime(
+            eff_date.year, eff_date.month, eff_date.day,
+            0, 0, 0, tzinfo=est
+        )
+        dt_utc = dt_est_midnight.astimezone(ZoneInfo("UTC"))
         eff_unix = int(dt_utc.timestamp())
 
-        # convert cycle‑time back to weekly target
+        # compute weekly target
         total_seconds = 7200 * 60
         target_val = int(total_seconds / cycle) if cycle > 0 else 0
 
         t = OAMachineTargets.objects.create(
-            machine_id = machine,
-            line       = line,
-            target     = target_val,
-            effective_date_unix = eff_unix
+            machine_id=machine,
+            line=line,
+            target=target_val,
+            effective_date_unix=eff_unix
         )
 
-        return JsonResponse({ 'success': True, 'id': t.id })
+        return JsonResponse({'success': True, 'id': t.id})
     except Exception as e:
-        return JsonResponse({ 'success': False, 'error': str(e) }, status=400)
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
 
 
+
+
+@require_POST
+def target_edit_ajax(request, pk):
+    try:
+        data = json.loads(request.body)
+        machine = data['machine']
+        line    = data['line']
+        cycle   = float(data['cycle_time'])
+        date_str= data['effective_date']
+
+        # parse user date
+        eff_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+        # EST‑midnight → UTC timestamp
+        est = ZoneInfo("America/New_York")
+        dt_est_midnight = datetime(
+            eff_date.year, eff_date.month, eff_date.day,
+            0, 0, 0, tzinfo=est
+        )
+        dt_utc = dt_est_midnight.astimezone(ZoneInfo("UTC"))
+        eff_unix = int(dt_utc.timestamp())
+
+        # recalc weekly target
+        total_secs = 7200 * 60
+        target_val = int(total_secs / cycle) if cycle > 0 else 0
+
+        # update
+        obj = OAMachineTargets.objects.get(pk=pk)
+        obj.machine_id          = machine
+        obj.line                = line
+        obj.target              = target_val
+        obj.effective_date_unix = eff_unix
+        obj.save()
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
