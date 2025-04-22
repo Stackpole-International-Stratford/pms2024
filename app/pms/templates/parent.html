@@ -22,6 +22,15 @@
 
     <!-- Additional CSS -->
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+    <style>
+        /* full‐page background */
+        body {
+          /* use your static tag to resolve the image URL */
+          background: url("{% static 'images/sleek_background.png' %}") no-repeat center center fixed;
+          background-size: cover;
+        }
+    
+      </style>
 
     <style>
         .btn-warning {
@@ -185,6 +194,7 @@
             <div class="navbar-logo">
                 <img src="{% static 'images/JE_Logo_PNG.png' %}" alt="JE Logo">
             </div>
+ 
 
             <!-- Right Side: Second Group of Links and Guest/Login Dropdown -->
             <div class="navbar-right">
