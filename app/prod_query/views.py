@@ -7271,7 +7271,8 @@ def annotate_targets(qs):
 def targets_list(request):
     # first page only
     offset = 0
-    qs_all = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+    qs_all = OAMachineTargets.objects.filter(isDeleted=False) \
+    .order_by('-effective_date_unix', 'machine_id')
     total = qs_all.count()
     page_qs = qs_all[:PAGE_SIZE]
     annotate_targets(page_qs)
@@ -7286,7 +7287,8 @@ def targets_list(request):
 def targets_load_more_ajax(request):
     # expects ?offset=<int>
     offset = int(request.GET.get('offset', 0))
-    qs_all = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+    qs_all = OAMachineTargets.objects.filter(isDeleted=False) \
+    .order_by('-effective_date_unix', 'machine_id')
     next_batch = qs_all[offset:offset + PAGE_SIZE]
     annotate_targets(next_batch)
 
