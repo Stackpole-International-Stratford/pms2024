@@ -2,7 +2,7 @@
 {% extends "parent.html" %}
 
 {% block content %}
-  <h1>OAE Machine Targets</h1>
+  <h1>Machine Targets</h1>
 
   {% if targets %}
     <table id="targets-table" class="table table-striped">
@@ -10,11 +10,11 @@
         <tr>
           <th>Machine ID</th>
           <th>Line</th>
-          <th>Target</th>
+          <th>Target Cycle Time (s)</th>
           <th>Effective (EST)</th>
           <th>Created At</th>
         </tr>
-        <!-- filter inputs -->
+        <!-- live‐filter inputs -->
         <tr>
           <th>
             <input type="text"
@@ -32,7 +32,7 @@
             <input type="text"
                    class="column-filter form-control"
                    data-column="2"
-                   placeholder="Filter Target…">
+                   placeholder="Filter Cycle…">
           </th>
           <th>
             <input type="text"
@@ -54,9 +54,15 @@
           <tr>
             <td>{{ t.machine_id }}</td>
             <td>{{ t.line|default:"—" }}</td>
-            <td>{{ t.target }}</td>
+            <td>
+              {% if t.cycle_time_seconds %}
+                {{ t.cycle_time_seconds|floatformat:2 }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ t.effective_date_est|date:"Y‑m‑d" }}</td>
-            <td>{{ t.created_at }}</td>
+            <td>{{ t.created_at|date:"Y‑m‑d H:i:s" }}</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -64,23 +70,23 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-      const table = document.getElementById('targets-table');
+      const table   = document.getElementById('targets-table');
       const filters = table.querySelectorAll('.column-filter');
 
       function filterTable() {
-        const values = Array.from(filters).map(f => f.value.trim().toLowerCase());
+        const vals = Array.from(filters)
+                          .map(f => f.value.trim().toLowerCase());
+
         Array.from(table.tBodies[0].rows).forEach(row => {
           const cells = row.cells;
-          const visible = values.every((val, i) =>
-            !val || cells[i].textContent.toLowerCase().includes(val)
+          const show = vals.every((v,i) =>
+            !v || cells[i].textContent.toLowerCase().includes(v)
           );
-          row.style.display = visible ? '' : 'none';
+          row.style.display = show ? '' : 'none';
         });
       }
 
-      filters.forEach(input => {
-        input.addEventListener('input', filterTable);
-      });
+      filters.forEach(inp => inp.addEventListener('input', filterTable));
     });
     </script>
   {% else %}
