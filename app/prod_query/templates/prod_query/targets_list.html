@@ -84,6 +84,15 @@
     <p>No targets have been set yet.</p>
   {% endif %}
 
+  <div id="load-more-container" class="text-center my-4">
+    {% if total > page_size %}
+      <button id="load-more-btn" class="btn btn-secondary">
+        Load more
+      </button>
+    {% endif %}
+  </div>
+  
+
   {# ─────────── Add New Modal ─────────── #}
   <div class="modal fade" id="targetModal" tabindex="-1" aria-labelledby="targetModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -310,5 +319,44 @@
         }
       });
     });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let offset = {{ offset }};
+      const pageSize = {{ page_size }};
+      const loadBtn = document.getElementById('load-more-btn');
+      const container = document.getElementById('load-more-container');
+      const tbody = document.querySelector('#targets-table tbody');
+    
+      if (loadBtn) {
+        loadBtn.addEventListener('click', async () => {
+          loadBtn.disabled = true;
+          loadBtn.textContent = 'Loading…';
+          try {
+            const resp = await fetch(
+              "{% url 'prod_query:targets_load_more_ajax' %}?offset=" + offset,
+              { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+            );
+            const data = await resp.json();
+            tbody.insertAdjacentHTML('beforeend', data.html);
+            offset += pageSize;
+    
+            if (!data.has_more) {
+              container.style.display = 'none';
+            } else {
+              loadBtn.disabled = false;
+              loadBtn.textContent = 'Load more';
+            }
+          } catch (err) {
+            console.error(err);
+            alert('Could not load more targets.');
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load more';
+          }
+        });
+      }
+    });
+    
   </script>
 {% endblock %}

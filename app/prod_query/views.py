@@ -3,6 +3,8 @@ from django.shortcuts import render
 from django.db import connections
 import mysql.connector
 # import mysql.connector
+from django.template.loader import render_to_string
+
 
 from datetime import datetime, date, timedelta
 import time
@@ -7254,34 +7256,46 @@ def fetch_exclude_weekends_data(request):
 
 
 
-def targets_list(request):
-    from zoneinfo import ZoneInfo
-    # fetch and order
-    qs = OAMachineTargets.objects.all().order_by(
-        '-effective_date_unix',
-        'machine_id'
-    )
+PAGE_SIZE = 500
 
+def annotate_targets(qs):
+    """Add .effective_date_est and .cycle_time_seconds on each."""
     est = ZoneInfo("America/New_York")
-    total_seconds = 7200 * 60  # 7 200 minutes → seconds
-
+    total_seconds = 7200 * 60
     for t in qs:
-        # convert Unix → UTC dt, then to EST
-        dt_utc = datetime.fromtimestamp(
-            t.effective_date_unix,
-            tz=ZoneInfo("UTC")
-        )
+        dt_utc = datetime.fromtimestamp(t.effective_date_unix, tz=ZoneInfo("UTC"))
         t.effective_date_est = dt_utc.astimezone(est)
+        t.cycle_time_seconds = (total_seconds / t.target) if t.target else None
+    return qs
 
-        # avoid division by zero
-        t.cycle_time_seconds = (
-            total_seconds / t.target
-            if t.target else None
-        )
+def targets_list(request):
+    # first page only
+    offset = 0
+    qs_all = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+    total = qs_all.count()
+    page_qs = qs_all[:PAGE_SIZE]
+    annotate_targets(page_qs)
 
     return render(request, 'prod_query/targets_list.html', {
-        'targets': qs,
+        'targets': page_qs,
+        'offset': PAGE_SIZE,
+        'total': total,
+        'page_size': PAGE_SIZE,
     })
+
+def targets_load_more_ajax(request):
+    # expects ?offset=<int>
+    offset = int(request.GET.get('offset', 0))
+    qs_all = OAMachineTargets.objects.all().order_by('-effective_date_unix', 'machine_id')
+    next_batch = qs_all[offset:offset + PAGE_SIZE]
+    annotate_targets(next_batch)
+
+    html = render_to_string('prod_query/_targets_rows.html', {
+        'targets': next_batch
+    }, request)
+
+    has_more = offset + PAGE_SIZE < qs_all.count()
+    return JsonResponse({'html': html, 'has_more': has_more})
 
 
 

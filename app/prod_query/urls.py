@@ -60,6 +60,7 @@ urlpatterns = [
     path('api/oee-metrics/', views.oee_metrics_view, name='oee_metrics_view'),
 
     path('targets/', views.targets_list, name='targets_list'),
+    path('targets/load-more/', views.targets_load_more_ajax, name='targets_load_more_ajax'),
     path('targets/new/', views.target_create_ajax, name='target_create_ajax'),
     path('targets/<int:pk>/edit/', views.target_edit_ajax, name='target_edit_ajax'),
 
