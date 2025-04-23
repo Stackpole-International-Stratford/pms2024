@@ -1212,7 +1212,7 @@ def rejects_dashboard(request, line=None):
 
         return render(
             request,
-            "barcode/grades_dashboard.html",
+            "dashboards/rejects_dashboard.html",
             {"json_data": json.dumps(data, indent=4)}
         )
 
@@ -1222,9 +1222,9 @@ def rejects_dashboard(request, line=None):
         valid_lines = line_to_assets.keys()
 
         if selected_line in valid_lines:
-            return redirect(f"/barcode/grades-dashboard/{selected_line}/")
+            return redirect(f"/dashboard/rejects-dashboard/{selected_line}/")
 
-    return render(request, "barcode/grades_dashboard_finder.html")
+    return render(request, "dashboards/rejects_dashboard_finder.html")
 
 
 
@@ -1243,7 +1243,7 @@ def rejects_dashboard_finder(request):
         valid_lines = ["10R80", "AB1V"]  # Add more if needed
 
         if selected_line in valid_lines:
-            return redirect(f"/barcode/grades-dashboard/{selected_line}/")
+            return redirect(f"/dashboard/rejects-dashboard/{selected_line}/")
 
     # Render the selection page if GET request
-    return render(request, "barcode/grades_dashboard_finder.html")
+    return render(request, "dashboards/rejects_dashboard_finder.html")
