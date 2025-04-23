@@ -119,9 +119,9 @@
         const failSpan = document.getElementById(`failCount-${line}`);
         const n = pie.failures_total || 0;
         failSpan.textContent = n;
-        if (n < 5) {
+        if (n < 30) {
           failSpan.classList.add("text-success");
-        } else if (n < 15) {
+        } else if (n < 50) {
           failSpan.classList.add("text-warning");
         } else {
           failSpan.classList.add("text-danger");
