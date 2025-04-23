@@ -1147,11 +1147,11 @@ def rejects_dashboard(request, line):
 
 
 def rejects_dashboard_finder(request):
-    """
-    If you post a ‘line’, redirect you to /rejects-dashboard/<line>/.
-    """
+    lines = list(LINE_TO_MACHINES.keys())   # ["10R80", "AB1V", …]
     if request.method == "POST":
-        line = request.POST.get("line")
-        if line in LINE_TO_MACHINES:
-            return redirect(f"/dashboard/rejects-dashboard/{line}/")
-    return render(request, "dashboards/rejects_dashboard_finder.html")
+        chosen = request.POST.get("line")
+        if chosen in lines:
+            return redirect("rejects_dashboard_by_line", line=chosen)
+    return render(request,
+                  "dashboards/rejects_dashboard_finder.html",
+                  {"lines": lines})
