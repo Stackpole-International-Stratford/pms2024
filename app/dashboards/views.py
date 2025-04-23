@@ -1047,6 +1047,15 @@ def fetch_pie_chart_data(machine):
     pct_good   = round((good   / total * 100), 2) if total else 0.0
     pct_reject = round((rejects/ total * 100), 2) if total else 0.0
 
+
+    # ←— NEW: pick the right bootstrap class by percentage
+    if pct_reject < 2.5:
+        reject_color = "text-success"
+    elif pct_reject < 5.0:
+        reject_color = "text-warning"
+    else:
+        reject_color = "text-danger"
+
     return {
         "total": total,
         "grades": {
@@ -1058,6 +1067,8 @@ def fetch_pie_chart_data(machine):
             "Reject": pct_reject,
         },
         "failures_total": rejects,
+        # ←— NEW FIELD your frontend will just apply
+        "reject_color": reject_color,
     }
 
 

@@ -49,35 +49,35 @@
       const lines = Object.keys(data);
       const container = document.getElementById("charts-container");
       const rowHeight = Math.floor(container.clientHeight / lines.length);
-  
+
       const COLORS = {
         Good:   "rgba(0, 128, 0, 0.9)",
         Reject: "rgba(255, 0, 0, 0.9)"
       };
-  
+
       lines.forEach(line => {
         // unpack our JSON
         const {
           breakdown_data: breakdown = [],
           pie_chart_data: pie       = {}
         } = data[line];
-  
+
         // raw counts and percentages
         const rawGood   = pie.grades?.Good   || 0;
         const rawReject = pie.grades?.Reject || 0;
         const pct       = pie.percentages   || { Good: 0, Reject: 0 };
-  
-        // display strings for legend
+
+        // display strings for pie legend
         const pieDisplay = {
           Good:   `${rawGood} (${pct.Good}%)`,
           Reject: `${rawReject} (${pct.Reject}%)`
         };
-  
+
         // build row
         const row = document.createElement("div");
         row.className = "row g-3";
         row.style.height = `${rowHeight}px`;
-  
+
         // line‐chart column
         const colLine = document.createElement("div");
         colLine.className = "col-12 col-md-7";
@@ -89,7 +89,7 @@
             </div>
           </div>`;
         row.appendChild(colLine);
-  
+
         // pie‐chart column
         const colPie = document.createElement("div");
         colPie.className = "col-12 col-md-3";
@@ -100,7 +100,7 @@
             </div>
           </div>`;
         row.appendChild(colPie);
-  
+
         // rejects count column
         const colFail = document.createElement("div");
         colFail.className = "col-12 col-md-2";
@@ -112,26 +112,21 @@
             </div>
           </div>`;
         row.appendChild(colFail);
-  
+
         container.appendChild(row);
-  
-        // update rejects number & color
+
+        // ─── NEW: pull the span, then apply backend-computed class ───
         const failSpan = document.getElementById(`failCount-${line}`);
-        const n = pie.failures_total || 0;
+        const n        = pie.failures_total || 0;
+        const cssClass = pie.reject_color   || "text-success";
         failSpan.textContent = n;
-        if (n < 30) {
-          failSpan.classList.add("text-success");
-        } else if (n < 50) {
-          failSpan.classList.add("text-warning");
-        } else {
-          failSpan.classList.add("text-danger");
-        }
-  
+        failSpan.classList.add(cssClass);
+
         // build line chart
-        const labels    = breakdown.map(i => i.interval_start);
-        const goodData  = breakdown.map(i => parseInt((i.grade_counts?.Good||"0").split(" ")[0],10));
-        const rejectData= breakdown.map(i => parseInt((i.grade_counts?.Reject||"0").split(" ")[0],10));
-  
+        const labels     = breakdown.map(i => i.interval_start);
+        const goodData   = breakdown.map(i => parseInt((i.grade_counts?.Good   || "0").split(" ")[0], 10));
+        const rejectData = breakdown.map(i => parseInt((i.grade_counts?.Reject || "0").split(" ")[0], 10));
+
         new Chart(
           document.getElementById(`lineChart-${line}`).getContext("2d"),
           {
@@ -164,20 +159,13 @@
                 legend: { labels: { color: "#ffffff" } }
               },
               scales: {
-                x: {
-                  title: { display: true, text: "Last 7 days", color: "#ffffff" },
-                  ticks: { color: "#ffffff" }
-                },
-                y: {
-                  beginAtZero: true,
-                  title: { display: true, text: "Count", color: "#ffffff" },
-                  ticks: { color: "#ffffff" }
-                }
+                x: { title: { display: true, text: "Last 7 days", color: "#ffffff" }, ticks: { color: "#ffffff" } },
+                y: { beginAtZero: true, title: { display: true, text: "Count", color: "#ffffff" }, ticks: { color: "#ffffff" } }
               }
             }
           }
         );
-  
+
         // build pie chart
         new Chart(
           document.getElementById(`pieChart-${line}`).getContext("2d"),
@@ -199,7 +187,7 @@
                   labels: {
                     color: "#ffffff",
                     font: { size: 14, weight: "bold" },
-                    generateLabels: chart => 
+                    generateLabels: chart =>
                       chart.data.labels.map((lbl,i) => ({
                         text:       lbl === "Good"
                                     ? pieDisplay.Good
@@ -213,14 +201,13 @@
             }
           }
         );
-  
+
       }); // end forEach
-  
+
       // auto-refresh every minute
       setInterval(() => location.reload(), 60000);
     });
   </script>
-  
 
 </body>
 </html>
