@@ -93,7 +93,7 @@
         colFail.innerHTML = `
           <div class="card border-0 h-100" style="background-color: black !important;">
             <div class="card-header text-white fw-bold large-header">
-              Failures (24 hr)
+              Rejects (24 hr)
             </div>
             <div class="card-body p-0 d-flex justify-content-center align-items-center" style="border-bottom: 1px solid white;">
               <span id="failCount-${line}" class="display-1 fw-bold large-number">0</span>
@@ -103,12 +103,21 @@
 
         container.appendChild(row);
 
+          
         // update failures number & color
         const failSpan = document.getElementById(`failCount-${line}`);
-        failSpan.textContent = pie.failures_total || 0;
-        failSpan.classList.add(
-          pie.failures_total === 0 ? "text-success" : "text-danger"
-        );
+        const n = pie.failures_total || 0;
+        failSpan.textContent = n;
+
+        // now color-code 0–4 green, 5–14 yellow, 15+ red
+        if (n < 5) {
+          failSpan.classList.add("text-success");
+        } else if (n < 15) {
+          failSpan.classList.add("text-warning");
+        } else {
+          failSpan.classList.add("text-danger");
+        }
+
 
         // -- prepare line-chart data (counts only) --
         const labels = breakdown.map(i => i.interval_start);
