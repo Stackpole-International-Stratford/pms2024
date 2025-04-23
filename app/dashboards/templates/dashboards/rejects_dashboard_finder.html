@@ -3,7 +3,7 @@
 {% block title %}Select Production Line{% endblock %}
 
 {% block extra_css %}
-  {# no extra styles needed #}
+
 {% endblock %}
 
 {% block content %}
@@ -17,7 +17,9 @@
             <span class="h5 mb-0">{{ line }}</span>
             <a href="{% url 'dashboards:rejects_dashboard_by_line' line=line %}"
                class="text-dark"
-               aria-label="View {{ line }} Dashboard">
+               aria-label="View {{ line }} Dashboard"
+               data-bs-toggle="tooltip"
+               title="View {{ line }} rejects">
               <svg xmlns="http://www.w3.org/2000/svg"
                    width="24" height="24"
                    fill="currentColor"
