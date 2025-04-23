@@ -1,13 +1,16 @@
 import time
-from django.shortcuts import render
 from django.db import connections
 from django.views.decorators.cache import cache_page
 from django.conf import settings
 from importlib import import_module
-from django.shortcuts import redirect
 import json
 from datetime import datetime, timedelta
 from django.http import Http404
+
+from django.shortcuts import render, redirect
+import MySQLdb
+
+
 
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
 from django import forms
@@ -1003,247 +1006,152 @@ def display_shift_points(request, tv_number):
 # ==============================================================
 
 
+# define your line→machines map
+LINE_TO_MACHINES = {
+    "10R80": ["1508", "1532", "1538"],
+    # add more lines here...
+}
 
 
-
-def get_grade_totals(asset, grade):
-    """
-    Fetch the total count of a specific grade for a given asset in the last 24 hours.
-    """
-    last_24_hours = datetime.now() - timedelta(hours=24)
-    try:
-        with connections['default'].cursor() as cursor:
-            query = """
-                SELECT COUNT(*)
-                FROM barcode_lasermark
-                WHERE asset = %s AND grade = %s AND created_at >= %s;
-            """
-            cursor.execute(query, [asset, grade, last_24_hours])
-            return cursor.fetchone()[0]
-    except Exception as e:
-        return f"Error: {str(e)}"
+def get_db_connection():
+    return MySQLdb.connect(
+        host=settings.NEW_HOST,
+        user=settings.DAVE_USER,
+        passwd=settings.DAVE_PASSWORD,
+        db=settings.DAVE_DB
+    )
 
 
-def fetch_pie_chart_data(asset):
-    """
-    Fetch overall raw grade totals for the last 24 hours to be used in a pie chart,
-    including total count and total number of failures (grades not A/B/C).
-    """
-    possible_grades = ["A", "B", "C", "D", "E", "F"]
-    # Get the total counts for each grade
-    grade_totals = {grade: get_grade_totals(asset, grade) for grade in possible_grades}
-    
-    # Compute total (all grades)
-    total = sum(grade_totals.values()) if all(isinstance(val, int) for val in grade_totals.values()) else 0
-    
-    # Failures = any grade that is D, E, or F
-    failures = grade_totals.get("D", 0) + grade_totals.get("E", 0) + grade_totals.get("F", 0)
-    
+def fetch_pie_chart_data(machine):
+    now = datetime.now()
+    cutoff = now.timestamp() - 24 * 3600
+    conn = get_db_connection()
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) FROM GFxPRoduction "
+            "WHERE Machine = %s AND TimeStamp >= %s",
+            [machine, cutoff]
+        )
+        good = cursor.fetchone()[0]
+
+        cursor.execute(
+            "SELECT COUNT(*) FROM GFxPRoduction "
+            "WHERE Machine = %s AND TimeStamp >= %s",
+            [f"{machine}REJ", cutoff]
+        )
+        rejects = cursor.fetchone()[0]
+
+    total = good + rejects
     return {
         "total": total,
-        "grades": grade_totals,
-        "failures_total": failures
+        "grades": {
+            "Good": good,
+            "Reject": rejects,
+        },
+        "failures_total": rejects,
     }
 
 
-
-def fetch_grade_data_for_asset(asset, time_interval=60):
-    """
-    Fetch total grade counts and calculate percentage breakdown for a single asset,
-    covering the last 7 full days + today, with 8-hour interval breakdowns.
-    """
+def fetch_weekly_data_for_machine(machine):
     now = datetime.now()
-    last_7_days = now - timedelta(days=7)
-    possible_grades = ["A", "B", "C", "D", "E", "F"]
+    start_dt = (now - timedelta(days=7)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    interval_hours = [0, 8, 16]
+    breakdown = []
+    conn = get_db_connection()
 
-    grade_totals = {grade: get_grade_totals(asset, grade) for grade in possible_grades}
-    total_count = sum(val for val in grade_totals.values() if isinstance(val, int))
+    with conn.cursor() as cursor:
+        for day in range(8):  # 7 days + today
+            day_base = start_dt + timedelta(days=day)
+            for h in interval_hours:
+                block_start = day_base + timedelta(hours=h)
+                block_end   = block_start + timedelta(hours=8)
+                if block_start >= now:
+                    continue
 
-    grade_percentages = {}
-    for g, cnt in grade_totals.items():
-        if isinstance(cnt, int) and total_count > 0:
-            pct = round((cnt / total_count * 100), 2)
-            grade_percentages[g] = f"{cnt} ({pct}%)"
-        else:
-            grade_percentages[g] = f"{cnt} (0.00%)" if isinstance(cnt, int) else cnt
+                s_ts = block_start.timestamp()
+                e_ts = block_end.timestamp()
 
-    interval_offsets = [0, 8, 16]  # Start times for each 8-hour interval
-    
-    breakdown_data = []
-    num_days = 7  # 7 full days + today
+                # good
+                cursor.execute(
+                    "SELECT COUNT(*) FROM GFxPRoduction "
+                    "WHERE Machine = %s AND TimeStamp >= %s AND TimeStamp < %s",
+                    [machine, s_ts, e_ts]
+                )
+                good_cnt = cursor.fetchone()[0]
 
-    try:
-        with connections['default'].cursor() as cursor:
-            for i in range(num_days + 1):  # +1 for today
-                start_date = last_7_days + timedelta(days=i)
+                # reject
+                cursor.execute(
+                    "SELECT COUNT(*) FROM GFxPRoduction "
+                    "WHERE Machine = %s AND TimeStamp >= %s AND TimeStamp < %s",
+                    [f"{machine}REJ", s_ts, e_ts]
+                )
+                rej_cnt = cursor.fetchone()[0]
 
-                for start_hour in interval_offsets:
-                    start_time = start_date.replace(hour=start_hour, minute=0, second=0, microsecond=0)
-                    end_time = start_time + timedelta(hours=8)  # Ensure we don't set an invalid hour
+                total = good_cnt + rej_cnt
+                if total == 0:
+                    continue
 
-                    if start_time >= now:  # Avoid future times
-                        continue
+                breakdown.append({
+                    "interval_start": block_start.strftime("%b-%d %H:%M"),
+                    "interval_end":   block_end.strftime("%b-%d %H:%M"),
+                    "total_count":    total,
+                    "grade_counts": {
+                        "Good":  f"{good_cnt} ({round(good_cnt/total*100,2)}%)",
+                        "Reject": f"{rej_cnt} ({round(rej_cnt/total*100,2)}%)",
+                    }
+                })
 
-                    cursor.execute(
-                        """
-                        SELECT COUNT(*)
-                        FROM barcode_lasermark
-                        WHERE asset = %s AND created_at >= %s AND created_at < %s;
-                        """,
-                        [asset, start_time, end_time]
-                    )
-                    interval_total = cursor.fetchone()[0]
+    # roll-up for the 7-day totals
+    total_count = sum(item["total_count"] for item in breakdown)
+    total_good   = sum(int(item["grade_counts"]["Good"].split()[0]) for item in breakdown)
+    total_rej    = sum(int(item["grade_counts"]["Reject"].split()[0]) for item in breakdown)
 
-                    if interval_total == 0:
-                        continue
-
-                    cursor.execute(
-                        """
-                        SELECT grade, COUNT(*)
-                        FROM barcode_lasermark
-                        WHERE asset = %s AND created_at >= %s AND created_at < %s
-                        GROUP BY grade;
-                        """,
-                        [asset, start_time, end_time]
-                    )
-                    interval_grades_raw = {row[0]: row[1] for row in cursor.fetchall()}
-
-                    interval_grade_counts = {}
-                    for g in possible_grades:
-                        count_g = interval_grades_raw.get(g, 0)
-                        pct_g = round((count_g / interval_total * 100), 2) if interval_total else 0
-                        interval_grade_counts[g] = f"{count_g} ({pct_g}%)"
-
-                    breakdown_data.append({
-                        "interval_start": start_time.strftime("%b-%d %H:%M"),
-                        "interval_end": end_time.strftime("%b-%d %H:%M"),
-                        "total_count": interval_total,
-                        "grade_counts": interval_grade_counts,
-                    })
-
-    except Exception as e:
-        print(f"Error fetching grade data for asset {asset}: {e}")
-        breakdown_data = []  # Ensure we always return a list
+    pct_good = round((total_good   / total_count * 100), 2) if total_count else 0
+    pct_rej  = round((total_rej    / total_count * 100), 2) if total_count else 0
 
     return {
-        "asset": asset,
+        "asset": machine,
         "total_count_last_7_days": total_count,
-        "grade_counts_last_7_days": grade_percentages,
-        "breakdown_data": breakdown_data,  # Ensures remove_sharp_dips always gets a list
+        "grade_counts_last_7_days": {
+            "Good":  f"{total_good} ({pct_good}%)",
+            "Reject": f"{total_rej} ({pct_rej}%)",
+        },
+        "breakdown_data": breakdown,
     }
 
 
-
-
-
-
-
-def remove_sharp_dips(breakdown_data, asset):
+def rejects_dashboard(request, line):
     """
-    Removes time intervals where:
-    1. The sum of A, B, C, D, E, and F percentages is < 75%.
-    2. All grades are 0 (0.00%).
+    Renders the dashboard for a given line (e.g. 10R80),
+    which internally shows machines defined in LINE_TO_MACHINES[line].
     """
-    filtered_intervals = []
+    machines = LINE_TO_MACHINES.get(line)
+    if not machines:
+        raise Http404(f"Unknown line: {line}")
 
-    for interval in breakdown_data:
-        grade_counts = interval.get("grade_counts", {})
+    data = {}
+    for m in machines:
+        weekly = fetch_weekly_data_for_machine(m)
+        pie    = fetch_pie_chart_data(m)
+        weekly["pie_chart_data"] = pie
+        data[m] = weekly
 
-        # Convert grade percentages to float values
-        percentages = [
-            float(count.split("(")[1].replace("%)", "").strip()) if "(" in count else 0
-            for count in grade_counts.values()
-        ]
-        total_percentage = sum(percentages)
-
-        # Remove interval if total percentage is less than 75%
-        if total_percentage < 75:
-            # print(
-            #     f"⚠ Removing interval with low total percentage for asset {asset}: "
-            #     f"{interval['interval_start']} to {interval['interval_end']} - Total: {total_percentage:.2f}%"
-            # )
-            continue  # Skip this interval, do not add it to the final list
-
-        # # Remove interval if all grades are "0 (0.00%)"
-        # if all(count.startswith("0 (") for count in grade_counts.values()):
-        #     # print(
-        #     #     f"⚠ Removing interval with all zero grades for asset {asset}: "
-        #     #     f"{interval['interval_start']} to {interval['interval_end']}"
-        #     # )
-        #     continue  # Skip this interval, do not add it to the final list
-
-        # If valid, add to the list
-        filtered_intervals.append(interval)
-
-    return filtered_intervals
-
-
-def rejects_dashboard(request, line=None):
-    """
-    If a line (e.g., '10R80') is provided in the URL, render the dashboard for that line.
-    If no line is provided, show the selection page.
-    """
-    # Mapping of line names to assets
-    line_to_assets = {
-        "10R80": ["1534", "1505", "1811"],
-        "AB1V": ["1724", "1725", "1750"],
-        # Add more lines as needed
-    }
-
-    if line:
-        # If a line is provided, load the dashboard for that line's assets
-        assets = line_to_assets.get(line, [])
-        if not assets:
-            raise Http404("Invalid line selection.")
-
-        time_interval = int(request.GET.get("time_interval", 30))  # Default 30 min
-        data = {}
-
-        for asset in assets:
-            grade_data = fetch_grade_data_for_asset(asset, time_interval)
-            pie_data = fetch_pie_chart_data(asset)
-
-            grade_data["breakdown_data"] = remove_sharp_dips(grade_data.get("breakdown_data", []), asset)
-
-            data[asset] = {
-                **grade_data,
-                "pie_chart_data": pie_data
-            }
-
-        return render(
-            request,
-            "dashboards/rejects_dashboard.html",
-            {"json_data": json.dumps(data, indent=4)}
-        )
-
-    # If no line is given, show the selection page
-    if request.method == "POST":
-        selected_line = request.POST.get("line")
-        valid_lines = line_to_assets.keys()
-
-        if selected_line in valid_lines:
-            return redirect(f"/dashboard/rejects-dashboard/{selected_line}/")
-
-    return render(request, "dashboards/rejects_dashboard_finder.html")
-
-
-
-
+    return render(
+        request,
+        "dashboards/rejects_dashboard.html",
+        {"json_data": json.dumps(data, indent=4)}
+    )
 
 
 def rejects_dashboard_finder(request):
     """
-    Renders a selection page where users choose a line (e.g., 10R80, AB1V).
-    Redirects them to the dashboard URL using the line name.
+    If you post a ‘line’, redirect you to /rejects-dashboard/<line>/.
     """
     if request.method == "POST":
-        selected_line = request.POST.get("line")
-
-        # Define available lines
-        valid_lines = ["10R80", "AB1V"]  # Add more if needed
-
-        if selected_line in valid_lines:
-            return redirect(f"/dashboard/rejects-dashboard/{selected_line}/")
-
-    # Render the selection page if GET request
+        line = request.POST.get("line")
+        if line in LINE_TO_MACHINES:
+            return redirect(f"/dashboard/rejects-dashboard/{line}/")
     return render(request, "dashboards/rejects_dashboard_finder.html")

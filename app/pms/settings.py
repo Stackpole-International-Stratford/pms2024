@@ -373,6 +373,7 @@ def get_db_connection_new():
     )
 
 DAVE_HOST = "10.4.1.224"
+NEW_HOST = "10.4.1.245"
 DAVE_USER = "stuser"
 DAVE_PASSWORD = "stp383"
 DAVE_DB = "prodrptdb"
