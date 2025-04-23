@@ -1043,14 +1043,23 @@ def fetch_pie_chart_data(machine):
         rejects = cursor.fetchone()[0]
 
     total = good + rejects
+    # avoid divide‐by‐zero
+    pct_good   = round((good   / total * 100), 2) if total else 0.0
+    pct_reject = round((rejects/ total * 100), 2) if total else 0.0
+
     return {
         "total": total,
         "grades": {
             "Good": good,
             "Reject": rejects,
         },
+        "percentages": {
+            "Good": pct_good,
+            "Reject": pct_reject,
+        },
         "failures_total": rejects,
     }
+
 
 
 def fetch_weekly_data_for_machine(machine):

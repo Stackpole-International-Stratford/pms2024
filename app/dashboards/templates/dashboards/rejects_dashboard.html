@@ -49,67 +49,76 @@
       const lines = Object.keys(data);
       const container = document.getElementById("charts-container");
       const rowHeight = Math.floor(container.clientHeight / lines.length);
-
+  
       const COLORS = {
         Good:   "rgba(0, 128, 0, 0.9)",
         Reject: "rgba(255, 0, 0, 0.9)"
       };
-
+  
       lines.forEach(line => {
-        const { breakdown_data: breakdown = [], pie_chart_data: pie = {} } = data[line];
-        const pieGrades = pie.grades || { Good: 0, Reject: 0 };
-
-        // -- build row --
+        // unpack our JSON
+        const {
+          breakdown_data: breakdown = [],
+          pie_chart_data: pie       = {}
+        } = data[line];
+  
+        // raw counts and percentages
+        const rawGood   = pie.grades?.Good   || 0;
+        const rawReject = pie.grades?.Reject || 0;
+        const pct       = pie.percentages   || { Good: 0, Reject: 0 };
+  
+        // display strings for legend
+        const pieDisplay = {
+          Good:   `${rawGood} (${pct.Good}%)`,
+          Reject: `${rawReject} (${pct.Reject}%)`
+        };
+  
+        // build row
         const row = document.createElement("div");
         row.className = "row g-3";
         row.style.height = `${rowHeight}px`;
-
-        // Line chart col
+  
+        // line‐chart column
         const colLine = document.createElement("div");
         colLine.className = "col-12 col-md-7";
         colLine.innerHTML = `
-          <div class="card h-100" style="background-color: black !important; border-bottom: 1px solid white;">
-            <div class="card-header fw-bold">Machine: ${line} (Week)</div>
+          <div class="card h-100" style="background-color: black; border-bottom: 1px solid white;">
+            <div class="card-header fw-bold">Line: ${line} (Week)</div>
             <div class="card-body p-0">
               <canvas id="lineChart-${line}"></canvas>
             </div>
           </div>`;
         row.appendChild(colLine);
-
-        // Pie chart col
+  
+        // pie‐chart column
         const colPie = document.createElement("div");
         colPie.className = "col-12 col-md-3";
         colPie.innerHTML = `
-          <div class="card border-0 h-100" style="background-color: black !important;">
+          <div class="card border-0 h-100" style="background-color: black;">
             <div class="card-body p-0 d-flex justify-content-center align-items-center">
               <canvas id="pieChart-${line}" width="180" height="180"></canvas>
             </div>
           </div>`;
         row.appendChild(colPie);
-
-        // Failures count col
+  
+        // rejects count column
         const colFail = document.createElement("div");
         colFail.className = "col-12 col-md-2";
         colFail.innerHTML = `
-          <div class="card border-0 h-100" style="background-color: black !important;">
-            <div class="card-header text-white fw-bold large-header">
-              Rejects (24 hr)
-            </div>
+          <div class="card border-0 h-100" style="background-color: black;">
+            <div class="card-header text-white fw-bold large-header">Rejects (24 hr)</div>
             <div class="card-body p-0 d-flex justify-content-center align-items-center" style="border-bottom: 1px solid white;">
               <span id="failCount-${line}" class="display-1 fw-bold large-number">0</span>
             </div>
           </div>`;
         row.appendChild(colFail);
-
+  
         container.appendChild(row);
-
-          
-        // update failures number & color
+  
+        // update rejects number & color
         const failSpan = document.getElementById(`failCount-${line}`);
         const n = pie.failures_total || 0;
         failSpan.textContent = n;
-
-        // now color-code 0–4 green, 5–14 yellow, 15+ red
         if (n < 5) {
           failSpan.classList.add("text-success");
         } else if (n < 15) {
@@ -117,23 +126,12 @@
         } else {
           failSpan.classList.add("text-danger");
         }
-
-
-        // -- prepare line-chart data (counts only) --
-        const labels = breakdown.map(i => i.interval_start);
-        const goodData = breakdown.map(i => {
-          const v = i.grade_counts?.Good;
-          return (typeof v === "number")
-            ? v
-            : parseInt((v||"0").toString().split(" ")[0], 10);
-        });
-        const rejectData = breakdown.map(i => {
-          const v = i.grade_counts?.Reject;
-          return (typeof v === "number")
-            ? v
-            : parseInt((v||"0").toString().split(" ")[0], 10);
-        });
-
+  
+        // build line chart
+        const labels    = breakdown.map(i => i.interval_start);
+        const goodData  = breakdown.map(i => parseInt((i.grade_counts?.Good||"0").split(" ")[0],10));
+        const rejectData= breakdown.map(i => parseInt((i.grade_counts?.Reject||"0").split(" ")[0],10));
+  
         new Chart(
           document.getElementById(`lineChart-${line}`).getContext("2d"),
           {
@@ -179,8 +177,8 @@
             }
           }
         );
-
-        // -- pie chart (good vs reject counts) --
+  
+        // build pie chart
         new Chart(
           document.getElementById(`pieChart-${line}`).getContext("2d"),
           {
@@ -188,7 +186,7 @@
             data: {
               labels: ["Good", "Reject"],
               datasets: [{
-                data: [pieGrades.Good || 0, pieGrades.Reject || 0],
+                data: [rawGood, rawReject],
                 backgroundColor: [COLORS.Good, COLORS.Reject]
               }]
             },
@@ -201,29 +199,28 @@
                   labels: {
                     color: "#ffffff",
                     font: { size: 14, weight: "bold" },
-                    generateLabels: chart => {
-                      return chart.data.labels.map((label, i) => {
-                        const count = chart.data.datasets[0].data[i];
-                        return {
-                          text: `${label}: ${count}`,
-                          fillStyle: chart.data.datasets[0].backgroundColor[i],
-                          fontColor: "#ffffff"
-                        };
-                      });
-                    }
+                    generateLabels: chart => 
+                      chart.data.labels.map((lbl,i) => ({
+                        text:       lbl === "Good"
+                                    ? pieDisplay.Good
+                                    : pieDisplay.Reject,
+                        fillStyle:  chart.data.datasets[0].backgroundColor[i],
+                        fontColor:  "#ffffff"
+                      }))
                   }
                 }
               }
             }
           }
         );
-
+  
       }); // end forEach
-
-      // auto-refresh
+  
+      // auto-refresh every minute
       setInterval(() => location.reload(), 60000);
     });
   </script>
+  
 
 </body>
 </html>
