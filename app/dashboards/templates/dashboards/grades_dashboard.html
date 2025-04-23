@@ -1,0 +1,208 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grades Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Bootstrap CSS & JS -->
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <!-- Chart.js -->
+  <script src="{% static 'chart.js/chart.umd.js' %}"></script>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    /* The outer card takes up the entire viewport */
+    .full-height-card {
+      height: 100vh;
+    }
+    /* The container that holds all our rows */
+    .charts-container {
+      height: 100%;
+      overflow: hidden;
+    }
+    .card-header {
+        font-size: 1.8rem;
+      }    
+      .large-number {
+        font-size: clamp(2rem, 8vw, 10rem);
+    } 
+  </style>
+</head>
+<body class="bg-black text-white">
+
+  <!-- Outer card wrapper with no padding -->
+<div class="card border-0 full-height-card" style="background-color: black !important;">
+    <div class="card-body p-0">
+      <div class="container-fluid charts-container" id="charts-container">
+        <!-- Asset rows will be generated here via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // JSON data passed from Django, keyed by asset
+      const data = JSON.parse('{{ json_data|escapejs }}');
+      const assets = Object.keys(data);
+      const chartsContainer = document.getElementById("charts-container");
+      const totalAssets = assets.length;
+
+      // Calculate available height from the container and divide among rows
+      const availableHeight = chartsContainer.clientHeight;
+      const rowHeight = Math.floor(availableHeight / totalAssets);
+
+      // Define chart colors for grades
+      const gradeColors = {
+        "A": "rgba(0, 128, 0, 0.9)",
+        "B": "rgba(173, 255, 47, 0.9)",
+        "C": "rgba(255, 255, 0, 0.9)",
+        "D": "rgba(255, 69, 0, 0.9)",
+        "E": "rgba(220, 20, 60, 0.9)",
+        "F": "rgba(255, 0, 0, 0.9)"
+      };
+
+      assets.forEach(asset => {
+        const assetData = data[asset];
+        const breakdownData = assetData.breakdown_data || [];
+        const pieData = assetData.pie_chart_data || { total: 0, grades: {}, failures_total: 0 };
+
+        // Create a row for this asset and set its fixed height
+        const row = document.createElement("div");
+        row.className = "row g-3";
+        row.style.height = `${rowHeight}px`;
+
+        // --- Column 1: Line Chart (Make it wider) ---
+        const colLine = document.createElement("div");
+        colLine.className = "col-12 col-md-7"; // Increased width from col-md-4 to col-md-5
+        colLine.innerHTML = `
+        <div class="card h-100" style="background-color: black !important; border-bottom: 1px solid white;">
+            <div class="card-header fw-bold">Machine: ${asset} (Week)</div>
+            <div class="card-body p-0">
+                <canvas id="lineChartCanvas-${asset}"></canvas>
+            </div>
+        </div>
+        `;
+        row.appendChild(colLine);
+
+        // --- Column 2: Pie Chart --
+        // <div class="card-header fw-bold">Total: ${pieData.total} (24hr)-
+        const colPie = document.createElement("div");
+        colPie.className = "col-12 col-md-3"; // Reduced width from col-md-4 to col-md-3
+        colPie.innerHTML = `
+        <div class="card border-0 h-100" style="background-color: black !important;">     
+            <div class="card-body mt-2 p-0 d-flex justify-content-center align-items-center">
+                <canvas id="pieChartCanvas-${asset}" width="180" height="180"></canvas>
+            </div>
+        </div>
+        `;
+        row.appendChild(colPie);
+
+        // --- Column 3: Failures ---
+        const colFail = document.createElement("div");
+        colFail.className = "col-12 col-md-2"; // Keeping it at col-md-4
+        colFail.innerHTML = `
+            <div class="card border-0 h-100" style="background-color: black !important;">
+                <div class="card-header text-white fw-bold large-header;">
+                    Failures (24hr)
+                </div>
+                <div class="card-body p-0 d-flex justify-content-center align-items-center" style="border-bottom: 1px solid white;">
+                    <span id="failures-${asset}" class="display-1 fw-bold large-number">0</span>
+                </div>
+            </div>
+        `;
+        row.appendChild(colFail);
+
+
+        chartsContainer.appendChild(row);
+
+        // Update Failures Count & Color
+        const failuresSpan = document.getElementById(`failures-${asset}`);
+        failuresSpan.textContent = pieData.failures_total;
+        failuresSpan.classList.add(
+          pieData.failures_total == 0 ? "text-success" :
+          pieData.failures_total <= 5 ? "text-warning" : "text-danger"
+        );
+
+        // ---------- Build Line Chart ----------
+        const grades = ["A", "B", "C", "D", "E", "F"];
+        const lineLabels = breakdownData.map(i => i.interval_start);
+        const lineDatasets = grades.map(grade => ({
+          label: grade,
+          data: breakdownData.map(i => {
+            const gradeStr = i.grade_counts[grade] || "0 (0.00%)";
+            const match = gradeStr.match(/\((.*?)%\)/);
+            return match ? parseFloat(match[1]) : 0;
+          }),
+          borderColor: gradeColors[grade],
+          backgroundColor: gradeColors[grade].replace("0.9", "0.5"),
+          fill: true,
+          tension: 0.1
+        }));
+
+        new Chart(document.getElementById(`lineChartCanvas-${asset}`).getContext("2d"), {
+          type: "line",
+          data: { labels: lineLabels, datasets: lineDatasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#ffffff' } } },
+            scales: {
+              x: { title: { display: true, text: "Last 7 days", color: '#ffffff' }, ticks: { color: '#ffffff' } },
+              y: { beginAtZero: true, max: 100, title: { display: true, text: "Percentage (%)", color: '#ffffff' }, ticks: { color: '#ffffff' } }
+            }
+          }
+        });
+
+        // ---------- Build Pie Chart ----------
+        const pieLabels = grades;
+        const pieCounts = grades.map(g => pieData.grades[g] || 0);
+        const totalCount = pieCounts.reduce((sum, count) => sum + count, 0);
+
+        new Chart(document.getElementById(`pieChartCanvas-${asset}`).getContext("2d"), {
+          type: "pie",
+          data: {
+            labels: pieLabels,
+            datasets: [{
+              data: pieCounts,
+              backgroundColor: Object.values(gradeColors)
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "right",
+                    labels: {
+                      color: '#ffffff', // Ensure this line is present
+                      font: { size: 16, weight: 'bold' },
+                      generateLabels: chart => chart.data.labels.map((label, i) => {
+                        const count = chart.data.datasets[0].data[i];
+                        const percentage = totalCount > 0 ? ((count / totalCount) * 100).toFixed(1) : 0;
+                        return { 
+                          text: `${label}: ${percentage}%`, 
+                          fillStyle: chart.data.datasets[0].backgroundColor[i],
+                          fontColor: "#ffffff" // Make sure the legend text stays white
+                        };
+                      })
+                    }
+                  }                  
+            }
+          }
+        });
+      });
+    });
+
+    // Optional: Auto-refresh every 60 seconds
+    setInterval(() => { location.reload(); }, 60000);
+  </script>
+
+</body>
+</html>

@@ -5,6 +5,9 @@ from django.views.decorators.cache import cache_page
 from django.conf import settings
 from importlib import import_module
 from django.shortcuts import redirect
+import json
+from datetime import datetime, timedelta
+from django.http import Http404
 
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
 from django import forms
@@ -991,3 +994,256 @@ def display_shift_points(request, tv_number):
 
 
 
+
+
+# ==============================================================
+# ==============================================================
+# ==================== Rejects Dashboard =======================
+# ==============================================================
+# ==============================================================
+
+
+
+
+
+def get_grade_totals(asset, grade):
+    """
+    Fetch the total count of a specific grade for a given asset in the last 24 hours.
+    """
+    last_24_hours = datetime.now() - timedelta(hours=24)
+    try:
+        with connections['default'].cursor() as cursor:
+            query = """
+                SELECT COUNT(*)
+                FROM barcode_lasermark
+                WHERE asset = %s AND grade = %s AND created_at >= %s;
+            """
+            cursor.execute(query, [asset, grade, last_24_hours])
+            return cursor.fetchone()[0]
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def fetch_pie_chart_data(asset):
+    """
+    Fetch overall raw grade totals for the last 24 hours to be used in a pie chart,
+    including total count and total number of failures (grades not A/B/C).
+    """
+    possible_grades = ["A", "B", "C", "D", "E", "F"]
+    # Get the total counts for each grade
+    grade_totals = {grade: get_grade_totals(asset, grade) for grade in possible_grades}
+    
+    # Compute total (all grades)
+    total = sum(grade_totals.values()) if all(isinstance(val, int) for val in grade_totals.values()) else 0
+    
+    # Failures = any grade that is D, E, or F
+    failures = grade_totals.get("D", 0) + grade_totals.get("E", 0) + grade_totals.get("F", 0)
+    
+    return {
+        "total": total,
+        "grades": grade_totals,
+        "failures_total": failures
+    }
+
+
+
+def fetch_grade_data_for_asset(asset, time_interval=60):
+    """
+    Fetch total grade counts and calculate percentage breakdown for a single asset,
+    covering the last 7 full days + today, with 8-hour interval breakdowns.
+    """
+    now = datetime.now()
+    last_7_days = now - timedelta(days=7)
+    possible_grades = ["A", "B", "C", "D", "E", "F"]
+
+    grade_totals = {grade: get_grade_totals(asset, grade) for grade in possible_grades}
+    total_count = sum(val for val in grade_totals.values() if isinstance(val, int))
+
+    grade_percentages = {}
+    for g, cnt in grade_totals.items():
+        if isinstance(cnt, int) and total_count > 0:
+            pct = round((cnt / total_count * 100), 2)
+            grade_percentages[g] = f"{cnt} ({pct}%)"
+        else:
+            grade_percentages[g] = f"{cnt} (0.00%)" if isinstance(cnt, int) else cnt
+
+    interval_offsets = [0, 8, 16]  # Start times for each 8-hour interval
+    
+    breakdown_data = []
+    num_days = 7  # 7 full days + today
+
+    try:
+        with connections['default'].cursor() as cursor:
+            for i in range(num_days + 1):  # +1 for today
+                start_date = last_7_days + timedelta(days=i)
+
+                for start_hour in interval_offsets:
+                    start_time = start_date.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+                    end_time = start_time + timedelta(hours=8)  # Ensure we don't set an invalid hour
+
+                    if start_time >= now:  # Avoid future times
+                        continue
+
+                    cursor.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM barcode_lasermark
+                        WHERE asset = %s AND created_at >= %s AND created_at < %s;
+                        """,
+                        [asset, start_time, end_time]
+                    )
+                    interval_total = cursor.fetchone()[0]
+
+                    if interval_total == 0:
+                        continue
+
+                    cursor.execute(
+                        """
+                        SELECT grade, COUNT(*)
+                        FROM barcode_lasermark
+                        WHERE asset = %s AND created_at >= %s AND created_at < %s
+                        GROUP BY grade;
+                        """,
+                        [asset, start_time, end_time]
+                    )
+                    interval_grades_raw = {row[0]: row[1] for row in cursor.fetchall()}
+
+                    interval_grade_counts = {}
+                    for g in possible_grades:
+                        count_g = interval_grades_raw.get(g, 0)
+                        pct_g = round((count_g / interval_total * 100), 2) if interval_total else 0
+                        interval_grade_counts[g] = f"{count_g} ({pct_g}%)"
+
+                    breakdown_data.append({
+                        "interval_start": start_time.strftime("%b-%d %H:%M"),
+                        "interval_end": end_time.strftime("%b-%d %H:%M"),
+                        "total_count": interval_total,
+                        "grade_counts": interval_grade_counts,
+                    })
+
+    except Exception as e:
+        print(f"Error fetching grade data for asset {asset}: {e}")
+        breakdown_data = []  # Ensure we always return a list
+
+    return {
+        "asset": asset,
+        "total_count_last_7_days": total_count,
+        "grade_counts_last_7_days": grade_percentages,
+        "breakdown_data": breakdown_data,  # Ensures remove_sharp_dips always gets a list
+    }
+
+
+
+
+
+
+
+def remove_sharp_dips(breakdown_data, asset):
+    """
+    Removes time intervals where:
+    1. The sum of A, B, C, D, E, and F percentages is < 75%.
+    2. All grades are 0 (0.00%).
+    """
+    filtered_intervals = []
+
+    for interval in breakdown_data:
+        grade_counts = interval.get("grade_counts", {})
+
+        # Convert grade percentages to float values
+        percentages = [
+            float(count.split("(")[1].replace("%)", "").strip()) if "(" in count else 0
+            for count in grade_counts.values()
+        ]
+        total_percentage = sum(percentages)
+
+        # Remove interval if total percentage is less than 75%
+        if total_percentage < 75:
+            # print(
+            #     f"⚠ Removing interval with low total percentage for asset {asset}: "
+            #     f"{interval['interval_start']} to {interval['interval_end']} - Total: {total_percentage:.2f}%"
+            # )
+            continue  # Skip this interval, do not add it to the final list
+
+        # # Remove interval if all grades are "0 (0.00%)"
+        # if all(count.startswith("0 (") for count in grade_counts.values()):
+        #     # print(
+        #     #     f"⚠ Removing interval with all zero grades for asset {asset}: "
+        #     #     f"{interval['interval_start']} to {interval['interval_end']}"
+        #     # )
+        #     continue  # Skip this interval, do not add it to the final list
+
+        # If valid, add to the list
+        filtered_intervals.append(interval)
+
+    return filtered_intervals
+
+
+def rejects_dashboard(request, line=None):
+    """
+    If a line (e.g., '10R80') is provided in the URL, render the dashboard for that line.
+    If no line is provided, show the selection page.
+    """
+    # Mapping of line names to assets
+    line_to_assets = {
+        "10R80": ["1534", "1505", "1811"],
+        "AB1V": ["1724", "1725", "1750"],
+        # Add more lines as needed
+    }
+
+    if line:
+        # If a line is provided, load the dashboard for that line's assets
+        assets = line_to_assets.get(line, [])
+        if not assets:
+            raise Http404("Invalid line selection.")
+
+        time_interval = int(request.GET.get("time_interval", 30))  # Default 30 min
+        data = {}
+
+        for asset in assets:
+            grade_data = fetch_grade_data_for_asset(asset, time_interval)
+            pie_data = fetch_pie_chart_data(asset)
+
+            grade_data["breakdown_data"] = remove_sharp_dips(grade_data.get("breakdown_data", []), asset)
+
+            data[asset] = {
+                **grade_data,
+                "pie_chart_data": pie_data
+            }
+
+        return render(
+            request,
+            "barcode/grades_dashboard.html",
+            {"json_data": json.dumps(data, indent=4)}
+        )
+
+    # If no line is given, show the selection page
+    if request.method == "POST":
+        selected_line = request.POST.get("line")
+        valid_lines = line_to_assets.keys()
+
+        if selected_line in valid_lines:
+            return redirect(f"/barcode/grades-dashboard/{selected_line}/")
+
+    return render(request, "barcode/grades_dashboard_finder.html")
+
+
+
+
+
+
+def rejects_dashboard_finder(request):
+    """
+    Renders a selection page where users choose a line (e.g., 10R80, AB1V).
+    Redirects them to the dashboard URL using the line name.
+    """
+    if request.method == "POST":
+        selected_line = request.POST.get("line")
+
+        # Define available lines
+        valid_lines = ["10R80", "AB1V"]  # Add more if needed
+
+        if selected_line in valid_lines:
+            return redirect(f"/barcode/grades-dashboard/{selected_line}/")
+
+    # Render the selection page if GET request
+    return render(request, "barcode/grades_dashboard_finder.html")

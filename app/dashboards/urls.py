@@ -31,4 +31,9 @@ urlpatterns = [
     path('shift_points/update/', views.list_and_update_shift_points, name='list_and_update_shift_points'),
     path('shift_points/<int:tv_number>/', views.display_shift_points, name='display_shift_points'),
 
+
+
+
+    path("rejects-dashboard/", views.rejects_dashboard_finder, name="rejects_dashboard_finder"),
+    path("rejects-dashboard/<str:line>/", views.rejects_dashboard, name="rejects_dashboard_by_line"),
 ]
