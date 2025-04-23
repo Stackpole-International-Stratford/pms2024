@@ -1964,12 +1964,13 @@ lines = [
                     {"number": "1701R", "target": 3500},
                 ],
             },
-            {
-                "op": "50",
-                "machines": [
-                    {"number": "733", "target": 7000},
-                ],
-            },
+            # This one is also not tracking... found 3 not tracking so far. this will boost oee
+            # {
+            #     "op": "50",
+            #     "machines": [
+            #         {"number": "733", "target": 7000},
+            #     ],
+            # },
             {
                 "op": "60",
                 "machines": [
@@ -2222,12 +2223,13 @@ lines = [
                     {"number": "1815", "target": 16908},
                 ],
             },
-            {
-                "op": "90",
-                "machines": [
-                    {"number": "1542", "target": 16908},
-                ],
-            },
+            # I don't believe this machine is even being tracked, there are no records for it
+            # {
+            #     "op": "90",
+            #     "machines": [
+            #         {"number": "1542", "target": 16908},
+            #     ],
+            # },
             {
                 "op": "100",
                 "machines": [
@@ -2295,12 +2297,13 @@ lines = [
                     {"number": "1706", "target": 5000},
                 ],
             },
-            {
-                "op": "80",
-                "machines": [
-                    {"number": "1720", "target": 5000},
-                ],
-            },
+            # I don't think this machine is being tracked either
+            # {
+            #     "op": "80",
+            #     "machines": [
+            #         {"number": "1720", "target": 5000},
+            #     ],
+            # },
             {
                 "op": "90",
                 "machines": [
