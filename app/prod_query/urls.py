@@ -52,7 +52,7 @@ urlpatterns = [
     path('press_runtime/', views.press_runtime_wrapper3, name='press_runtime3'),
 
 
-    path('oa_by_day/', views.oa_by_day, name='oa_by_day'),
+    path('oee/', views.oa_by_day, name='oa_by_day'),
     # path('fetch_oa_by_day_production_data/', views.fetch_oa_by_day_production_data, name='fetch_oa_by_day_production_data'),
     # path('fetch_exclude_weekends_data/', views.fetch_exclude_weekends_data, name='fetch_exclude_weekends_data'),
 
