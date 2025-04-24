@@ -68,6 +68,22 @@ def weekly_prod_goal(part, end_of_period):
     return 0
 
 
+def weekly_prod_target(part, end_of_period):
+    # get all targets for this part, most-recent first
+    targets = (Weekly_Production_Target.objects
+            .filter(part_number=part)
+            .order_by('-year', '-week'))
+    for t in targets:
+        # Sunday of that ISO-week
+        target_date = date.fromisocalendar(t.year, t.week, 7)
+        # align to midnight and convert to timestamp (minus 2h timezone offset as you did for goals)
+        target_ts = (datetime.combine(target_date, datetime.min.time())
+                    .timestamp() - 7200)
+        if target_ts <= end_of_period:
+            return t.target
+    return 0
+
+
 
 def adjust_target_to_effective_date(target_date):
     (temp_year,temp_week,temp_day) = target_date.isocalendar()
@@ -203,6 +219,8 @@ def weekly_prod(request):
         # Goal
         end_of_period = last_shift_end
         goal = weekly_prod_goal(part,end_of_period)
+        target_value = weekly_prod_target(part, end_of_period)
+
 
         # One query for each machine used by part
         # sql "in" is very slow
@@ -262,6 +280,8 @@ def weekly_prod(request):
         row.append(goal)  # add in goal for reference
         row.append(difference)
         rows.append(row)
+        row.append(target_value)    # ← new
+
 
     context['dates'] = dates
     context['rows'] = rows

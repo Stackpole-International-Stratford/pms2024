@@ -101,20 +101,30 @@
                     </tr>    
                 </thead>
                 {% for row in rows %}
-                    <tr>
-                        {% for cell in row %}
-                            
-                            <td class="d-part d-bottom {% if cell < 0 %}red{% endif %}
-                            {% if forloop.counter == 25 %} show_modal" onclick="handleClick(event)" data-part="{{row.0}}{% endif %}">
-                            {{cell}}</td>
-                        {% endfor %}
-                        <td class="d-target show_modal_target"
-                            onclick="handleTargetClick(event)"
-                            data-part="{{ row.0 }}">
-                        {{ row.target }}
-                        </td>
-                    </tr>
-                {% endfor %}    
+                <tr>
+                  {% for cell in row %}
+                    {% if forloop.last %}
+                      {# the very last cell is your target #}
+                      <td class="d-target show_modal_target"
+                          onclick="handleTargetClick(event)"
+                          data-part="{{ row.0 }}">
+                        {{ cell }}
+                      </td>
+                    {% else %}
+                      {# everything else (shifts, totals, goals, diffs) #}
+                      <td class="d-part d-bottom {% if cell < 0 %}red{% endif %}
+                                 {% if forloop.counter == 25 %} show_modal{% endif %}"
+                          {% if forloop.counter == 25 %}
+                            onclick="handleClick(event)" data-part="{{ row.0 }}"
+                          {% endif %}>
+                        {{ cell }}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+              
+            
             </table>
             <button class="btn btn-outline-secondary" type="submit" name="prev">Previous Week</button>
             <button class="btn btn-outline-secondary" type="submit" name="current">Current Week</button>
