@@ -144,12 +144,8 @@ def weekly_prod(request):
                 target_value   = form.cleaned_data.get('goal')       # still named 'goal' in the form
                 part_number    = form.cleaned_data.get('part_number')
 
-                # derive ISO week & year from the effective date
-                effective_year, effective_week, _ = (
-                    effective_date.year,
-                    effective_date.isocalendar().week,
-                    effective_date.isocalendar().day
-                )
+                # derive ISO year, week, and weekday—and ignore the weekday
+                effective_year, effective_week, _ = effective_date.isocalendar()
 
                 # save (or overwrite) the weekly target
                 new_weekly_target, created = Weekly_Production_Target.objects.get_or_create(
