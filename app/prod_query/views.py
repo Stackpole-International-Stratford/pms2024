@@ -131,6 +131,25 @@ def weekly_prod(request):
                 new_weekly_goal.goal = goal
                 new_weekly_goal.save()
 
+                # ←–– ADD THIS:
+                print(f"[WeeklyProd] Goal update: part={part_number!r}, "
+                      f"effective_date={effective_date}, goal={goal!r}")
+                
+        # —— handle target updates ——
+        elif 'update_target' in request.POST:
+            form = WeeklyProdUpdate(request.POST)
+            if form.is_valid():
+                effective_date = form.cleaned_data.get('effective_date')
+                target_value   = form.cleaned_data.get('goal')
+                part_number    = form.cleaned_data.get('part_number')
+
+                # (insert your existing target‐saving logic here,
+                #  or if it’s the same model/table, just reuse the code above)
+
+                # ←–– ADD THIS:
+                print(f"[WeeklyProd] Target update: part={part_number!r}, "
+                      f"effective_date={effective_date}, target={target_value!r}")
+
         form = WeeklyProdDate(request.POST)
         if form.is_valid():
             # Previous week
