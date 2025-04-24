@@ -65,7 +65,7 @@
             <table id="report-table" class="table table-striped table-hover table-borderless">
                 <thead >
                     <tr>
-                        <th colspan="26" id="table_heading"><h3>Weekly Production</h3></th>
+                        <th colspan="28" id="table_heading"><h3>Weekly Production</h3></th>
                     </tr>
                     <tr id="header-row-2">
                         <th rowspan="2" id="h-part" class="subheading h-bottom">Part</th>
@@ -76,6 +76,7 @@
                         <th rowspan="2" id="h-predicted" class="h-bottom subheading">Predicted Final</th>
                         <th rowspan="2" id="h-goal" class="h-bottom subheading">Goal</th>
                         <th rowspan="2" id="h-difference" class="h-bottom subheading">Rel to Goal</th>
+                        <th rowspan="2" id="h-target"    class="h-bottom subheading">Target</th>
                     </tr>    
                     <tr id="header-row-3">
                         {% for day in dates %}
@@ -93,6 +94,7 @@
                             {% if forloop.counter == 25 %} show_modal" onclick="handleClick(event)" data-part="{{row.0}}{% endif %}">
                             {{cell}}</td>
                         {% endfor %}
+                        <td class="d-target">{{ row.target }}</td>
                     </tr>
                 {% endfor %}    
             </table>
