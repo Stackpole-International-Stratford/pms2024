@@ -41,6 +41,20 @@
 
     </script>
 
+
+    <!-- New script for Target Modal -->
+    <script>
+        function handleTargetClick(e) {
+          const { part } = e.target.dataset;
+          const myModal = new bootstrap.Modal(
+            document.querySelector('#exampleTargetModal'), {}
+          );
+          document.querySelector('#id_part_number').value = part + '_TARGET';
+          document.querySelector('#id_goal').value        = e.target.innerText.trim();
+          myModal.show();
+        }
+      </script>
+      
     
     <style>
         .form-label {
@@ -94,7 +108,11 @@
                             {% if forloop.counter == 25 %} show_modal" onclick="handleClick(event)" data-part="{{row.0}}{% endif %}">
                             {{cell}}</td>
                         {% endfor %}
-                        <td class="d-target">{{ row.target }}</td>
+                        <td class="d-target show_modal_target"
+                            onclick="handleTargetClick(event)"
+                            data-part="{{ row.0 }}">
+                        {{ row.target }}
+                        </td>
                     </tr>
                 {% endfor %}    
             </table>
@@ -141,6 +159,37 @@
             </div>
         </div>
     </div>
+
+    <!-- == New Target modal == -->
+    <div class="modal fade" id="exampleTargetModal" tabindex="-1" aria-labelledby="exampleTargetModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleTargetModalLabel">Edit Target</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label"> Effective Date: </label>
+                {% render_field update_form.effective_date class+="form-control" %}
+    
+                <label class="form-label"> Target: </label>
+                {% render_field update_form.goal class+="form-control" %}
+                
+                <label class="form-label"> Part Number: </label>
+                {% render_field update_form.part_number class+="form-control" %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <!-- note the different name here -->
+                <button type="submit" name="update_target" class="btn btn-primary">Save Target</button>
+            </div>
+            </form>
+        </div>
+        </div>
+    </div>
+
 </body>
 </html>
 
