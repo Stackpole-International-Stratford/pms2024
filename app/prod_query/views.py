@@ -6525,12 +6525,13 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
         return {"error": str(e)}
 
 
-def fetch_machine_target(machine_id, line_name, effective_timestamp):
+def fetch_machine_target(machine_id, line_name, effective_timestamp, end_timestamp):
     """
     Fetches the most recent target for a given machine and line from the OAMachineTargets table.
     Only targets with effective_date_unix less than or equal to the effective_timestamp are considered.
     Returns the target value if found, or None otherwise.
     """
+  
     target_record = (
         OAMachineTargets.objects.filter(
             machine_id=machine_id,
@@ -6541,11 +6542,19 @@ def fetch_machine_target(machine_id, line_name, effective_timestamp):
         .first()
     )
 
+    # 2) If nothing found, log and bail
     if target_record is None:
-        print(f"DEBUG: No target found for machine_id: {machine_id}, line: {line_name}, effective_timestamp: {effective_timestamp}")
+        print(f"DEBUG: No target found for machine_id={machine_id}, line={line_name}, timestamp={effective_timestamp}")
         return None
 
+
+    # 4) Print part number if present
+    # if target_record.part:
+    #     print(f"DEBUG: Part number for this record is '{target_record.part}'")
+ 
+
     return target_record.target
+
 
 
 
@@ -6614,7 +6623,7 @@ def parse_date_range(request):
 def get_production_data_for_machine(cursor, machine, machine_number, start_timestamp, end_timestamp, op, queried_minutes, line_name):
     import datetime
     """Fetches production parts data and target for a given machine."""
-    target_val = fetch_machine_target(machine_number, line_name, start_timestamp)
+    target_val = fetch_machine_target(machine_number, line_name, start_timestamp, end_timestamp)
     target = int(target_val * (queried_minutes / 7200)) if target_val is not None else None
 
     if machine.get("part_numbers") and isinstance(machine.get("part_numbers"), list) and machine["part_numbers"]:
