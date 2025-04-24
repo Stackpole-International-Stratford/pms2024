@@ -6632,9 +6632,32 @@ def fetch_machine_target(cursor, machine_id, line_name, effective_timestamp, end
         print(f"DEBUG: No target found for machine_id={machine_id}, line={line_name}, timestamp={effective_timestamp}")
         return None
 
-    if machine_id == '1723':
-        part_timeline = fetch_part_timeline(cursor, machine_id, effective_timestamp, end_timestamp, line_name)
-        # print(f"DEBUG: Part timeline for machine {machine_id}:", part_timeline)
+
+    # 1) Look up the part_numbers list for this machine in your global `lines`
+    part_numbers = []
+    for line in lines:
+        if line.get("line") == line_name:
+            for op in line.get("operations", []):
+                for m in op.get("machines", []):
+                    if m.get("number") == machine_id:
+                        part_numbers = m.get("part_numbers", []) or []
+                        break
+                if part_numbers:
+                    break
+        if part_numbers:
+            break
+
+    # 2) Only fetch timeline if there are multiple parts defined
+    if len(part_numbers) > 1:
+        part_timeline = fetch_part_timeline(
+            cursor,
+            machine_id,
+            effective_timestamp,
+            end_timestamp,
+            line_name
+        )
+        print(f"DEBUG: Fetched part timeline for machine {machine_id}: {part_timeline}")
+
 
     # 4) Print part number if present
     # if target_record.part:
