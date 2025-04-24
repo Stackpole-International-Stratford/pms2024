@@ -4,7 +4,10 @@ from django.db import connections
 import mysql.connector
 # import mysql.connector
 from django.template.loader import render_to_string
+from django.contrib import messages
 
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponseForbidden
 
 from datetime import datetime, date, timedelta
 import time
@@ -7524,21 +7527,40 @@ def annotate_targets(qs):
         t.cycle_time_seconds = (total_seconds / t.target) if t.target else None
     return qs
 
+
+
+@login_required(login_url='/login/')
 def targets_list(request):
-    # first page only
-    offset = 0
-    qs_all = OAMachineTargets.objects.filter(isDeleted=False) \
-    .order_by('-effective_date_unix', 'machine_id')
-    total = qs_all.count()
+    if not request.user.groups.filter(name="oee_target_managers").exists():
+        # simple HTML with a 5-second meta refresh back to “/”
+        html = """
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="refresh" content="5;url=/">
+            <title>Access Denied</title>
+          </head>
+          <body style="display:flex;align-items:center;justify-content:center;height:100vh;">
+            <h1>Only admins can access this page.</h1>
+          </body>
+        </html>
+        """
+        return HttpResponse(html, content_type="text/html")
+
+    # …otherwise your normal code
+    qs_all  = OAMachineTargets.objects.filter(isDeleted=False) \
+                                       .order_by('-effective_date_unix', 'machine_id')
+    total   = qs_all.count()
     page_qs = qs_all[:PAGE_SIZE]
     annotate_targets(page_qs)
-
     return render(request, 'prod_query/targets_list.html', {
-        'targets': page_qs,
-        'offset': PAGE_SIZE,
-        'total': total,
+        'targets':   page_qs,
+        'offset':    PAGE_SIZE,
+        'total':     total,
         'page_size': PAGE_SIZE,
     })
+
+
 
 def targets_load_more_ajax(request):
     # expects ?offset=<int>
