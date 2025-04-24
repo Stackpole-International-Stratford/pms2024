@@ -37,6 +37,7 @@ class OAMachineTargets(models.Model):
     effective_date_unix = models.BigIntegerField()
     target = models.IntegerField()
     line = models.CharField(max_length=50, null=True, blank=True)
+    part = models.CharField(max_length=50, null=True, blank=True)
     comment = models.TextField(blank=True, null=True)  # NEW
 
 
