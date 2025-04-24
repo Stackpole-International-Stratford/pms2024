@@ -116,7 +116,7 @@
                   {% for cell in row %}
                     {% if forloop.last %}
                       {# the very last cell is your target #}
-                      <td class="d-target show_modal_target"
+                       <td class="d-target d-bottom show_modal_target"
                           onclick="handleTargetClick(event)"
                           data-part="{{ row.0 }}">
                         {{ cell }}
@@ -151,7 +151,7 @@
                 <form method="POST">
                 {% csrf_token %}
                     <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                        <h5 class="modal-title" id="exampleModalLabel">Edit Goal</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
