@@ -6616,23 +6616,6 @@ def fetch_machine_target(cursor, machine_id, line_name, effective_timestamp, end
     Only targets with effective_date_unix less than or equal to the effective_timestamp are considered.
     Returns the target value if found, or None otherwise.
     """
-  
-    target_record = (
-        OAMachineTargets.objects.filter(
-            machine_id=machine_id,
-            line=line_name,
-            effective_date_unix__lte=effective_timestamp
-        )
-        .order_by('-effective_date_unix')
-        .first()
-    )
-
-    # 2) If nothing found, log and bail
-    if target_record is None:
-        print(f"DEBUG: No target found for machine_id={machine_id}, line={line_name}, timestamp={effective_timestamp}")
-        return None
-
-
     # 1) Look up the part_numbers list for this machine in your global `lines`
     part_numbers = []
     for line in lines:
@@ -6659,9 +6642,23 @@ def fetch_machine_target(cursor, machine_id, line_name, effective_timestamp, end
         print(f"DEBUG: Fetched part timeline for machine {machine_id}: {part_timeline}")
 
 
-    # 4) Print part number if present
-    # if target_record.part:
-    #     print(f"DEBUG: Part number for this record is '{target_record.part}'")
+
+
+
+    target_record = (
+        OAMachineTargets.objects.filter(
+            machine_id=machine_id,
+            line=line_name,
+            effective_date_unix__lte=effective_timestamp
+        )
+        .order_by('-effective_date_unix')
+        .first()
+    )
+
+    # 2) If nothing found, log and bail
+    if target_record is None:
+        print(f"DEBUG: No target found for machine_id={machine_id}, line={line_name}, timestamp={effective_timestamp}")
+        return None
  
 
     return target_record.target
