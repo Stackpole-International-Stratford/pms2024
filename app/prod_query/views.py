@@ -7592,6 +7592,7 @@ def target_create_ajax(request):
         data = json.loads(request.body)
         machine = data['machine']
         line    = data['line']
+        part       = data.get('part', '').strip()          # ← NEW
         cycle   = float(data['cycle_time'])
         date_str= data['effective_date']
         comment = data.get('comment', '').strip()
@@ -7604,6 +7605,7 @@ def target_create_ajax(request):
         t = OAMachineTargets.objects.create(
             machine_id=machine,
             line=line,
+            part=part,                   # ← NEW
             target=target_val,
             effective_date_unix=eff_unix,
             comment=comment
@@ -7618,6 +7620,7 @@ def target_edit_ajax(request, pk):
         data = json.loads(request.body)
         machine = data['machine']
         line    = data['line']
+        part    = data['part']
         cycle   = float(data['cycle_time'])
         date_str= data['effective_date']
         comment = data.get('comment', '').strip()
@@ -7630,6 +7633,7 @@ def target_edit_ajax(request, pk):
         obj = OAMachineTargets.objects.get(pk=pk)
         obj.machine_id           = machine
         obj.line                 = line
+        obj.part                 = part
         obj.target               = target_val
         obj.effective_date_unix  = eff_unix
         obj.comment              = comment

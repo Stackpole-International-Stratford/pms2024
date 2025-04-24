@@ -17,6 +17,7 @@
         <tr>
           <th>Machine ID</th>
           <th>Line</th>
+          <th>Part</th>
           <th>Cycle Time (s)</th>
           <th>Effective (EST)</th>
           <th>Created At</th>
@@ -26,10 +27,11 @@
         <tr>
           <th><input class="column-filter form-control" data-column="0" placeholder="Filter Machine…"></th>
           <th><input class="column-filter form-control" data-column="1" placeholder="Filter Line…"></th>
-          <th><input class="column-filter form-control" data-column="2" placeholder="Filter Cycle…"></th>
-          <th><input class="column-filter form-control" data-column="3" placeholder="Filter Effective…"></th>
-          <th><input class="column-filter form-control" data-column="4" placeholder="Filter Created…"></th>
-          <th><input class="column-filter form-control" data-column="5" placeholder="Filter Comment…"></th>
+          <th><input class="column-filter form-control" data-column="2" placeholder="Filter Part…"></th>
+          <th><input class="column-filter form-control" data-column="3" placeholder="Filter Cycle…"></th>
+          <th><input class="column-filter form-control" data-column="4" placeholder="Filter Effective…"></th>
+          <th><input class="column-filter form-control" data-column="5" placeholder="Filter Created…"></th>
+          <th><input class="column-filter form-control" data-column="6" placeholder="Filter Comment…"></th>
           <th>  <!-- Add New Target Button -->
             <button id="add-target-btn"
                     class="btn btn-warning btn-sm"
@@ -44,6 +46,7 @@
           <tr data-id="{{ t.id }}">
             <td class="col-machine">{{ t.machine_id }}</td>
             <td class="col-line">{{ t.line|default:"—" }}</td>
+            <td class="col-part">{{ t.part|default:"—" }}</td>
             <td class="col-cycle">{{ t.cycle_time_seconds|floatformat:2 }}</td>
             <td class="col-effective">{{ t.effective_date_est|date:"Y-m-d" }}</td>
             <td class="col-created">{{ t.created_at|date:"Y‑m‑d H:i" }}</td>
@@ -152,6 +155,10 @@
             </select>
           </div>
           <div class="mb-3">
+            <label for="part-input" class="form-label">Part</label>
+            <input type="text" id="part-input" class="form-control" required>
+          </div>
+          <div class="mb-3">
             <label for="cycle-input" class="form-label">Cycle Time (s)</label>
             <input type="number" step="0.01" id="cycle-input" class="form-control" required>
           </div>
@@ -204,6 +211,10 @@
               <option>10R140</option>
               <option>Presses</option>
             </select>
+          </div>
+          <div class="mb-3">
+            <label for="edit-part" class="form-label">Part</label>
+            <input type="text" id="edit-part" class="form-control" required>
           </div>
           <div class="mb-3">
             <label for="edit-cycle" class="form-label">Cycle Time (s)</label>
@@ -314,6 +325,7 @@
         const data = {
           machine: document.getElementById('machine-input').value,
           line: document.getElementById('line-select').value,
+          part: document.getElementById('part-input').value,
           cycle_time: document.getElementById('cycle-input').value,
           effective_date: document.getElementById('date-input').value,
           comment: document.getElementById('comment-input').value
@@ -341,6 +353,7 @@
           document.getElementById('edit-id').value = row.dataset.id;
           document.getElementById('edit-machine').value = row.querySelector('.col-machine').textContent.trim();
           document.getElementById('edit-line').value = row.querySelector('.col-line').textContent.trim();
+          document.getElementById('edit-part').value = row.querySelector('.col-part').textContent.trim();
           document.getElementById('edit-cycle').value = row.querySelector('.col-cycle').textContent.trim();
           document.getElementById('edit-date').value = row.querySelector('.col-effective').textContent.trim();
           document.getElementById('edit-comment').value = row.querySelector('.col-comment').textContent.trim();
@@ -354,6 +367,7 @@
         const data = {
           machine: document.getElementById('edit-machine').value,
           line: document.getElementById('edit-line').value,
+          part: document.getElementById('edit-part').value,
           cycle_time: document.getElementById('edit-cycle').value,
           effective_date: document.getElementById('edit-date').value,
           comment: document.getElementById('edit-comment').value
