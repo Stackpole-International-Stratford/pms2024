@@ -19,6 +19,7 @@ from .forms import CycleQueryForm
 from .forms import WeeklyProdDate
 from .forms import WeeklyProdUpdate
 from .models import Weekly_Production_Goal
+from .models import Weekly_Production_Target
 from query_tracking.models import record_execution_time
 from django.shortcuts import redirect
 from math import ceil
@@ -140,15 +141,30 @@ def weekly_prod(request):
             form = WeeklyProdUpdate(request.POST)
             if form.is_valid():
                 effective_date = form.cleaned_data.get('effective_date')
-                target_value   = form.cleaned_data.get('goal')
+                target_value   = form.cleaned_data.get('goal')       # still named 'goal' in the form
                 part_number    = form.cleaned_data.get('part_number')
 
-                # (insert your existing target‐saving logic here,
-                #  or if it’s the same model/table, just reuse the code above)
+                # derive ISO week & year from the effective date
+                effective_year, effective_week, _ = (
+                    effective_date.year,
+                    effective_date.isocalendar().week,
+                    effective_date.isocalendar().day
+                )
 
-                # ←–– ADD THIS:
+                # save (or overwrite) the weekly target
+                new_weekly_target, created = Weekly_Production_Target.objects.get_or_create(
+                    part_number=part_number,
+                    year=effective_year,
+                    week=effective_week,
+                    defaults={'target': target_value},
+                )
+                new_weekly_target.target = target_value
+                new_weekly_target.save()
+
+                # your existing debug print
                 print(f"[WeeklyProd] Target update: part={part_number!r}, "
-                      f"effective_date={effective_date}, target={target_value!r}")
+                    f"effective_date={effective_date}, target={target_value!r}")
+
 
         form = WeeklyProdDate(request.POST)
         if form.is_valid():
