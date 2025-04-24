@@ -45,15 +45,26 @@
     <!-- New script for Target Modal -->
     <script>
         function handleTargetClick(e) {
-          const { part } = e.target.dataset;
-          const myModal = new bootstrap.Modal(
-            document.querySelector('#exampleTargetModal'), {}
-          );
-          document.querySelector('#id_part_number').value = part + '_TARGET';
-          document.querySelector('#id_goal').value        = e.target.innerText.trim();
-          myModal.show();
+          const part        = e.target.dataset.part
+          const targetValue = e.target.innerText.trim()
+      
+          // grab the modal container, then query _inside_ it
+          const modalEl = document.getElementById('exampleTargetModal')
+      
+          // these will now select the inputs in the TARGET modal,
+          // not the ones in the GOAL modal up above.
+          modalEl.querySelector('input[name="part_number"]').value    = part
+          modalEl.querySelector('input[name="goal"]').value           = targetValue
+          // (you don't need to set effective_date here — it's already
+          //  pre‐rendered by your form's initial=… — but if you ever want
+          //  to override it you could do the same:)
+          // modalEl.querySelector('input[name="effective_date"]').value = '2025-04-27'
+      
+          // now show it
+          new bootstrap.Modal(modalEl).show()
         }
       </script>
+      
       
     
     <style>
