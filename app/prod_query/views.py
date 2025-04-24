@@ -6525,7 +6525,92 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
         return {"error": str(e)}
 
 
-def fetch_machine_target(machine_id, line_name, effective_timestamp, end_timestamp):
+
+def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
+    """
+    Builds a sequence of contiguous-change intervals for only the specified parts
+    (pulled dynamically from your `lines` object) on a single machine over a time window.
+    Includes debug prints for line, machine, allowed parts, timestamps, and final timeline.
+    """
+    # Debug: entry parameters
+    print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
+          f"machine='{machine_id}', start_ts={start_ts}, end_ts={end_ts}")
+
+    # 1) Find that machine's part_numbers list in your global `lines`
+    allowed_parts = []
+    for line in lines:
+        if line.get("line") == line_name:
+            for op in line.get("operations", []):
+                for m in op.get("machines", []):
+                    if m.get("number") == machine_id:
+                        allowed_parts = m.get("part_numbers", []) or []
+                        break
+                if allowed_parts:
+                    break
+        if allowed_parts:
+            break
+
+    # Debug: allowed_parts result
+    print(f"DEBUG: allowed_parts for machine '{machine_id}' on line '{line_name}': {allowed_parts}")
+
+    # 2) If nothing to track, bail out early
+    if not allowed_parts:
+        print("DEBUG: No parts to track; returning empty timeline.")
+        return []
+
+    # 3) Build your IN-clause and execute
+    placeholders = ", ".join(["%s"] * len(allowed_parts))
+    query = f"""
+        SELECT TimeStamp, Part
+        FROM GFxPRoduction
+        WHERE Machine     = %s
+          AND TimeStamp BETWEEN %s AND %s
+          AND Part        IN ({placeholders})
+        ORDER BY TimeStamp ASC
+    """
+    params = [machine_id, start_ts, end_ts] + allowed_parts
+    print(f"DEBUG: Executing SQL with params: {params}")
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    # Debug: number of rows fetched
+    print(f"DEBUG: Retrieved {len(rows)} rows from GFxPRoduction")
+
+    if not rows:
+        print("DEBUG: No matching production rows; returning empty timeline.")
+        return []
+
+    # 4) Collapse contiguous runs
+    timeline = []
+    current_part  = rows[0][1]
+    current_start = rows[0][0]
+
+    for ts, part in rows[1:]:
+        if part != current_part:
+            timeline.append({
+                "part":     current_part,
+                "start_ts": current_start,
+                "end_ts":   ts
+            })
+            current_part  = part
+            current_start = ts
+
+    # 5) Close out the final segment
+    timeline.append({
+        "part":     current_part,
+        "start_ts": current_start,
+        "end_ts":   end_ts
+    })
+
+    # Debug: final timeline
+    print(f"DEBUG: Computed timeline: {timeline}")
+
+    return timeline
+
+
+
+
+def fetch_machine_target(cursor, machine_id, line_name, effective_timestamp, end_timestamp):
     """
     Fetches the most recent target for a given machine and line from the OAMachineTargets table.
     Only targets with effective_date_unix less than or equal to the effective_timestamp are considered.
@@ -6547,6 +6632,9 @@ def fetch_machine_target(machine_id, line_name, effective_timestamp, end_timesta
         print(f"DEBUG: No target found for machine_id={machine_id}, line={line_name}, timestamp={effective_timestamp}")
         return None
 
+    if machine_id == '1723':
+        part_timeline = fetch_part_timeline(cursor, machine_id, effective_timestamp, end_timestamp, line_name)
+        # print(f"DEBUG: Part timeline for machine {machine_id}:", part_timeline)
 
     # 4) Print part number if present
     # if target_record.part:
@@ -6623,7 +6711,7 @@ def parse_date_range(request):
 def get_production_data_for_machine(cursor, machine, machine_number, start_timestamp, end_timestamp, op, queried_minutes, line_name):
     import datetime
     """Fetches production parts data and target for a given machine."""
-    target_val = fetch_machine_target(machine_number, line_name, start_timestamp, end_timestamp)
+    target_val = fetch_machine_target(cursor, machine_number, line_name, start_timestamp, end_timestamp)
     target = int(target_val * (queried_minutes / 7200)) if target_val is not None else None
 
     if machine.get("part_numbers") and isinstance(machine.get("part_numbers"), list) and machine["part_numbers"]:
