@@ -6534,8 +6534,8 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
 
     Prints debug info and returns the normalized target (int).
     """
-    print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
-          f"machine='{machine_id}', start_ts={start_ts}, end_ts={end_ts}")
+    # print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
+    #       f"machine='{machine_id}', start_ts={start_ts}, end_ts={end_ts}")
 
     # 1) Lookup allowed parts
     allowed_parts = []
@@ -6551,7 +6551,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         if allowed_parts:
             break
 
-    print(f"DEBUG: allowed_parts = {allowed_parts}")
+    # print(f"DEBUG: allowed_parts = {allowed_parts}")
     if not allowed_parts:
         print("DEBUG: No parts to track → returning 0")
         return 0
@@ -6567,10 +6567,10 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         ORDER BY TimeStamp ASC
     """
     params = [machine_id, start_ts, end_ts] + allowed_parts
-    print(f"DEBUG: Executing SQL: {params}")
+    # print(f"DEBUG: Executing SQL: {params}")
     cursor.execute(sql, params)
     rows = cursor.fetchall()
-    print(f"DEBUG: Retrieved {len(rows)} rows")
+    # print(f"DEBUG: Retrieved {len(rows)} rows")
 
     if not rows:
         print("DEBUG: No rows → returning 0")
@@ -6584,7 +6584,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
             timeline.append({"part": curr_part, "start_ts": curr_start, "end_ts": ts})
             curr_part, curr_start = part, ts
     timeline.append({"part": curr_part, "start_ts": curr_start, "end_ts": end_ts})
-    print(f"DEBUG: timeline = {timeline}")
+    # print(f"DEBUG: timeline = {timeline}")
 
     # 4) Compute run-seconds per part
     run_secs = {}
@@ -6596,7 +6596,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     TOTAL_SECONDS = 7200 * 60
     sum_expected = 0
     for part, secs in run_secs.items():
-        print(f"DEBUG: Part {part} ran {(secs/60):.2f} minutes")
+        # print(f"DEBUG: Part {part} ran {(secs/60):.2f} minutes")
         rec = (
             OAMachineTargets.objects
             .filter(
@@ -6611,7 +6611,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         )
         if rec and rec.target:
             expected = int(round(secs / (TOTAL_SECONDS / rec.target)))
-            print(f"DEBUG: Part {part} expected={expected}")
+            # print(f"DEBUG: Part {part} expected={expected}")
             sum_expected += expected
         else:
             print(f"DEBUG: Part {part} has no valid (non-deleted) target record")
@@ -6620,8 +6620,8 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     queried_minutes = (end_ts - start_ts) / 60.0
     normalized = int(round(sum_expected * (7200.0 / queried_minutes))) if queried_minutes else 0
 
-    print(f"DEBUG: sum_expected={sum_expected}, queried_minutes={queried_minutes:.2f}, "
-          f"normalized_target={normalized}")
+    # print(f"DEBUG: sum_expected={sum_expected}, queried_minutes={queried_minutes:.2f}, "
+    #       f"normalized_target={normalized}")
     return normalized
 
 
@@ -6647,7 +6647,7 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
 
     if len(parts) > 1:
         tgt = fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name)
-        print(f"DEBUG: multi-part normalized target = {tgt}")
+        # print(f"DEBUG: multi-part normalized target = {tgt}")
         return tgt
 
     # single-part fallback: ignore deleted records
@@ -6666,7 +6666,7 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
         print(f"DEBUG: no stored (non-deleted) target for {machine_id}@{line_name}")
         return None
 
-    print(f"DEBUG: using stored target = {rec.target}")
+    # print(f"DEBUG: using stored target = {rec.target}")
     return rec.target
 
 
