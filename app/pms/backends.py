@@ -1,6 +1,7 @@
 import ldap
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 import logging
 
 # Set up logger
@@ -109,30 +110,43 @@ class CustomLDAPBackend(BaseBackend):
         return None
 
     def _get_or_create_user(self, username):
-        """
-        Fetch or create a Django user based on the given username.
+            """
+            Fetch or create a Django user based on the given username.
+            If this is the very first time they log in, look for a 
+            preload account (username@preload), copy its groups, then
+            delete the preload user.
+            """
+            User = get_user_model()
+            created = False
 
-        Args:
-            username (str): The username to fetch or create.
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                # first‐time login: create the real user
+                user = User.objects.create_user(username=username)
+                user.is_staff = True
+                user.save()
+                created = True
 
-        Returns:
-            User object corresponding to the given username.
-        """
-        User = get_user_model()
-        try:
-            # Try to retrieve the user from the database
-            logger.info(f"Looking up user {username} in Django database.")
-            # print(f"Looking up user {username} in Django database.")
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            # If the user doesn't exist, create a new one
-            logger.info(f"User {username} not found in database. Creating new user.")
-            print(f"User {username} not found in database. Creating new user.")
-            user = User.objects.create_user(username=username)
-            # Automatically grant staff status to LDAP users
-            user.is_staff = True
-            user.save()
-        return user
+            if created:
+                preload_username = f"{username}@preload"
+                try:
+                    preload = User.objects.get(username=preload_username)
+                except User.DoesNotExist:
+                    logger.warning(f"No preload user found: {preload_username}")
+                else:
+                    # 1) copy all group memberships
+                    groups = preload.groups.all()
+                    user.groups.set(groups)
+                    user.save()
+                    logger.info(f"Copied {groups.count()} groups from {preload_username} to {username}")
+
+                    # 2) delete the preload account
+                    preload.delete()
+                    logger.info(f"Deleted preload user {preload_username}")
+
+            return user
+
 
     def get_user(self, user_id):
         """
