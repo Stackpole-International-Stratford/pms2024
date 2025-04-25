@@ -6531,7 +6531,8 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     Builds a sequence of contiguous-change intervals for only the specified parts
     (pulled dynamically from your `lines` object) on a single machine over a time window.
     Prints debug info, total queried minutes, per-part run minutes, per-part cycle time,
-    expected parts produced in that run (rounded to integer), and the stored target.
+    expected parts produced (rounded), stored target, and finally the sum of targets
+    for all tracked parts on this machine/line.
     """
     # Debug: entry parameters
     print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
@@ -6557,6 +6558,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         print("DEBUG: No parts to track; returning empty timeline.")
         return []
 
+    # 2) Query only those parts
     placeholders = ", ".join(["%s"] * len(allowed_parts))
     query = f"""
         SELECT TimeStamp, Part
@@ -6576,35 +6578,31 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         print("DEBUG: No matching production rows; returning empty timeline.")
         return []
 
+    # 3) Collapse contiguous runs
     timeline = []
     current_part  = rows[0][1]
     current_start = rows[0][0]
     for ts, part in rows[1:]:
         if part != current_part:
-            timeline.append({
-                "part":     current_part,
-                "start_ts": current_start,
-                "end_ts":   ts
-            })
-            current_part  = part
-            current_start = ts
-    timeline.append({
-        "part":     current_part,
-        "start_ts": current_start,
-        "end_ts":   end_ts
-    })
+            timeline.append({"part": current_part, "start_ts": current_start, "end_ts": ts})
+            current_part, current_start = part, ts
+    timeline.append({"part": current_part, "start_ts": current_start, "end_ts": end_ts})
     print(f"DEBUG: Computed timeline: {timeline}")
 
+    # 4) Total queried minutes
     total_minutes = (end_ts - start_ts) / 60
     print(f"Total Queried Minutes: {total_minutes:.2f}")
 
-    # sum up run-seconds per part
+    # 5) Sum run-seconds per part
     run_seconds_by_part = {}
     for seg in timeline:
         run_seconds_by_part.setdefault(seg["part"], 0)
         run_seconds_by_part[seg["part"]] += (seg["end_ts"] - seg["start_ts"])
 
     TOTAL_SECONDS = 7200 * 60  # for cycle-time calc
+
+    # track the sum of expected parts across all parts
+    sum_expected = 0
 
     for part, seconds in run_seconds_by_part.items():
         run_minutes = seconds / 60
@@ -6626,18 +6624,22 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
             cycle_min = cycle_sec / 60
             print(f"Part {part} cycle time is: {cycle_min:.2f} minutes")
 
-            # round expected count to integer
             expected_count = int(round(seconds / cycle_sec))
             print(f"Part {part} should have made {expected_count} parts during the queried time")
 
-            print(f"Part {part} target is: {tgt_rec.target}")
+            print(f"Part {part} stored target is: {tgt_rec.target}")
+
+            # **add to our line‐level “target”**
+            sum_expected += expected_count
         else:
             print(f"Part {part} cycle time is: N/A")
             print(f"Part {part} should have made: N/A")
-            print(f"Part {part} target is: N/A")
+            print(f"Part {part} stored target is: N/A")
 
-    return timeline
+    # finally, print your summed “line target” based on actual run
+    print(f"Sum of expected parts for machine {machine_id} on line '{line_name}': {sum_expected}")
 
+    return timeline   
 
 
 
