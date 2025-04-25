@@ -6528,23 +6528,22 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
 
 def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     """
-    Builds a sequence of contiguous-change intervals for only the specified parts
-    (pulled dynamically from your `lines` object) on a single machine over a time window.
-    Prints debug info, total queried minutes, per-part run minutes, per-part cycle time,
-    expected parts produced (rounded), stored target, and finally the sum of targets
-    for all tracked parts on this machine/line.
+    For machines with multiple parts, compute a more accurate 'target' by
+    summing the expected counts of each part over the given time window,
+    then normalizing that sum to a 7200-minute period.
+
+    Prints debug info and returns the normalized target (int).
     """
-    # Debug: entry parameters
     print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
           f"machine='{machine_id}', start_ts={start_ts}, end_ts={end_ts}")
 
-    # 1) Find that machine's part_numbers list in your global `lines`
+    # 1) Lookup allowed parts
     allowed_parts = []
-    for line in lines:
-        if line.get("line") == line_name:
-            for op in line.get("operations", []):
+    for ln in lines:
+        if ln["line"] == line_name:
+            for op in ln.get("operations", []):
                 for m in op.get("machines", []):
-                    if m.get("number") == machine_id:
+                    if m["number"] == machine_id:
                         allowed_parts = m.get("part_numbers", []) or []
                         break
                 if allowed_parts:
@@ -6552,149 +6551,117 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         if allowed_parts:
             break
 
-    print(f"DEBUG: allowed_parts for machine '{machine_id}' on line '{line_name}': {allowed_parts}")
-
+    print(f"DEBUG: allowed_parts = {allowed_parts}")
     if not allowed_parts:
-        print("DEBUG: No parts to track; returning empty timeline.")
-        return []
+        print("DEBUG: No parts to track → returning 0")
+        return 0
 
-    # 2) Query only those parts
-    placeholders = ", ".join(["%s"] * len(allowed_parts))
-    query = f"""
+    # 2) Pull only those parts’ timestamps
+    ph = ", ".join(["%s"] * len(allowed_parts))
+    sql = f"""
         SELECT TimeStamp, Part
         FROM GFxPRoduction
         WHERE Machine     = %s
           AND TimeStamp BETWEEN %s AND %s
-          AND Part        IN ({placeholders})
+          AND Part        IN ({ph})
         ORDER BY TimeStamp ASC
     """
     params = [machine_id, start_ts, end_ts] + allowed_parts
-    print(f"DEBUG: Executing SQL with params: {params}")
-    cursor.execute(query, params)
+    print(f"DEBUG: Executing SQL: {params}")
+    cursor.execute(sql, params)
     rows = cursor.fetchall()
-    print(f"DEBUG: Retrieved {len(rows)} rows from GFxPRoduction")
+    print(f"DEBUG: Retrieved {len(rows)} rows")
 
     if not rows:
-        print("DEBUG: No matching production rows; returning empty timeline.")
-        return []
+        print("DEBUG: No rows → returning 0")
+        return 0
 
     # 3) Collapse contiguous runs
     timeline = []
-    current_part  = rows[0][1]
-    current_start = rows[0][0]
+    curr_part, curr_start = rows[0][1], rows[0][0]
     for ts, part in rows[1:]:
-        if part != current_part:
-            timeline.append({"part": current_part, "start_ts": current_start, "end_ts": ts})
-            current_part, current_start = part, ts
-    timeline.append({"part": current_part, "start_ts": current_start, "end_ts": end_ts})
-    print(f"DEBUG: Computed timeline: {timeline}")
+        if part != curr_part:
+            timeline.append({"part": curr_part, "start_ts": curr_start, "end_ts": ts})
+            curr_part, curr_start = part, ts
+    timeline.append({"part": curr_part, "start_ts": curr_start, "end_ts": end_ts})
+    print(f"DEBUG: timeline = {timeline}")
 
-    # 4) Total queried minutes
-    total_minutes = (end_ts - start_ts) / 60
-    print(f"Total Queried Minutes: {total_minutes:.2f}")
-
-    # 5) Sum run-seconds per part
-    run_seconds_by_part = {}
+    # 4) Compute run-seconds per part
+    run_secs = {}
     for seg in timeline:
-        run_seconds_by_part.setdefault(seg["part"], 0)
-        run_seconds_by_part[seg["part"]] += (seg["end_ts"] - seg["start_ts"])
+        run_secs.setdefault(seg["part"], 0)
+        run_secs[seg["part"]] += (seg["end_ts"] - seg["start_ts"])
 
-    TOTAL_SECONDS = 7200 * 60  # for cycle-time calc
-
-    # track the sum of expected parts across all parts
+    # 5) Sum expected counts
+    TOTAL_SECONDS = 7200 * 60
     sum_expected = 0
-
-    for part, seconds in run_seconds_by_part.items():
-        run_minutes = seconds / 60
-        print(f"Part {part} ran for {run_minutes:.2f} minutes:")
-
-        tgt_rec = (
+    for part, secs in run_secs.items():
+        print(f"DEBUG: Part {part} ran {(secs/60):.2f} minutes")
+        rec = (
             OAMachineTargets.objects
-            .filter(
-                machine_id=machine_id,
-                line=line_name,
-                part=part,
-                effective_date_unix__lte=start_ts
-            )
+            .filter(machine_id=machine_id, line=line_name, part=part,
+                    effective_date_unix__lte=start_ts)
             .order_by('-effective_date_unix')
             .first()
         )
-        if tgt_rec and tgt_rec.target:
-            cycle_sec = TOTAL_SECONDS / tgt_rec.target
-            cycle_min = cycle_sec / 60
-            print(f"Part {part} cycle time is: {cycle_min:.2f} minutes")
-
-            expected_count = int(round(seconds / cycle_sec))
-            print(f"Part {part} should have made {expected_count} parts during the queried time")
-
-            print(f"Part {part} stored target is: {tgt_rec.target}")
-
-            # **add to our line‐level “target”**
-            sum_expected += expected_count
+        if rec and rec.target:
+            expected = int(round(secs / (TOTAL_SECONDS / rec.target)))
+            print(f"DEBUG: Part {part} expected={expected}")
+            sum_expected += expected
         else:
-            print(f"Part {part} cycle time is: N/A")
-            print(f"Part {part} should have made: N/A")
-            print(f"Part {part} stored target is: N/A")
+            print(f"DEBUG: Part {part} has no valid target record")
 
-    # finally, print your summed “line target” based on actual run
-    print(f"Sum of expected parts for machine {machine_id} on line '{line_name}': {sum_expected}")
+    # 6) Normalize to a 7200-minute window
+    queried_minutes = (end_ts - start_ts) / 60.0
+    if queried_minutes > 0:
+        normalized = int(round(sum_expected * (7200.0 / queried_minutes)))
+    else:
+        normalized = 0
 
-    return timeline   
+    print(f"DEBUG: sum_expected={sum_expected}, queried_minutes={queried_minutes:.2f}, "
+          f"normalized_target={normalized}")
+    return normalized
 
 
-
-def fetch_machine_target(cursor, machine_id, line_name, effective_timestamp, end_timestamp):
+def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
     """
-    Fetches the most recent target for a given machine and line from the OAMachineTargets table.
-    Only targets with effective_date_unix less than or equal to the effective_timestamp are considered.
-    Returns the target value if found, or None otherwise.
+    Returns the OEE target for a machine/line. If the machine has multiple parts,
+    uses fetch_part_timeline (which now returns a normalized multi-part target);
+    otherwise falls back to the stored single-part target.
     """
-    # 1) Look up the part_numbers list for this machine in your global `lines`
-    part_numbers = []
-    for line in lines:
-        if line.get("line") == line_name:
-            for op in line.get("operations", []):
+    # lookup part_numbers
+    parts = []
+    for ln in lines:
+        if ln["line"] == line_name:
+            for op in ln.get("operations", []):
                 for m in op.get("machines", []):
-                    if m.get("number") == machine_id:
-                        part_numbers = m.get("part_numbers", []) or []
+                    if m["number"] == machine_id:
+                        parts = m.get("part_numbers", []) or []
                         break
-                if part_numbers:
+                if parts:
                     break
-        if part_numbers:
+        if parts:
             break
 
-    # 2) Only fetch timeline if there are multiple parts defined
-    if len(part_numbers) > 1:
-        part_timeline = fetch_part_timeline(
-            cursor,
-            machine_id,
-            effective_timestamp,
-            end_timestamp,
-            line_name
-        )
-        print(f"DEBUG: Fetched part timeline for machine {machine_id}: {part_timeline}")
+    if len(parts) > 1:
+        tgt = fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name)
+        print(f"DEBUG: multi-part normalized target = {tgt}")
+        return tgt
 
-
-
-
-
-    target_record = (
-        OAMachineTargets.objects.filter(
-            machine_id=machine_id,
-            line=line_name,
-            effective_date_unix__lte=effective_timestamp
-        )
+    # single-part fallback
+    rec = (
+        OAMachineTargets.objects
+        .filter(machine_id=machine_id, line=line_name, effective_date_unix__lte=start_ts)
         .order_by('-effective_date_unix')
         .first()
     )
-
-    # 2) If nothing found, log and bail
-    if target_record is None:
-        print(f"DEBUG: No target found for machine_id={machine_id}, line={line_name}, timestamp={effective_timestamp}")
+    if not rec:
+        print(f"DEBUG: no stored target for {machine_id}@{line_name}")
         return None
- 
 
-    return target_record.target
+    print(f"DEBUG: using stored target = {rec.target}")
+    return rec.target
+
 
 
 
