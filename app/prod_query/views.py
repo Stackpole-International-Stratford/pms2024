@@ -6530,7 +6530,8 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     """
     Builds a sequence of contiguous-change intervals for only the specified parts
     (pulled dynamically from your `lines` object) on a single machine over a time window.
-    Includes debug prints for line, machine, allowed parts, timestamps, and final timeline.
+    Includes debug prints for line, machine, allowed parts, timestamps, computed timeline,
+    and per-part total run minutes.
     """
     # Debug: entry parameters
     print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
@@ -6604,6 +6605,22 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
 
     # Debug: final timeline
     print(f"DEBUG: Computed timeline: {timeline}")
+
+    # --- New: compute and print total queried minutes and per-part totals ---
+    total_seconds = end_ts - start_ts
+    total_minutes = total_seconds / 60
+    print(f"DEBUG: Total queried minutes: {total_minutes:.2f}")
+
+    # Sum up runtime per part
+    run_seconds_by_part = {}
+    for segment in timeline:
+        dur = segment["end_ts"] - segment["start_ts"]
+        run_seconds_by_part.setdefault(segment["part"], 0)
+        run_seconds_by_part[segment["part"]] += dur
+
+    for part, seconds in run_seconds_by_part.items():
+        minutes = seconds / 60
+        print(f"DEBUG: Part {part} ran for {minutes:.2f} minutes total during the queried time")
 
     return timeline
 
