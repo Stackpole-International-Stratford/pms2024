@@ -110,42 +110,32 @@ class CustomLDAPBackend(BaseBackend):
         return None
 
     def _get_or_create_user(self, username):
-            """
-            Fetch or create a Django user based on the given username.
-            If this is the very first time they log in, look for a 
-            preload account (username@preload), copy its groups, then
-            delete the preload user.
-            """
-            User = get_user_model()
-            created = False
+        User = get_user_model()
+        username = username.lower()
+        created = False
 
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            user = User.objects.create_user(username=username)
+            user.is_staff = True
+            user.save()
+            created = True
+
+        if created:
+            preload_username = f"{username}@preload"
             try:
-                user = User.objects.get(username=username)
+                preload = User.objects.get(username=preload_username)
             except User.DoesNotExist:
-                # first‐time login: create the real user
-                user = User.objects.create_user(username=username)
-                user.is_staff = True
+                logger.warning(f"No preload user found: {preload_username}")
+            else:
+                user.groups.set(preload.groups.all())
                 user.save()
-                created = True
+                preload.delete()
+                logger.info(f"Copied groups and deleted preload user {preload_username}")
 
-            if created:
-                preload_username = f"{username}@preload"
-                try:
-                    preload = User.objects.get(username=preload_username)
-                except User.DoesNotExist:
-                    logger.warning(f"No preload user found: {preload_username}")
-                else:
-                    # 1) copy all group memberships
-                    groups = preload.groups.all()
-                    user.groups.set(groups)
-                    user.save()
-                    logger.info(f"Copied {groups.count()} groups from {preload_username} to {username}")
+        return user
 
-                    # 2) delete the preload account
-                    preload.delete()
-                    logger.info(f"Deleted preload user {preload_username}")
-
-            return user
 
 
     def get_user(self, user_id):
