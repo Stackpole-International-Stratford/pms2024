@@ -6599,8 +6599,13 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         print(f"DEBUG: Part {part} ran {(secs/60):.2f} minutes")
         rec = (
             OAMachineTargets.objects
-            .filter(machine_id=machine_id, line=line_name, part=part,
-                    effective_date_unix__lte=start_ts)
+            .filter(
+                machine_id=machine_id,
+                line=line_name,
+                part=part,
+                effective_date_unix__lte=start_ts,
+                isDeleted=False
+            )
             .order_by('-effective_date_unix')
             .first()
         )
@@ -6609,14 +6614,11 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
             print(f"DEBUG: Part {part} expected={expected}")
             sum_expected += expected
         else:
-            print(f"DEBUG: Part {part} has no valid target record")
+            print(f"DEBUG: Part {part} has no valid (non-deleted) target record")
 
     # 6) Normalize to a 7200-minute window
     queried_minutes = (end_ts - start_ts) / 60.0
-    if queried_minutes > 0:
-        normalized = int(round(sum_expected * (7200.0 / queried_minutes)))
-    else:
-        normalized = 0
+    normalized = int(round(sum_expected * (7200.0 / queried_minutes))) if queried_minutes else 0
 
     print(f"DEBUG: sum_expected={sum_expected}, queried_minutes={queried_minutes:.2f}, "
           f"normalized_target={normalized}")
@@ -6627,7 +6629,7 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
     """
     Returns the OEE target for a machine/line. If the machine has multiple parts,
     uses fetch_part_timeline (which now returns a normalized multi-part target);
-    otherwise falls back to the stored single-part target.
+    otherwise falls back to the stored single-part target (only non-deleted).
     """
     # lookup part_numbers
     parts = []
@@ -6648,15 +6650,20 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
         print(f"DEBUG: multi-part normalized target = {tgt}")
         return tgt
 
-    # single-part fallback
+    # single-part fallback: ignore deleted records
     rec = (
         OAMachineTargets.objects
-        .filter(machine_id=machine_id, line=line_name, effective_date_unix__lte=start_ts)
+        .filter(
+            machine_id=machine_id,
+            line=line_name,
+            effective_date_unix__lte=start_ts,
+            isDeleted=False
+        )
         .order_by('-effective_date_unix')
         .first()
     )
     if not rec:
-        print(f"DEBUG: no stored target for {machine_id}@{line_name}")
+        print(f"DEBUG: no stored (non-deleted) target for {machine_id}@{line_name}")
         return None
 
     print(f"DEBUG: using stored target = {rec.target}")
