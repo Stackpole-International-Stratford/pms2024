@@ -2317,7 +2317,7 @@ lines = [
                         {
                 "op": "100",
                 "machines": [
-                    {"number": "1723", "target": 7200, "part_numbers": ["50-0519", "50-5404"]},
+                    {"number": "1723", "target": 7200, "part_numbers": ["50-5214", "50-3214"]},
                 ],
             },
                         {
@@ -6530,8 +6530,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     """
     Builds a sequence of contiguous-change intervals for only the specified parts
     (pulled dynamically from your `lines` object) on a single machine over a time window.
-    Includes debug prints for line, machine, allowed parts, timestamps, computed timeline,
-    and per-part total run minutes.
+    Prints debug info, total queried minutes, per-part run minutes, and per-part cycle time.
     """
     # Debug: entry parameters
     print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
@@ -6559,7 +6558,7 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
         print("DEBUG: No parts to track; returning empty timeline.")
         return []
 
-    # 3) Build your IN-clause and execute
+    # 3) Build and run the query
     placeholders = ", ".join(["%s"] * len(allowed_parts))
     query = f"""
         SELECT TimeStamp, Part
@@ -6573,8 +6572,6 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     print(f"DEBUG: Executing SQL with params: {params}")
     cursor.execute(query, params)
     rows = cursor.fetchall()
-
-    # Debug: number of rows fetched
     print(f"DEBUG: Retrieved {len(rows)} rows from GFxPRoduction")
 
     if not rows:
@@ -6585,7 +6582,6 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
     timeline = []
     current_part  = rows[0][1]
     current_start = rows[0][0]
-
     for ts, part in rows[1:]:
         if part != current_part:
             timeline.append({
@@ -6595,32 +6591,46 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
             })
             current_part  = part
             current_start = ts
-
-    # 5) Close out the final segment
     timeline.append({
         "part":     current_part,
         "start_ts": current_start,
         "end_ts":   end_ts
     })
-
-    # Debug: final timeline
     print(f"DEBUG: Computed timeline: {timeline}")
 
-    # --- New: compute and print total queried minutes and per-part totals ---
-    total_seconds = end_ts - start_ts
-    total_minutes = total_seconds / 60
-    print(f"DEBUG: Total queried minutes: {total_minutes:.2f}")
+    # --- compute total queried minutes ---
+    total_minutes = (end_ts - start_ts) / 60
+    print(f"Total Queried Minutes: {total_minutes:.2f}")
 
-    # Sum up runtime per part
+    # --- sum up run-seconds per part ---
     run_seconds_by_part = {}
-    for segment in timeline:
-        dur = segment["end_ts"] - segment["start_ts"]
-        run_seconds_by_part.setdefault(segment["part"], 0)
-        run_seconds_by_part[segment["part"]] += dur
+    for seg in timeline:
+        run_seconds_by_part.setdefault(seg["part"], 0)
+        run_seconds_by_part[seg["part"]] += (seg["end_ts"] - seg["start_ts"])
 
-    for part, seconds in run_seconds_by_part.items():
-        minutes = seconds / 60
-        print(f"DEBUG: Part {part} ran for {minutes:.2f} minutes total during the queried time")
+    # 5) For each part, print run minutes and cycle time
+    # total_seconds constant used when computing target/cycle in your model:
+    TOTAL_SECONDS = 7200 * 60
+    for part, sec in run_seconds_by_part.items():
+        minutes = sec / 60
+        print(f"Part {part} ran for {minutes:.2f} minutes:")
+        # fetch the most recent target record for this part
+        tgt_rec = (
+            OAMachineTargets.objects
+            .filter(
+                machine_id=machine_id,
+                line=line_name,
+                part=part,
+                effective_date_unix__lte=start_ts
+            )
+            .order_by('-effective_date_unix')
+            .first()
+        )
+        if tgt_rec and tgt_rec.target:
+            cycle_time_minutes = (TOTAL_SECONDS / tgt_rec.target) / 60
+            print(f"Part {part} cycle time is: {cycle_time_minutes:.2f} minutes")
+        else:
+            print(f"Part {part} cycle time is: N/A")
 
     return timeline
 
