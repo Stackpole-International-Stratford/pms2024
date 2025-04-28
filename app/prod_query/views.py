@@ -6526,39 +6526,43 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
 
 
 
-def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
-    """
-    For machines with multiple parts, compute a more accurate 'target' by
-    summing the expected counts of each part over the given time window,
-    then normalizing that sum to a 7200-minute period.
+from collections import defaultdict
 
-    Prints debug info and returns the normalized target (int).
+def get_parts_for_machine(lines, line_name, machine_id):
     """
-    # print(f"DEBUG: fetch_part_timeline called for line='{line_name}', "
-    #       f"machine='{machine_id}', start_ts={start_ts}, end_ts={end_ts}")
-
-    # 1) Lookup allowed parts
-    allowed_parts = []
+    Helper to return the list of part_numbers (may be empty) for the given machine.
+    """
     for ln in lines:
         if ln["line"] == line_name:
             for op in ln.get("operations", []):
                 for m in op.get("machines", []):
                     if m["number"] == machine_id:
-                        allowed_parts = m.get("part_numbers", []) or []
-                        break
-                if allowed_parts:
-                    break
-        if allowed_parts:
-            break
+                        return m.get("part_numbers") or []
+    return []
 
-    # print(f"DEBUG: allowed_parts = {allowed_parts}")
-    if not allowed_parts:
-        print("DEBUG: No parts to track → returning 0")
+
+def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
+    """
+    Build a time-weighted expected count across all parts, handling:
+      - a “virtual” event at start_ts if the machine was already loaded
+      - breaking each part’s run at every target-change timestamp
+      - normalization back to a 7200-minute window
+    """
+    # 0) invalid window?
+    if end_ts <= start_ts:
+        print(f"ERROR: end_ts ({end_ts}) ≤ start_ts ({start_ts}) → returning 0")
         return 0
 
-    # 2) Pull only those parts’ timestamps
-    ph = ", ".join(["%s"] * len(allowed_parts))
-    sql = f"""
+    if not parts:
+        print("DEBUG: no parts defined → returning 0")
+        return 0
+
+    TOTAL_SECONDS = 7200 * 60
+    window_secs = end_ts - start_ts
+
+    # 1) pull all part-change events in [start, end]
+    ph   = ", ".join(["%s"] * len(parts))
+    sql  = f"""
         SELECT TimeStamp, Part
         FROM GFxPRoduction
         WHERE Machine     = %s
@@ -6566,109 +6570,184 @@ def fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name):
           AND Part        IN ({ph})
         ORDER BY TimeStamp ASC
     """
-    params = [machine_id, start_ts, end_ts] + allowed_parts
-    # print(f"DEBUG: Executing SQL: {params}")
+    params = [machine_id, start_ts, end_ts] + parts
     cursor.execute(sql, params)
-    rows = cursor.fetchall()
-    # print(f"DEBUG: Retrieved {len(rows)} rows")
+    rows = list(cursor.fetchall())
+
+    # 1a) if first event is after start_ts, grab the last event before start_ts
+    if not rows or rows[0][0] > start_ts:
+        sql_prev = f"""
+            SELECT TimeStamp, Part
+            FROM GFxPRoduction
+            WHERE Machine = %s
+              AND TimeStamp < %s
+              AND Part IN ({ph})
+            ORDER BY TimeStamp DESC
+            LIMIT 1
+        """
+        params_prev = [machine_id, start_ts] + parts
+        cursor.execute(sql_prev, params_prev)
+        prev = cursor.fetchone()
+        if prev:
+            # seed a “virtual” event exactly at start_ts
+            rows.insert(0, (start_ts, prev[1]))
 
     if not rows:
-        print("DEBUG: No rows → returning 0")
+        print("DEBUG: still no rows → returning 0")
         return 0
 
-    # 3) Collapse contiguous runs
-    timeline = []
+    # 2) collapse into contiguous part-runs
+    part_segments = []
     curr_part, curr_start = rows[0][1], rows[0][0]
     for ts, part in rows[1:]:
         if part != curr_part:
-            timeline.append({"part": curr_part, "start_ts": curr_start, "end_ts": ts})
+            part_segments.append({
+                "part":  curr_part,
+                "start": curr_start,
+                "end":   ts
+            })
             curr_part, curr_start = part, ts
-    timeline.append({"part": curr_part, "start_ts": curr_start, "end_ts": end_ts})
-    # print(f"DEBUG: timeline = {timeline}")
+    # final run goes to end_ts
+    part_segments.append({
+        "part":  curr_part,
+        "start": curr_start,
+        "end":   end_ts
+    })
 
-    # 4) Compute run-seconds per part
-    run_secs = {}
-    for seg in timeline:
-        run_secs.setdefault(seg["part"], 0)
-        run_secs[seg["part"]] += (seg["end_ts"] - seg["start_ts"])
-
-    # 5) Sum expected counts
-    TOTAL_SECONDS = 7200 * 60
-    sum_expected = 0
-    for part, secs in run_secs.items():
-        # print(f"DEBUG: Part {part} ran {(secs/60):.2f} minutes")
-        rec = (
-            OAMachineTargets.objects
-            .filter(
-                machine_id=machine_id,
-                line=line_name,
-                part=part,
-                effective_date_unix__lte=start_ts,
-                isDeleted=False
-            )
-            .order_by('-effective_date_unix')
-            .first()
+    # 3) fetch *all* per-part target records up to end_ts
+    recs = (
+        OAMachineTargets.objects
+        .filter(
+            machine_id=machine_id,
+            line=line_name,
+            part__in=parts,
+            effective_date_unix__lte=end_ts,
+            isDeleted=False
         )
-        if rec and rec.target:
-            expected = int(round(secs / (TOTAL_SECONDS / rec.target)))
-            # print(f"DEBUG: Part {part} expected={expected}")
-            sum_expected += expected
-        else:
-            print(f"DEBUG: Part {part} has no valid (non-deleted) target record")
+        .order_by('part', 'effective_date_unix')
+    )
+    # group by part for easy lookup
+    targets_by_part = defaultdict(list)
+    for r in recs:
+        targets_by_part[r.part].append(r)
 
-    # 6) Normalize to a 7200-minute window
-    queried_minutes = (end_ts - start_ts) / 60.0
-    normalized = int(round(sum_expected * (7200.0 / queried_minutes))) if queried_minutes else 0
+    # 4) for each part-segment, break at every mid-window target change
+    total_expected = 0.0
+    for seg in part_segments:
+        part      = seg["part"]
+        seg_start = max(seg["start"], start_ts)
+        seg_end   = min(seg["end"],   end_ts)
+        if seg_end <= seg_start:
+            continue
 
-    # print(f"DEBUG: sum_expected={sum_expected}, queried_minutes={queried_minutes:.2f}, "
-    #       f"normalized_target={normalized}")
+        part_recs = targets_by_part.get(part, [])
+        if not part_recs:
+            print(f"DEBUG: no targets for part {part} → skipping")
+            continue
+
+        # find the index of the record effective at seg_start
+        idx0 = max(
+            i for i,r in enumerate(part_recs)
+            if r.effective_date_unix <= seg_start
+        )
+
+        # build break-times: seg_start, any rec.effective_date_unix in (seg_start, seg_end), seg_end
+        breaks = [seg_start]
+        for r in part_recs[idx0+1:]:
+            if seg_start < r.effective_date_unix < seg_end:
+                breaks.append(r.effective_date_unix)
+        breaks.append(seg_end)
+        breaks = sorted(breaks)
+
+        # for each sub-segment, pick the right target and accumulate
+        for i in range(len(breaks) - 1):
+            t0, t1 = breaks[i], breaks[i+1]
+            duration = t1 - t0
+            # find the record effective at t0
+            rec = next(
+                (r for r in reversed(part_recs)
+                 if r.effective_date_unix <= t0),
+                None
+            )
+            if not rec:
+                print(f"DEBUG: no target for part {part} at {t0} → skipping")
+                continue
+
+            # add expected count (fraction of a 7200-min period)
+            total_expected += duration * (rec.target / TOTAL_SECONDS)
+
+    # 5) normalize back up to a 7200-minute window
+    queried_minutes = window_secs / 60.0
+    normalized = int(round(
+        total_expected * (7200.0 / queried_minutes)
+    )) if queried_minutes else 0
+
     return normalized
 
 
 def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
     """
-    Returns the OEE target for a machine/line. If the machine has multiple parts,
-    uses fetch_part_timeline (which now returns a normalized multi-part target);
-    otherwise falls back to the stored single-part target (only non-deleted).
+    If the machine has *any* part_numbers, always uses the above
+    fetch_part_timeline logic (even for a single part). Otherwise
+    falls back to a pure machine-level target (with its own
+    mid-window target–change weighting).
     """
-    # lookup part_numbers
-    parts = []
-    for ln in lines:
-        if ln["line"] == line_name:
-            for op in ln.get("operations", []):
-                for m in op.get("machines", []):
-                    if m["number"] == machine_id:
-                        parts = m.get("part_numbers", []) or []
-                        break
-                if parts:
-                    break
-        if parts:
-            break
+    # invalid window?
+    if end_ts <= start_ts:
+        print(f"ERROR: end_ts ({end_ts}) ≤ start_ts ({start_ts}) → returning 0")
+        return 0
 
-    if len(parts) > 1:
-        tgt = fetch_part_timeline(cursor, machine_id, start_ts, end_ts, line_name)
-        # print(f"DEBUG: multi-part normalized target = {tgt}")
-        return tgt
+    parts = get_parts_for_machine(lines, line_name, machine_id)
+    if parts:
+        return fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts)
 
-    # single-part fallback: ignore deleted records
-    rec = (
+    # no parts defined → do machine-level target weighting
+    TOTAL_SECONDS = 7200 * 60
+    window_secs   = end_ts - start_ts
+
+    recs = (
         OAMachineTargets.objects
         .filter(
             machine_id=machine_id,
             line=line_name,
-            effective_date_unix__lte=start_ts,
+            effective_date_unix__lte=end_ts,
             isDeleted=False
         )
-        .order_by('-effective_date_unix')
-        .first()
+        .order_by('effective_date_unix')
     )
-    if not rec:
-        print(f"DEBUG: no stored (non-deleted) target for {machine_id}@{line_name}")
+    if not recs:
+        print(f"DEBUG: no stored (non-deleted) machine target → returning None")
         return None
 
-    # print(f"DEBUG: using stored target = {rec.target}")
-    return rec.target
+    # build breakpoints at each target-change time plus window edges
+    times = [start_ts] + [
+        r.effective_date_unix
+        for r in recs
+        if start_ts < r.effective_date_unix < end_ts
+    ] + [end_ts]
+    times = sorted(set(times))
 
+    total_expected = 0.0
+    for i in range(len(times) - 1):
+        t0, t1 = times[i], times[i+1]
+        secs = t1 - t0
+
+        # pick the record effective at t0
+        rec = next(
+            (r for r in reversed(recs) if r.effective_date_unix <= t0),
+            None
+        )
+        if not rec:
+            print(f"DEBUG: no machine-level target at {t0} → skipping")
+            continue
+
+        total_expected += secs * (rec.target / TOTAL_SECONDS)
+
+    normalized = int(round(
+        total_expected * (TOTAL_SECONDS / window_secs)
+    )) if window_secs else 0
+
+    return normalized
 
 
 
