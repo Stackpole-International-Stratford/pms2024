@@ -6543,12 +6543,11 @@ def get_parts_for_machine(lines, line_name, machine_id):
 
 def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
     """
-    Build a time-weighted expected count across all parts, handling:
-      - a “virtual” event at start_ts if the machine was already loaded
-      - breaking each part’s run at every target-change timestamp
-      - normalization back to a 7200-minute window
+    Build a time-weighted “expected count” across all parts over a given time window.
+    This version is fully expanded so you can see every sub-step clearly.
     """
-    # 0) invalid window?
+
+    # ---- STEP 0: Sanity checks ----
     if end_ts <= start_ts:
         print(f"ERROR: end_ts ({end_ts}) ≤ start_ts ({start_ts}) → returning 0")
         return 0
@@ -6557,65 +6556,91 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         print("DEBUG: no parts defined → returning 0")
         return 0
 
-    TOTAL_SECONDS = 7200 * 60
-    window_secs = end_ts - start_ts
+    # Constants
+    MINUTES_IN_REFERENCE = 7200
+    SECONDS_PER_MINUTE    = 60
+    TOTAL_SECONDS         = MINUTES_IN_REFERENCE * SECONDS_PER_MINUTE
 
-    # 1) pull all part-change events in [start, end]
-    ph   = ", ".join(["%s"] * len(parts))
-    sql  = f"""
+    # Compute actual window length
+    window_seconds = end_ts - start_ts
+
+    # ---- STEP 1: Pull part-change events in [start_ts, end_ts] ----
+    # Build the SQL placeholder string for the IN clause: "%s, %s, %s, ..."
+    placeholder_list = ["%s"] * len(parts)
+    placeholder_str  = ", ".join(placeholder_list)
+
+    sql_events = f"""
         SELECT TimeStamp, Part
         FROM GFxPRoduction
         WHERE Machine     = %s
           AND TimeStamp BETWEEN %s AND %s
-          AND Part        IN ({ph})
+          AND Part        IN ({placeholder_str})
         ORDER BY TimeStamp ASC
     """
-    params = [machine_id, start_ts, end_ts] + parts
-    cursor.execute(sql, params)
-    rows = list(cursor.fetchall())
+    sql_params = [machine_id, start_ts, end_ts] + parts
 
-    # 1a) if first event is after start_ts, grab the last event before start_ts
-    if not rows or rows[0][0] > start_ts:
+    cursor.execute(sql_events, sql_params)
+    raw_rows = list(cursor.fetchall())
+    # raw_rows is [(ts1, partA), (ts2, partA), (ts3, partB), ...]
+
+    # ---- STEP 1a: If the first event is after start_ts, grab the prior event ----
+    needs_virtual_event = (not raw_rows) or (raw_rows[0][0] > start_ts)
+
+    if needs_virtual_event:
         sql_prev = f"""
             SELECT TimeStamp, Part
             FROM GFxPRoduction
             WHERE Machine = %s
               AND TimeStamp < %s
-              AND Part IN ({ph})
+              AND Part IN ({placeholder_str})
             ORDER BY TimeStamp DESC
             LIMIT 1
         """
-        params_prev = [machine_id, start_ts] + parts
-        cursor.execute(sql_prev, params_prev)
-        prev = cursor.fetchone()
-        if prev:
-            # seed a “virtual” event exactly at start_ts
-            rows.insert(0, (start_ts, prev[1]))
+        prev_params = [machine_id, start_ts] + parts
+        cursor.execute(sql_prev, prev_params)
+        prev_row = cursor.fetchone()
 
-    if not rows:
+        if prev_row:
+            virtual_timestamp, virtual_part = start_ts, prev_row[1]
+            # Insert at the front so the first segment starts exactly at start_ts
+            raw_rows.insert(0, (virtual_timestamp, virtual_part))
+
+    # If there are still no events, we have nothing to measure
+    if not raw_rows:
         print("DEBUG: still no rows → returning 0")
         return 0
 
-    # 2) collapse into contiguous part-runs
+    # ---- STEP 2: Collapse raw events into contiguous segments ----
     part_segments = []
-    curr_part, curr_start = rows[0][1], rows[0][0]
-    for ts, part in rows[1:]:
-        if part != curr_part:
+    # Initialize the first segment
+    current_part  = raw_rows[0][1]
+    segment_start = raw_rows[0][0]
+
+    # Walk through the rest of raw_rows
+    for row in raw_rows[1:]:
+        ts, part = row
+        if part != current_part:
+            # Close out the existing segment
+            segment_end = ts
             part_segments.append({
-                "part":  curr_part,
-                "start": curr_start,
-                "end":   ts
+                "part":  current_part,
+                "start": segment_start,
+                "end":   segment_end
             })
-            curr_part, curr_start = part, ts
-    # final run goes to end_ts
+            # Start a new segment
+            current_part  = part
+            segment_start = ts
+
+    # Final segment goes until end_ts
     part_segments.append({
-        "part":  curr_part,
-        "start": curr_start,
+        "part":  current_part,
+        "start": segment_start,
         "end":   end_ts
     })
 
-    # 3) fetch *all* per-part target records up to end_ts
-    recs = (
+    # ---- STEP 3: Load all target-rate records (production targets) ----
+    # Using Django ORM; adjust if using raw SQL
+    all_target_recs = (
         OAMachineTargets.objects
         .filter(
             machine_id=machine_id,
@@ -6626,61 +6651,96 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         )
         .order_by('part', 'effective_date_unix')
     )
-    # group by part for easy lookup
-    targets_by_part = defaultdict(list)
-    for r in recs:
-        targets_by_part[r.part].append(r)
 
-    # 4) for each part-segment, break at every mid-window target change
+    # Organize records by part
+    targets_by_part = defaultdict(list)
+    for rec in all_target_recs:
+        targets_by_part[rec.part].append(rec)
+
+    # ---- STEP 4: For each segment, split further at any mid-segment rate changes ----
     total_expected = 0.0
+
     for seg in part_segments:
         part      = seg["part"]
-        seg_start = max(seg["start"], start_ts)
-        seg_end   = min(seg["end"],   end_ts)
+        raw_start = seg["start"]
+        raw_end   = seg["end"]
+
+        # Clip segment to our window
+        seg_start = max(raw_start, start_ts)
+        seg_end   = min(raw_end,   end_ts)
+
+        # Skip empty or invalid segments
         if seg_end <= seg_start:
             continue
 
-        part_recs = targets_by_part.get(part, [])
+        part_recs = targets_by_part.get(part)
         if not part_recs:
             print(f"DEBUG: no targets for part {part} → skipping")
             continue
 
-        # find the index of the record effective at seg_start
-        idx0 = max(
-            i for i,r in enumerate(part_recs)
-            if r.effective_date_unix <= seg_start
-        )
+        # ---- STEP 4a: Find which rate record applies at seg_start ----
+        idx0 = None
+        for i, rec in enumerate(part_recs):
+            if rec.effective_date_unix <= seg_start:
+                idx0 = i
+            else:
+                break
+        if idx0 is None:
+            # No record exists at or before seg_start
+            print(f"DEBUG: no initial target record for part {part} → skipping")
+            continue
 
-        # build break-times: seg_start, any rec.effective_date_unix in (seg_start, seg_end), seg_end
-        breaks = [seg_start]
-        for r in part_recs[idx0+1:]:
-            if seg_start < r.effective_date_unix < seg_end:
-                breaks.append(r.effective_date_unix)
-        breaks.append(seg_end)
-        breaks = sorted(breaks)
+        # ---- STEP 4b: Build breakpoints where the rate changes ----
+        breakpoints = [seg_start]
 
-        # for each sub-segment, pick the right target and accumulate
-        for i in range(len(breaks) - 1):
-            t0, t1 = breaks[i], breaks[i+1]
-            duration = t1 - t0
-            # find the record effective at t0
-            rec = next(
-                (r for r in reversed(part_recs)
-                 if r.effective_date_unix <= t0),
-                None
-            )
-            if not rec:
-                print(f"DEBUG: no target for part {part} at {t0} → skipping")
+        for rec in part_recs[idx0 + 1:]:
+            change_ts = rec.effective_date_unix
+            if seg_start < change_ts < seg_end:
+                breakpoints.append(change_ts)
+
+        breakpoints.append(seg_end)
+        breakpoints.sort()
+
+        # ---- STEP 4c: For each sub-interval, compute its contribution ----
+        for i in range(len(breakpoints) - 1):
+            t0 = breakpoints[i]
+            t1 = breakpoints[i + 1]
+
+            sub_interval_seconds = t1 - t0  # duration of this slice
+
+            # Find the active record at time t0 by walking backwards
+            active_rec = None
+            for rec in reversed(part_recs):
+                if rec.effective_date_unix <= t0:
+                    active_rec = rec
+                    break
+
+            if not active_rec:
+                print(f"DEBUG: no active record at {t0} for part {part} → skipping slice")
                 continue
 
-            # add expected count (fraction of a 7200-min period)
-            total_expected += duration * (rec.target / TOTAL_SECONDS)
+            # Compute fraction of the reference period this slice represents
+            rate_per_reference_second = active_rec.target / TOTAL_SECONDS
 
-    # 5) normalize back up to a 7200-minute window
-    queried_minutes = window_secs / 60.0
-    normalized = int(round(
-        total_expected * (7200.0 / queried_minutes)
-    )) if queried_minutes else 0
+            # Contribution = time span (seconds) * rate fraction
+            contribution = sub_interval_seconds * rate_per_reference_second
+
+            total_expected += contribution
+
+    # ---- STEP 5: Normalize up to a full 7200-minute window ----
+    queried_minutes = window_seconds / SECONDS_PER_MINUTE
+
+    if queried_minutes > 0:
+        # How many reference windows fit into our actual window?
+        normalization_factor = MINUTES_IN_REFERENCE / queried_minutes
+
+        # Scale our accumulated expected count accordingly
+        normalized_float = total_expected * normalization_factor
+
+        # Round to nearest integer
+        normalized = int(round(normalized_float))
+    else:
+        normalized = 0
 
     return normalized
 
