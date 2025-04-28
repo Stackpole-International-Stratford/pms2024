@@ -6612,11 +6612,11 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
     # ---- PRINT: intra-window target changes for same part ----
     for part, recs in targets_by_part.items():
         in_window = [r for r in recs if start_ts < r.effective_date_unix < end_ts]
-        for old, new in zip(in_window, in_window[1:]):
-            print(
-                f"Part {part} target changed "
-                f"from {old.target} to {new.target} at {new.effective_date_unix}"
-            )
+        # for old, new in zip(in_window, in_window[1:]):
+        #     # print(
+        #     #     f"Part {part} target changed "
+        #     #     f"from {old.target} to {new.target} at {new.effective_date_unix}"
+        #     # )
 
     # ---- PRINT: part-change events with old/new targets ----
     for (ts, part), (next_ts, next_part) in zip(raw_rows, raw_rows[1:]):
@@ -6625,10 +6625,10 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
             new_recs = [r for r in targets_by_part.get(next_part, []) if r.effective_date_unix <= next_ts]
             old_target = max(old_recs, key=lambda r: r.effective_date_unix).target if old_recs else 'N/A'
             new_target = max(new_recs, key=lambda r: r.effective_date_unix).target if new_recs else 'N/A'
-            print(
-                f"Machine changed part from {part} (target {old_target}) "
-                f"to {next_part} (target {new_target}) at {next_ts}"
-            )
+            # print(
+            #     f"Machine changed part from {part} (target {old_target}) "
+            #     f"to {next_part} (target {new_target}) at {next_ts}"
+            # )
 
     # ---- STEP 3: Collapse raw events into contiguous segments ----
     part_segments = []
@@ -6686,14 +6686,14 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
             total_expected += contribution
 
             # **Print the slice’s details and running total**
-            print(
-                f"  + Part {part}: {duration_min:.2f} min at rate {active.target} "
-                f"→ slice contrib {contribution:.2f}, running raw total {total_expected:.2f}"
-            )
+            # print(
+            #     f"  + Part {part}: {duration_min:.2f} min at rate {active.target} "
+            #     f"→ slice contrib {contribution:.2f}, running raw total {total_expected:.2f}"
+            # )
 
     # ---- STEP 5: Show raw window total then normalize ----
     queried_minutes = window_seconds / SECONDS_PER_MINUTE
-    print(f"This window of {queried_minutes:.2f} minutes gives us a raw expected count of: {total_expected:.2f}")
+    # print(f"This window of {queried_minutes:.2f} minutes gives us a raw expected count of: {total_expected:.2f}")
 
     if queried_minutes > 0:
         factor     = MINUTES_IN_REFERENCE / queried_minutes
@@ -6701,7 +6701,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
     else:
         normalized = 0
 
-    print(f"FINAL normalized target for 7200-min window: {normalized}")
+    # print(f"FINAL normalized target for 7200-min window: {normalized}")
     return normalized
 
 
