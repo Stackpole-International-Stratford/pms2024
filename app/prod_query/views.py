@@ -6613,7 +6613,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         "start": curr_start,
         "end":   end_ts
     })
-d
+
     # 3) fetch *all* per-part target records up to end_ts
     recs = (
         OAMachineTargets.objects
