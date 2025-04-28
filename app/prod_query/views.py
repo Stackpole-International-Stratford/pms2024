@@ -6,6 +6,9 @@ import mysql.connector
 from django.template.loader import render_to_string
 from django.contrib import messages
 
+
+
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden
 
@@ -6524,9 +6527,6 @@ def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
     except Exception as e:
         return {"error": str(e)}
 
-
-
-from collections import defaultdict
 
 def get_parts_for_machine(lines, line_name, machine_id):
     """
