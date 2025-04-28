@@ -6544,7 +6544,7 @@ def get_parts_for_machine(lines, line_name, machine_id):
 def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
     """
     Build a time-weighted “expected count” across all parts over a given time window,
-    with console output of part/target changes and final totals.
+    with console output of part/target changes, per-slice contributions, and totals.
     """
     # ---- STEP 0: Sanity checks ----
     if end_ts <= start_ts:
@@ -6641,6 +6641,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
 
     # ---- STEP 4: Accumulate time-weighted expected count ----
     total_expected = 0.0
+
     for seg in part_segments:
         part      = seg["part"]
         seg_start = max(seg["start"], start_ts)
@@ -6670,16 +6671,25 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         breakpoints.append(seg_end)
         breakpoints.sort()
 
-        # sum contributions
-        for i in range(len(breakpoints)-1):
+        # sum contributions, printing each slice
+        for i in range(len(breakpoints) - 1):
             t0, t1 = breakpoints[i], breakpoints[i+1]
-            duration   = t1 - t0
+            duration_secs = t1 - t0
+            duration_min  = duration_secs / SECONDS_PER_MINUTE
+
             # get active record at t0
             active = next((r for r in reversed(part_recs) if r.effective_date_unix <= t0), None)
             if not active:
                 continue
-            contribution = duration * (active.target / TOTAL_SECONDS)
+
+            contribution = duration_secs * (active.target / TOTAL_SECONDS)
             total_expected += contribution
+
+            # **Print the slice’s details and running total**
+            print(
+                f"  + Part {part}: {duration_min:.2f} min at rate {active.target} "
+                f"→ slice contrib {contribution:.2f}, running raw total {total_expected:.2f}"
+            )
 
     # ---- STEP 5: Show raw window total then normalize ----
     queried_minutes = window_seconds / SECONDS_PER_MINUTE
@@ -6693,6 +6703,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
 
     print(f"FINAL normalized target for 7200-min window: {normalized}")
     return normalized
+
 
 def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
     """
