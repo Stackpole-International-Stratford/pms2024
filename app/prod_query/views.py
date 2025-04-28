@@ -6544,7 +6544,7 @@ def get_parts_for_machine(lines, line_name, machine_id):
 def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
     """
     Build a time-weighted “expected count” across all parts over a given time window,
-    with console output of part/target changes and final total.
+    with console output of part/target changes and final totals.
     """
     # ---- STEP 0: Sanity checks ----
     if end_ts <= start_ts:
@@ -6556,9 +6556,9 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
 
     # Constants
     MINUTES_IN_REFERENCE = 7200
-    SECONDS_PER_MINUTE    = 60
-    TOTAL_SECONDS         = MINUTES_IN_REFERENCE * SECONDS_PER_MINUTE
-    window_seconds        = end_ts - start_ts
+    SECONDS_PER_MINUTE   = 60
+    TOTAL_SECONDS        = MINUTES_IN_REFERENCE * SECONDS_PER_MINUTE
+    window_seconds       = end_ts - start_ts
 
     # ---- STEP 1: Pull part-change events ----
     ph = ", ".join(["%s"] * len(parts))
@@ -6573,7 +6573,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
     cursor.execute(sql_events, [machine_id, start_ts, end_ts] + parts)
     raw_rows = list(cursor.fetchall())
 
-    # ---- STEP 1a: Seed virtual event if machine already loaded ----
+    # ---- STEP 1a: Seed virtual event if needed ----
     if not raw_rows or raw_rows[0][0] > start_ts:
         sql_prev = f"""
             SELECT TimeStamp, Part
@@ -6593,7 +6593,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         print("DEBUG: still no rows → returning 0")
         return 0
 
-    # ---- STEP 2: Load all target-rate records and group by part ----
+    # ---- STEP 2: Load & group all target-rate records ----
     all_target_recs = (
         OAMachineTargets.objects
         .filter(
@@ -6611,32 +6611,26 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
 
     # ---- PRINT: intra-window target changes for same part ----
     for part, recs in targets_by_part.items():
-        # only those changes strictly inside (start_ts, end_ts)
         in_window = [r for r in recs if start_ts < r.effective_date_unix < end_ts]
-        # if more than one, show each from→to
         for old, new in zip(in_window, in_window[1:]):
             print(
                 f"Part {part} target changed "
-                f"from {old.target} to {new.target} "
-                f"at timestamp {new.effective_date_unix}"
+                f"from {old.target} to {new.target} at {new.effective_date_unix}"
             )
 
     # ---- PRINT: part-change events with old/new targets ----
     for (ts, part), (next_ts, next_part) in zip(raw_rows, raw_rows[1:]):
         if part != next_part:
-            # find most recent target ≤ next_ts
             old_recs = [r for r in targets_by_part.get(part, []) if r.effective_date_unix <= next_ts]
             new_recs = [r for r in targets_by_part.get(next_part, []) if r.effective_date_unix <= next_ts]
             old_target = max(old_recs, key=lambda r: r.effective_date_unix).target if old_recs else 'N/A'
             new_target = max(new_recs, key=lambda r: r.effective_date_unix).target if new_recs else 'N/A'
-
             print(
                 f"Machine changed part from {part} (target {old_target}) "
-                f"to {next_part} (target {new_target}) "
-                f"at timestamp {next_ts}"
+                f"to {next_part} (target {new_target}) at {next_ts}"
             )
 
-    # ---- STEP 3: Collapse raw events into segments ----
+    # ---- STEP 3: Collapse raw events into contiguous segments ----
     part_segments = []
     curr_part, seg_start = raw_rows[0][1], raw_rows[0][0]
     for ts, part in raw_rows[1:]:
@@ -6658,7 +6652,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         if not part_recs:
             continue
 
-        # find index of record in effect at seg_start
+        # find record index effective at seg_start
         idx0 = None
         for i, r in enumerate(part_recs):
             if r.effective_date_unix <= seg_start:
@@ -6668,7 +6662,7 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         if idx0 is None:
             continue
 
-        # build breakpoints
+        # build breakpoints for rate changes
         breakpoints = [seg_start]
         for r in part_recs[idx0+1:]:
             if seg_start < r.effective_date_unix < seg_end:
@@ -6679,25 +6673,26 @@ def fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts):
         # sum contributions
         for i in range(len(breakpoints)-1):
             t0, t1 = breakpoints[i], breakpoints[i+1]
-            duration = t1 - t0
-            # find active record at t0
+            duration   = t1 - t0
+            # get active record at t0
             active = next((r for r in reversed(part_recs) if r.effective_date_unix <= t0), None)
             if not active:
                 continue
             contribution = duration * (active.target / TOTAL_SECONDS)
             total_expected += contribution
 
-    # ---- STEP 5: Normalize and return ----
+    # ---- STEP 5: Show raw window total then normalize ----
     queried_minutes = window_seconds / SECONDS_PER_MINUTE
+    print(f"This window of {queried_minutes:.2f} minutes gives us a raw expected count of: {total_expected:.2f}")
+
     if queried_minutes > 0:
-        factor = MINUTES_IN_REFERENCE / queried_minutes
+        factor     = MINUTES_IN_REFERENCE / queried_minutes
         normalized = int(round(total_expected * factor))
     else:
         normalized = 0
 
     print(f"FINAL normalized target for 7200-min window: {normalized}")
     return normalized
-
 
 def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
     """
