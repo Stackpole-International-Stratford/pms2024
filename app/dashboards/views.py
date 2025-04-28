@@ -1074,7 +1074,12 @@ def fetch_pie_chart_data(machine):
 
 
 def fetch_weekly_data_for_machine(machine):
+    """
+    Returns a breakdown of the last 7 days (in 8-hour buckets) with both
+    raw counts and percentages for Good vs Reject.
+    """
     now = datetime.now()
+    # start at midnight 7 days ago
     start_dt = (now - timedelta(days=7)).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
@@ -1083,63 +1088,70 @@ def fetch_weekly_data_for_machine(machine):
     conn = get_db_connection()
 
     with conn.cursor() as cursor:
-        for day in range(8):  # 7 days + today
+        for day in range(8):  # 7 days + today partial
             day_base = start_dt + timedelta(days=day)
             for h in interval_hours:
                 block_start = day_base + timedelta(hours=h)
                 block_end   = block_start + timedelta(hours=8)
+                # don’t include future buckets
                 if block_start >= now:
                     continue
 
                 s_ts = block_start.timestamp()
                 e_ts = block_end.timestamp()
 
-                # good
+                # Good count
                 cursor.execute(
                     "SELECT COUNT(*) FROM GFxPRoduction "
                     "WHERE Machine = %s AND TimeStamp >= %s AND TimeStamp < %s",
                     [machine, s_ts, e_ts]
                 )
-                good_cnt = cursor.fetchone()[0]
+                good_cnt = cursor.fetchone()[0] or 0
 
-                # reject
+                # Reject count
                 cursor.execute(
                     "SELECT COUNT(*) FROM GFxPRoduction "
                     "WHERE Machine = %s AND TimeStamp >= %s AND TimeStamp < %s",
                     [f"{machine}REJ", s_ts, e_ts]
                 )
-                rej_cnt = cursor.fetchone()[0]
+                rej_cnt = cursor.fetchone()[0] or 0
 
                 total = good_cnt + rej_cnt
                 if total == 0:
                     continue
+
+                pct_good = round(good_cnt / total * 100, 2)
+                pct_rej  = round(rej_cnt  / total * 100, 2)
 
                 breakdown.append({
                     "interval_start": block_start.strftime("%b-%d %H:%M"),
                     "interval_end":   block_end.strftime("%b-%d %H:%M"),
                     "total_count":    total,
                     "grade_counts": {
-                        "Good":  f"{good_cnt} ({round(good_cnt/total*100,2)}%)",
-                        "Reject": f"{rej_cnt} ({round(rej_cnt/total*100,2)}%)",
+                        "Good":   good_cnt,
+                        "Reject": rej_cnt
+                    },
+                    "grade_percentages": {
+                        "Good":   pct_good,
+                        "Reject": pct_rej
                     }
                 })
 
-    # roll-up for the 7-day totals
+    # roll‐up for the 7-day totals (unchanged)
     total_count = sum(item["total_count"] for item in breakdown)
-    total_good   = sum(int(item["grade_counts"]["Good"].split()[0]) for item in breakdown)
-    total_rej    = sum(int(item["grade_counts"]["Reject"].split()[0]) for item in breakdown)
-
-    pct_good = round((total_good   / total_count * 100), 2) if total_count else 0
-    pct_rej  = round((total_rej    / total_count * 100), 2) if total_count else 0
+    total_good  = sum(item["grade_counts"]["Good"]   for item in breakdown)
+    total_rej   = sum(item["grade_counts"]["Reject"] for item in breakdown)
+    pct_good_7  = round(total_good / total_count * 100, 2) if total_count else 0
+    pct_rej_7   = round(total_rej  / total_count * 100, 2) if total_count else 0
 
     return {
         "asset": machine,
         "total_count_last_7_days": total_count,
         "grade_counts_last_7_days": {
-            "Good":  f"{total_good} ({pct_good}%)",
-            "Reject": f"{total_rej} ({pct_rej}%)",
+            "Good":   f"{total_good} ({pct_good_7}%)",
+            "Reject": f"{total_rej}  ({pct_rej_7}%)"
         },
-        "breakdown_data": breakdown,
+        "breakdown_data": breakdown
     }
 
 

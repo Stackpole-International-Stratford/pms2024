@@ -10,7 +10,7 @@
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
   <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 
-  <!-- Chart.js -->
+  <!-- Chart.js (v3+) -->
   <script src="{% static 'chart.js/chart.umd.js' %}"></script>
 
   <style>
@@ -18,19 +18,10 @@
       height: 100%;
       margin: 0;
     }
-    .full-height-card {
-      height: 100vh;
-    }
-    .charts-container {
-      height: 100%;
-      overflow: hidden;
-    }
-    .card-header {
-      font-size: 1.8rem;
-    }
-    .large-number {
-      font-size: clamp(2rem, 8vw, 10rem);
-    }
+    .full-height-card { height: 100vh; }
+    .charts-container { height: 100%; overflow: hidden; }
+    .card-header { font-size: 1.8rem; }
+    .large-number { font-size: clamp(2rem, 8vw, 10rem); }
   </style>
 </head>
 <body class="bg-black text-white">
@@ -38,7 +29,7 @@
   <div class="card border-0 full-height-card" style="background-color: black !important;">
     <div class="card-body p-0">
       <div class="container-fluid charts-container" id="charts-container">
-        <!-- Rows inserted by JS -->
+        <!-- Rows will be injected by JS -->
       </div>
     </div>
   </div>
@@ -51,38 +42,23 @@
       const rowHeight = Math.floor(container.clientHeight / lines.length);
 
       const COLORS = {
-        Good:   "rgba(0, 128, 0, 0.9)",
-        Reject: "rgba(255, 0, 0, 0.9)"
+        Good:   "rgba(0,128,0,0.9)",
+        Reject: "rgba(255,0,0,0.9)"
       };
 
       lines.forEach(line => {
-        // unpack our JSON
-        const {
-          breakdown_data: breakdown = [],
-          pie_chart_data: pie       = {}
-        } = data[line];
-
-        // raw counts and percentages
-        const rawGood   = pie.grades?.Good   || 0;
-        const rawReject = pie.grades?.Reject || 0;
-        const pct       = pie.percentages   || { Good: 0, Reject: 0 };
-
-        // display strings for pie legend
-        const pieDisplay = {
-          Good:   `${rawGood} (${pct.Good}%)`,
-          Reject: `${rawReject} (${pct.Reject}%)`
-        };
+        const { breakdown_data: breakdown = [], pie_chart_data: pie } = data[line];
 
         // build row
         const row = document.createElement("div");
         row.className = "row g-3";
         row.style.height = `${rowHeight}px`;
 
-        // line‐chart column
+        // ── Line chart col ──
         const colLine = document.createElement("div");
         colLine.className = "col-12 col-md-7";
         colLine.innerHTML = `
-          <div class="card h-100" style="background-color: black; border-bottom: 1px solid white;">
+          <div class="card h-100" style="background-color:black; border-bottom:1px solid white;">
             <div class="card-header fw-bold">Machine: ${line} (Week)</div>
             <div class="card-body p-0">
               <canvas id="lineChart-${line}"></canvas>
@@ -90,24 +66,24 @@
           </div>`;
         row.appendChild(colLine);
 
-        // pie‐chart column
+        // ── Pie chart col ──
         const colPie = document.createElement("div");
         colPie.className = "col-12 col-md-3";
         colPie.innerHTML = `
-          <div class="card border-0 h-100" style="background-color: black;">
+          <div class="card border-0 h-100" style="background-color:black;">
             <div class="card-body p-0 d-flex justify-content-center align-items-center">
               <canvas id="pieChart-${line}" width="180" height="180"></canvas>
             </div>
           </div>`;
         row.appendChild(colPie);
 
-        // rejects count column
+        // ── Rejects count col ──
         const colFail = document.createElement("div");
         colFail.className = "col-12 col-md-2";
         colFail.innerHTML = `
-          <div class="card border-0 h-100" style="background-color: black;">
-            <div class="card-header text-white fw-bold large-header">Rejects (24 hr)</div>
-            <div class="card-body p-0 d-flex justify-content-center align-items-center" style="border-bottom: 1px solid white;">
+          <div class="card border-0 h-100" style="background-color:black;">
+            <div class="card-header fw-bold large-header">Rejects (24 hr)</div>
+            <div class="card-body p-0 d-flex justify-content-center align-items-center" style="border-bottom:1px solid white;">
               <span id="failCount-${line}" class="display-1 fw-bold large-number">0</span>
             </div>
           </div>`;
@@ -115,58 +91,111 @@
 
         container.appendChild(row);
 
-        // ─── NEW: pull the span, then apply backend-computed class ───
+        // update 24h rejects count & color
         const failSpan = document.getElementById(`failCount-${line}`);
         const n        = pie.failures_total || 0;
-        const cssClass = pie.reject_color   || "text-success";
         failSpan.textContent = n;
-        failSpan.classList.add(cssClass);
+        failSpan.classList.add(pie.reject_color || "text-success");
 
-        // build line chart
-        const labels     = breakdown.map(i => i.interval_start);
-        const goodData   = breakdown.map(i => parseInt((i.grade_counts?.Good   || "0").split(" ")[0], 10));
-        const rejectData = breakdown.map(i => parseInt((i.grade_counts?.Reject || "0").split(" ")[0], 10));
+        // ── Prepare data arrays ──
+        const labels         = breakdown.map(i => i.interval_start);
+        const goodCounts     = breakdown.map(i => i.grade_counts.Good);
+        const rejectPercents = breakdown.map(i => i.grade_percentages.Reject);
 
-        new Chart(
-          document.getElementById(`lineChart-${line}`).getContext("2d"),
-          {
-            type: "line",
-            data: {
-              labels,
-              datasets: [
-                {
-                  label: "Good",
-                  data: goodData,
-                  borderColor: COLORS.Good,
-                  backgroundColor: COLORS.Good.replace("0.9","0.3"),
-                  fill: true,
-                  tension: 0.1
+            // ── Render line chart with dual Y-axes ──
+            new Chart(
+              document.getElementById(`lineChart-${line}`).getContext("2d"),
+              {
+                type: "line",
+                data: {
+                  labels,
+                  datasets: [
+                    {
+                      label: "Good",
+                      data: goodCounts,
+                      yAxisID: "count",
+                      borderColor: COLORS.Good,
+                      backgroundColor: COLORS.Good.replace("0.9","0.3"),
+                      fill: true,
+                      tension: 0.1
+                    },
+                    {
+                      label: "Reject %",
+                      data: rejectPercents,
+                      yAxisID: "pct",
+                      borderColor: COLORS.Reject,
+                      backgroundColor: COLORS.Reject.replace("0.9","0.3"),
+                      fill: true,
+                      tension: 0.1
+                    }
+                  ]
                 },
-                {
-                  label: "Reject",
-                  data: rejectData,
-                  borderColor: COLORS.Reject,
-                  backgroundColor: COLORS.Reject.replace("0.9","0.3"),
-                  fill: true,
-                  tension: 0.1
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { labels: { color: "#ffffff" } },
+                   tooltip: {
+                     callbacks: {
+                       label: ctx => {
+                        // when hovering the Reject % line, pull both raw & pct
+                         if (ctx.dataset.label === "Reject %") {
+                           const idx = ctx.dataIndex;
+                           const pct = ctx.dataset.data[idx];
+                           const raw = breakdown[idx].grade_counts.Reject;
+                           return `Reject: ${raw} (${pct}%)`;
+                         }
+                         // default for the Good line
+                         return Chart.defaults.plugins.tooltip.callbacks.label(ctx);
+                       }
+                     }
+                   }
+                  },
+                  scales: {
+                    count: {
+                      type: "linear",
+                      position: "left",
+                      title: {
+                        display: true,
+                        text: "Good parts (count)",
+                        color: "#ffffff"
+                      },
+                      ticks: {
+                        color: "#ffffff",
+                        beginAtZero: true
+                      }
+                    },
+                    pct: {
+                      type: "linear",
+                      position: "right",
+                      title: {
+                        display: true,
+                        text: "Reject rate (%)",
+                        color: "#ffffff"
+                      },
+                      min: 0,
+                      max: 30,
+                      grid: { drawOnChartArea: false },
+                      ticks: {
+                        color: "#ffffff",
+                        callback: v => v + "%"
+                      }
+                    }
+                  }
                 }
-              ]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { labels: { color: "#ffffff" } }
-              },
-              scales: {
-                x: { title: { display: true, text: "Last 7 days", color: "#ffffff" }, ticks: { color: "#ffffff" } },
-                y: { beginAtZero: true, title: { display: true, text: "Count", color: "#ffffff" }, ticks: { color: "#ffffff" } }
               }
-            }
-          }
-        );
+            );
 
-        // build pie chart
+
+        // ── Render pie chart (unchanged) ──
+        const rawGood   = pie.grades?.Good   || 0;
+        const rawReject = pie.grades?.Reject || 0;
+        const pct       = pie.percentages   || { Good: 0, Reject: 0 };
+        const pieDisplay = {
+          Good:   `${rawGood} (${pct.Good}%)`,
+          Reject: `${rawReject} (${pct.Reject}%)`
+        };
+
         new Chart(
           document.getElementById(`pieChart-${line}`).getContext("2d"),
           {
@@ -201,13 +230,11 @@
             }
           }
         );
-
-      }); // end forEach
+      });
 
       // auto-refresh every minute
       setInterval(() => location.reload(), 60000);
     });
   </script>
-
 </body>
 </html>
