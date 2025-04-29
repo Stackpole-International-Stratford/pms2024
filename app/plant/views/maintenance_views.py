@@ -1,27 +1,45 @@
-# /home/tcareless/pms2024/app/plant/views/maintenance_views.py
-
 import json
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse
+
+# import your lines structure
 from prod_query.views import lines as prod_lines
 
 
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     """
-    Renders the maintenance form page, embedding the downtime-codes
-    structure as JSON for the frontend to consume.
+    GET:  render the form shell, embedding downtime_codes + prod_lines as JSON
+    POST: echo back submitted values
     """
+    if request.method == 'POST':
+        # grab the submitted fields
+        machine     = request.POST.get('machine')
+        category    = request.POST.get('category')
+        subcategory = request.POST.get('subcategory')
+        description = request.POST.get('description')
+
+        # for now, just print what was submitted
+        return HttpResponse(f"""
+            <h1>Submission Received</h1>
+            <p><strong>Machine:</strong> {machine}</p>
+            <p><strong>Category:</strong> {category}</p>
+            <p><strong>Sub-category:</strong> {subcategory}</p>
+            <p><strong>Description:</strong> {description}</p>
+            <p><a href="">Log another downtime</a></p>
+        """)
+
+    # GET: build your hierarchies
     downtime_codes = [
         {
             'name': 'Equipment Failure',
             'code': 'EQP',
             'subcategories': [
-                {'name': 'Tooling Failure',      'code': 'EQP-TOOL'},
-                {'name': 'Breakdown',            'code': 'EQP-BRK'},
-                {'name': 'Unplanned Maintenance','code': 'EQP-MNT'},
+                {'name': 'Tooling Failure',       'code': 'EQP-TOOL'},
+                {'name': 'Breakdown',             'code': 'EQP-BRK'},
+                {'name': 'Unplanned Maintenance', 'code': 'EQP-MNT'},
                 {'name': 'Starved (No Material)', 'code': 'EQP-STAR'},
-                {'name': 'Blocked (Downstream)', 'code': 'EQP-BLKD'},
+                {'name': 'Blocked (Downstream)',  'code': 'EQP-BLKD'},
             ],
         },
         {
@@ -78,11 +96,10 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         },
     ]
 
-    # Convert to a JSON string and mark safe so Django won’t escape it
-    downtime_json = mark_safe(json.dumps(downtime_codes))
-
+    # safely embed as JSON strings
     context = {
         'message': 'Hello, world! This is the maintenance form.',
-        'downtime_codes_json': downtime_json,
+        'downtime_codes_json': mark_safe(json.dumps(downtime_codes)),
+        'lines_json':           mark_safe(json.dumps(prod_lines)),
     }
     return render(request, 'plant/maintenance_form.html', context)
