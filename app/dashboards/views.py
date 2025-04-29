@@ -1175,3 +1175,7 @@ def rejects_dashboard_finder(request):
     return render(request,
                   "dashboards/rejects_dashboard_finder.html",
                   {"lines": lines})
+
+
+
+
