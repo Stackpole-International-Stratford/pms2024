@@ -109,7 +109,6 @@
       const list = document.createElement('ul');
       list.id = 'machine-list';
       list.className = 'list-group mt-2';
-      // max 10 items visible, scroll for the rest
       list.style.maxHeight = '300px';
       list.style.overflowY = 'auto';
       container.appendChild(list);
@@ -141,7 +140,6 @@
       back.className = 'btn btn-warning mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
-        // reset everything
         state.step = 0;
         state.machine = state.category = state.subcategory = null;
         removeHidden('machine');
@@ -156,7 +154,8 @@
     } else if (state.step === 2) {
       downtimeCodes.forEach(c => {
         const div = document.createElement('div');
-        div.className = 'form-check';
+        // added mb-3 for spacing
+        div.className = 'form-check mb-3';
 
         const inp = document.createElement('input');
         inp.className = 'form-check-input';
@@ -187,7 +186,6 @@
       back.className = 'btn btn-warning mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
-        // go back to machine, clear category/subcategory
         state.step = 1;
         state.category = state.subcategory = null;
         removeHidden('category');
@@ -201,7 +199,8 @@
       const cat = downtimeCodes.find(c => c.code === state.category);
       cat.subcategories.forEach(sc => {
         const div = document.createElement('div');
-        div.className = 'form-check';
+        // added mb-3 for spacing
+        div.className = 'form-check mb-3';
 
         const inp = document.createElement('input');
         inp.className = 'form-check-input';
@@ -232,7 +231,6 @@
       back.className = 'btn btn-warning mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
-        // go back to category, clear subcategory
         state.step = 2;
         state.subcategory = null;
         removeHidden('subcategory');
@@ -272,9 +270,7 @@
       back.className = 'btn btn-secondary ms-2';
       back.textContent = 'Back';
       back.onclick = () => {
-        // clear description? not needed; clear subcategory so they can re-pick
         state.step = 3;
-        // don't remove hidden description
         renderStep();
       };
       container.appendChild(back);
