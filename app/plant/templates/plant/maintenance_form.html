@@ -1,11 +1,17 @@
 {# /home/tcareless/pms2024/app/plant/templates/plant/maintenance_form.html #}
-
 {% extends "parent.html" %}
 
 {% block content %}
   <div class="maintenance-form">
     <h1>Maintenance Form</h1>
     <p>{{ message }}</p>
-    {# future form markup goes here #}
+
+    {# Embed the downtime-codes JSON for your script to pick up later #}
+    <script>
+      // Parse the JSON your view injected
+      const downtimeCodes = JSON.parse('{{ downtime_codes_json }}');
+      console.log('Downtime codes:', downtimeCodes);
+      // → you can now loop over downtimeCodes in your JS app
+    </script>
   </div>
 {% endblock %}
