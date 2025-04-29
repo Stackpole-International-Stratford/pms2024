@@ -1,289 +1,293 @@
-{# extends your parent layout which already loads Bootstrap JS/CSS #}
+{# /home/tcareless/pms2024/app/plant/templates/plant/maintenance_form.html #}
 {% extends "parent.html" %}
 
 {% block content %}
-  <div class="maintenance-form container py-4">
+<div class="maintenance-form container py-4">
 
-    <h1 class="mb-4">Maintenance Form</h1>
-    <p>{{ message }}</p>
+  <h1 class="mb-4">Maintenance Form</h1>
+  <p>{{ message }}</p>
 
-    {# START BUTTON #}
-    <div id="start-container">
-      <button id="start-btn" class="btn btn-primary">Enter downtime</button>
-    </div>
+  {# START BUTTON #}
+  <div id="start-container">
+    <button id="start-btn" class="btn btn-primary">Enter downtime</button>
+  </div>
 
-    {# MULTI-STEP FORM (hidden until you click the button) #}
-    <form id="downtime-form" method="POST" style="display:none;">
-      {% csrf_token %}
-      <nav aria-label="breadcrumb" class="mt-3">
-        <ol class="breadcrumb" id="breadcrumb"></ol>
-      </nav>
-      <div id="form-steps" class="mt-3"></div>
-    </form>
+  {# MULTI-STEP FORM (hidden until you click the button) #}
+  <form id="downtime-form" method="POST" style="display: none;">
+    {% csrf_token %}
+    <nav aria-label="breadcrumb" class="mt-3">
+      <ol class="breadcrumb" id="breadcrumb"></ol>
+    </nav>
+    <div id="form-steps" class="mt-3"></div>
+  </form>
 
-    {# embed your JSON data for JS to consume #}
-    <script>
-      const downtimeCodes = JSON.parse('{{ downtime_codes_json }}');
-      const prodLines      = JSON.parse('{{ lines_json }}');
-    </script>
+  {# embed your JSON data for JS to consume #}
+  <script>
+    const downtimeCodes = JSON.parse('{{ downtime_codes_json }}');
+    const prodLines     = JSON.parse('{{ lines_json }}');
+  </script>
 
-    <script>
-    (function(){
-      // flatten all machines
-      const allMachines = [];
-      prodLines.forEach(line => {
-        line.operations.forEach(op => {
-          op.machines.forEach(m => {
-            allMachines.push({
-              number:       m.number,
-              line:         line.line,
-              op:           op.op,
-              target:       m.target,
-              partNumbers:  m.part_numbers || []
-            });
+  <script>
+  (function(){
+    // 1) Flatten all machines into a single list
+    const allMachines = [];
+    prodLines.forEach(line => {
+      line.operations.forEach(op => {
+        op.machines.forEach(m => {
+          allMachines.push({
+            number:      m.number,
+            line:        line.line,
+            op:          op.op,
+            target:      m.target,
+            partNumbers: m.part_numbers || []
           });
         });
       });
+    });
 
-      // wizard state
-      const state = { step:0, machine:null, category:null, subcategory:null };
+    // 2) Wizard state
+    const state = { step: 0, machine: null, category: null, subcategory: null };
 
-      // helper to sync hidden inputs
-      function addOrUpdateHidden(name, value) {
-        let input = document.querySelector(`#downtime-form input[name="${name}"]`);
-        if (!input) {
-          input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = name;
-          document.getElementById('downtime-form').appendChild(input);
+    // 3) Helper: add or update hidden inputs
+    function addOrUpdateHidden(name, value) {
+      let input = document.querySelector(`#downtime-form input[name="${name}"]`);
+      if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        document.getElementById('downtime-form').appendChild(input);
+      }
+      input.value = value;
+    }
+
+    // 4) Breadcrumb update
+    function updateBreadcrumb() {
+      const bc = document.getElementById('breadcrumb');
+      bc.innerHTML = '';
+      const crumbs = [];
+      if (state.machine)    crumbs.push({ label: state.machine.number });
+      if (state.category)   crumbs.push({ label: downtimeCodes.find(c => c.code === state.category).name });
+      if (state.subcategory) crumbs.push({
+        label: downtimeCodes
+                 .find(c => c.code === state.category)
+                 .subcategories.find(s => s.code === state.subcategory)
+                 .name
+      });
+
+      crumbs.forEach((crumb, i) => {
+        const li = document.createElement('li');
+        li.className = i === crumbs.length - 1
+          ? 'breadcrumb-item active'
+          : 'breadcrumb-item';
+        if (i === crumbs.length - 1) {
+          li.setAttribute('aria-current', 'page');
         }
-        input.value = value;
-      }
+        li.textContent = crumb.label;
+        bc.appendChild(li);
+      });
+    }
 
-      // update breadcrumb trail
-      function updateBreadcrumb() {
-        const bc = document.getElementById('breadcrumb');
-        bc.innerHTML = '';
-        const crumbs = [];
-        if (state.machine)    crumbs.push({ label: state.machine.number });
-        if (state.category)   crumbs.push({ label: downtimeCodes.find(c=>c.code===state.category).name });
-        if (state.subcategory)crumbs.push({ label:
-            downtimeCodes
-              .find(c=>c.code===state.category)
-              .subcategories.find(s=>s.code===state.subcategory)
-              .name
-        });
+    // 5) Render each step
+    function renderStep() {
+      const container = document.getElementById('form-steps');
+      container.innerHTML = '';
+      updateBreadcrumb();
 
-        crumbs.forEach((crumb, i) => {
-          const li = document.createElement('li');
-          if (i === crumbs.length -1) {
-            li.className = 'breadcrumb-item active';
-            li.setAttribute('aria-current','page');
-          } else {
-            li.className = 'breadcrumb-item';
-          }
-          li.textContent = crumb.label;
-          bc.appendChild(li);
-        });
-      }
+      // STEP 1: MACHINE SELECTION
+      if (state.step === 1) {
+        const search = document.createElement('input');
+        search.id = 'machine-search';
+        search.className = 'form-control';
+        search.placeholder = 'Search machines...';
+        container.appendChild(search);
 
-      // main renderer
-      function renderStep() {
-        const container = document.getElementById('form-steps');
-        container.innerHTML = '';
-        updateBreadcrumb();
+        const list = document.createElement('ul');
+        list.id = 'machine-list';
+        list.className = 'list-group mt-2';
+        container.appendChild(list);
 
-        // STEP 1: pick machine
-        if (state.step === 1) {
-          // live search input
-          const search = document.createElement('input');
-          search.id = 'machine-search';
-          search.className = 'form-control';
-          search.placeholder = 'Search machines...';
-          container.appendChild(search);
+        function refreshList() {
+          const term = search.value.trim().toUpperCase();
+          list.innerHTML = '';
+          allMachines
+            .filter(m => m.number.toUpperCase().includes(term))
+            .forEach(m => {
+              const li = document.createElement('li');
+              li.className = 'list-group-item list-group-item-action';
+              li.textContent = `${m.number} (${m.line} – Op ${m.op})`;
+              li.onclick = () => {
+                state.machine = m;
+                addOrUpdateHidden('machine', m.number);
+                state.step = 2;
+                renderStep();
+              };
+              list.appendChild(li);
+            });
+        }
 
-          const list = document.createElement('ul');
-          list.id = 'machine-list';
-          list.className = 'list-group mt-2';
-          container.appendChild(list);
+        search.addEventListener('input', refreshList);
+        refreshList();
 
-          function refreshList() {
-            const term = search.value.trim();
-            list.innerHTML = '';
-            allMachines
-              .filter(m=> m.number.includes(term))
-              .forEach(m=>{
-                const li = document.createElement('li');
-                li.className = 'list-group-item list-group-item-action';
-                li.textContent = `${m.number} (${m.line} – Op ${m.op})`;
-                li.onclick = ()=>{
-                  state.machine = m;
-                  addOrUpdateHidden('machine', m.number);
-                  state.step = 2;
-                  renderStep();
-                };
-                list.appendChild(li);
-              });
-          }
-          search.addEventListener('input', refreshList);
-          refreshList();
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'btn btn-secondary mt-3';
+        back.textContent = 'Back';
+        back.onclick = () => {
+          state.step = 0;
+          document.getElementById('downtime-form').style.display = 'none';
+          document.getElementById('start-container').style.display = 'block';
+        };
+        container.appendChild(back);
 
-          // back → start
-          const back = document.createElement('button');
-          back.type='button';
-          back.className='btn btn-secondary mt-3';
-          back.textContent='Back';
-          back.onclick = ()=>{
-            state.step = 0;
-            document.getElementById('downtime-form').style.display = 'none';
-            document.getElementById('start-container').style.display = 'block';
-          };
-          container.appendChild(back);
-
-        // STEP 2: pick category
-        } else if (state.step === 2) {
-          downtimeCodes.forEach(c=>{
-            const div = document.createElement('div');
-            div.className='form-check';
-            const inp = document.createElement('input');
-            inp.className='form-check-input';
-            inp.type='radio';
-            inp.name='category';
-            inp.id=`cat-${c.code}`;
-            inp.value=c.code;
-            if (state.category===c.code) inp.checked=true;
-
-            inp.onchange = ()=>{
-              state.category = c.code;
-              addOrUpdateHidden('category', c.code);
-            };
-
-            const lbl = document.createElement('label');
-            lbl.className='form-check-label';
-            lbl.htmlFor=inp.id;
-            lbl.textContent=c.name;
-
-            div.appendChild(inp);
-            div.appendChild(lbl);
-            container.appendChild(div);
-          });
-
-          const next = document.createElement('button');
-          next.type='button';
-          next.className='btn btn-primary mt-3';
-          next.textContent='Next';
-          next.disabled = !state.category;
-          next.onclick = ()=>{
-            state.step = 3;
-            renderStep();
-          };
-          container.appendChild(next);
-
-          const back = document.createElement('button');
-          back.type='button';
-          back.className='btn btn-secondary mt-3 ms-2';
-          back.textContent='Back';
-          back.onclick = ()=>{
-            state.step = 1;
-            renderStep();
-          };
-          container.appendChild(back);
-
-        // STEP 3: pick sub-category
-        } else if (state.step === 3) {
-          const cat = downtimeCodes.find(c=>c.code===state.category);
-          cat.subcategories.forEach(sc=>{
-            const div = document.createElement('div');
-            div.className='form-check';
-            const inp = document.createElement('input');
-            inp.className='form-check-input';
-            inp.type='radio';
-            inp.name='subcategory';
-            inp.id=`subcat-${sc.code}`;
-            inp.value=sc.code;
-            if (state.subcategory===sc.code) inp.checked=true;
-
-            inp.onchange = ()=>{
-              state.subcategory = sc.code;
-              addOrUpdateHidden('subcategory', sc.code);
-            };
-
-            const lbl = document.createElement('label');
-            lbl.className='form-check-label';
-            lbl.htmlFor=inp.id;
-            lbl.textContent=sc.name;
-
-            div.appendChild(inp);
-            div.appendChild(lbl);
-            container.appendChild(div);
-          });
-
-          const next = document.createElement('button');
-          next.type='button';
-          next.className='btn btn-primary mt-3';
-          next.textContent='Next';
-          next.disabled = !state.subcategory;
-          next.onclick = ()=>{
-            state.step = 4;
-            renderStep();
-          };
-          container.appendChild(next);
-
-          const back = document.createElement('button');
-          back.type='button';
-          back.className='btn btn-secondary mt-3 ms-2';
-          back.textContent='Back';
-          back.onclick = ()=>{
-            state.step = 2;
-            renderStep();
-          };
-          container.appendChild(back);
-
-        // STEP 4: description + submit
-        } else if (state.step === 4) {
+      // STEP 2: CATEGORY SELECTION
+      } else if (state.step === 2) {
+        downtimeCodes.forEach(c => {
           const div = document.createElement('div');
-          div.className='mb-3';
-          const lbl = document.createElement('label');
-          lbl.htmlFor='description';
-          lbl.className='form-label';
-          lbl.textContent='Description';
+          div.className = 'form-check';
+
           const inp = document.createElement('input');
-          inp.type='text';
-          inp.id='description';
-          inp.name='description';
-          inp.className='form-control';
-          inp.required = true;
-          div.appendChild(lbl);
-          div.appendChild(inp);
-          container.appendChild(div);
-
-          const submit = document.createElement('button');
-          submit.type='submit';
-          submit.className='btn btn-success';
-          submit.textContent='Submit';
-          container.appendChild(submit);
-
-          const back = document.createElement('button');
-          back.type='button';
-          back.className='btn btn-secondary ms-2';
-          back.textContent='Back';
-          back.onclick = ()=>{
-            state.step = 3;
-            renderStep();
+          inp.className = 'form-check-input';
+          inp.type = 'radio';
+          inp.name = 'category';
+          inp.id   = `cat-${c.code}`;
+          inp.value= c.code;
+          if (state.category === c.code) inp.checked = true;
+          inp.onchange = () => {
+            state.category = c.code;
+            addOrUpdateHidden('category', c.code);
+            renderStep();  // re-render so Next button becomes enabled
           };
-          container.appendChild(back);
-        }
+
+          const lbl = document.createElement('label');
+          lbl.className = 'form-check-label';
+          lbl.htmlFor = inp.id;
+          lbl.textContent = c.name;
+
+          div.appendChild(inp);
+          div.appendChild(lbl);
+          container.appendChild(div);
+        });
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'btn btn-primary mt-3';
+        next.textContent = 'Next';
+        next.disabled = !state.category;
+        next.onclick = () => {
+          state.step = 3;
+          renderStep();
+        };
+        container.appendChild(next);
+
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'btn btn-secondary mt-3 ms-2';
+        back.textContent = 'Back';
+        back.onclick = () => {
+          state.step = 1;
+          renderStep();
+        };
+        container.appendChild(back);
+
+      // STEP 3: SUB-CATEGORY SELECTION
+      } else if (state.step === 3) {
+        const cat = downtimeCodes.find(c => c.code === state.category);
+        cat.subcategories.forEach(sc => {
+          const div = document.createElement('div');
+          div.className = 'form-check';
+
+          const inp = document.createElement('input');
+          inp.className = 'form-check-input';
+          inp.type = 'radio';
+          inp.name = 'subcategory';
+          inp.id   = `subcat-${sc.code}`;
+          inp.value= sc.code;
+          if (state.subcategory === sc.code) inp.checked = true;
+          inp.onchange = () => {
+            state.subcategory = sc.code;
+            addOrUpdateHidden('subcategory', sc.code);
+            renderStep();  // re-render so Next button becomes enabled
+          };
+
+          const lbl = document.createElement('label');
+          lbl.className = 'form-check-label';
+          lbl.htmlFor = inp.id;
+          lbl.textContent = sc.name;
+
+          div.appendChild(inp);
+          div.appendChild(lbl);
+          container.appendChild(div);
+        });
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'btn btn-primary mt-3';
+        next.textContent = 'Next';
+        next.disabled = !state.subcategory;
+        next.onclick = () => {
+          state.step = 4;
+          renderStep();
+        };
+        container.appendChild(next);
+
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'btn btn-secondary mt-3 ms-2';
+        back.textContent = 'Back';
+        back.onclick = () => {
+          state.step = 2;
+          renderStep();
+        };
+        container.appendChild(back);
+
+      // STEP 4: DESCRIPTION + SUBMIT
+      } else if (state.step === 4) {
+        const div = document.createElement('div');
+        div.className = 'mb-3';
+
+        const lbl = document.createElement('label');
+        lbl.htmlFor = 'description';
+        lbl.className = 'form-label';
+        lbl.textContent = 'Description';
+
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.id   = 'description';
+        inp.name = 'description';
+        inp.className = 'form-control';
+        inp.required = true;
+
+        div.appendChild(lbl);
+        div.appendChild(inp);
+        container.appendChild(div);
+
+        const submit = document.createElement('button');
+        submit.type = 'submit';
+        submit.className = 'btn btn-success';
+        submit.textContent = 'Submit';
+        container.appendChild(submit);
+
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'btn btn-secondary ms-2';
+        back.textContent = 'Back';
+        back.onclick = () => {
+          state.step = 3;
+          renderStep();
+        };
+        container.appendChild(back);
       }
+    }
 
-      // wire up the start button
-      document.getElementById('start-btn').onclick = ()=>{
-        document.getElementById('start-container').style.display='none';
-        document.getElementById('downtime-form').style.display='block';
-        state.step = 1;
-        renderStep();
-      };
+    // 6) Wire up the start button
+    document.getElementById('start-btn').onclick = () => {
+      document.getElementById('start-container').style.display = 'none';
+      document.getElementById('downtime-form').style.display   = 'block';
+      state.step = 1;
+      renderStep();
+    };
+  })();
+  </script>
 
-    })();
-    </script>
-  </div>
+</div>
 {% endblock %}
