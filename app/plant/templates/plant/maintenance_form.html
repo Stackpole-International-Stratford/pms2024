@@ -51,7 +51,7 @@
   // 2) Wizard state
   const state = { step: 0, machine: null, category: null, subcategory: null };
 
-  // 3) Helper: add or update hidden inputs
+  // 3) Helpers to manage hidden inputs
   function addOrUpdateHidden(name, value) {
     let input = document.querySelector(`#downtime-form input[name="${name}"]`);
     if (!input) {
@@ -61,6 +61,10 @@
       document.getElementById('downtime-form').appendChild(input);
     }
     input.value = value;
+  }
+  function removeHidden(name) {
+    const input = document.querySelector(`#downtime-form input[name="${name}"]`);
+    if (input) input.remove();
   }
 
   // 4) Breadcrumb update
@@ -105,8 +109,8 @@
       const list = document.createElement('ul');
       list.id = 'machine-list';
       list.className = 'list-group mt-2';
-      // show up to 10 items, then scroll
-      list.style.maxHeight = '200px';
+      // max 10 items visible, scroll for the rest
+      list.style.maxHeight = '300px';
       list.style.overflowY = 'auto';
       container.appendChild(list);
 
@@ -137,7 +141,12 @@
       back.className = 'btn btn-secondary mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
+        // reset everything
         state.step = 0;
+        state.machine = state.category = state.subcategory = null;
+        removeHidden('machine');
+        removeHidden('category');
+        removeHidden('subcategory');
         document.getElementById('downtime-form').style.display = 'none';
         document.getElementById('start-container').style.display = 'block';
       };
@@ -178,7 +187,11 @@
       back.className = 'btn btn-secondary mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
+        // go back to machine, clear category/subcategory
         state.step = 1;
+        state.category = state.subcategory = null;
+        removeHidden('category');
+        removeHidden('subcategory');
         renderStep();
       };
       container.appendChild(back);
@@ -219,7 +232,10 @@
       back.className = 'btn btn-secondary mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
+        // go back to category, clear subcategory
         state.step = 2;
+        state.subcategory = null;
+        removeHidden('subcategory');
         renderStep();
       };
       container.appendChild(back);
@@ -256,7 +272,9 @@
       back.className = 'btn btn-secondary ms-2';
       back.textContent = 'Back';
       back.onclick = () => {
+        // clear description? not needed; clear subcategory so they can re-pick
         state.step = 3;
+        // don't remove hidden description
         renderStep();
       };
       container.appendChild(back);
