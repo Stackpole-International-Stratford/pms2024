@@ -3,12 +3,12 @@
 
 {% block content %}
 <div class="d-flex justify-content-center align-items-center min-vh-100 p-4">
-  <div class="card shadow-sm" style="max-width: 600px; width: 100%;">
+  <div class="card shadow-sm" style="max-width: 400px; width: 100%;">
     <div class="card-body">
 
       {# START BUTTON #}
       <div id="start-container" class="text-center py-5">
-        <button id="start-btn" class="btn btn-primary btn-lg">Enter downtime</button>
+        <button id="start-btn" class="btn btn-dark btn-lg">Enter downtime</button>
       </div>
 
       {# MULTI-STEP FORM (hidden until you click the button) #}
@@ -138,7 +138,7 @@
 
       const back = document.createElement('button');
       back.type = 'button';
-      back.className = 'btn btn-secondary mt-3';
+      back.className = 'btn btn-warning mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
         // reset everything
@@ -184,7 +184,7 @@
 
       const back = document.createElement('button');
       back.type = 'button';
-      back.className = 'btn btn-secondary mt-3';
+      back.className = 'btn btn-warning mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
         // go back to machine, clear category/subcategory
@@ -229,7 +229,7 @@
 
       const back = document.createElement('button');
       back.type = 'button';
-      back.className = 'btn btn-secondary mt-3';
+      back.className = 'btn btn-warning mt-3';
       back.textContent = 'Back';
       back.onclick = () => {
         // go back to category, clear subcategory
@@ -263,7 +263,7 @@
 
       const submit = document.createElement('button');
       submit.type = 'submit';
-      submit.className = 'btn btn-success';
+      submit.className = 'btn btn-dark';
       submit.textContent = 'Submit';
       container.appendChild(submit);
 
