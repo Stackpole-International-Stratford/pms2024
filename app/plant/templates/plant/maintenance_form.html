@@ -105,6 +105,9 @@
       const list = document.createElement('ul');
       list.id = 'machine-list';
       list.className = 'list-group mt-2';
+      // show up to 10 items, then scroll
+      list.style.maxHeight = '200px';
+      list.style.overflowY = 'auto';
       container.appendChild(list);
 
       function refreshList() {
