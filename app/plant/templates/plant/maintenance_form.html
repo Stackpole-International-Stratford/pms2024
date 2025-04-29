@@ -154,7 +154,6 @@
     } else if (state.step === 2) {
       downtimeCodes.forEach(c => {
         const div = document.createElement('div');
-        // added mb-3 for spacing
         div.className = 'form-check mb-3';
 
         const inp = document.createElement('input');
@@ -199,7 +198,6 @@
       const cat = downtimeCodes.find(c => c.code === state.category);
       cat.subcategories.forEach(sc => {
         const div = document.createElement('div');
-        // added mb-3 for spacing
         div.className = 'form-check mb-3';
 
         const inp = document.createElement('input');
@@ -248,15 +246,22 @@
       lbl.className = 'form-label';
       lbl.textContent = 'Describe the downtime:';
 
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.id   = 'description';
+      const inp = document.createElement('textarea');
+      inp.id = 'description';
       inp.name = 'description';
       inp.className = 'form-control';
+      inp.rows = 2;
+      inp.style.resize = 'vertical';
+      inp.maxLength = 500;
       inp.required = true;
+
+      const hint = document.createElement('small');
+      hint.className = 'form-text text-muted';
+      hint.textContent = 'Up to 500 characters.';
 
       div.appendChild(lbl);
       div.appendChild(inp);
+      div.appendChild(hint);
       container.appendChild(div);
 
       const submit = document.createElement('button');
