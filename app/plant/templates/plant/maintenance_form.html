@@ -9,42 +9,50 @@
       <div class="card-body">
         <h5 class="card-title mb-4 text-center">Downtime Entry</h5>
         <div class="row g-3 align-items-end">
+          <!-- Line selector -->
           <div class="col">
             <label for="line-select" class="form-label">Line</label>
-            <select id="line-select" class="form-select">
+            <select id="line-select" name="line" class="form-select">
               <option value="">Select Line</option>
             </select>
           </div>
+
+          <!-- Machine selector -->
           <div class="col">
             <label for="machine-select" class="form-label">Machine</label>
-            <select id="machine-select" class="form-select" disabled>
+            <select id="machine-select" name="machine" class="form-select" disabled>
               <option value="">Select Machine</option>
             </select>
           </div>
+
+          <!-- Nested Category → Subcategory dropdown -->
           <div class="col">
-            <label for="category-select" class="form-label">Category</label>
-            <select id="category-select" class="form-select" disabled>
-              <option value="">Select Category</option>
-            </select>
-          </div>
-          <div class="col">
-            <label for="subcategory-select" class="form-label">Subcategory</label>
-            <select id="subcategory-select" class="form-select" disabled>
-              <option value="">Select Subcategory</option>
-            </select>
+            <label for="category-btn" class="form-label">Category &amp; Subcategory</label>
+            <div class="dropdown">
+              <button id="category-btn"
+                      class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false">
+                Select Category
+              </button>
+              <ul id="category-menu" class="dropdown-menu w-100">
+                <!-- JS will populate categories and nested subcategories here -->
+              </ul>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    
 
+    <!-- Comment textarea, shown once a subcategory is picked -->
     <div id="description-container" class="mt-4" style="display: none;">
       <label for="description" class="form-label">Comment:</label>
       <textarea class="form-control" name="description" id="description" rows="2" maxlength="5000" required></textarea>
     </div>
 
+    <!-- Hidden inputs for category/subcategory and submit button -->
     <div class="mt-3" id="submit-container" style="display: none;">
-      <input type="hidden" name="machine" id="machine-hidden">
       <input type="hidden" name="category" id="category-hidden">
       <input type="hidden" name="subcategory" id="subcategory-hidden">
       <button type="submit" class="btn btn-dark">Submit</button>
@@ -52,116 +60,128 @@
   </form>
 </div>
 
+<!-- CSS for flying-out submenus -->
+<style>
+  .dropdown-submenu { position: relative; }
+  .dropdown-submenu:hover > .dropdown-menu { display: block; }
+  .dropdown-submenu > .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -1px;
+  }
+</style>
 
 <script>
-const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
-const prodLines = JSON.parse('{{ lines_json|escapejs }}');
+  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+  const prodLines      = JSON.parse('{{ lines_json|escapejs }}');
 
-const lineSelect = document.getElementById('line-select');
-const machineSelect = document.getElementById('machine-select');
-const categorySelect = document.getElementById('category-select');
-const subcategorySelect = document.getElementById('subcategory-select');
-const descriptionContainer = document.getElementById('description-container');
-const submitContainer = document.getElementById('submit-container');
+  const lineSelect       = document.getElementById('line-select');
+  const machineSelect    = document.getElementById('machine-select');
+  const categoryBtn      = document.getElementById('category-btn');
+  const categoryMenu     = document.getElementById('category-menu');
+  const descriptionCtr   = document.getElementById('description-container');
+  const submitCtr        = document.getElementById('submit-container');
+  const categoryHidden   = document.getElementById('category-hidden');
+  const subcategoryHidden= document.getElementById('subcategory-hidden');
 
-const machineHidden = document.getElementById('machine-hidden');
-const categoryHidden = document.getElementById('category-hidden');
-const subcategoryHidden = document.getElementById('subcategory-hidden');
+  // Populate lines
+  prodLines.forEach(line => {
+    const opt = document.createElement('option');
+    opt.value   = line.line;
+    opt.textContent = line.line;
+    lineSelect.appendChild(opt);
+  });
 
-// Populate Line dropdown
-prodLines.forEach(line => {
-  const option = document.createElement('option');
-  option.value = line.line;
-  option.textContent = line.line;
-  lineSelect.appendChild(option);
-});
+  // When line changes → load machines
+  lineSelect.addEventListener('change', () => {
+    resetMachine();
+    resetCategoryMenu();
+    hide(descriptionCtr, submitCtr);
 
-lineSelect.addEventListener('change', () => {
-  const selectedLine = lineSelect.value;
-  machineSelect.innerHTML = '<option value="">Select Machine</option>';
-  machineSelect.disabled = true;
-  categorySelect.disabled = true;
-  subcategorySelect.disabled = true;
-  descriptionContainer.style.display = 'none';
-  submitContainer.style.display = 'none';
+    if (!lineSelect.value) return;
 
-  if (!selectedLine) return;
+    const ops = prodLines.find(l => l.line === lineSelect.value).operations;
+    ops.forEach(op => {
+      op.machines.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value       = m.number;
+        opt.textContent = `${m.number} (Op ${op.op})`;
+        machineSelect.appendChild(opt);
+      });
+    });
+    machineSelect.disabled = false;
+  });
 
-  const lineObj = prodLines.find(l => l.line === selectedLine);
-  const machines = [];
-  lineObj.operations.forEach(op => {
-    op.machines.forEach(m => {
-      machines.push({ number: m.number, op: op.op });
+  // When machine changes → build category & subcategory menu
+  machineSelect.addEventListener('change', () => {
+    resetCategoryMenu();
+    hide(descriptionCtr, submitCtr);
+
+    if (!machineSelect.value) return;
+
+    downtimeCodes.forEach(cat => {
+      const li = document.createElement('li');
+      li.classList.add('dropdown-submenu');
+
+      // category toggle
+      const a = document.createElement('a');
+      a.classList.add('dropdown-item', 'dropdown-toggle');
+      a.href = '#';
+      a.textContent         = cat.name;
+      a.dataset.catCode     = cat.code;
+      li.appendChild(a);
+
+      // nested subcategory list
+      const subUl = document.createElement('ul');
+      subUl.classList.add('dropdown-menu');
+      cat.subcategories.forEach(sc => {
+        const subLi = document.createElement('li');
+        const subA  = document.createElement('a');
+        subA.classList.add('dropdown-item');
+        subA.href            = '#';
+        subA.textContent     = sc.name;
+        subA.dataset.subCode = sc.code;
+        subLi.appendChild(subA);
+        subUl.appendChild(subLi);
+      });
+      li.appendChild(subUl);
+
+      categoryMenu.appendChild(li);
     });
   });
 
-  machines.forEach(machine => {
-    const option = document.createElement('option');
-    option.value = machine.number;
-    option.textContent = `${machine.number} (Op ${machine.op})`;
-    machineSelect.appendChild(option);
+  // Handle subcategory click
+  categoryMenu.addEventListener('click', e => {
+    e.preventDefault();
+    const tgt = e.target;
+    if (tgt.matches('.dropdown-item') && tgt.dataset.subCode) {
+      // set hidden inputs
+      const parentCat = tgt.closest('.dropdown-submenu')
+                          .querySelector('.dropdown-toggle').dataset.catCode;
+      categoryHidden.value    = parentCat;
+      subcategoryHidden.value = tgt.dataset.subCode;
+
+      // update button text
+      categoryBtn.textContent = tgt.textContent;
+
+      // reveal comment + submit
+      show(descriptionCtr, submitCtr);
+    }
   });
 
-  machineSelect.disabled = false;
-});
-
-machineSelect.addEventListener('change', () => {
-  const selectedMachine = machineSelect.value;
-  categorySelect.innerHTML = '<option value="">Select Category</option>';
-  subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
-  categorySelect.disabled = true;
-  subcategorySelect.disabled = true;
-  descriptionContainer.style.display = 'none';
-  submitContainer.style.display = 'none';
-
-  if (!selectedMachine) return;
-
-  machineHidden.value = selectedMachine;
-
-  downtimeCodes.forEach(cat => {
-    const option = document.createElement('option');
-    option.value = cat.code;
-    option.textContent = cat.name;
-    categorySelect.appendChild(option);
-  });
-
-  categorySelect.disabled = false;
-});
-
-categorySelect.addEventListener('change', () => {
-  const selectedCategory = categorySelect.value;
-  subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
-  subcategorySelect.disabled = true;
-  descriptionContainer.style.display = 'none';
-  submitContainer.style.display = 'none';
-
-  if (!selectedCategory) return;
-
-  categoryHidden.value = selectedCategory;
-
-  const category = downtimeCodes.find(c => c.code === selectedCategory);
-  category.subcategories.forEach(sc => {
-    const option = document.createElement('option');
-    option.value = sc.code;
-    option.textContent = sc.name;
-    subcategorySelect.appendChild(option);
-  });
-
-  subcategorySelect.disabled = false;
-});
-
-subcategorySelect.addEventListener('change', () => {
-  const selectedSubcategory = subcategorySelect.value;
-
-  if (!selectedSubcategory) {
-    descriptionContainer.style.display = 'none';
-    submitContainer.style.display = 'none';
-    return;
+  function resetMachine() {
+    machineSelect.innerHTML = '<option value=\"\">Select Machine</option>';
+    machineSelect.disabled  = true;
   }
-
-  subcategoryHidden.value = selectedSubcategory;
-  descriptionContainer.style.display = 'block';
-  submitContainer.style.display = 'block';
-});
+  function resetCategoryMenu() {
+    categoryBtn.textContent = 'Select Category';
+    categoryMenu.innerHTML  = '';
+  }
+  function hide(...els) {
+    els.forEach(el => el.style.display = 'none');
+  }
+  function show(...els) {
+    els.forEach(el => el.style.display = 'block');
+  }
 </script>
 {% endblock %}
