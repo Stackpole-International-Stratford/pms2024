@@ -88,6 +88,24 @@
 </div>
 
 <style>
+  /* cap the card width to the viewport */
+  #maintenance-form .card {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+  }
+
+  /* on phones, make it full-width and block-level */
+  @media (max-width: 576px) {
+    #maintenance-form .card {
+      display: block;
+      width: 100%;
+    }
+  }
+</style>
+
+
+<style>
   .form-label {
     margin-bottom: .25rem;
   }
