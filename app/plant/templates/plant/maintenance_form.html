@@ -1,295 +1,160 @@
-{# /home/tcareless/pms2024/app/plant/templates/plant/maintenance_form.html #}
 {% extends "parent.html" %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center p-4"
-     style="min-height: calc(100vh - 100px);">
-  <div class="card shadow-sm" style="max-width: 400px; width: 100%;">
-    <div class="card-body">
+<div class="container py-5">
+  <form id="downtime-form" method="POST">
+    {% csrf_token %}
 
-      {# START BUTTON #}
-      <div id="start-container" class="text-center py-5">
-        <button id="start-btn" class="btn btn-dark btn-lg">Enter downtime</button>
+    <div class="row g-3 align-items-end">
+      <div class="col">
+        <label for="line-select" class="form-label">Line</label>
+        <select id="line-select" class="form-select">
+          <option value="">Select Line</option>
+        </select>
       </div>
-
-      {# MULTI-STEP FORM (hidden until you click the button) #}
-      <form id="downtime-form" method="POST" style="display: none;">
-        {% csrf_token %}
-        <nav aria-label="breadcrumb" class="mt-3">
-          <ol class="breadcrumb" id="breadcrumb"></ol>
-        </nav>
-        <div id="form-steps" class="mt-3"></div>
-      </form>
-
+      <div class="col">
+        <label for="machine-select" class="form-label">Machine</label>
+        <select id="machine-select" class="form-select" disabled>
+          <option value="">Select Machine</option>
+        </select>
+      </div>
+      <div class="col">
+        <label for="category-select" class="form-label">Category</label>
+        <select id="category-select" class="form-select" disabled>
+          <option value="">Select Category</option>
+        </select>
+      </div>
+      <div class="col">
+        <label for="subcategory-select" class="form-label">Subcategory</label>
+        <select id="subcategory-select" class="form-select" disabled>
+          <option value="">Select Subcategory</option>
+        </select>
+      </div>
     </div>
-  </div>
+
+    <div id="description-container" class="mt-4" style="display: none;">
+      <label for="description" class="form-label">Describe the downtime</label>
+      <textarea class="form-control" name="description" id="description" rows="2" maxlength="500" required></textarea>
+    </div>
+
+    <div class="mt-3" id="submit-container" style="display: none;">
+      <input type="hidden" name="machine" id="machine-hidden">
+      <input type="hidden" name="category" id="category-hidden">
+      <input type="hidden" name="subcategory" id="subcategory-hidden">
+      <button type="submit" class="btn btn-dark">Submit</button>
+    </div>
+  </form>
 </div>
 
-{# embed JSON data #}
 <script>
-  const downtimeCodes = JSON.parse('{{ downtime_codes_json }}');
-  const prodLines     = JSON.parse('{{ lines_json }}');
-</script>
+const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+const prodLines = JSON.parse('{{ lines_json|escapejs }}');
 
-<script>
-(function(){
-  // 1) Flatten all machines into a single list
-  const allMachines = [];
-  prodLines.forEach(line => {
-    line.operations.forEach(op => {
-      op.machines.forEach(m => {
-        allMachines.push({
-          number:      m.number,
-          line:        line.line,
-          op:          op.op,
-          target:      m.target,
-          partNumbers: m.part_numbers || []
-        });
-      });
+const lineSelect = document.getElementById('line-select');
+const machineSelect = document.getElementById('machine-select');
+const categorySelect = document.getElementById('category-select');
+const subcategorySelect = document.getElementById('subcategory-select');
+const descriptionContainer = document.getElementById('description-container');
+const submitContainer = document.getElementById('submit-container');
+
+const machineHidden = document.getElementById('machine-hidden');
+const categoryHidden = document.getElementById('category-hidden');
+const subcategoryHidden = document.getElementById('subcategory-hidden');
+
+// Populate Line dropdown
+prodLines.forEach(line => {
+  const option = document.createElement('option');
+  option.value = line.line;
+  option.textContent = line.line;
+  lineSelect.appendChild(option);
+});
+
+lineSelect.addEventListener('change', () => {
+  const selectedLine = lineSelect.value;
+  machineSelect.innerHTML = '<option value="">Select Machine</option>';
+  machineSelect.disabled = true;
+  categorySelect.disabled = true;
+  subcategorySelect.disabled = true;
+  descriptionContainer.style.display = 'none';
+  submitContainer.style.display = 'none';
+
+  if (!selectedLine) return;
+
+  const lineObj = prodLines.find(l => l.line === selectedLine);
+  const machines = [];
+  lineObj.operations.forEach(op => {
+    op.machines.forEach(m => {
+      machines.push({ number: m.number, op: op.op });
     });
   });
 
-  // 2) Wizard state
-  const state = { step: 0, machine: null, category: null, subcategory: null };
+  machines.forEach(machine => {
+    const option = document.createElement('option');
+    option.value = machine.number;
+    option.textContent = `${machine.number} (Op ${machine.op})`;
+    machineSelect.appendChild(option);
+  });
 
-  // 3) Helpers to manage hidden inputs
-  function addOrUpdateHidden(name, value) {
-    let input = document.querySelector(`#downtime-form input[name="${name}"]`);
-    if (!input) {
-      input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      document.getElementById('downtime-form').appendChild(input);
-    }
-    input.value = value;
-  }
-  function removeHidden(name) {
-    const input = document.querySelector(`#downtime-form input[name="${name}"]`);
-    if (input) input.remove();
-  }
+  machineSelect.disabled = false;
+});
 
-  // 4) Breadcrumb update
-  function updateBreadcrumb() {
-    const bc = document.getElementById('breadcrumb');
-    bc.innerHTML = '';
-    const crumbs = [];
-    if (state.machine)     crumbs.push({ label: state.machine.number });
-    if (state.category)    crumbs.push({ label: downtimeCodes.find(c => c.code === state.category).name });
-    if (state.subcategory) crumbs.push({
-      label: downtimeCodes
-               .find(c => c.code === state.category)
-               .subcategories.find(s => s.code === state.subcategory)
-               .name
-    });
+machineSelect.addEventListener('change', () => {
+  const selectedMachine = machineSelect.value;
+  categorySelect.innerHTML = '<option value="">Select Category</option>';
+  subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+  categorySelect.disabled = true;
+  subcategorySelect.disabled = true;
+  descriptionContainer.style.display = 'none';
+  submitContainer.style.display = 'none';
 
-    crumbs.forEach((crumb, i) => {
-      const li = document.createElement('li');
-      li.className = i === crumbs.length - 1
-        ? 'breadcrumb-item active'
-        : 'breadcrumb-item';
-      if (i === crumbs.length - 1) li.setAttribute('aria-current', 'page');
-      li.textContent = crumb.label;
-      bc.appendChild(li);
-    });
-  }
+  if (!selectedMachine) return;
 
-  // 5) Render each step
-  function renderStep() {
-    const container = document.getElementById('form-steps');
-    container.innerHTML = '';
-    updateBreadcrumb();
+  machineHidden.value = selectedMachine;
 
-    // STEP 1: MACHINE SELECTION
-    if (state.step === 1) {
-      const search = document.createElement('input');
-      search.id = 'machine-search';
-      search.className = 'form-control';
-      search.placeholder = 'Search machines...';
-      container.appendChild(search);
+  downtimeCodes.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat.code;
+    option.textContent = cat.name;
+    categorySelect.appendChild(option);
+  });
 
-      const list = document.createElement('ul');
-      list.id = 'machine-list';
-      list.className = 'list-group mt-2';
-      list.style.maxHeight = '300px';
-      list.style.overflowY = 'auto';
-      container.appendChild(list);
+  categorySelect.disabled = false;
+});
 
-      function refreshList() {
-        const term = search.value.trim().toUpperCase();
-        list.innerHTML = '';
-        allMachines
-          .filter(m => m.number.toUpperCase().includes(term))
-          .forEach(m => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item list-group-item-action';
-            li.textContent = `${m.number} (${m.line} – Op ${m.op})`;
-            li.onclick = () => {
-              state.machine = m;
-              addOrUpdateHidden('machine', m.number);
-              state.step = 2;
-              renderStep();
-            };
-            list.appendChild(li);
-          });
-      }
+categorySelect.addEventListener('change', () => {
+  const selectedCategory = categorySelect.value;
+  subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+  subcategorySelect.disabled = true;
+  descriptionContainer.style.display = 'none';
+  submitContainer.style.display = 'none';
 
-      search.addEventListener('input', refreshList);
-      refreshList();
+  if (!selectedCategory) return;
 
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'btn btn-warning mt-3';
-      back.textContent = 'Back';
-      back.onclick = () => {
-        state.step = 0;
-        state.machine = state.category = state.subcategory = null;
-        removeHidden('machine');
-        removeHidden('category');
-        removeHidden('subcategory');
-        document.getElementById('downtime-form').style.display = 'none';
-        document.getElementById('start-container').style.display = 'block';
-      };
-      container.appendChild(back);
+  categoryHidden.value = selectedCategory;
 
-    // STEP 2: CATEGORY SELECTION
-    } else if (state.step === 2) {
-      downtimeCodes.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'form-check mb-3';
+  const category = downtimeCodes.find(c => c.code === selectedCategory);
+  category.subcategories.forEach(sc => {
+    const option = document.createElement('option');
+    option.value = sc.code;
+    option.textContent = sc.name;
+    subcategorySelect.appendChild(option);
+  });
 
-        const inp = document.createElement('input');
-        inp.className = 'form-check-input';
-        inp.type = 'radio';
-        inp.name = 'category';
-        inp.id   = `cat-${c.code}`;
-        inp.value= c.code;
-        if (state.category === c.code) inp.checked = true;
-        inp.onchange = () => {
-          state.category = c.code;
-          addOrUpdateHidden('category', c.code);
-          state.step = 3;
-          renderStep();
-        };
+  subcategorySelect.disabled = false;
+});
 
-        const lbl = document.createElement('label');
-        lbl.className = 'form-check-label';
-        lbl.htmlFor = inp.id;
-        lbl.textContent = c.name;
+subcategorySelect.addEventListener('change', () => {
+  const selectedSubcategory = subcategorySelect.value;
 
-        div.appendChild(inp);
-        div.appendChild(lbl);
-        container.appendChild(div);
-      });
-
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'btn btn-warning mt-3';
-      back.textContent = 'Back';
-      back.onclick = () => {
-        state.step = 1;
-        state.category = state.subcategory = null;
-        removeHidden('category');
-        removeHidden('subcategory');
-        renderStep();
-      };
-      container.appendChild(back);
-
-    // STEP 3: SUB-CATEGORY SELECTION
-    } else if (state.step === 3) {
-      const cat = downtimeCodes.find(c => c.code === state.category);
-      cat.subcategories.forEach(sc => {
-        const div = document.createElement('div');
-        div.className = 'form-check mb-3';
-
-        const inp = document.createElement('input');
-        inp.className = 'form-check-input';
-        inp.type = 'radio';
-        inp.name = 'subcategory';
-        inp.id   = `subcat-${sc.code}`;
-        inp.value= sc.code;
-        if (state.subcategory === sc.code) inp.checked = true;
-        inp.onchange = () => {
-          state.subcategory = sc.code;
-          addOrUpdateHidden('subcategory', sc.code);
-          state.step = 4;
-          renderStep();
-        };
-
-        const lbl = document.createElement('label');
-        lbl.className = 'form-check-label';
-        lbl.htmlFor = inp.id;
-        lbl.textContent = sc.name;
-
-        div.appendChild(inp);
-        div.appendChild(lbl);
-        container.appendChild(div);
-      });
-
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'btn btn-warning mt-3';
-      back.textContent = 'Back';
-      back.onclick = () => {
-        state.step = 2;
-        state.subcategory = null;
-        removeHidden('subcategory');
-        renderStep();
-      };
-      container.appendChild(back);
-
-    // STEP 4: DESCRIPTION + SUBMIT
-    } else if (state.step === 4) {
-      const div = document.createElement('div');
-      div.className = 'mb-3';
-
-      const lbl = document.createElement('label');
-      lbl.htmlFor = 'description';
-      lbl.className = 'form-label';
-      lbl.textContent = 'Describe the downtime:';
-
-      const inp = document.createElement('textarea');
-      inp.id = 'description';
-      inp.name = 'description';
-      inp.className = 'form-control';
-      inp.rows = 2;
-      inp.style.resize = 'vertical';
-      inp.maxLength = 500;
-      inp.required = true;
-
-      const hint = document.createElement('small');
-      hint.className = 'form-text text-muted';
-      hint.textContent = 'Up to 500 characters.';
-
-      div.appendChild(lbl);
-      div.appendChild(inp);
-      div.appendChild(hint);
-      container.appendChild(div);
-
-      const submit = document.createElement('button');
-      submit.type = 'submit';
-      submit.className = 'btn btn-dark';
-      submit.textContent = 'Submit';
-      container.appendChild(submit);
-
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'btn btn-secondary ms-2';
-      back.textContent = 'Back';
-      back.onclick = () => {
-        state.step = 3;
-        renderStep();
-      };
-      container.appendChild(back);
-    }
+  if (!selectedSubcategory) {
+    descriptionContainer.style.display = 'none';
+    submitContainer.style.display = 'none';
+    return;
   }
 
-  // 6) Wire up the start button
-  document.getElementById('start-btn').onclick = () => {
-    document.getElementById('start-container').style.display = 'none';
-    document.getElementById('downtime-form').style.display   = 'block';
-    state.step = 1;
-    renderStep();
-  };
-})();
+  subcategoryHidden.value = selectedSubcategory;
+  descriptionContainer.style.display = 'block';
+  submitContainer.style.display = 'block';
+});
 </script>
 {% endblock %}

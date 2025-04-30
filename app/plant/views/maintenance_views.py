@@ -70,18 +70,14 @@ DOWNTIME_CODES = [
 ]
 
 
+
 def maintenance_form(request: HttpRequest) -> HttpResponse:
-    """
-    GET:  render the form shell, embedding downtime_codes + prod_lines as JSON
-    POST: echo back submitted values
-    """
     if request.method == 'POST':
         machine     = request.POST.get('machine')
         category    = request.POST.get('category')
         subcategory = request.POST.get('subcategory')
         description = request.POST.get('description')
 
-        # for now, just print what was submitted
         return HttpResponse(f"""
             <h1>Submission Received</h1>
             <p><strong>Machine:</strong> {machine}</p>
@@ -91,10 +87,8 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             <p><a href="">Log another downtime</a></p>
         """)
 
-    # GET: embed module-level DOWNTIME_CODES
     context = {
-        'message': 'Hello, world! This is the maintenance form.',
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
-        'lines_json':           mark_safe(json.dumps(prod_lines)),
+        'lines_json': mark_safe(json.dumps(prod_lines)),
     }
     return render(request, 'plant/maintenance_form.html', context)
