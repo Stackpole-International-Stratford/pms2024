@@ -1,0 +1,194 @@
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container-fluid py-5">
+  <form id="maintenance-form" method="POST">
+    {% csrf_token %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-4 text-center">Maintenance Entry</h5>
+
+        <!-- HORIZONTAL, NO-WRAP selects that flexibly fill available space -->
+        <div class="d-flex flex-nowrap align-items-start gap-3">
+          <!-- Line -->
+          <div class="flex-fill">
+            <label for="line-select" class="form-label">Line</label>
+            <select id="line-select" name="line" class="form-select">
+              <option value="">Select Line</option>
+            </select>
+          </div>
+
+          <!-- Machine -->
+          <div class="flex-fill">
+            <label for="machine-select" class="form-label">Machine</label>
+            <select id="machine-select" name="machine" class="form-select" disabled>
+              <option value="">Select Machine</option>
+            </select>
+          </div>
+
+          <!-- Category -->
+          <div id="category-container" class="flex-fill" style="display: none;">
+            <label for="category-select" class="form-label">Category</label>
+            <select id="category-select" name="category" class="form-select" disabled>
+              <option value="">Select Category</option>
+            </select>
+          </div>
+
+          <!-- Subcategory -->
+          <div id="subcategory-container" class="flex-fill" style="display: none;">
+            <label for="subcategory-select" class="form-label">Subcategory</label>
+            <select id="subcategory-select" name="subcategory" class="form-select" disabled>
+              <option value="">Select Subcategory</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Comment -->
+        <div class="mt-3" id="description-container" style="display: none;">
+          <label for="description" class="form-label">Comment:</label>
+          <textarea id="description" name="description"
+                    class="form-control" rows="2" maxlength="5000" required></textarea>
+        </div>
+
+        <!-- Submit -->
+        <div class="mt-3 text-end" id="submit-container" style="display: none;">
+          <button type="submit" class="btn btn-dark">Submit</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<style>
+  .form-label {
+    margin-bottom: .25rem;
+  }
+   /* override Bootstrap’s full‐width selects so they size to their content */
+   #maintenance-form .form-select {
+    width: auto !important;
+    min-width: 150px;
+  }
+  /* ensure the card itself shrinks or grows with its content */
+  #maintenance-form .card {
+    display: inline-block;
+    width: auto;
+  }
+</style>
+
+<script>
+  // Data from view
+  const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
+  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+
+  // Element refs
+  const lineSelect        = document.getElementById('line-select');
+  const machineSelect     = document.getElementById('machine-select');
+  const categorySelect    = document.getElementById('category-select');
+  const subcategorySelect = document.getElementById('subcategory-select');
+
+  const categoryContainer    = document.getElementById('category-container');
+  const subcategoryContainer = document.getElementById('subcategory-container');
+  const descCtr              = document.getElementById('description-container');
+  const submitCtr            = document.getElementById('submit-container');
+
+  // Initialize Choices.js
+  const lineChoice = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
+  // Disable sorting so our groups stay in the order we supply them
+  const machineChoice = new Choices(machineSelect,   { searchEnabled: false, itemSelectText: '', shouldSort: false });
+  const categoryChoice = new Choices(categorySelect, { searchEnabled: false, itemSelectText: '' });
+  const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
+
+  function hide(...els) { els.forEach(el => el.style.display = 'none'); }
+  function show(...els) { els.forEach(el => el.style.display = 'block'); }
+
+  // Initial state
+  hide(categoryContainer, subcategoryContainer, descCtr, submitCtr);
+  machineChoice.disable();
+  categoryChoice.disable();
+  subcategoryChoice.disable();
+
+  // 1) Populate Line
+  lineChoice.setChoices(
+    prodLines.map(l => ({ value: l.line, label: l.line })),
+    'value',
+    'label',
+    true
+  );
+
+  // 2) Line → Machine (grouped by operation)
+  lineSelect.addEventListener('change', () => {
+    const line = lineSelect.value;
+    machineChoice.clearChoices().disable();
+    categoryChoice.clearChoices().disable();
+    subcategoryChoice.clearChoices().disable();
+    hide(categoryContainer, subcategoryContainer, descCtr, submitCtr);
+
+    if (!line) return;
+
+    const lineObj = prodLines.find(l => l.line === line);
+
+    // Build optgroup-style groups for each operation
+    const machineGroups = lineObj.operations.map(op => ({
+      label: `Op ${op.op}`,
+      choices: op.machines.map(m => ({
+        value: m.number,
+        label: `${m.number}`
+      }))
+    }));
+
+    machineChoice.setChoices(machineGroups, 'value', 'label', true);
+    machineChoice.enable().showDropdown();
+    show(machineSelect.parentElement); // in case the <select> was hidden
+  });
+
+  // 3) Machine → Category
+  machineSelect.addEventListener('change', () => {
+    const machine = machineSelect.value;
+    categoryChoice.clearChoices().disable();
+    subcategoryChoice.clearChoices().disable();
+    hide(subcategoryContainer, descCtr, submitCtr);
+
+    if (!machine) return;
+
+    const cats = downtimeCodes.map(cat => ({
+      value: cat.code,
+      label: cat.name
+    }));
+
+    categoryChoice.setChoices(cats, 'value', 'label', true);
+    categoryChoice.enable().showDropdown();
+    show(categoryContainer);
+  });
+
+  // 4) Category → Subcategory
+  categorySelect.addEventListener('change', () => {
+    const catCode = categorySelect.value;
+    subcategoryChoice.clearChoices().disable();
+    hide(descCtr, submitCtr);
+
+    if (!catCode) return;
+
+    const subcats = downtimeCodes
+      .find(c => c.code === catCode)
+      .subcategories.map(sc => ({
+        value: sc.code,
+        label: sc.name
+      }));
+
+    subcategoryChoice.setChoices(subcats, 'value', 'label', true);
+    subcategoryChoice.enable().showDropdown();
+    show(subcategoryContainer);
+  });
+
+  // 5) Subcategory → Comment & Submit
+  subcategorySelect.addEventListener('change', () => {
+    if (subcategorySelect.value) {
+      show(descCtr, submitCtr);
+      document.getElementById('description').focus();
+    } else {
+      hide(descCtr, submitCtr);
+    }
+  });
+</script>
+
+{% endblock %}
