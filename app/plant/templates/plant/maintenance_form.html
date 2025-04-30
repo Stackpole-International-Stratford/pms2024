@@ -5,35 +5,39 @@
   <form id="downtime-form" method="POST">
     {% csrf_token %}
 
-    <div class="row g-3 align-items-end">
-      <div class="col">
-        <label for="line-select" class="form-label">Line</label>
-        <select id="line-select" class="form-select">
-          <option value="">Select Line</option>
-        </select>
-      </div>
-      <div class="col">
-        <label for="machine-select" class="form-label">Machine</label>
-        <select id="machine-select" class="form-select" disabled>
-          <option value="">Select Machine</option>
-        </select>
-      </div>
-      <div class="col">
-        <label for="category-select" class="form-label">Category</label>
-        <select id="category-select" class="form-select" disabled>
-          <option value="">Select Category</option>
-        </select>
-      </div>
-      <div class="col">
-        <label for="subcategory-select" class="form-label">Subcategory</label>
-        <select id="subcategory-select" class="form-select" disabled>
-          <option value="">Select Subcategory</option>
-        </select>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col">
+            <label for="line-select" class="form-label">Line</label>
+            <select id="line-select" class="form-select">
+              <option value="">Select Line</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="machine-select" class="form-label">Machine</label>
+            <select id="machine-select" class="form-select" disabled>
+              <option value="">Select Machine</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="category-select" class="form-label">Category</label>
+            <select id="category-select" class="form-select" disabled>
+              <option value="">Select Category</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="subcategory-select" class="form-label">Subcategory</label>
+            <select id="subcategory-select" class="form-select" disabled>
+              <option value="">Select Subcategory</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
 
     <div id="description-container" class="mt-4" style="display: none;">
-      <label for="description" class="form-label">Describe the downtime</label>
+      <label for="description" class="form-label">Comment:</label>
       <textarea class="form-control" name="description" id="description" rows="2" maxlength="500" required></textarea>
     </div>
 
@@ -45,6 +49,7 @@
     </div>
   </form>
 </div>
+
 
 <script>
 const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
