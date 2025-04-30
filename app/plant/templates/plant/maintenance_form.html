@@ -50,10 +50,20 @@
                     class="form-control" rows="2" maxlength="5000" required></textarea>
         </div>
 
+        <!-- Start Date & Time -->
+        <div class="mt-3" id="datetime-container" style="display: none;">
+          <label for="start-date" class="form-label">Start Date:</label>
+          <input type="date" id="start-date" name="start_date" class="form-control" required>
+
+          <label for="start-time" class="form-label mt-2">Start Time:</label>
+          <input type="time" id="start-time" name="start_time" class="form-control" required>
+        </div>
+
         <!-- Submit -->
         <div class="mt-3 text-end" id="submit-container" style="display: none;">
           <button type="submit" class="btn btn-dark">Submit</button>
         </div>
+
       </div>
     </div>
   </form>
@@ -63,8 +73,8 @@
   .form-label {
     margin-bottom: .25rem;
   }
-   /* override Bootstrap’s full‐width selects so they size to their content */
-   #maintenance-form .form-select {
+  /* override Bootstrap’s full‐width selects so they size to their content */
+  #maintenance-form .form-select {
     width: auto !important;
     min-width: 150px;
   }
@@ -89,20 +99,23 @@
   const categoryContainer    = document.getElementById('category-container');
   const subcategoryContainer = document.getElementById('subcategory-container');
   const descCtr              = document.getElementById('description-container');
+  const datetimeCtr          = document.getElementById('datetime-container');
   const submitCtr            = document.getElementById('submit-container');
 
+  const dateInput            = document.getElementById('start-date');
+  const timeInput            = document.getElementById('start-time');
+
   // Initialize Choices.js
-  const lineChoice = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
-  // Disable sorting so our groups stay in the order we supply them
-  const machineChoice = new Choices(machineSelect,   { searchEnabled: false, itemSelectText: '', shouldSort: false });
-  const categoryChoice = new Choices(categorySelect, { searchEnabled: false, itemSelectText: '' });
+  const lineChoice        = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
+  const machineChoice     = new Choices(machineSelect,     { searchEnabled: false, itemSelectText: '', shouldSort: false });
+  const categoryChoice    = new Choices(categorySelect,    { searchEnabled: false, itemSelectText: '' });
   const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
 
   function hide(...els) { els.forEach(el => el.style.display = 'none'); }
   function show(...els) { els.forEach(el => el.style.display = 'block'); }
 
   // Initial state
-  hide(categoryContainer, subcategoryContainer, descCtr, submitCtr);
+  hide(categoryContainer, subcategoryContainer, descCtr, datetimeCtr, submitCtr);
   machineChoice.disable();
   categoryChoice.disable();
   subcategoryChoice.disable();
@@ -121,24 +134,19 @@
     machineChoice.clearChoices().disable();
     categoryChoice.clearChoices().disable();
     subcategoryChoice.clearChoices().disable();
-    hide(categoryContainer, subcategoryContainer, descCtr, submitCtr);
+    hide(categoryContainer, subcategoryContainer, descCtr, datetimeCtr, submitCtr);
 
     if (!line) return;
 
     const lineObj = prodLines.find(l => l.line === line);
 
-    // Build optgroup-style groups for each operation
     const machineGroups = lineObj.operations.map(op => ({
       label: `Op ${op.op}`,
-      choices: op.machines.map(m => ({
-        value: m.number,
-        label: `${m.number}`
-      }))
+      choices: op.machines.map(m => ({ value: m.number, label: `${m.number}` }))
     }));
 
     machineChoice.setChoices(machineGroups, 'value', 'label', true);
     machineChoice.enable().showDropdown();
-    show(machineSelect.parentElement); // in case the <select> was hidden
   });
 
   // 3) Machine → Category
@@ -146,7 +154,7 @@
     const machine = machineSelect.value;
     categoryChoice.clearChoices().disable();
     subcategoryChoice.clearChoices().disable();
-    hide(subcategoryContainer, descCtr, submitCtr);
+    hide(subcategoryContainer, descCtr, datetimeCtr, submitCtr);
 
     if (!machine) return;
 
@@ -164,7 +172,7 @@
   categorySelect.addEventListener('change', () => {
     const catCode = categorySelect.value;
     subcategoryChoice.clearChoices().disable();
-    hide(descCtr, submitCtr);
+    hide(descCtr, datetimeCtr, submitCtr);
 
     if (!catCode) return;
 
@@ -180,15 +188,22 @@
     show(subcategoryContainer);
   });
 
-  // 5) Subcategory → Comment & Submit
+  // 5) Subcategory → Comment, Date/Time & Submit
   subcategorySelect.addEventListener('change', () => {
-    if (subcategorySelect.value) {
-      show(descCtr, submitCtr);
-      document.getElementById('description').focus();
-    } else {
-      hide(descCtr, submitCtr);
+    if (!subcategorySelect.value) {
+      hide(descCtr, datetimeCtr, submitCtr);
+      return;
     }
+
+    // set defaults for date & time
+    const now = new Date();
+    // YYYY-MM-DD
+    dateInput.value = now.toISOString().substring(0,10);
+    // HH:MM (24‐hour)
+    timeInput.value = now.toTimeString().substring(0,5);
+
+    show(descCtr, datetimeCtr, submitCtr);
+    document.getElementById('description').focus();
   });
 </script>
-
 {% endblock %}

@@ -78,17 +78,31 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         subcategory = request.POST.get('subcategory')
         description = request.POST.get('description')
 
+        # grab the start date & time from the form
+        start_date = request.POST.get('start_date')   # e.g. "2025-04-30"
+        start_time = request.POST.get('start_time')   # e.g. "14:23"
+
+        # combine into a naive datetime, then make it timezone-aware
+        dt_str    = f"{start_date} {start_time}"
+        dt_naive  = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+        dt_aware  = timezone.make_aware(dt_naive, timezone.get_current_timezone())
+
+        # convert to UNIX epoch (seconds since 1970-01-01 UTC)
+        epoch_ts = int(dt_aware.timestamp())
+
         return HttpResponse(f"""
             <h1>Submission Received</h1>
             <p><strong>Machine:</strong> {machine}</p>
             <p><strong>Category:</strong> {category}</p>
             <p><strong>Sub-category:</strong> {subcategory}</p>
             <p><strong>Description:</strong> {description}</p>
+            <p><strong>Downtime Start (epoch):</strong> {epoch_ts}</p>
             <p><a href="">Log another downtime</a></p>
         """)
 
+    # GET – render the form
     context = {
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
-        'lines_json': mark_safe(json.dumps(prod_lines)),
+        'lines_json':          mark_safe(json.dumps(prod_lines)),
     }
     return render(request, 'plant/maintenance_form.html', context)
