@@ -43,12 +43,40 @@
           </div>
         </div>
 
-        <!-- Comment -->
+        <!-- Comment + Start Date/Time -->
         <div class="mt-3" id="description-container" style="display: none;">
-          <label for="description" class="form-label">Comment:</label>
-          <textarea id="description" name="description"
-                    class="form-control" rows="2" maxlength="5000" required></textarea>
+          <div class="row g-2">
+            <!-- Start Date -->
+            <div class="col">
+              <label for="start-date" class="form-label">Start Date</label>
+              <input type="date"
+                    id="start-date"
+                    name="start_date"
+                    class="form-control"
+                    required>
+            </div>
+            <!-- Start Time -->
+            <div class="col">
+              <label for="start-time" class="form-label">Start Time</label>
+              <input type="time"
+                    id="start-time"
+                    name="start_time"
+                    class="form-control"
+                    required>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label for="description" class="form-label">Comment:</label>
+            <textarea id="description"
+                      name="description"
+                      class="form-control"
+                      rows="2"
+                      maxlength="5000"
+                      required></textarea>
+          </div>
         </div>
+
 
         <!-- Submit -->
         <div class="mt-3 text-end" id="submit-container" style="display: none;">
@@ -85,6 +113,10 @@
   const machineSelect     = document.getElementById('machine-select');
   const categorySelect    = document.getElementById('category-select');
   const subcategorySelect = document.getElementById('subcategory-select');
+  
+  // New refs for date/time
+  const startDateInput    = document.getElementById('start-date');
+  const startTimeInput    = document.getElementById('start-time');
 
   const categoryContainer    = document.getElementById('category-container');
   const subcategoryContainer = document.getElementById('subcategory-container');
@@ -92,14 +124,23 @@
   const submitCtr            = document.getElementById('submit-container');
 
   // Initialize Choices.js
-  const lineChoice = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
-  // Disable sorting so our groups stay in the order we supply them
-  const machineChoice = new Choices(machineSelect,   { searchEnabled: false, itemSelectText: '', shouldSort: false });
-  const categoryChoice = new Choices(categorySelect, { searchEnabled: false, itemSelectText: '' });
+  const lineChoice        = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
+  const machineChoice     = new Choices(machineSelect,     { searchEnabled: false, itemSelectText: '', shouldSort: false });
+  const categoryChoice    = new Choices(categorySelect,    { searchEnabled: false, itemSelectText: '' });
   const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
 
+  // Utility to hide/show
   function hide(...els) { els.forEach(el => el.style.display = 'none'); }
   function show(...els) { els.forEach(el => el.style.display = 'block'); }
+
+  // Populate date/time defaults
+  function setDefaultDateTime() {
+    const now = new Date();
+    // yyyy-mm-dd
+    startDateInput.value = now.toISOString().slice(0,10);
+    // HH:MM
+    startTimeInput.value = now.toTimeString().slice(0,5);
+  }
 
   // Initial state
   hide(categoryContainer, subcategoryContainer, descCtr, submitCtr);
@@ -126,19 +167,14 @@
     if (!line) return;
 
     const lineObj = prodLines.find(l => l.line === line);
-
-    // Build optgroup-style groups for each operation
     const machineGroups = lineObj.operations.map(op => ({
       label: `Op ${op.op}`,
-      choices: op.machines.map(m => ({
-        value: m.number,
-        label: `${m.number}`
-      }))
+      choices: op.machines.map(m => ({ value: m.number, label: `${m.number}` }))
     }));
 
     machineChoice.setChoices(machineGroups, 'value', 'label', true);
     machineChoice.enable().showDropdown();
-    show(machineSelect.parentElement); // in case the <select> was hidden
+    show(machineSelect.parentElement);
   });
 
   // 3) Machine → Category
@@ -150,11 +186,7 @@
 
     if (!machine) return;
 
-    const cats = downtimeCodes.map(cat => ({
-      value: cat.code,
-      label: cat.name
-    }));
-
+    const cats = downtimeCodes.map(cat => ({ value: cat.code, label: cat.name }));
     categoryChoice.setChoices(cats, 'value', 'label', true);
     categoryChoice.enable().showDropdown();
     show(categoryContainer);
@@ -170,19 +202,17 @@
 
     const subcats = downtimeCodes
       .find(c => c.code === catCode)
-      .subcategories.map(sc => ({
-        value: sc.code,
-        label: sc.name
-      }));
+      .subcategories.map(sc => ({ value: sc.code, label: sc.name }));
 
     subcategoryChoice.setChoices(subcats, 'value', 'label', true);
     subcategoryChoice.enable().showDropdown();
     show(subcategoryContainer);
   });
 
-  // 5) Subcategory → Comment & Submit
+  // 5) Subcategory → Date/Time defaults + Comment & Submit
   subcategorySelect.addEventListener('change', () => {
     if (subcategorySelect.value) {
+      setDefaultDateTime();
       show(descCtr, submitCtr);
       document.getElementById('description').focus();
     } else {
@@ -190,5 +220,6 @@
     }
   });
 </script>
+
 
 {% endblock %}
