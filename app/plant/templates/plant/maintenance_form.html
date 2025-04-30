@@ -8,9 +8,9 @@
       <div class="card-body">
         <h5 class="card-title mb-4 text-center">Downtime Entry</h5>
 
-        <!-- FLEX ROW: Line, Machine, then Category submenu -->
+        <!-- HORIZONTAL, NO-WRAP selects -->
         <div class="d-flex flex-nowrap align-items-start gap-2">
-          <!-- Line select -->
+          <!-- Line -->
           <div class="flex-shrink-0">
             <label for="line-select" class="form-label">Line</label>
             <select id="line-select" name="line"
@@ -19,7 +19,7 @@
             </select>
           </div>
 
-          <!-- Machine select -->
+          <!-- Machine -->
           <div class="flex-shrink-0">
             <label for="machine-select" class="form-label">Machine</label>
             <select id="machine-select" name="machine"
@@ -28,35 +28,34 @@
             </select>
           </div>
 
-          <!-- Category→Subcategory dropdown -->
-          <div id="category-dropdown-container" class="flex-shrink-0" style="display: none;">
-            <label class="form-label d-block mb-1">Category &amp; Subcategory</label>
-            <div class="dropdown">
-              <button id="categoryDropdownBtn"
-                      class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false">
-                Select…
-              </button>
-              <ul id="categoryDropdownMenu" class="dropdown-menu">
-                <!-- JS will inject nested menus here -->
-              </ul>
-            </div>
+          <!-- Category -->
+          <div id="category-container" class="flex-shrink-0" style="display: none;">
+            <label for="category-select" class="form-label">Category</label>
+            <select id="category-select" name="category"
+                    class="form-select form-select-sm w-auto" disabled>
+              <option value="">Select Category</option>
+            </select>
+          </div>
+
+          <!-- Subcategory -->
+          <div id="subcategory-container" class="flex-shrink-0" style="display: none;">
+            <label for="subcategory-select" class="form-label">Subcategory</label>
+            <select id="subcategory-select" name="subcategory"
+                    class="form-select form-select-sm w-auto" disabled>
+              <option value="">Select Subcategory</option>
+            </select>
           </div>
         </div>
 
-        <!-- Comment textarea (shows after subcategory pick) -->
+        <!-- Comment -->
         <div class="mt-3" id="description-container" style="display: none;">
           <label for="description" class="form-label">Comment:</label>
           <textarea id="description" name="description"
                     class="form-control" rows="2" maxlength="5000" required></textarea>
         </div>
 
-        <!-- Hidden inputs + Submit -->
+        <!-- Submit -->
         <div class="mt-3 text-end" id="submit-container" style="display: none;">
-          <input type="hidden" id="category-hidden" name="category">
-          <input type="hidden" id="subcategory-hidden" name="subcategory">
           <button type="submit" class="btn btn-dark">Submit</button>
         </div>
       </div>
@@ -65,146 +64,114 @@
 </div>
 
 <style>
-  /* smaller labels/selects */
   .form-label { margin-bottom: .25rem; }
   .form-select-sm { padding: .25rem .5rem; font-size: .875rem; }
   .w-auto { width: auto !important; }
-
-  /* nested dropdown submenu styling */
-  .dropdown-submenu { position: relative; }
-  .dropdown-submenu > .dropdown-menu {
-    top: 0; left: 100%;
-    margin-left: .125rem;
-  }
 </style>
 
 <script>
   const downtimeCodes     = JSON.parse('{{ downtime_codes_json|escapejs }}');
   const prodLines         = JSON.parse('{{ lines_json|escapejs }}');
+
   const lineSelect        = document.getElementById('line-select');
   const machineSelect     = document.getElementById('machine-select');
-  const catContainer      = document.getElementById('category-dropdown-container');
-  const catBtn            = document.getElementById('categoryDropdownBtn');
-  const catMenu           = document.getElementById('categoryDropdownMenu');
+  const categoryContainer = document.getElementById('category-container');
+  const categorySelect    = document.getElementById('category-select');
+  const subcatContainer   = document.getElementById('subcategory-container');
+  const subcatSelect      = document.getElementById('subcategory-select');
   const descCtr           = document.getElementById('description-container');
   const submitCtr         = document.getElementById('submit-container');
-  const catHidden         = document.getElementById('category-hidden');
-  const subHidden         = document.getElementById('subcategory-hidden');
 
-  // Populate Line select
+  // Populate Line dropdown
   prodLines.forEach(line => {
-    const o = document.createElement('option');
-    o.value = line.line;
-    o.textContent = line.line;
-    lineSelect.appendChild(o);
+    const opt = document.createElement('option');
+    opt.value = line.line;
+    opt.textContent = line.line;
+    lineSelect.appendChild(opt);
   });
 
-  // Reset machine dropdown
+  // Utility resets
   function resetMachine() {
     machineSelect.innerHTML = '<option value="">Select Machine</option>';
     machineSelect.disabled  = true;
   }
-
-  // Reset category dropdown
-  function resetCategoryDropdown() {
-    catMenu.innerHTML    = '';
-    catBtn.textContent   = 'Select…';
-    catHidden.value      = '';
-    subHidden.value      = '';
+  function resetCategory() {
+    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    categorySelect.disabled  = true;
+    categoryContainer.style.display = 'none';
   }
-
-  // Hide utility
+  function resetSubcategory() {
+    subcatSelect.innerHTML = '<option value="">Select Subcategory</option>';
+    subcatSelect.disabled  = true;
+    subcatContainer.style.display = 'none';
+  }
   function hide(...els) { els.forEach(e => e.style.display = 'none'); }
   function show(...els) { els.forEach(e => e.style.display = 'block'); }
 
-  // Line → Machine
+  // When Line changes → reset downstream
   lineSelect.addEventListener('change', () => {
     resetMachine();
-    resetCategoryDropdown();
-    hide(descCtr, submitCtr, catContainer);
+    resetCategory();
+    resetSubcategory();
+    hide(descCtr, submitCtr);
 
     if (!lineSelect.value) return;
+
     const ops = prodLines.find(l => l.line === lineSelect.value).operations;
     ops.forEach(op => {
       op.machines.forEach(m => {
-        const o = document.createElement('option');
-        o.value       = m.number;
-        o.textContent = `${m.number} (Op ${op.op})`;
-        machineSelect.appendChild(o);
+        const opt = document.createElement('option');
+        opt.value = m.number;
+        opt.textContent = `${m.number} (Op ${op.op})`;
+        machineSelect.appendChild(opt);
       });
     });
     machineSelect.disabled = false;
   });
 
-  // Machine → build nested dropdown
+  // When Machine changes → show categories
   machineSelect.addEventListener('change', () => {
-    resetCategoryDropdown();
+    resetCategory();
+    resetSubcategory();
     hide(descCtr, submitCtr);
 
-    if (!machineSelect.value) {
-      hide(catContainer);
-      return;
-    }
+    if (!machineSelect.value) return;
 
-    // build menu
     downtimeCodes.forEach(cat => {
-      const liCat = document.createElement('li');
-      liCat.classList.add('dropdown-submenu');
-
-      const aCat = document.createElement('a');
-      aCat.classList.add('dropdown-item', 'dropdown-toggle');
-      aCat.href = '#';
-      aCat.textContent = cat.name;
-      liCat.appendChild(aCat);
-
-      const subUL = document.createElement('ul');
-      subUL.classList.add('dropdown-menu');
-      cat.subcategories.forEach(sc => {
-        const liSub = document.createElement('li');
-        const aSub  = document.createElement('a');
-        aSub.classList.add('dropdown-item', 'subcategory-item');
-        aSub.href = '#';
-        aSub.textContent = sc.name;
-        aSub.dataset.catCode = cat.code;
-        aSub.dataset.subCode = sc.code;
-        liSub.appendChild(aSub);
-        subUL.appendChild(liSub);
-      });
-      liCat.appendChild(subUL);
-      catMenu.appendChild(liCat);
+      const opt = document.createElement('option');
+      opt.value = cat.code;
+      opt.textContent = cat.name;
+      categorySelect.appendChild(opt);
     });
-
-    show(catContainer);
+    categorySelect.disabled = false;
+    show(categoryContainer);
   });
 
-  // Toggle submenu on click
-  catMenu.addEventListener('click', e => {
-    // click on a category toggle
-    if (e.target.matches('.dropdown-submenu > .dropdown-toggle')) {
-      e.preventDefault();
-      e.stopPropagation();
-      const sub = e.target.nextElementSibling;
-      sub.classList.toggle('show');
-    }
-    // click on a subcategory
-    if (e.target.matches('.subcategory-item')) {
-      e.preventDefault();
-      const li = e.target;
-      catHidden.value = li.dataset.catCode;
-      subHidden.value = li.dataset.subCode;
-      catBtn.textContent = li.textContent;
-      // hide dropdown & any open submenus
-      Bootstrap.Dropdown.getInstance(catBtn).hide();
-      catMenu.querySelectorAll('.dropdown-menu.show')
-             .forEach(m => m.classList.remove('show'));
+  // When Category changes → show subcategories
+  categorySelect.addEventListener('change', () => {
+    resetSubcategory();
+    hide(descCtr, submitCtr);
+
+    if (!categorySelect.value) return;
+
+    const cat = downtimeCodes.find(c => c.code === categorySelect.value);
+    cat.subcategories.forEach(sc => {
+      const opt = document.createElement('option');
+      opt.value = sc.code;
+      opt.textContent = sc.name;
+      subcatSelect.appendChild(opt);
+    });
+    subcatSelect.disabled = false;
+    show(subcatContainer);
+  });
+
+  // When Subcategory changes → show comment & submit
+  subcatSelect.addEventListener('change', () => {
+    if (subcatSelect.value) {
       show(descCtr, submitCtr);
+    } else {
+      hide(descCtr, submitCtr);
     }
-  });
-
-  // Clean up open submenus when main menu closes
-  catBtn.addEventListener('hidden.bs.dropdown', () => {
-    catMenu.querySelectorAll('.dropdown-menu.show')
-           .forEach(m => m.classList.remove('show'));
   });
 </script>
 {% endblock %}
