@@ -8,51 +8,44 @@
     <div class="card shadow-sm">
       <div class="card-body">
         <h5 class="card-title mb-4 text-center">Downtime Entry</h5>
-        <div class="row g-3 align-items-end">
-          <!-- Line selector -->
-          <div class="col">
+
+        <!-- Vertical stack -->
+        <div class="row g-3">
+          <!-- Line -->
+          <div class="col-12">
             <label for="line-select" class="form-label">Line</label>
             <select id="line-select" name="line" class="form-select">
               <option value="">Select Line</option>
             </select>
           </div>
 
-          <!-- Machine selector -->
-          <div class="col">
+          <!-- Machine -->
+          <div class="col-12">
             <label for="machine-select" class="form-label">Machine</label>
             <select id="machine-select" name="machine" class="form-select" disabled>
               <option value="">Select Machine</option>
             </select>
           </div>
 
-          <!-- Nested Category → Subcategory dropdown -->
-          <div class="col">
-            <label for="category-btn" class="form-label">Category &amp; Subcategory</label>
-            <div class="dropdown">
-              <button id="category-btn"
-                      class="btn btn-outline-secondary dropdown-toggle w-100 text-start"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false">
-                Select Category
-              </button>
-              <ul id="category-menu" class="dropdown-menu w-100">
-                <!-- JS will populate categories and nested subcategories here -->
-              </ul>
+          <!-- Category & Subcategory (hidden until machine chosen) -->
+          <div class="col-12" id="category-container" style="display: none;">
+            <label class="form-label">Category &amp; Subcategory</label>
+            <div class="accordion" id="category-accordion">
+              <!-- JS will inject items here -->
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Comment textarea, shown once a subcategory is picked -->
+    <!-- Comment textarea (hidden until subcategory chosen) -->
     <div id="description-container" class="mt-4" style="display: none;">
       <label for="description" class="form-label">Comment:</label>
       <textarea class="form-control" name="description" id="description" rows="2" maxlength="5000" required></textarea>
     </div>
 
-    <!-- Hidden inputs for category/subcategory and submit button -->
-    <div class="mt-3" id="submit-container" style="display: none;">
+    <!-- Hidden inputs + Submit -->
+    <div id="submit-container" class="mt-3" style="display: none;">
       <input type="hidden" name="category" id="category-hidden">
       <input type="hidden" name="subcategory" id="subcategory-hidden">
       <button type="submit" class="btn btn-dark">Submit</button>
@@ -60,46 +53,50 @@
   </form>
 </div>
 
-<!-- CSS for flying-out submenus -->
+<!-- Optional styling for highlights -->
 <style>
-  .dropdown-submenu { position: relative; }
-  .dropdown-submenu:hover > .dropdown-menu { display: block; }
-  .dropdown-submenu > .dropdown-menu {
-    top: 0;
-    left: 100%;
-    margin-top: -1px;
-  }
+/* override the blue active bg on subcategories */
+.list-group-item.active {
+  background-color: #e9ecef !important;  /* a light gray */
+  color: #212529 !important;             /* default text color */
+}
+
+/* and if you’re also highlighting the accordion header */
+.accordion-button.selected {
+  background-color: #e9ecef !important;
+}
+
 </style>
 
 <script>
-  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
-  const prodLines      = JSON.parse('{{ lines_json|escapejs }}');
+  const downtimeCodes      = JSON.parse('{{ downtime_codes_json|escapejs }}');
+  const prodLines          = JSON.parse('{{ lines_json|escapejs }}');
 
-  const lineSelect       = document.getElementById('line-select');
-  const machineSelect    = document.getElementById('machine-select');
-  const categoryBtn      = document.getElementById('category-btn');
-  const categoryMenu     = document.getElementById('category-menu');
-  const descriptionCtr   = document.getElementById('description-container');
-  const submitCtr        = document.getElementById('submit-container');
-  const categoryHidden   = document.getElementById('category-hidden');
-  const subcategoryHidden= document.getElementById('subcategory-hidden');
+  const lineSelect         = document.getElementById('line-select');
+  const machineSelect      = document.getElementById('machine-select');
+  const categoryContainer  = document.getElementById('category-container');
+  const accordion          = document.getElementById('category-accordion');
+  const descriptionCtr     = document.getElementById('description-container');
+  const submitCtr          = document.getElementById('submit-container');
+  const categoryHidden     = document.getElementById('category-hidden');
+  const subcategoryHidden  = document.getElementById('subcategory-hidden');
 
-  // Populate lines
+  // Populate Line dropdown
   prodLines.forEach(line => {
     const opt = document.createElement('option');
-    opt.value   = line.line;
+    opt.value       = line.line;
     opt.textContent = line.line;
     lineSelect.appendChild(opt);
   });
 
-  // When line changes → load machines
+  // When Line changes → reset downstream & hide category section
   lineSelect.addEventListener('change', () => {
     resetMachine();
-    resetCategoryMenu();
+    resetCategory();
     hide(descriptionCtr, submitCtr);
+    categoryContainer.style.display = 'none';
 
     if (!lineSelect.value) return;
-
     const ops = prodLines.find(l => l.line === lineSelect.value).operations;
     ops.forEach(op => {
       op.machines.forEach(m => {
@@ -112,70 +109,101 @@
     machineSelect.disabled = false;
   });
 
-  // When machine changes → build category & subcategory menu
+  // When Machine changes → show category accordion
   machineSelect.addEventListener('change', () => {
-    resetCategoryMenu();
+    resetCategory();
     hide(descriptionCtr, submitCtr);
 
-    if (!machineSelect.value) return;
+    if (!machineSelect.value) {
+      categoryContainer.style.display = 'none';
+      return;
+    }
 
-    downtimeCodes.forEach(cat => {
-      const li = document.createElement('li');
-      li.classList.add('dropdown-submenu');
+    // build accordion items
+    downtimeCodes.forEach((cat, idx) => {
+      const item = document.createElement('div');
+      item.classList.add('accordion-item');
 
-      // category toggle
-      const a = document.createElement('a');
-      a.classList.add('dropdown-item', 'dropdown-toggle');
-      a.href = '#';
-      a.textContent         = cat.name;
-      a.dataset.catCode     = cat.code;
-      li.appendChild(a);
+      // header
+      const header = document.createElement('h2');
+      header.classList.add('accordion-header');
+      header.id = `heading-${idx}`;
+      const btn = document.createElement('button');
+      btn.classList.add('accordion-button', 'collapsed');
+      btn.type = 'button';
+      btn.setAttribute('data-bs-toggle', 'collapse');
+      btn.setAttribute('data-bs-target', `#collapse-${idx}`);
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-controls', `collapse-${idx}`);
+      btn.textContent = cat.name;
+      header.appendChild(btn);
+      item.appendChild(header);
 
-      // nested subcategory list
-      const subUl = document.createElement('ul');
-      subUl.classList.add('dropdown-menu');
+      // collapse (no data-bs-parent so multiple can stay open)
+      const collapse = document.createElement('div');
+      collapse.id = `collapse-${idx}`;
+      collapse.classList.add('accordion-collapse', 'collapse');
+      collapse.setAttribute('aria-labelledby', `heading-${idx}`);
+
+      // body with subcategories
+      const body = document.createElement('div');
+      body.classList.add('accordion-body');
+      const list = document.createElement('ul');
+      list.classList.add('list-group', 'list-group-flush');
       cat.subcategories.forEach(sc => {
-        const subLi = document.createElement('li');
-        const subA  = document.createElement('a');
-        subA.classList.add('dropdown-item');
-        subA.href            = '#';
-        subA.textContent     = sc.name;
-        subA.dataset.subCode = sc.code;
-        subLi.appendChild(subA);
-        subUl.appendChild(subLi);
+        const li = document.createElement('li');
+        li.classList.add('list-group-item', 'list-group-item-action');
+        li.textContent        = sc.name;
+        li.dataset.catCode    = cat.code;
+        li.dataset.subCode    = sc.code;
+        list.appendChild(li);
       });
-      li.appendChild(subUl);
+      body.appendChild(list);
+      collapse.appendChild(body);
+      item.appendChild(collapse);
 
-      categoryMenu.appendChild(li);
+      accordion.appendChild(item);
     });
+
+    // show it
+    categoryContainer.style.display = 'block';
   });
 
-  // Handle subcategory click
-  categoryMenu.addEventListener('click', e => {
-    e.preventDefault();
-    const tgt = e.target;
-    if (tgt.matches('.dropdown-item') && tgt.dataset.subCode) {
+  // Handle subcategory click & highlight selection
+  accordion.addEventListener('click', e => {
+    if (e.target.matches('li.list-group-item-action')) {
+      const li = e.target;
       // set hidden inputs
-      const parentCat = tgt.closest('.dropdown-submenu')
-                          .querySelector('.dropdown-toggle').dataset.catCode;
-      categoryHidden.value    = parentCat;
-      subcategoryHidden.value = tgt.dataset.subCode;
-
-      // update button text
-      categoryBtn.textContent = tgt.textContent;
-
-      // reveal comment + submit
+      categoryHidden.value    = li.dataset.catCode;
+      subcategoryHidden.value = li.dataset.subCode;
       show(descriptionCtr, submitCtr);
+
+      // highlight the chosen subcategory
+      accordion.querySelectorAll('.list-group-item').forEach(el =>
+        el.classList.remove('active')
+      );
+      li.classList.add('active');
+
+      // highlight the parent category header
+      accordion.querySelectorAll('.accordion-button').forEach(btn =>
+        btn.classList.remove('selected')
+      );
+      const collapseDiv = li.closest('.accordion-collapse');
+      const headerBtn = document.querySelector(
+        `button[data-bs-target="#${collapseDiv.id}"]`
+      );
+      headerBtn.classList.add('selected');
     }
   });
 
   function resetMachine() {
-    machineSelect.innerHTML = '<option value=\"\">Select Machine</option>';
+    machineSelect.innerHTML = '<option value="">Select Machine</option>';
     machineSelect.disabled  = true;
   }
-  function resetCategoryMenu() {
-    categoryBtn.textContent = 'Select Category';
-    categoryMenu.innerHTML  = '';
+  function resetCategory() {
+    accordion.innerHTML     = '';
+    categoryHidden.value    = '';
+    subcategoryHidden.value = '';
   }
   function hide(...els) {
     els.forEach(el => el.style.display = 'none');
