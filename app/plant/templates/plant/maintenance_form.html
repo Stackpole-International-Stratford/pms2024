@@ -90,124 +90,130 @@
 </style>
 
 <script>
-  // Data from view
-  const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
-  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
-
-  // Element refs
-  const lineSelect        = document.getElementById('line-select');
-  const machineSelect     = document.getElementById('machine-select');
-  const categorySelect    = document.getElementById('category-select');
-  const subcategorySelect = document.getElementById('subcategory-select');
-
-  const categoryContainer    = document.getElementById('category-container');
-  const subcategoryContainer = document.getElementById('subcategory-container');
-  const descCtr              = document.getElementById('description-container');
-  const datetimeCtr          = document.getElementById('datetime-container');
-  const submitCtr            = document.getElementById('submit-container');
-
-  const dateInput            = document.getElementById('start-date');
-  const timeInput            = document.getElementById('start-time');
-
-  // Initialize Choices.js
-  const lineChoice        = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
-  const machineChoice     = new Choices(machineSelect,     { searchEnabled: false, itemSelectText: '', shouldSort: false });
-  const categoryChoice    = new Choices(categorySelect,    { searchEnabled: false, itemSelectText: '' });
-  const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
-
-  function hide(...els) { els.forEach(el => el.style.display = 'none'); }
-  function show(...els) { els.forEach(el => el.style.display = 'block'); }
-
-  // Initial state
-  hide(categoryContainer, subcategoryContainer, descCtr, datetimeCtr, submitCtr);
-  machineChoice.disable();
-  categoryChoice.disable();
-  subcategoryChoice.disable();
-
-  // 1) Populate Line
-  lineChoice.setChoices(
-    prodLines.map(l => ({ value: l.line, label: l.line })),
-    'value',
-    'label',
-    true
-  );
-
-  // 2) Line → Machine (grouped by operation)
-  lineSelect.addEventListener('change', () => {
-    const line = lineSelect.value;
-    machineChoice.clearChoices().disable();
-    categoryChoice.clearChoices().disable();
-    subcategoryChoice.clearChoices().disable();
-    hide(categoryContainer, subcategoryContainer, descCtr, datetimeCtr, submitCtr);
-
-    if (!line) return;
-
-    const lineObj = prodLines.find(l => l.line === line);
-
-    const machineGroups = lineObj.operations.map(op => ({
-      label: `Op ${op.op}`,
-      choices: op.machines.map(m => ({ value: m.number, label: `${m.number}` }))
-    }));
-
-    machineChoice.setChoices(machineGroups, 'value', 'label', true);
-    machineChoice.enable().showDropdown();
-  });
-
-  // 3) Machine → Category
-  machineSelect.addEventListener('change', () => {
-    const machine = machineSelect.value;
-    categoryChoice.clearChoices().disable();
-    subcategoryChoice.clearChoices().disable();
-    hide(subcategoryContainer, descCtr, datetimeCtr, submitCtr);
-
-    if (!machine) return;
-
-    const cats = downtimeCodes.map(cat => ({
-      value: cat.code,
-      label: cat.name
-    }));
-
-    categoryChoice.setChoices(cats, 'value', 'label', true);
-    categoryChoice.enable().showDropdown();
-    show(categoryContainer);
-  });
-
-  // 4) Category → Subcategory
-  categorySelect.addEventListener('change', () => {
-    const catCode = categorySelect.value;
-    subcategoryChoice.clearChoices().disable();
-    hide(descCtr, datetimeCtr, submitCtr);
-
-    if (!catCode) return;
-
-    const subcats = downtimeCodes
-      .find(c => c.code === catCode)
-      .subcategories.map(sc => ({
-        value: sc.code,
-        label: sc.name
-      }));
-
-    subcategoryChoice.setChoices(subcats, 'value', 'label', true);
-    subcategoryChoice.enable().showDropdown();
-    show(subcategoryContainer);
-  });
-
-  // 5) Subcategory → Comment, Date/Time & Submit
-  subcategorySelect.addEventListener('change', () => {
-    if (!subcategorySelect.value) {
-      hide(descCtr, datetimeCtr, submitCtr);
-      return;
+  (function(){
+    // this runs immediately if DOM is ready, or on DOMContentLoaded if not yet
+    function initDowntimeForm(){
+      // Data from view
+      const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
+      const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+  
+      // Element refs
+      const lineSelect        = document.getElementById('line-select');
+      const machineSelect     = document.getElementById('machine-select');
+      const categorySelect    = document.getElementById('category-select');
+      const subcategorySelect = document.getElementById('subcategory-select');
+  
+      const categoryContainer    = document.getElementById('category-container');
+      const subcategoryContainer = document.getElementById('subcategory-container');
+      const descCtr              = document.getElementById('description-container');
+      const datetimeCtr          = document.getElementById('datetime-container');
+      const submitCtr            = document.getElementById('submit-container');
+  
+      const dateInput        = document.getElementById('start-date');
+      const timeInput        = document.getElementById('start-time');
+      const descriptionField = document.getElementById('description');
+  
+      // Initialize Choices.js
+      const lineChoice        = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
+      const machineChoice     = new Choices(machineSelect,     { searchEnabled: false, itemSelectText: '', shouldSort: false });
+      const categoryChoice    = new Choices(categorySelect,    { searchEnabled: false, itemSelectText: '' });
+      const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
+  
+      // simple show/hide
+      function hide(...els){ els.forEach(e=>e.style.display='none'); }
+      function show(...els){ els.forEach(e=>e.style.display='block'); }
+  
+      // **1)** initial hide
+      hide(categoryContainer, subcategoryContainer, descCtr, datetimeCtr, submitCtr);
+      machineChoice.disable();
+      categoryChoice.disable();
+      subcategoryChoice.disable();
+  
+      // **2)** Populate Line
+      lineChoice.setChoices(
+        prodLines.map(l => ({ value: l.line, label: l.line })),
+        'value','label',true
+      );
+  
+      // **3)** Line → Machine
+      lineSelect.addEventListener('change', () => {
+        const line = lineSelect.value;
+        machineChoice.clearChoices().disable();
+        categoryChoice.clearChoices().disable();
+        subcategoryChoice.clearChoices().disable();
+        hide(categoryContainer, subcategoryContainer, descCtr, datetimeCtr, submitCtr);
+        if (!line) return;
+  
+        const ops = prodLines.find(l=>l.line===line).operations;
+        const groups = ops.map(op => ({
+          label: `Op ${op.op}`,
+          choices: op.machines.map(m=>({value:m.number,label:m.number}))
+        }));
+        machineChoice.setChoices(groups,'value','label',true)
+                     .enable().showDropdown();
+      });
+  
+      // **4)** Machine → Category
+      machineSelect.addEventListener('change', () => {
+        const m = machineSelect.value;
+        categoryChoice.clearChoices().disable();
+        subcategoryChoice.clearChoices().disable();
+        hide(subcategoryContainer, descCtr, datetimeCtr, submitCtr);
+        if (!m) return;
+  
+        categoryChoice
+          .setChoices(downtimeCodes.map(c=>({value:c.code,label:c.name})),'value','label',true)
+          .enable().showDropdown();
+        show(categoryContainer);
+      });
+  
+      // **5)** Category → Subcategory
+      categorySelect.addEventListener('change', () => {
+        const c = categorySelect.value;
+        subcategoryChoice.clearChoices().disable();
+        hide(descCtr, datetimeCtr, submitCtr);
+        if (!c) return;
+  
+        const subs = downtimeCodes.find(x=>x.code===c).subcategories
+                        .map(sc=>({value:sc.code,label:sc.name}));
+        subcategoryChoice.setChoices(subs,'value','label',true)
+                         .enable().showDropdown();
+        show(subcategoryContainer);
+      });
+  
+      // **6)** Subcategory → only show comment box
+      subcategorySelect.addEventListener('change', () => {
+        if (!subcategorySelect.value) {
+          hide(descCtr, datetimeCtr, submitCtr);
+          return;
+        }
+        const now = new Date();
+        dateInput.value = now.toISOString().slice(0,10);
+        timeInput.value = now.toTimeString().slice(0,5);
+  
+        show(descCtr);
+        hide(datetimeCtr, submitCtr);
+        descriptionField.focus();
+      });
+  
+      // **7)** On typing comment → show date/time & submit
+      descriptionField.addEventListener('input', () => {
+        if (descriptionField.value.trim()) {
+          show(datetimeCtr, submitCtr);
+        } else {
+          hide(datetimeCtr, submitCtr);
+        }
+      });
     }
+  
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', initDowntimeForm);
+    } else {
+      initDowntimeForm();
+    }
+  })();
+  </script>
+  
+  
 
-    // set defaults for date & time
-    const now = new Date();
-    // YYYY-MM-DD
-    dateInput.value = now.toISOString().substring(0,10);
-    // HH:MM (24‐hour)
-    timeInput.value = now.toTimeString().substring(0,5);
-
-    show(descCtr, datetimeCtr, submitCtr);
-    document.getElementById('description').focus();
-  });
-</script>
 {% endblock %}

@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse
+from datetime import datetime, timezone
 
 # import your lines structure
 from prod_query.views import lines as prod_lines
