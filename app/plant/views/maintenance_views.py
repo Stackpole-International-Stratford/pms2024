@@ -22,6 +22,14 @@ DOWNTIME_CODES = [
             {'name': 'Environmental Issue',     'code': 'MECH-ENV'},
         ],
     },
+        {
+        'name': 'Other',
+        'code': 'OTHER',
+        'subcategories': [
+            {'name': 'Other',         'code': 'OTHER-OTHER'},
+
+        ],
+    },
     {
         'name': 'Electrical Failure',
         'code': 'ELEC',
