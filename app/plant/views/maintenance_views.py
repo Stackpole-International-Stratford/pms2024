@@ -73,6 +73,12 @@ DOWNTIME_CODES = [
 
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
+        # New fields
+        line        = request.POST.get('line')
+        start_date  = request.POST.get('start_date')
+        start_time  = request.POST.get('start_time')
+
+        # Existing fields
         machine     = request.POST.get('machine')
         category    = request.POST.get('category')
         subcategory = request.POST.get('subcategory')
@@ -80,15 +86,18 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 
         return HttpResponse(f"""
             <h1>Submission Received</h1>
+            <p><strong>Line:</strong> {line}</p>
             <p><strong>Machine:</strong> {machine}</p>
             <p><strong>Category:</strong> {category}</p>
             <p><strong>Sub-category:</strong> {subcategory}</p>
+            <p><strong>Start Date:</strong> {start_date}</p>
+            <p><strong>Start Time:</strong> {start_time}</p>
             <p><strong>Description:</strong> {description}</p>
             <p><a href="">Log another downtime</a></p>
         """)
 
     context = {
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
-        'lines_json': mark_safe(json.dumps(prod_lines)),
+        'lines_json':          mark_safe(json.dumps(prod_lines)),
     }
     return render(request, 'plant/maintenance_form.html', context)
