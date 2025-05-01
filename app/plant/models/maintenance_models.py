@@ -16,7 +16,7 @@ class MachineDowntimeEvent(models.Model):
     code               = models.CharField("Downtime Code",max_length=20,
                                           help_text="Same as subcategory")
     start_epoch        = models.BigIntegerField("Start (epoch)")
-    closeout_timestamp = models.DateTimeField("Closed At",  null=True, blank=True)
+    closeout_epoch     = models.BigIntegerField("Closeout (epoch)", null=True, blank=True)
     comment            = models.TextField("Comment")
 
     # new soft-delete fields

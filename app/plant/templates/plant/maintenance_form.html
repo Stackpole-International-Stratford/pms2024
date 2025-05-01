@@ -84,6 +84,7 @@
     {% endif %}
   </form>
 
+
   <!-- EDIT ENTRY MODAL -->
   <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -100,12 +101,12 @@
               <div class="col-md-6">
                 <label for="edit-start-date" class="form-label">Date</label>
                 <input type="date" id="edit-start-date" name="start_date"
-                       class="form-control form-control-sm" required>
+                      class="form-control form-control-sm" required>
               </div>
               <div class="col-md-6">
                 <label for="edit-start-time" class="form-label">Time</label>
                 <input type="time" id="edit-start-time" name="start_time"
-                       class="form-control form-control-sm" required>
+                      class="form-control form-control-sm" required>
               </div>
               <div class="col-md-4">
                 <label for="edit-line-select" class="form-label">Line</label>
@@ -150,6 +151,11 @@
               Delete
             </button>
             <button type="button"
+                    id="closeout-open-button"
+                    class="btn btn-info me-2">
+              Close Out
+            </button>
+            <button type="button"
                     class="btn btn-secondary"
                     data-bs-dismiss="modal">
               Cancel
@@ -159,11 +165,52 @@
                     class="btn btn-warning">
               Save changes
             </button>
-          </div>          
+          </div>
         </form>
       </div>
     </div>
   </div>
+
+  <!-- CLOSE-OUT MODAL -->
+  <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Close Out Downtime</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="closeout-form">
+            {% csrf_token %}
+            <input type="hidden" id="closeout-entry-id">
+            <div class="mb-3">
+              <label for="closeout-date" class="form-label">Date</label>
+              <input type="date" id="closeout-date" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label for="closeout-time" class="form-label">Time</label>
+              <input type="time" id="closeout-time" class="form-control" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+                  id="closeout-cancel"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="button"
+                  id="closeout-confirm"
+                  class="btn btn-info">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 </div>
 
 <style>
@@ -189,12 +236,12 @@
     const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
   
     // ─── DOM ELEMENTS ─────────────────────────────────────────────────────
-    const tbody   = document.getElementById('entries-body');
-    const loadBtn = document.getElementById('load-more');
+    const tbody      = document.getElementById('entries-body');
+    const loadBtn    = document.getElementById('load-more');
     const entriesUrl = "{% url 'maintenance_entries' %}";
-    let   offset  = {{ entries|length }};
+    let   offset     = {{ entries|length }};
   
-    // add-form elems …
+    // ADD-FORM ELEMENTS
     const add = {
       dateInput:     document.getElementById('start-date'),
       timeInput:     document.getElementById('start-time'),
@@ -206,7 +253,7 @@
       submitBtn:     document.getElementById('add-button')
     };
   
-    // edit-modal elems …
+    // EDIT-MODAL ELEMENTS
     const edit = {
       modal:         document.getElementById('editEntryModal'),
       form:          document.getElementById('edit-entry-form'),
@@ -222,10 +269,18 @@
       deleteBtn:     document.getElementById('delete-button')
     };
   
-    // ─── Choices.js helpers ───────────────────────────────────────────────
-    const makeChoices = (el, opts = { searchEnabled:false, itemSelectText:'' }) =>
-      new Choices(el, opts);
+    // CLOSEOUT-MODAL ELEMENTS
+    const closeoutOpenBtn = document.getElementById('closeout-open-button');
+    const closeoutModalEl = document.getElementById('closeoutModal');
+    const closeoutDate    = document.getElementById('closeout-date');
+    const closeoutTime    = document.getElementById('closeout-time');
+    const closeoutEntryId = document.getElementById('closeout-entry-id');
+    const closeoutConfirm = document.getElementById('closeout-confirm');
   
+    // ─── Choices.js SETUP ─────────────────────────────────────────────────
+    function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'' }) {
+      return new Choices(el, opts);
+    }
     const choices = {
       addLine:     makeChoices(add.lineSelect),
       addMachine:  makeChoices(add.machineSelect),
@@ -236,83 +291,77 @@
       editCat:     makeChoices(edit.catSelect),
       editSub:     makeChoices(edit.subSelect)
     };
-  
-    // disable dependents initially
     [choices.addMachine, choices.addCat, choices.addSub,
-     choices.editMachine, choices.editCat, choices.editSub].forEach(c => c.disable());
+     choices.editMachine, choices.editCat, choices.editSub]
+      .forEach(c=>c.disable());
   
-    // ─── option builders ──────────────────────────────────────────────────
+    // ─── option-builders ──────────────────────────────────────────────────
     const getMachines = lineVal => {
-      const ops = prodLines.find(l => l.line === lineVal)?.operations ?? [];
-      return ops.map(op => ({
+      const ops = prodLines.find(l=>l.line===lineVal)?.operations||[];
+      return ops.map(op=>({
         label:   `Op ${op.op}`,
-        choices: op.machines.map(m => ({ value: m.number, label: m.number }))
+        choices: op.machines.map(m=>({value:m.number,label:m.number}))
       }));
     };
-  
-    const getCats = () =>
-      downtimeCodes.map(c => ({ value: String(c.code), label: c.name }));
-  
+    const getCats = ()=> downtimeCodes.map(c=>({value:String(c.code),label:c.name}));
     const getSubs = catCode => {
-      const cat = downtimeCodes.find(c => c.code === catCode);
-      return (cat?.subcategories ?? []).map(s => ({ value: String(s.code), label: s.name }));
+      const cat = downtimeCodes.find(c=>c.code===catCode);
+      return (cat?.subcategories||[]).map(s=>({value:String(s.code),label:s.name}));
     };
   
-    // ─── cascade wiring for manual user input (add-form & edit-modal) ─────
-    function chain(parentEl, childChoice, getOpts, showDD=false) {
-      parentEl.addEventListener('change', () => {
-        const v = parentEl.value;
+    // ─── cascade helper ───────────────────────────────────────────────────
+    function chain(parentEl, childChoice, getOpts, showDD=false){
+      parentEl.addEventListener('change',()=>{
+        const v=parentEl.value;
         childChoice.clearChoices().disable();
-        if (!v) return;
-        childChoice.setChoices(getOpts(v), 'value', 'label', true);
+        if(!v) return;
+        childChoice.setChoices(getOpts(v),'value','label',true);
         childChoice.enable();
-        if (showDD) childChoice.showDropdown();
+        if(showDD) childChoice.showDropdown();
       });
     }
   
-    // add-form chains
+    // wire up add-form chains
     chain(add.lineSelect,    choices.addMachine,  getMachines, true);
     chain(add.machineSelect, choices.addCat,      getCats,     true);
     chain(add.catSelect,     choices.addSub,      getSubs,     true);
   
-    // edit-modal chains (still needed if the user changes selections)
+    // wire up edit-modal chains
     chain(edit.lineSelect,    choices.editMachine, getMachines);
     chain(edit.machineSelect, choices.editCat,     getCats);
     chain(edit.catSelect,     choices.editSub,     getSubs);
   
     // populate line dropdowns
-    const lineOpts = prodLines.map(l => ({ value:l.line, label:l.line }));
-    choices.addLine.setChoices(lineOpts, 'value', 'label', true);
-    choices.editLine.setChoices(lineOpts, 'value', 'label', true);
+    const lineOpts = prodLines.map(l=>({value:l.line,label:l.line}));
+    choices.addLine.setChoices(lineOpts,'value','label',true);
+    choices.editLine.setChoices(lineOpts,'value','label',true);
   
-    // ─── ADD FORM default date/time & validation ──────────────────────────
-    (() => {
-      const now = new Date();
-      add.dateInput.value = now.toISOString().slice(0,10);
-      add.timeInput.value = now.toTimeString().slice(0,5);
+    // ─── ADD-FORM default date/time & validation ─────────────────────────
+    (()=>{ const n=new Date();
+      add.dateInput.value=n.toISOString().slice(0,10);
+      add.timeInput.value=n.toTimeString().slice(0,5);
     })();
-  
-    const validateAdd = () =>
+    function validateAdd(){
       add.submitBtn.disabled = !(
         add.lineSelect.value && add.machineSelect.value &&
         add.catSelect.value  && add.subSelect.value &&
         add.descInput.value.trim()
       );
+    }
+    [add.lineSelect,add.machineSelect,add.catSelect,add.subSelect]
+      .forEach(el=>el.addEventListener('change',validateAdd));
+    add.descInput.addEventListener('input',validateAdd);
   
-    [add.lineSelect, add.machineSelect, add.catSelect, add.subSelect]
-      .forEach(el => el.addEventListener('change', validateAdd));
-    add.descInput.addEventListener('input', validateAdd);
-  
-    // ─── LOAD-MORE (unchanged) ─────────────────────────────────────────────
-    if (loadBtn) {
-      loadBtn.addEventListener('click', () => {
+    // ─── LOAD-MORE ───────────────────────────────────────────────────────
+    if(loadBtn){
+      loadBtn.addEventListener('click',()=>{
         fetch(`${entriesUrl}?offset=${offset}`)
-          .then(r => r.json())
-          .then(({ entries, has_more }) => {
-            entries.forEach(e => {
-              const tr = document.createElement('tr');
-              tr.dataset.entryId = e.id;
-              tr.innerHTML = `
+          .then(r=>r.json())
+          .then(({entries,has_more})=>{
+            entries.forEach(e=>{
+              const tr=document.createElement('tr');
+              tr.dataset.entryId=e.id;
+              tr.innerHTML=`
                 <td>${e.start_at}</td>
                 <td>${e.line}</td>
                 <td>${e.machine}</td>
@@ -324,81 +373,117 @@
               tbody.appendChild(tr);
             });
             offset += entries.length;
-            if (!has_more) loadBtn.style.display = 'none';
+            if(!has_more) loadBtn.style.display='none';
           })
           .catch(console.error);
       });
     }
   
-    // ─── EDIT ROW CLICK ────────────────────────────────────────────────────
-    tbody.addEventListener('click', ev => {
-      const tr = ev.target.closest('tr[data-entry-id]');
-      if (!tr) return;
+    // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
+    tbody.addEventListener('click',ev=>{
+      const tr=ev.target.closest('tr[data-entry-id]');
+      if(!tr) return;
+      const cells=tr.cells;
+      const datetime=cells[0].textContent.trim();
+      const lineVal=cells[1].textContent.trim();
+      const machVal=cells[2].textContent.trim();
+      const fullCode=cells[5].textContent.trim();
+      const catCode=fullCode.split('-')[0];
+      const subCode=fullCode;
   
-      const cells    = tr.cells;
-      const datetime = cells[0].textContent.trim();
-      const lineVal  = cells[1].textContent.trim();
-      const machVal  = cells[2].textContent.trim();
-      const fullCode = cells[5].textContent.trim();          // the Code column
-      const catCode  = fullCode.split('-')[0];               // "MECH"
-      const subCode  = fullCode;                             // "MECH-TOOL"
+      // fill basic fields
+      edit.idInput.value   =tr.dataset.entryId;
+      edit.dateInput.value =datetime.slice(0,10);
+      edit.timeInput.value =datetime.slice(11);
+      edit.descInput.value =cells[6].textContent.trim();
   
-      // basic fields
-      edit.idInput.value   = tr.dataset.entryId;
-      edit.dateInput.value = datetime.slice(0,10);
-      edit.timeInput.value = datetime.slice(11);
-      edit.descInput.value = cells[6].textContent.trim();
-  
-      // ── 1. LINE ──────────────────────────────────────────────────────────
+      // 1) line
       choices.editLine.setChoiceByValue(lineVal);
-      edit.lineSelect.value = lineVal;
+      edit.lineSelect.value=lineVal;
   
-      // ── 2. MACHINE (built from selected line) ────────────────────────────
-      const machChoices = getMachines(lineVal);
+      // 2) machine
+      const mOpts=getMachines(lineVal);
       choices.editMachine.clearChoices()
-                         .setChoices(machChoices,'value','label',true)
+                         .setChoices(mOpts,'value','label',true)
                          .enable();
       choices.editMachine.setChoiceByValue(machVal);
-      edit.machineSelect.value = machVal;
+      edit.machineSelect.value=machVal;
   
-      // ── 3. CATEGORY (independent of machine) ─────────────────────────────
+      // 3) category
       choices.editCat.clearChoices()
                      .setChoices(getCats(),'value','label',true)
                      .enable();
       choices.editCat.setChoiceByValue(catCode);
-      edit.catSelect.value = catCode;
+      edit.catSelect.value=catCode;
   
-      // ── 4. SUB-CATEGORY (depends on category) ────────────────────────────
+      // 4) sub-category
       choices.editSub.clearChoices()
                      .setChoices(getSubs(catCode),'value','label',true)
                      .enable();
       choices.editSub.setChoiceByValue(subCode);
-      edit.subSelect.value = subCode;
+      edit.subSelect.value=subCode;
   
-      // show modal
+      // show edit modal
       new bootstrap.Modal(edit.modal).show();
     });
   
-    // ─── DELETE ENTRY (unchanged) ──────────────────────────────────────────
-    edit.deleteBtn.addEventListener('click', () => {
-      if (!confirm('Delete this downtime entry?')) return;
-      const id = edit.idInput.value;
-  
-      fetch("{% url 'delete_downtime_entry' %}", {
-        method : 'POST',
-        headers: {
-          'Content-Type' : 'application/json',
-          'X-CSRFToken'  : document.querySelector('[name=csrfmiddlewaretoken]').value
+    // ─── DELETE ENTRY ───────────────────────────────────────────────────
+    edit.deleteBtn.addEventListener('click',()=>{
+      if(!confirm('Delete this downtime entry?')) return;
+      const id=edit.idInput.value;
+      fetch("{% url 'delete_downtime_entry' %}",{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: JSON.stringify({ entry_id:id })
+        body:JSON.stringify({entry_id:id})
       })
-      .then(r => { if (!r.ok) throw new Error('Delete failed'); return r.json(); })
-      .then(() => {
+      .then(r=>{ if(!r.ok) throw Error(); return r.json(); })
+      .then(()=>{
         bootstrap.Modal.getInstance(edit.modal).hide();
         tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
       })
-      .catch(err => { console.error(err); alert('Error deleting entry.'); });
+      .catch(()=>alert('Error deleting entry.'));
     });
+  
+    // ─── OPEN CLOSE-OUT MODAL ────────────────────────────────────────────
+    closeoutOpenBtn.addEventListener('click',()=>{
+      closeoutEntryId.value = edit.idInput.value;
+      const now = new Date();
+      closeoutDate.value = now.toISOString().slice(0,10);
+      closeoutTime.value = now.toTimeString().slice(0,5);
+      new bootstrap.Modal(closeoutModalEl).show();
+    });
+  
+    // ─── CONFIRM CLOSE-OUT ───────────────────────────────────────────────
+    closeoutConfirm.addEventListener('click',()=>{
+      const id = closeoutEntryId.value;
+      const date = closeoutDate.value;
+      const time = closeoutTime.value;
+      if(!date||!time) return alert('Pick date & time.');
+  
+      fetch("{% url 'closeout_downtime_entry' %}",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "X-CSRFToken":document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body:JSON.stringify({
+          entry_id: id,
+          closeout: `${date} ${time}`
+        })
+      })
+      .then(r=>{ if(!r.ok) throw Error(); return r.json(); })
+      .then(data=>{
+        bootstrap.Modal.getInstance(closeoutModalEl).hide();
+        bootstrap.Modal.getInstance(edit.modal).hide();
+        // optionally remove the row immediately:
+        document.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
+      })
+      .catch(()=>alert("Error closing out."));
+    });
+  
   })();
   </script>
   

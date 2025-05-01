@@ -158,33 +158,60 @@ def delete_downtime_entry(request):
 
     return JsonResponse({'status': 'ok'})
 
+@require_POST
+def closeout_downtime_entry(request):
+    try:
+        payload   = json.loads(request.body)
+        entry_id  = payload['entry_id']
+        close_str = payload['closeout']     # e.g. "2025-05-01 18:08"
+        # parse into a naive datetime in server local time (America/Toronto)
+        close_dt  = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
+    except Exception:
+        return HttpResponseBadRequest("Invalid payload")
+
+    try:
+        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest("Entry not found")
+
+    # compute epoch exactly like you do for start_epoch
+    epoch_ts = int(close_dt.timestamp())
+
+    # save the epoch
+    e.closeout_epoch     = epoch_ts
+    e.save(update_fields=['closeout_epoch'])
+
+    # return the epoch back to the JS caller
+    return JsonResponse({
+        'status':           'ok',
+        'closed_at_epoch':  epoch_ts,
+    })
+
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
-    """
-    AJAX endpoint: returns the next page of downtime entries in JSON.
-    Querystring:
-      ?offset=N   — zero-based index to start at
-    """
     offset    = int(request.GET.get('offset', 0))
     page_size = 100
 
-    # ← only non-deleted
-    qs      = MachineDowntimeEvent.objects.filter(is_deleted=False).order_by('-start_epoch')
-    total   = qs.count()
-    batch   = list(qs[offset : offset + page_size])
+    qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_timestamp__isnull=True
+    ).order_by('-start_epoch')
+
+    total = qs.count()
+    batch = list(qs[offset: offset + page_size])
 
     entries = [
-    {
-        'start_at'      : e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'line'          : e.line,
-        'machine'       : e.machine,
-        'category'      : e.category,
-        'subcategory'   : e.subcategory,
-        'code'          : e.code,                       # full sub-category code
-        'category_code' : e.code.split('-')[0],         # e.g. "MECH"
-        'subcategory_code': e.code,                     # e.g. "MECH-TOOL"
-        'comment'       : e.comment,
-    }
-    for e in batch
+        {
+            'start_at'        : e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'line'            : e.line,
+            'machine'         : e.machine,
+            'category'        : e.category,
+            'subcategory'     : e.subcategory,
+            'code'            : e.code,
+            'category_code'   : e.code.split('-')[0],
+            'subcategory_code': e.code,
+            'comment'         : e.comment,
+        }
+        for e in batch
     ]
     has_more = (offset + page_size) < total
 
@@ -230,12 +257,15 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         # preserve offset so page doesn’t jump back
         return redirect(request.get_full_path())
 
-    # ─── GET ────────────────────────────────────────────────────────────────
+    # ─── GET ───────────────────────────────────────────────────────────────
     offset    = int(request.GET.get('offset', 0))
     page_size = 100
 
-    # ← only non-deleted
-    qs        = MachineDowntimeEvent.objects.filter(is_deleted=False).order_by('-start_epoch')
+    qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_timestamp__isnull=True
+    ).order_by('-start_epoch')
+
     total     = qs.count()
     page_objs = list(qs[offset: offset + page_size])
     has_more  = (offset + page_size) < total
