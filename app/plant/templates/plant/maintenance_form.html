@@ -178,7 +178,7 @@
 </style>
 
 <script>
-  (function(){
+  (function() {
     // ─── JSON DATA ────────────────────────────────────────────────────────
     const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
     const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
@@ -217,17 +217,18 @@
       deleteBtn:     document.getElementById('delete-button')
     };
   
-    // ─── HELPERS ─────────────────────────────────────────────────────────
-    function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'', shouldSort:false }) {
+    // ─── CHOICES.JS INSTANCES ────────────────────────────────────────────
+    function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'' }) {
       return new Choices(el, opts);
     }
   
-    // ─── INITIALIZE Choices.js ───────────────────────────────────────────
     const choices = {
+      // add-form
       addLine:     makeChoices(add.lineSelect),
       addMachine:  makeChoices(add.machineSelect),
       addCat:      makeChoices(add.catSelect),
       addSub:      makeChoices(add.subSelect),
+      // edit-form
       editLine:    makeChoices(edit.lineSelect),
       editMachine: makeChoices(edit.machineSelect),
       editCat:     makeChoices(edit.catSelect),
@@ -241,61 +242,58 @@
     ].forEach(c => c.disable());
   
     // populate Line dropdowns
-    const lineChoices = prodLines.map(l => ({ value:l.line, label:l.line }));
+    const lineChoices = prodLines.map(l => ({ value: l.line, label: l.line }));
     choices.addLine.setChoices(lineChoices, 'value','label', true);
     choices.editLine.setChoices(lineChoices, 'value','label', true);
   
-    // chain helpers
-    function chainLineToMachine(lineEl, machineChoice) {
-      lineEl.addEventListener('change', () => {
-        machineChoice.clearChoices().disable();
-        const lineVal = lineEl.value;
-        if (!lineVal) return;
-        const ops = prodLines.find(l => l.line===lineVal).operations;
-        machineChoice.setChoices(
-          ops.map(op => ({
-            label:`Op ${op.op}`,
-            choices: op.machines.map(m=>({value:m.number, label:m.number}))
-          })), 'value','label', true
-        );
-        machineChoice.enable().showDropdown();
+    // ─── CHAIN HELPERS ────────────────────────────────────────────────────
+    // for add: opens dropdowns after populating
+    function chainAdd(parentEl, childChoice, getOpts) {
+      parentEl.addEventListener('change', () => {
+        const val = parentEl.value;
+        childChoice.clearChoices().disable();
+        if (!val) return;
+        childChoice.setChoices(getOpts(val), 'value','label', true);
+        childChoice.enable().showDropdown();
       });
     }
-    chainLineToMachine(add.lineSelect,  choices.addMachine);
-    chainLineToMachine(edit.lineSelect, choices.editMachine);
+    // for edit: only populates, does NOT open dropdown
+    function chainEdit(parentEl, childChoice, getOpts) {
+      parentEl.addEventListener('change', () => {
+        const val = parentEl.value;
+        childChoice.clearChoices().disable();
+        if (!val) return;
+        childChoice.setChoices(getOpts(val), 'value','label', true);
+        childChoice.enable();
+      });
+    }
   
-    function chainMachineToCat(machineEl, catChoice) {
-      machineEl.addEventListener('change', () => {
-        catChoice.clearChoices().disable();
-        if (!machineEl.value) return;
-        catChoice.setChoices(
-          downtimeCodes.map(c=>({value:c.code,label:c.name})),
-          'value','label', true
-        );
-        catChoice.enable().showDropdown();
-      });
-    }
-    chainMachineToCat(add.machineSelect,  choices.addCat);
-    chainMachineToCat(edit.machineSelect, choices.editCat);
+    // define your option-builders:
+    const getMachines = lineVal => {
+      const ops = prodLines.find(l => l.line === lineVal).operations;
+      return ops.map(op => ({
+        label: `Op ${op.op}`,
+        choices: op.machines.map(m => ({ value: m.number, label: m.number }))
+      }));
+    };
+    const getCats = () => downtimeCodes.map(c => ({ value: c.code, label: c.name }));
+    const getSubs = catCode => {
+      const cat = downtimeCodes.find(c => c.code === catCode);
+      return (cat ? cat.subcategories : []).map(s => ({ value: s.code, label: s.name }));
+    };
   
-    function chainCatToSub(catEl, subChoice) {
-      catEl.addEventListener('change', () => {
-        subChoice.clearChoices().disable();
-        const cat = catEl.value;
-        if (!cat) return;
-        const subs = downtimeCodes.find(c=>c.code===cat).subcategories;
-        subChoice.setChoices(
-          subs.map(s=>({value:s.code,label:s.name})),
-          'value','label', true
-        );
-        subChoice.enable().showDropdown();
-      });
-    }
-    chainCatToSub(add.catSelect,  choices.addSub);
-    chainCatToSub(edit.catSelect, choices.editSub);
+    // wire up add-form chains
+    chainAdd(add.lineSelect,  choices.addMachine, getMachines);
+    chainAdd(add.machineSelect, choices.addCat,     () => getCats());
+    chainAdd(add.catSelect,    choices.addSub,      getSubs);
+  
+    // wire up edit-form chains
+    chainEdit(edit.lineSelect,  choices.editMachine, getMachines);
+    chainEdit(edit.machineSelect, choices.editCat,    () => getCats());
+    chainEdit(edit.catSelect,     choices.editSub,     getSubs);
   
     // ─── ADD FORM: default now, validation, filtering ────────────────────
-    (()=>{
+    (() => {
       const now = new Date();
       add.dateInput.value = now.toISOString().slice(0,10);
       add.timeInput.value = now.toTimeString().slice(0,5);
@@ -310,8 +308,9 @@
         add.descInput.value.trim()
       );
     }
+  
     [add.lineSelect, add.machineSelect, add.catSelect, add.subSelect]
-      .forEach(el=>el.addEventListener('change', ()=>{
+      .forEach(el => el.addEventListener('change', () => {
         updateAddBtn();
         filterRows();
       }));
@@ -322,24 +321,24 @@
             fM = add.machineSelect.value,
             fC = add.catSelect.value,
             fS = add.subSelect.value;
-      Array.from(tbody.rows).forEach(tr=>{
+      Array.from(tbody.rows).forEach(tr => {
         const [ , lineCell, machineCell, , , codeCell ] = tr.cells;
         let show = true;
-        if (fL && lineCell.textContent.trim()!==fL) show = false;
-        if (fM && machineCell.textContent.trim()!==fM) show = false;
-        if (fC && !codeCell.textContent.trim().startsWith(fC+'-')) show = false;
-        if (fS && codeCell.textContent.trim()!==fS) show = false;
+        if (fL && lineCell.textContent.trim() !== fL) show = false;
+        if (fM && machineCell.textContent.trim() !== fM) show = false;
+        if (fC && !codeCell.textContent.trim().startsWith(fC + '-')) show = false;
+        if (fS && codeCell.textContent.trim() !== fS) show = false;
         tr.style.display = show ? '' : 'none';
       });
     }
   
     // ─── LOAD MORE ───────────────────────────────────────────────────────
     if (loadBtn) {
-      loadBtn.addEventListener('click', ()=>{
+      loadBtn.addEventListener('click', () => {
         fetch(`${entriesUrl}?offset=${offset}`)
-          .then(r=>r.json())
-          .then(data=>{
-            data.entries.forEach(e=>{
+          .then(r => r.json())
+          .then(data => {
+            data.entries.forEach(e => {
               const tr = document.createElement('tr');
               tr.setAttribute('data-entry-id', e.id);
               tr.innerHTML = `
@@ -354,7 +353,7 @@
               tbody.appendChild(tr);
             });
             offset += data.entries.length;
-            if (!data.has_more) loadBtn.style.display='none';
+            if (!data.has_more) loadBtn.style.display = 'none';
             filterRows();
           })
           .catch(console.error);
@@ -362,31 +361,37 @@
     }
   
     // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
-    tbody.addEventListener('click', e=>{
+    tbody.addEventListener('click', e => {
       const tr = e.target.closest('tr[data-entry-id]');
       if (!tr) return;
+  
       const cells = tr.cells;
       const datetime = cells[0].textContent.trim();
+  
+      // set basic fields
       edit.idInput.value   = tr.dataset.entryId;
       edit.dateInput.value = datetime.slice(0,10);
       edit.timeInput.value = datetime.slice(11);
-  
-      // populate selects
-      choices.editLine.setChoiceByValue(cells[1].textContent.trim());
-      edit.lineSelect.dispatchEvent(new Event('change'));
-      choices.editMachine.setChoiceByValue(cells[2].textContent.trim());
-      edit.machineSelect.dispatchEvent(new Event('change'));
-      choices.editCat.setChoiceByValue(cells[3].textContent.trim());
-      edit.catSelect.dispatchEvent(new Event('change'));
-      choices.editSub.setChoiceByValue(cells[4].textContent.trim());
-  
       edit.descInput.value = cells[6].textContent.trim();
   
+      // set selects without opening dropdowns
+      choices.editLine.setChoiceByValue(cells[1].textContent.trim());
+      edit.lineSelect.dispatchEvent(new Event('change'));
+  
+      choices.editMachine.setChoiceByValue(cells[2].textContent.trim());
+      edit.machineSelect.dispatchEvent(new Event('change'));
+  
+      choices.editCat.setChoiceByValue(cells[3].textContent.trim());
+      edit.catSelect.dispatchEvent(new Event('change'));
+  
+      choices.editSub.setChoiceByValue(cells[4].textContent.trim());
+  
+      // show the modal
       new bootstrap.Modal(edit.modal).show();
     });
   
     // ─── DELETE BUTTON ──────────────────────────────────────────────────
-    edit.deleteBtn.addEventListener('click', ()=>{
+    edit.deleteBtn.addEventListener('click', () => {
       if (!confirm("Are you sure you want to delete this downtime entry?")) return;
       const entryId = edit.idInput.value;
       fetch("{% url 'delete_downtime_entry' %}", {
@@ -397,17 +402,16 @@
         },
         body: JSON.stringify({ entry_id: entryId })
       })
-      .then(r=>{
+      .then(r => {
         if (!r.ok) throw new Error("Delete failed");
         return r.json();
       })
-      .then(()=>{
-        // close modal & remove row
+      .then(() => {
         bootstrap.Modal.getInstance(edit.modal).hide();
         const row = tbody.querySelector(`tr[data-entry-id="${entryId}"]`);
         if (row) row.remove();
       })
-      .catch(err=>{
+      .catch(err => {
         console.error(err);
         alert("Error deleting entry.");
       });
@@ -415,6 +419,7 @@
   
   })();
   </script>
+  
   
   
 {% endblock %}
