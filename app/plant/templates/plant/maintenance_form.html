@@ -61,7 +61,7 @@
         </thead>
         <tbody id="entries-body">
           {% for e in entries %}
-          <tr>
+          <tr data-entry-id="{{ e.id }}">
             <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
             <td>{{ e.line }}</td>
             <td>{{ e.machine }}</td>
@@ -75,18 +75,34 @@
         </tbody>
       </table>
     </div>
+
+    {% if has_more %}
+    <div class="text-center mt-3">
+      <button id="load-more" class="btn btn-outline-dark btn-sm">Load more</button>
+    </div>
+    {% endif %}
   </form>
 
-  {% if has_more %}
-  <div class="text-center mt-3">
-    <button id="load-more" class="btn btn-outline-dark btn-sm">Load more</button>
+  <!-- Entry ID Modal -->
+  <div class="modal fade" id="entryModal" tabindex="-1" aria-labelledby="entryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="entryModalLabel">Entry Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Database ID: <strong id="modal-entry-id"></strong>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
-  {% endif %}
 </div>
 
 <style>
-
-  /* sticky headers, min-height, etc. */
   .table-responsive { overflow-x: auto; }
   #downtime-table thead th {
     position: sticky;
@@ -227,6 +243,7 @@
       .then(data=>{
         data.entries.forEach(e=>{
           const tr = document.createElement('tr');
+          tr.setAttribute('data-entry-id', e.id);
           tr.innerHTML = `
             <td>${e.start_at}</td>
             <td>${e.line}</td>
@@ -244,6 +261,16 @@
         filterEntries();
       })
       .catch(console.error);
+  });
+
+  // Open modal on row click
+  tbody.addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-entry-id]');
+    if (!tr) return;
+    const entryId = tr.dataset.entryId;
+    document.getElementById('modal-entry-id').textContent = entryId;
+    const entryModal = new bootstrap.Modal(document.getElementById('entryModal'));
+    entryModal.show();
   });
 
   // init
