@@ -89,7 +89,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
       ?offset=N   — zero-based index to start at
     """
     offset    = int(request.GET.get('offset', 0))
-    page_size = 5
+    page_size = 100
 
     qs      = MachineDowntimeEvent.objects.order_by('-start_epoch')
     total   = qs.count()
@@ -153,7 +153,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # ─── GET ────────────────────────────────────────────────────────────────
     # paging params
     offset    = int(request.GET.get('offset', 0))
-    page_size = 5
+    page_size = 100
 
     # fetch the events in descending order, slice, then reverse to ascending
     qs         = MachineDowntimeEvent.objects.order_by('-start_epoch')
