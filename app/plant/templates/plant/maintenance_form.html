@@ -4,7 +4,7 @@
 <div class="container-fluid py-5">
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
-    <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+    <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
         <thead>
           <tr>
@@ -81,6 +81,12 @@
 </div>
 
 <style>
+
+  /* **new**: force the table wrapper to stay at least 300px tall */
+  #downtime-table-wrapper {
+    min-height: 300px;
+  }
+  
   /* Sticky header */
   #downtime-table thead th {
     position: sticky;
