@@ -1,6 +1,7 @@
 {% extends "parent.html" %}
 {% block content %}
 <div class="container-fluid py-5">
+  <!-- ADD FORM & TABLE -->
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
@@ -83,28 +84,78 @@
     {% endif %}
   </form>
 
-  <!-- Edit Details Modal -->
-  <div class="modal fade" id="entryModal" tabindex="-1" aria-labelledby="entryModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+  <!-- EDIT ENTRY MODAL -->
+  <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="entryModalLabel">Entry Details</h5>
+          <h5 class="modal-title" id="editEntryModalLabel">Edit Downtime Entry</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body">
-          <ul class="list-unstyled mb-0">
-            <li><strong>Database ID:</strong> <span id="modal-entry-id"></span></li>
-            <li><strong>Started at:</strong> <span id="modal-started-at"></span></li>
-            <li><strong>Line:</strong> <span id="modal-line"></span></li>
-            <li><strong>Machine:</strong> <span id="modal-machine"></span></li>
-            <li><strong>Category:</strong> <span id="modal-category"></span></li>
-            <li><strong>Sub-category:</strong> <span id="modal-subcategory"></span></li>
-            <li><strong>Comment:</strong> <span id="modal-comment"></span></li>
-          </ul>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
+        <form id="edit-entry-form" method="POST">
+          {% csrf_token %}
+          <div class="modal-body">
+            <input type="hidden" id="edit-entry-id" name="entry_id">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="edit-start-date" class="form-label">Date</label>
+                <input type="date" id="edit-start-date" name="start_date"
+                       class="form-control form-control-sm" required>
+              </div>
+              <div class="col-md-6">
+                <label for="edit-start-time" class="form-label">Time</label>
+                <input type="time" id="edit-start-time" name="start_time"
+                       class="form-control form-control-sm" required>
+              </div>
+              <div class="col-md-4">
+                <label for="edit-line-select" class="form-label">Line</label>
+                <select id="edit-line-select" name="line"
+                        class="form-select form-select-sm" required>
+                  <option value="">Select Line</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="edit-machine-select" class="form-label">Machine</label>
+                <select id="edit-machine-select" name="machine"
+                        class="form-select form-select-sm" required disabled>
+                  <option value="">Select Machine</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="edit-category-select" class="form-label">Category</label>
+                <select id="edit-category-select" name="category"
+                        class="form-select form-select-sm" required disabled>
+                  <option value="">Select Category</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="edit-subcategory-select" class="form-label">Sub-category</label>
+                <select id="edit-subcategory-select" name="subcategory"
+                        class="form-select form-select-sm" required disabled>
+                  <option value="">Select Subcategory</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="edit-description" class="form-label">Comment</label>
+                <textarea id="edit-description" name="description"
+                          class="form-control form-control-sm" rows="2"
+                          maxlength="5000" required></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+              Cancel
+            </button>
+            <button type="submit"
+                    id="save-button"
+                    class="btn btn-primary">
+              Save changes
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -122,172 +173,219 @@
 </style>
 
 <script>
-(function(){
-  const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
-  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
-
-  const lineSelect        = document.getElementById('line-select');
-  const machineSelect     = document.getElementById('machine-select');
-  const categorySelect    = document.getElementById('category-select');
-  const subcategorySelect = document.getElementById('subcategory-select');
-  const startDateInput    = document.getElementById('start-date');
-  const startTimeInput    = document.getElementById('start-time');
-  const descriptionInput  = document.getElementById('description');
-  const addBtn            = document.getElementById('add-button');
-  const tbody             = document.getElementById('entries-body');
-  const loadBtn           = document.getElementById('load-more');
-  const entriesUrl        = "{% url 'maintenance_entries' %}";
-  let   offset            = {{ entries|length }};
-
-  // Prefill date/time
-  (function setDefaultDateTime(){
-    const now = new Date();
-    startDateInput.value = now.toISOString().slice(0,10);
-    startTimeInput.value = now.toTimeString().slice(0,5);
-  })();
-
-  // Choices.js inits
-  const lineChoice        = new Choices(lineSelect,        { searchEnabled:false, itemSelectText:'' });
-  const machineChoice     = new Choices(machineSelect,     { searchEnabled:false, itemSelectText:'', shouldSort:false });
-  const categoryChoice    = new Choices(categorySelect,    { searchEnabled:false, itemSelectText:'' });
-  const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled:false, itemSelectText:'' });
-
-  machineChoice.disable();
-  categoryChoice.disable();
-  subcategoryChoice.disable();
-
-  // filter & add-button logic
-  function filterEntries(){
-    const fLine    = lineSelect.value;
-    const fMachine = machineSelect.value;
-    const fCat     = categorySelect.value;
-    const fSub     = subcategorySelect.value;
-
-    Array.from(tbody.rows).forEach(tr=>{
-      const cols       = tr.cells;
-      const rowLine    = cols[1].textContent.trim();
-      const rowMachine = cols[2].textContent.trim();
-      const rowCode    = cols[5].textContent.trim();
-      let show = true;
-      if (fLine    && rowLine    !== fLine)          show = false;
-      if (fMachine && rowMachine !== fMachine)       show = false;
-      if (fCat     && !rowCode.startsWith(fCat+'-')) show = false;
-      if (fSub     && rowCode !== fSub)              show = false;
-      tr.style.display = show ? '' : 'none';
+  (function(){
+    // -- your existing JSON data for both forms --
+    const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
+    const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+  
+    // --- SHARED DOM ELEMENTS ---
+    const tbody      = document.getElementById('entries-body');
+    const loadBtn    = document.getElementById('load-more');
+    const entriesUrl = "{% url 'maintenance_entries' %}";
+    let   offset     = {{ entries|length }};
+  
+    // --- ADD FORM ELEMENTS ---
+    const add = {
+      dateInput:    document.getElementById('start-date'),
+      timeInput:    document.getElementById('start-time'),
+      lineSelect:   document.getElementById('line-select'),
+      machineSelect:document.getElementById('machine-select'),
+      catSelect:    document.getElementById('category-select'),
+      subSelect:    document.getElementById('subcategory-select'),
+      descInput:    document.getElementById('description'),
+      submitBtn:    document.getElementById('add-button')
+    };
+  
+    // --- EDIT FORM ELEMENTS ---
+    const edit = {
+      modal:        document.getElementById('editEntryModal'),
+      form:         document.getElementById('edit-entry-form'),
+      idInput:      document.getElementById('edit-entry-id'),
+      dateInput:    document.getElementById('edit-start-date'),
+      timeInput:    document.getElementById('edit-start-time'),
+      lineSelect:   document.getElementById('edit-line-select'),
+      machineSelect:document.getElementById('edit-machine-select'),
+      catSelect:    document.getElementById('edit-category-select'),
+      subSelect:    document.getElementById('edit-subcategory-select'),
+      descInput:    document.getElementById('edit-description'),
+      saveBtn:      document.getElementById('save-button')
+    };
+  
+    // --- HELPER: Initialize Choices.js on a <select> and return the instance ---
+    function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'', shouldSort:false }) {
+      return new Choices(el, opts);
+    }
+  
+    // --- INITIALIZE Choices.js ---
+    const choices = {
+      addLine:    makeChoices(add.lineSelect),
+      addMachine: makeChoices(add.machineSelect),
+      addCat:     makeChoices(add.catSelect),
+      addSub:     makeChoices(add.subSelect),
+      editLine:   makeChoices(edit.lineSelect),
+      editMachine:makeChoices(edit.machineSelect),
+      editCat:    makeChoices(edit.catSelect),
+      editSub:    makeChoices(edit.subSelect),
+    };
+  
+    // Disable dependent selects initially
+    [ choices.addMachine, choices.addCat,   choices.addSub,
+      choices.editMachine,choices.editCat,  choices.editSub ].forEach(c => c.disable());
+  
+    // --- POPULATE LINE SELECTS (ADD + EDIT) ---
+    const lineChoices = prodLines.map(l => ({ value: l.line, label: l.line }));
+    choices.addLine.setChoices(lineChoices, 'value','label', true);
+    choices.editLine.setChoices(lineChoices, 'value','label', true);
+  
+    // --- FUNCTION: chain Line → Machines ---
+    function chainLineToMachine(lineSelect, machineChoice) {
+      lineSelect.addEventListener('change', () => {
+        machineChoice.clearChoices().disable();
+        const lineVal = lineSelect.value;
+        if (!lineVal) return;
+        const ops = prodLines.find(l => l.line === lineVal).operations;
+        machineChoice.setChoices(
+          ops.map(op => ({
+            label:   `Op ${op.op}`,
+            choices: op.machines.map(m => ({ value: m.number, label: m.number }))
+          })),
+          'value','label', true
+        );
+        machineChoice.enable().showDropdown();
+      });
+    }
+    chainLineToMachine(add.lineSelect,  choices.addMachine);
+    chainLineToMachine(edit.lineSelect, choices.editMachine);
+  
+    // --- FUNCTION: chain Machine → Category ---
+    function chainMachineToCat(machineSelect, catChoice) {
+      machineSelect.addEventListener('change', () => {
+        catChoice.clearChoices().disable();
+        if (!machineSelect.value) return;
+        catChoice.setChoices(
+          downtimeCodes.map(c => ({ value: c.code, label: c.name })),
+          'value','label', true
+        );
+        catChoice.enable().showDropdown();
+      });
+    }
+    chainMachineToCat(add.machineSelect,  choices.addCat);
+    chainMachineToCat(edit.machineSelect, choices.editCat);
+  
+    // --- FUNCTION: chain Category → Subcategory ---
+    function chainCatToSub(catSelect, subChoice) {
+      catSelect.addEventListener('change', () => {
+        subChoice.clearChoices().disable();
+        const cat = catSelect.value;
+        if (!cat) return;
+        const subs = downtimeCodes.find(c => c.code === cat).subcategories;
+        subChoice.setChoices(
+          subs.map(s => ({ value: s.code, label: s.name })),
+          'value','label', true
+        );
+        subChoice.enable().showDropdown();
+      });
+    }
+    chainCatToSub(add.catSelect,  choices.addSub);
+    chainCatToSub(edit.catSelect, choices.editSub);
+  
+    // --- ADD FORM: default date/time to "now" ---
+    (()=>{
+      const now = new Date();
+      add.dateInput.value = now.toISOString().slice(0,10);
+      add.timeInput.value = now.toTimeString().slice(0,5);
+    })();
+  
+    // --- ADD FORM: enable/disable Add button ---
+    function updateAddBtn() {
+      add.submitBtn.disabled = !(
+        add.lineSelect.value &&
+        add.machineSelect.value &&
+        add.catSelect.value &&
+        add.subSelect.value &&
+        add.descInput.value.trim()
+      );
+    }
+    [ add.lineSelect, add.machineSelect, add.catSelect, add.subSelect ]
+      .forEach(el => el.addEventListener('change', () => {
+        updateAddBtn();
+        filterRows();
+      }));
+    add.descInput.addEventListener('input', updateAddBtn);
+  
+    // --- FILTER existing table rows based on ADD form selects ---
+    function filterRows() {
+      const fL = add.lineSelect.value,
+            fM = add.machineSelect.value,
+            fC = add.catSelect.value,
+            fS = add.subSelect.value;
+      Array.from(tbody.rows).forEach(tr => {
+        const cells = tr.cells;
+        const rowLine     = cells[1].textContent.trim();
+        const rowMachine  = cells[2].textContent.trim();
+        const rowCode     = cells[5].textContent.trim();
+        let visible = true;
+        if (fL && rowLine !== fL) visible = false;
+        if (fM && rowMachine !== fM) visible = false;
+        if (fC && !rowCode.startsWith(fC+'-')) visible = false;
+        if (fS && rowCode !== fS) visible = false;
+        tr.style.display = visible ? '' : 'none';
+      });
+    }
+  
+    // --- LOAD MORE via AJAX ---
+    if (loadBtn) {
+      loadBtn.addEventListener('click', () => {
+        fetch(`${entriesUrl}?offset=${offset}`)
+          .then(r => r.json())
+          .then(data => {
+            data.entries.forEach(e => {
+              const tr = document.createElement('tr');
+              tr.setAttribute('data-entry-id', e.id);
+              tr.innerHTML = `
+                <td>${e.start_at}</td>
+                <td>${e.line}</td>
+                <td>${e.machine}</td>
+                <td>${e.category}</td>
+                <td>${e.subcategory}</td>
+                <td>${e.code}</td>
+                <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
+                <td></td>`;
+              tbody.appendChild(tr);
+            });
+            offset += data.entries.length;
+            if (!data.has_more) loadBtn.style.display = 'none';
+            filterRows();
+          })
+          .catch(console.error);
+      });
+    }
+  
+    // --- EDIT: click on row to populate & open modal ---
+    tbody.addEventListener('click', e => {
+      const tr = e.target.closest('tr[data-entry-id]');
+      if (!tr) return;
+      const cells = tr.cells;
+      // populate hidden ID
+      edit.idInput.value = tr.dataset.entryId;
+      // parse datetime
+      const datetime = cells[0].textContent.trim();
+      edit.dateInput.value = datetime.slice(0,10);
+      edit.timeInput.value = datetime.slice(11);
+      // sequentially set each select and trigger change
+      choices.editLine.setChoiceByValue(cells[1].textContent.trim());
+      edit.lineSelect.dispatchEvent(new Event('change'));
+      choices.editMachine.setChoiceByValue(cells[2].textContent.trim());
+      edit.machineSelect.dispatchEvent(new Event('change'));
+      choices.editCat.setChoiceByValue(cells[3].textContent.trim());
+      edit.catSelect.dispatchEvent(new Event('change'));
+      choices.editSub.setChoiceByValue(cells[4].textContent.trim());
+      edit.descInput.value = cells[6].textContent.trim();
+      // show modal
+      new bootstrap.Modal(edit.modal).show();
     });
-  }
-
-  function updateAddBtnState(){
-    const ok = lineSelect.value
-            && machineSelect.value
-            && categorySelect.value
-            && subcategorySelect.value
-            && descriptionInput.value.trim();
-    addBtn.disabled = !ok;
-  }
-
-  [ lineSelect, machineSelect, categorySelect, subcategorySelect ]
-    .forEach(el => el.addEventListener('change', ()=>{
-      filterEntries();
-      updateAddBtnState();
-    }));
-  descriptionInput.addEventListener('input', updateAddBtnState);
-
-  // populate dropdowns
-  lineChoice.setChoices(
-    prodLines.map(l=>({ value:l.line, label:l.line })),
-    'value','label',true
-  );
-  lineSelect.addEventListener('change', ()=>{
-    machineChoice.clearChoices().disable();
-    categoryChoice.clearChoices().disable();
-    subcategoryChoice.clearChoices().disable();
-    if (!lineSelect.value) return;
-    const ops = prodLines.find(l=>l.line===lineSelect.value).operations;
-    machineChoice.setChoices(
-      ops.map(op=>({
-        label:`Op ${op.op}`,
-        choices: op.machines.map(m=>({ value:m.number, label:m.number }))
-      })),
-      'value','label',true
-    );
-    machineChoice.enable().showDropdown();
-  });
-
-  machineSelect.addEventListener('change', ()=>{
-    categoryChoice.clearChoices().disable();
-    subcategoryChoice.clearChoices().disable();
-    if (!machineSelect.value) return;
-    categoryChoice.setChoices(
-      downtimeCodes.map(c=>({ value:c.code, label:c.name })),
-      'value','label',true
-    );
-    categoryChoice.enable().showDropdown();
-  });
-
-  categorySelect.addEventListener('change', ()=>{
-    subcategoryChoice.clearChoices().disable();
-    if (!categorySelect.value) return;
-    subcategoryChoice.setChoices(
-      downtimeCodes
-        .find(c=>c.code===categorySelect.value)
-        .subcategories
-        .map(s=>({ value:s.code, label:s.name })),
-      'value','label',true
-    );
-    subcategoryChoice.enable().showDropdown();
-  });
-
-  subcategorySelect.addEventListener('change', ()=>{
-    if (subcategorySelect.value) descriptionInput.focus();
-  });
-
-  // AJAX Load more
-  if (loadBtn) loadBtn.addEventListener('click', ()=>{
-    fetch(`${entriesUrl}?offset=${offset}`)
-      .then(r=>r.json())
-      .then(data=>{
-        data.entries.forEach(e=>{
-          const tr = document.createElement('tr');
-          tr.setAttribute('data-entry-id', e.id);
-          tr.innerHTML = `
-            <td>${e.start_at}</td>
-            <td>${e.line}</td>
-            <td>${e.machine}</td>
-            <td>${e.category}</td>
-            <td>${e.subcategory}</td>
-            <td>${e.code}</td>
-            <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
-            <td></td>
-          `;
-          tbody.appendChild(tr);
-        });
-        offset += data.entries.length;
-        if (!data.has_more) loadBtn.style.display = 'none';
-        filterEntries();
-      })
-      .catch(console.error);
-  });
-
-  // Show full details in modal on row click
-  tbody.addEventListener('click', e => {
-    const tr = e.target.closest('tr[data-entry-id]');
-    if (!tr) return;
-    const cells = tr.cells;
-    document.getElementById('modal-entry-id').textContent    = tr.dataset.entryId;
-    document.getElementById('modal-started-at').textContent  = cells[0].textContent.trim();
-    document.getElementById('modal-line').textContent        = cells[1].textContent.trim();
-    document.getElementById('modal-machine').textContent     = cells[2].textContent.trim();
-    document.getElementById('modal-category').textContent    = cells[3].textContent.trim();
-    document.getElementById('modal-subcategory').textContent = cells[4].textContent.trim();
-    document.getElementById('modal-comment').textContent     = cells[6].textContent.trim();
-    const entryModal = new bootstrap.Modal(document.getElementById('entryModal'));
-    entryModal.show();
-  });
-
-  // init
-  filterEntries();
-  updateAddBtnState();
-})();
-</script>
+  
+  })();
+  </script>
+  
 {% endblock %}
