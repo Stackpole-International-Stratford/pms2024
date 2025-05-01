@@ -4,73 +4,54 @@
 <div class="container-fluid py-5">
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
-    <div class="table-responsive">
+    <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
         <thead>
           <tr>
             <th style="min-width:140px">
               Started at<br>
-              <input type="date"
-                     id="start-date"
-                     name="start_date"
-                     class="form-control form-control-sm"
-                     required>
-              <input type="time"
-                     id="start-time"
-                     name="start_time"
-                     class="form-control form-control-sm mt-1"
-                     required>
+              <input type="date" id="start-date" name="start_date"
+                     class="form-control form-control-sm" required>
+              <input type="time" id="start-time" name="start_time"
+                     class="form-control form-control-sm mt-1" required>
             </th>
             <th style="min-width:100px">
               Line<br>
-              <select id="line-select"
-                      name="line"
+              <select id="line-select" name="line"
                       class="form-select form-select-sm">
                 <option value="">All</option>
               </select>
             </th>
             <th style="min-width:100px">
               Machine<br>
-              <select id="machine-select"
-                      name="machine"
-                      class="form-select form-select-sm"
-                      disabled>
+              <select id="machine-select" name="machine"
+                      class="form-select form-form-select-sm" disabled>
                 <option value="">All</option>
               </select>
             </th>
             <th style="min-width:160px">
               Category<br>
-              <select id="category-select"
-                      name="category"
-                      class="form-select form-select-sm"
-                      disabled>
+              <select id="category-select" name="category"
+                      class="form-select form-select-sm" disabled>
                 <option value="">All</option>
               </select>
             </th>
             <th style="min-width:180px">
               Sub-category<br>
-              <select id="subcategory-select"
-                      name="subcategory"
-                      class="form-select form-select-sm"
-                      disabled>
+              <select id="subcategory-select" name="subcategory"
+                      class="form-select form-select-sm" disabled>
                 <option value="">All</option>
               </select>
             </th>
             <th style="min-width:100px">Code</th>
             <th style="min-width:200px">
               Comment<br>
-              <textarea id="description"
-                        name="description"
+              <textarea id="description" name="description"
                         class="form-control form-control-sm"
-                        rows="1"
-                        maxlength="5000"
-                        required></textarea>
+                        rows="1" maxlength="5000" required></textarea>
             </th>
             <th style="width:1%;">
-              <button type="submit"
-                      class="btn btn-dark btn-sm mt-4">
-                Add
-              </button>
+              <button type="submit" class="btn btn-dark btn-sm mt-4">Add</button>
             </th>
           </tr>
         </thead>
@@ -94,25 +75,31 @@
 
   {% if has_more %}
   <div class="text-center mt-3">
-    <button id="load-more" class="btn btn-outline-dark btn-sm">
-      Load more
-    </button>
+    <button id="load-more" class="btn btn-outline-dark btn-sm">Load more</button>
   </div>
   {% endif %}
 </div>
 
 <style>
-  /* ensure horizontal scroll on narrow devices */
-  .table-responsive {
-    -webkit-overflow-scrolling: touch;
+  /* Sticky header */
+  #downtime-table thead th {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 2;
   }
+  /* cap form/table widths */
+  .table-responsive { overflow-x: auto; }
+  #downtime-table { white-space: nowrap; }
 </style>
 
 <script>
 (function(){
+  // parse JSON contexts
   const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
   const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
 
+  // element refs
   const lineSelect        = document.getElementById('line-select');
   const machineSelect     = document.getElementById('machine-select');
   const categorySelect    = document.getElementById('category-select');
@@ -122,41 +109,42 @@
   const descriptionInput  = document.getElementById('description');
   const tbody             = document.getElementById('entries-body');
   const loadBtn           = document.getElementById('load-more');
-  let offset              = {{ entries|length }};
   const entriesUrl        = "{% url 'maintenance_entries' %}";
+  let   offset           = {{ entries|length }};
 
-  // Initialize Choices.js on the selects
-  const lineChoice        = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
-  const machineChoice     = new Choices(machineSelect,     { searchEnabled: false, itemSelectText: '', shouldSort: false });
-  const categoryChoice    = new Choices(categorySelect,    { searchEnabled: false, itemSelectText: '' });
-  const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
-
-  function hide(...els){ els.forEach(e=>e.style.display='none'); }
-  function show(...els){ els.forEach(e=>e.style.display='block'); }
+  // set default date & time to now
   function setDefaultDateTime(){
     const now = new Date();
     startDateInput.value = now.toISOString().slice(0,10);
     startTimeInput.value = now.toTimeString().slice(0,5);
   }
+  setDefaultDateTime();
 
-  // Populate Line dropdown
-  lineChoice.setChoices(
-    prodLines.map(l => ({ value: l.line, label: l.line })),
-    'value','label',true
-  );
+  // init Choices.js
+  const lineChoice        = new Choices(lineSelect,        { searchEnabled:false, itemSelectText:'' });
+  const machineChoice     = new Choices(machineSelect,     { searchEnabled:false, itemSelectText:'', shouldSort:false });
+  const categoryChoice    = new Choices(categorySelect,    { searchEnabled:false, itemSelectText:'' });
+  const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled:false, itemSelectText:'' });
+
   machineChoice.disable();
   categoryChoice.disable();
   subcategoryChoice.disable();
 
-  // Client-side filter function
+  // populate Line dropdown
+  lineChoice.setChoices(
+    prodLines.map(l=>({value:l.line,label:l.line})),
+    'value','label',true
+  );
+
+  // client‐side filter
   function filterEntries(){
     const fLine    = lineSelect.value;
     const fMachine = machineSelect.value;
     const fCat     = categorySelect.value;
     const fSub     = subcategorySelect.value;
 
-    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
-      const cols       = tr.children;
+    Array.from(tbody.rows).forEach(tr=>{
+      const cols       = tr.cells;
       const rowLine    = cols[1].textContent.trim();
       const rowMachine = cols[2].textContent.trim();
       const rowCode    = cols[5].textContent.trim();
@@ -169,30 +157,27 @@
     });
   }
 
-  // Wire up dropdown change events
-  lineSelect.addEventListener('change', () => {
-    const line = lineSelect.value;
+  // wiring selects
+  lineSelect.addEventListener('change',()=>{
     machineChoice.clearChoices().disable();
     categoryChoice.clearChoices().disable();
     subcategoryChoice.clearChoices().disable();
     filterEntries();
+    const line = lineSelect.value;
     if (!line) return;
     const ops = prodLines.find(l=>l.line===line).operations;
     machineChoice.setChoices(
-      ops.map(op=>({
-        label: `Op ${op.op}`,
-        choices: op.machines.map(m=>({value:m.number,label:m.number}))
-      })),
+      ops.map(op=>({label:`Op ${op.op}`,choices:op.machines.map(m=>({value:m.number,label:m.number}))})),
       'value','label',true
     );
     machineChoice.enable().showDropdown();
   });
 
-  machineSelect.addEventListener('change', () => {
-    const mach = machineSelect.value;
+  machineSelect.addEventListener('change',()=>{
     categoryChoice.clearChoices().disable();
     subcategoryChoice.clearChoices().disable();
     filterEntries();
+    const mach = machineSelect.value;
     if (!mach) return;
     categoryChoice.setChoices(
       downtimeCodes.map(c=>({value:c.code,label:c.name})),
@@ -201,10 +186,10 @@
     categoryChoice.enable().showDropdown();
   });
 
-  categorySelect.addEventListener('change', () => {
-    const cat = categorySelect.value;
+  categorySelect.addEventListener('change',()=>{
     subcategoryChoice.clearChoices().disable();
     filterEntries();
+    const cat = categorySelect.value;
     if (!cat) return;
     subcategoryChoice.setChoices(
       downtimeCodes.find(c=>c.code===cat).subcategories.map(s=>({value:s.code,label:s.name})),
@@ -213,43 +198,40 @@
     subcategoryChoice.enable().showDropdown();
   });
 
-  subcategorySelect.addEventListener('change', () => {
+  subcategorySelect.addEventListener('change',()=>{
     filterEntries();
     if (subcategorySelect.value) {
-      setDefaultDateTime();
       descriptionInput.focus();
     }
   });
 
-  // AJAX Load More
-  if (loadBtn) {
-    loadBtn.addEventListener('click', () => {
-      fetch(`${entriesUrl}?offset=${offset}`)
-        .then(r=>r.json())
-        .then(data=>{
-          data.entries.forEach(e=>{
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${e.start_at}</td>
-              <td>${e.line}</td>
-              <td>${e.machine}</td>
-              <td>${e.category}</td>
-              <td>${e.subcategory}</td>
-              <td>${e.code}</td>
-              <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
-              <td></td>
-            `;
-            tbody.appendChild(tr);
-          });
-          offset += data.entries.length;
-          if (!data.has_more) loadBtn.style.display = 'none';
-          filterEntries();
-        })
-        .catch(console.error);
-    });
-  }
+  // AJAX load more
+  if (loadBtn) loadBtn.addEventListener('click',()=>{
+    fetch(`${entriesUrl}?offset=${offset}`)
+      .then(r=>r.json())
+      .then(data=>{
+        data.entries.forEach(e=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${e.start_at}</td>
+            <td>${e.line}</td>
+            <td>${e.machine}</td>
+            <td>${e.category}</td>
+            <td>${e.subcategory}</td>
+            <td>${e.code}</td>
+            <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
+            <td></td>
+          `;
+          tbody.appendChild(tr);
+        });
+        offset += data.entries.length;
+        if (!data.has_more) loadBtn.style.display='none';
+        filterEntries();
+      })
+      .catch(console.error);
+  });
 
-  // Initial filter on page load
+  // initial filter
   filterEntries();
 })();
 </script>
