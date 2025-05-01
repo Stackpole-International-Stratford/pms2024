@@ -1,7 +1,9 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse
+from datetime import datetime
+
 
 # import your lines structure
 from prod_query.views import lines as prod_lines
@@ -81,29 +83,33 @@ DOWNTIME_CODES = [
 
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-        # New fields
+        # grab your fields
         line        = request.POST.get('line')
-        start_date  = request.POST.get('start_date')
-        start_time  = request.POST.get('start_time')
-
-        # Existing fields
         machine     = request.POST.get('machine')
         category    = request.POST.get('category')
         subcategory = request.POST.get('subcategory')
+        start_date  = request.POST.get('start_date')   # e.g. "2025-05-01"
+        start_time  = request.POST.get('start_time')   # e.g. "14:30"
         description = request.POST.get('description')
 
-        return HttpResponse(f"""
-            <h1>Submission Received</h1>
-            <p><strong>Line:</strong> {line}</p>
-            <p><strong>Machine:</strong> {machine}</p>
-            <p><strong>Category:</strong> {category}</p>
-            <p><strong>Sub-category:</strong> {subcategory}</p>
-            <p><strong>Start Date:</strong> {start_date}</p>
-            <p><strong>Start Time:</strong> {start_time}</p>
-            <p><strong>Description:</strong> {description}</p>
-            <p><a href="">Log another downtime</a></p>
-        """)
+        # combine date + time, parse to datetime
+        dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+        epoch_ts = int(dt.timestamp())
 
+        # log it however you like:
+        # -- simple print:
+        print(
+            f"Downtime logged → "
+            f"line={line}, machine={machine}, "
+            f"category={category}, subcategory={subcategory}, "
+            f"start_epoch={epoch_ts}, comment={description}"
+        )
+
+
+        # then just redirect back (or send a minimal response)
+        return redirect(request.path)
+
+    # GET: render the form as before
     context = {
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
         'lines_json':          mark_safe(json.dumps(prod_lines)),
