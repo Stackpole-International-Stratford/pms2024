@@ -496,6 +496,24 @@
     });
   
   })();
+
+// ─── DEBUG: log every click ────────────────────────────────────────────
+document.addEventListener('click', () => {
+  resetInactivityTimer();
+});
+
+// ─── INACTIVITY–BASED RELOAD ───────────────────────────────────────────
+let inactivityTimer;
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => {
+    console.log('No activity for 5s, reloading…');
+    location.reload();
+  }, 5 * 60 * 1000);
+}
+// kick off the first timer
+resetInactivityTimer();
+
 </script>
 
   
