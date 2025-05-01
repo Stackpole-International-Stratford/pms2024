@@ -2,7 +2,8 @@
 
 {% block content %}
   {# ───── Downtime Entry Form ─────────────────────────────────────── #}
-  <div class="container-fluid d-flex justify-content-center py-5">
+  <div class="container-fluid d-flex justify-content-center py-5"
+     style="-webkit-overflow-scrolling: touch;">
     <form id="maintenance-form" method="POST">
       {% csrf_token %}
       <div class="card shadow-sm">
