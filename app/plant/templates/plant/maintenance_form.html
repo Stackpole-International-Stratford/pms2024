@@ -320,12 +320,13 @@
     // ─── cascade helper ───────────────────────────────────────────────────
     function chain(parentEl, childChoice, getOpts, showDD=false){
       parentEl.addEventListener('change',()=>{
-        const v=parentEl.value;
+        const v = parentEl.value;
         childChoice.clearChoices().disable();
-        if(!v) return;
+        if (!v) return;
         childChoice.setChoices(getOpts(v),'value','label',true);
         childChoice.enable();
-        if(showDD) childChoice.showDropdown();
+        if (showDD) childChoice.showDropdown();
+        filterRows();
       });
     }
   
@@ -357,8 +358,25 @@
       );
     }
     [add.lineSelect,add.machineSelect,add.catSelect,add.subSelect]
-      .forEach(el=>el.addEventListener('change',validateAdd));
+      .forEach(el=>el.addEventListener('change', validateAdd));
     add.descInput.addEventListener('input',validateAdd);
+  
+    // ─── ROW FILTERING ───────────────────────────────────────────────────
+    function filterRows() {
+      const fL = add.lineSelect.value,
+            fM = add.machineSelect.value,
+            fC = add.catSelect.value,
+            fS = add.subSelect.value;
+      Array.from(tbody.rows).forEach(tr => {
+        const [ , lineCell, machineCell, , , codeCell ] = tr.cells;
+        let show = true;
+        if (fL && lineCell.textContent.trim()   !== fL) show = false;
+        if (fM && machineCell.textContent.trim() !== fM) show = false;
+        if (fC && !codeCell.textContent.trim().startsWith(fC + '-')) show = false;
+        if (fS && codeCell.textContent.trim()    !== fS) show = false;
+        tr.style.display = show ? '' : 'none';
+      });
+    }
   
     // ─── LOAD-MORE ───────────────────────────────────────────────────────
     if(loadBtn){
@@ -382,6 +400,7 @@
             });
             offset += entries.length;
             if(!has_more) loadBtn.style.display='none';
+            filterRows();
           })
           .catch(console.error);
       });
@@ -399,39 +418,27 @@
       const catCode=fullCode.split('-')[0];
       const subCode=fullCode;
   
-      // fill basic fields
-      edit.idInput.value   =tr.dataset.entryId;
-      edit.dateInput.value =datetime.slice(0,10);
-      edit.timeInput.value =datetime.slice(11);
-      edit.descInput.value =cells[6].textContent.trim();
+      edit.idInput.value   = tr.dataset.entryId;
+      edit.dateInput.value = datetime.slice(0,10);
+      edit.timeInput.value = datetime.slice(11);
+      edit.descInput.value = cells[6].textContent.trim();
   
-      // 1) line
       choices.editLine.setChoiceByValue(lineVal);
       edit.lineSelect.value=lineVal;
   
-      // 2) machine
       const mOpts=getMachines(lineVal);
-      choices.editMachine.clearChoices()
-                         .setChoices(mOpts,'value','label',true)
-                         .enable();
+      choices.editMachine.clearChoices().setChoices(mOpts,'value','label',true).enable();
       choices.editMachine.setChoiceByValue(machVal);
       edit.machineSelect.value=machVal;
   
-      // 3) category
-      choices.editCat.clearChoices()
-                     .setChoices(getCats(),'value','label',true)
-                     .enable();
+      choices.editCat.clearChoices().setChoices(getCats(),'value','label',true).enable();
       choices.editCat.setChoiceByValue(catCode);
       edit.catSelect.value=catCode;
   
-      // 4) sub-category
-      choices.editSub.clearChoices()
-                     .setChoices(getSubs(catCode),'value','label',true)
-                     .enable();
+      choices.editSub.clearChoices().setChoices(getSubs(catCode),'value','label',true).enable();
       choices.editSub.setChoiceByValue(subCode);
       edit.subSelect.value=subCode;
   
-      // show edit modal
       new bootstrap.Modal(edit.modal).show();
     });
   
@@ -458,7 +465,7 @@
     // ─── OPEN CLOSE-OUT MODAL ────────────────────────────────────────────
     closeoutOpenBtn.addEventListener('click',()=>{
       closeoutEntryId.value = edit.idInput.value;
-      const now = new Date();
+      const now=new Date();
       closeoutDate.value = now.toISOString().slice(0,10);
       closeoutTime.value = now.toTimeString().slice(0,5);
       new bootstrap.Modal(closeoutModalEl).show();
@@ -466,9 +473,9 @@
   
     // ─── CONFIRM CLOSE-OUT ───────────────────────────────────────────────
     closeoutConfirm.addEventListener('click',()=>{
-      const id = closeoutEntryId.value;
-      const date = closeoutDate.value;
-      const time = closeoutTime.value;
+      const id=closeoutEntryId.value,
+            date=closeoutDate.value,
+            time=closeoutTime.value;
       if(!date||!time) return alert('Pick date & time.');
   
       fetch("{% url 'closeout_downtime_entry' %}",{
@@ -477,23 +484,20 @@
           "Content-Type":"application/json",
           "X-CSRFToken":document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body:JSON.stringify({
-          entry_id: id,
-          closeout: `${date} ${time}`
-        })
+        body:JSON.stringify({ entry_id:id, closeout:`${date} ${time}` })
       })
       .then(r=>{ if(!r.ok) throw Error(); return r.json(); })
-      .then(data=>{
+      .then(()=>{
         bootstrap.Modal.getInstance(closeoutModalEl).hide();
         bootstrap.Modal.getInstance(edit.modal).hide();
-        // optionally remove the row immediately:
-        document.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
+        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
       })
       .catch(()=>alert("Error closing out."));
     });
   
   })();
-  </script>
+</script>
+
   
 
   
