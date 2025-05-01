@@ -85,6 +85,52 @@
       </div>
     </div>
   </form>
+
+
+
+
+
+  {% if entries %}
+  <div class="mt-5">
+    <h5>Recent Downtime Entries</h5>
+    <table class="table table-sm table-striped">
+      <thead>
+        <tr>
+          <th>Start (epoch)</th>
+          <th>Line</th>
+          <th>Machine</th>
+          <th>Category</th>
+          <th>Subcategory</th>
+          <th>Code</th>
+          <th>Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td>{{ e.start_epoch }}</td>
+          <td>{{ e.line }}</td>
+          <td>{{ e.machine }}</td>
+          <td>{{ e.category }}</td>
+          <td>{{ e.subcategory }}</td>
+          <td>{{ e.code }}</td>
+          <td>{{ e.comment|truncatechars:50 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if has_more %}
+      <div class="text-center">
+        <a href="?offset={{ offset|add:page_size }}" class="btn btn-outline-primary">
+          Load more
+        </a>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+
 </div>
 
 <style>

@@ -111,21 +111,35 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         # 4) save: category_name & subcategory_name go into those fields;
         #    code stays as the raw sub_code
         MachineDowntimeEvent.objects.create(
-            line               = line,
-            machine            = machine,
-            category           = category_name,
-            subcategory        = subcategory_name,
-            code               = sub_code,
-            start_epoch        = epoch_ts,
-            comment            = description,
-            # closeout_timestamp left NULL for now
-        )
+                    line        = line,
+                    machine     = machine,
+                    category    = category_name,
+                    subcategory = subcategory_name,
+                    code        = sub_code,
+                    start_epoch = epoch_ts,
+                    comment     = description,
+                )
+                # preserve offset on redirect so page doesn’t jump back to page 1
+        return redirect(request.get_full_path())
 
-        return redirect(request.path)
+# ─── GET ────────────────────────────────────────────────────────────────
+    # paging params
+    offset    = int(request.GET.get('offset', 0))
+    page_size = 5
 
-    # GET handler unchanged
+    # fetch the events in descending order, slice, then reverse to ascending
+    qs         = MachineDowntimeEvent.objects.order_by('-start_epoch')
+    total      = qs.count()
+    page_objs  = list(qs[offset: offset + page_size])
+    entries    = list(reversed(page_objs))
+    has_more   = (offset + page_size) < total
+
     context = {
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
         'lines_json':          mark_safe(json.dumps(prod_lines)),
+        'entries':             entries,
+        'offset':              offset,
+        'page_size':           page_size,
+        'has_more':            has_more,
     }
     return render(request, 'plant/maintenance_form.html', context)
