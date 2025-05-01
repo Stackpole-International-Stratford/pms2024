@@ -193,7 +193,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
-        closeout_timestamp__isnull=True
+        closeout_epoch__isnull=True
     ).order_by('-start_epoch')
 
     total = qs.count()
@@ -263,7 +263,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
-        closeout_timestamp__isnull=True
+        closeout_epoch__isnull=True
     ).order_by('-start_epoch')
 
     total     = qs.count()
