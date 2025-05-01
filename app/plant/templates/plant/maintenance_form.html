@@ -66,8 +66,8 @@
             <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
             <td>{{ e.line }}</td>
             <td>{{ e.machine }}</td>
-            <td>{{ e.category }}</td>
-            <td>{{ e.subcategory }}</td>
+            <td data-category-code="{{ e.code|cut:'-' }}">{{ e.category }}</td>
+            <td data-subcategory-code="{{ e.code }}">{{ e.subcategory }}</td>       
             <td>{{ e.code }}</td>
             <td>{{ e.comment|truncatechars:50 }}</td>
             <td></td>
@@ -183,18 +183,18 @@
 </style>
 
 <script>
-  (function() {
+  (function () {
     // ─── JSON DATA ────────────────────────────────────────────────────────
     const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
     const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
   
-    // ─── SHARED DOM ELEMENTS ─────────────────────────────────────────────
-    const tbody      = document.getElementById('entries-body');
-    const loadBtn    = document.getElementById('load-more');
+    // ─── DOM ELEMENTS ─────────────────────────────────────────────────────
+    const tbody   = document.getElementById('entries-body');
+    const loadBtn = document.getElementById('load-more');
     const entriesUrl = "{% url 'maintenance_entries' %}";
-    let   offset     = {{ entries|length }};
+    let   offset  = {{ entries|length }};
   
-    // ─── ADD FORM ELEMENTS ────────────────────────────────────────────────
+    // add-form elems …
     const add = {
       dateInput:     document.getElementById('start-date'),
       timeInput:     document.getElementById('start-time'),
@@ -206,7 +206,7 @@
       submitBtn:     document.getElementById('add-button')
     };
   
-    // ─── EDIT FORM ELEMENTS ───────────────────────────────────────────────
+    // edit-modal elems …
     const edit = {
       modal:         document.getElementById('editEntryModal'),
       form:          document.getElementById('edit-entry-form'),
@@ -222,209 +222,186 @@
       deleteBtn:     document.getElementById('delete-button')
     };
   
-    // ─── CHOICES.JS INSTANCES ────────────────────────────────────────────
-    function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'' }) {
-      return new Choices(el, opts);
-    }
+    // ─── Choices.js helpers ───────────────────────────────────────────────
+    const makeChoices = (el, opts = { searchEnabled:false, itemSelectText:'' }) =>
+      new Choices(el, opts);
   
     const choices = {
-      // add-form
       addLine:     makeChoices(add.lineSelect),
       addMachine:  makeChoices(add.machineSelect),
       addCat:      makeChoices(add.catSelect),
       addSub:      makeChoices(add.subSelect),
-      // edit-form
       editLine:    makeChoices(edit.lineSelect),
       editMachine: makeChoices(edit.machineSelect),
       editCat:     makeChoices(edit.catSelect),
       editSub:     makeChoices(edit.subSelect)
     };
   
-    // disable dependent selects initially
-    [
-      choices.addMachine, choices.addCat, choices.addSub,
-      choices.editMachine, choices.editCat, choices.editSub
-    ].forEach(c => c.disable());
+    // disable dependents initially
+    [choices.addMachine, choices.addCat, choices.addSub,
+     choices.editMachine, choices.editCat, choices.editSub].forEach(c => c.disable());
   
-    // populate Line dropdowns
-    const lineChoices = prodLines.map(l => ({ value: l.line, label: l.line }));
-    choices.addLine.setChoices(lineChoices, 'value','label', true);
-    choices.editLine.setChoices(lineChoices, 'value','label', true);
-  
-    // ─── CHAIN HELPERS ────────────────────────────────────────────────────
-    // for add: opens dropdowns after populating
-    function chainAdd(parentEl, childChoice, getOpts) {
-      parentEl.addEventListener('change', () => {
-        const val = parentEl.value;
-        childChoice.clearChoices().disable();
-        if (!val) return;
-        childChoice.setChoices(getOpts(val), 'value','label', true);
-        childChoice.enable().showDropdown();
-      });
-    }
-    // for edit: only populates, does NOT open dropdown
-    function chainEdit(parentEl, childChoice, getOpts) {
-      parentEl.addEventListener('change', () => {
-        const val = parentEl.value;
-        childChoice.clearChoices().disable();
-        if (!val) return;
-        childChoice.setChoices(getOpts(val), 'value','label', true);
-        childChoice.enable();
-      });
-    }
-  
-    // define your option-builders:
+    // ─── option builders ──────────────────────────────────────────────────
     const getMachines = lineVal => {
-      const ops = prodLines.find(l => l.line === lineVal).operations;
+      const ops = prodLines.find(l => l.line === lineVal)?.operations ?? [];
       return ops.map(op => ({
-        label: `Op ${op.op}`,
+        label:   `Op ${op.op}`,
         choices: op.machines.map(m => ({ value: m.number, label: m.number }))
       }));
     };
-    const getCats = () => downtimeCodes.map(c => ({ value: c.code, label: c.name }));
+  
+    const getCats = () =>
+      downtimeCodes.map(c => ({ value: String(c.code), label: c.name }));
+  
     const getSubs = catCode => {
       const cat = downtimeCodes.find(c => c.code === catCode);
-      return (cat ? cat.subcategories : []).map(s => ({ value: s.code, label: s.name }));
+      return (cat?.subcategories ?? []).map(s => ({ value: String(s.code), label: s.name }));
     };
   
-    // wire up add-form chains
-    chainAdd(add.lineSelect,  choices.addMachine, getMachines);
-    chainAdd(add.machineSelect, choices.addCat,     () => getCats());
-    chainAdd(add.catSelect,    choices.addSub,      getSubs);
+    // ─── cascade wiring for manual user input (add-form & edit-modal) ─────
+    function chain(parentEl, childChoice, getOpts, showDD=false) {
+      parentEl.addEventListener('change', () => {
+        const v = parentEl.value;
+        childChoice.clearChoices().disable();
+        if (!v) return;
+        childChoice.setChoices(getOpts(v), 'value', 'label', true);
+        childChoice.enable();
+        if (showDD) childChoice.showDropdown();
+      });
+    }
   
-    // wire up edit-form chains
-    chainEdit(edit.lineSelect,  choices.editMachine, getMachines);
-    chainEdit(edit.machineSelect, choices.editCat,    () => getCats());
-    chainEdit(edit.catSelect,     choices.editSub,     getSubs);
+    // add-form chains
+    chain(add.lineSelect,    choices.addMachine,  getMachines, true);
+    chain(add.machineSelect, choices.addCat,      getCats,     true);
+    chain(add.catSelect,     choices.addSub,      getSubs,     true);
   
-    // ─── ADD FORM: default now, validation, filtering ────────────────────
+    // edit-modal chains (still needed if the user changes selections)
+    chain(edit.lineSelect,    choices.editMachine, getMachines);
+    chain(edit.machineSelect, choices.editCat,     getCats);
+    chain(edit.catSelect,     choices.editSub,     getSubs);
+  
+    // populate line dropdowns
+    const lineOpts = prodLines.map(l => ({ value:l.line, label:l.line }));
+    choices.addLine.setChoices(lineOpts, 'value', 'label', true);
+    choices.editLine.setChoices(lineOpts, 'value', 'label', true);
+  
+    // ─── ADD FORM default date/time & validation ──────────────────────────
     (() => {
       const now = new Date();
       add.dateInput.value = now.toISOString().slice(0,10);
       add.timeInput.value = now.toTimeString().slice(0,5);
     })();
   
-    function updateAddBtn() {
+    const validateAdd = () =>
       add.submitBtn.disabled = !(
-        add.lineSelect.value &&
-        add.machineSelect.value &&
-        add.catSelect.value &&
-        add.subSelect.value &&
+        add.lineSelect.value && add.machineSelect.value &&
+        add.catSelect.value  && add.subSelect.value &&
         add.descInput.value.trim()
       );
-    }
   
     [add.lineSelect, add.machineSelect, add.catSelect, add.subSelect]
-      .forEach(el => el.addEventListener('change', () => {
-        updateAddBtn();
-        filterRows();
-      }));
-    add.descInput.addEventListener('input', updateAddBtn);
+      .forEach(el => el.addEventListener('change', validateAdd));
+    add.descInput.addEventListener('input', validateAdd);
   
-    function filterRows() {
-      const fL = add.lineSelect.value,
-            fM = add.machineSelect.value,
-            fC = add.catSelect.value,
-            fS = add.subSelect.value;
-      Array.from(tbody.rows).forEach(tr => {
-        const [ , lineCell, machineCell, , , codeCell ] = tr.cells;
-        let show = true;
-        if (fL && lineCell.textContent.trim() !== fL) show = false;
-        if (fM && machineCell.textContent.trim() !== fM) show = false;
-        if (fC && !codeCell.textContent.trim().startsWith(fC + '-')) show = false;
-        if (fS && codeCell.textContent.trim() !== fS) show = false;
-        tr.style.display = show ? '' : 'none';
-      });
-    }
-  
-    // ─── LOAD MORE ───────────────────────────────────────────────────────
+    // ─── LOAD-MORE (unchanged) ─────────────────────────────────────────────
     if (loadBtn) {
       loadBtn.addEventListener('click', () => {
         fetch(`${entriesUrl}?offset=${offset}`)
           .then(r => r.json())
-          .then(data => {
-            data.entries.forEach(e => {
+          .then(({ entries, has_more }) => {
+            entries.forEach(e => {
               const tr = document.createElement('tr');
-              tr.setAttribute('data-entry-id', e.id);
+              tr.dataset.entryId = e.id;
               tr.innerHTML = `
                 <td>${e.start_at}</td>
                 <td>${e.line}</td>
                 <td>${e.machine}</td>
-                <td>${e.category}</td>
-                <td>${e.subcategory}</td>
+                <td data-category-code="${e.category_code}">${e.category}</td>
+                <td data-subcategory-code="${e.subcategory_code}">${e.subcategory}</td>
                 <td>${e.code}</td>
                 <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
                 <td></td>`;
               tbody.appendChild(tr);
             });
-            offset += data.entries.length;
-            if (!data.has_more) loadBtn.style.display = 'none';
-            filterRows();
+            offset += entries.length;
+            if (!has_more) loadBtn.style.display = 'none';
           })
           .catch(console.error);
       });
     }
   
-    // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
-    tbody.addEventListener('click', e => {
-      const tr = e.target.closest('tr[data-entry-id]');
+    // ─── EDIT ROW CLICK ────────────────────────────────────────────────────
+    tbody.addEventListener('click', ev => {
+      const tr = ev.target.closest('tr[data-entry-id]');
       if (!tr) return;
   
-      const cells = tr.cells;
+      const cells    = tr.cells;
       const datetime = cells[0].textContent.trim();
+      const lineVal  = cells[1].textContent.trim();
+      const machVal  = cells[2].textContent.trim();
+      const fullCode = cells[5].textContent.trim();          // the Code column
+      const catCode  = fullCode.split('-')[0];               // "MECH"
+      const subCode  = fullCode;                             // "MECH-TOOL"
   
-      // set basic fields
+      // basic fields
       edit.idInput.value   = tr.dataset.entryId;
       edit.dateInput.value = datetime.slice(0,10);
       edit.timeInput.value = datetime.slice(11);
       edit.descInput.value = cells[6].textContent.trim();
   
-      // set selects without opening dropdowns
-      choices.editLine.setChoiceByValue(cells[1].textContent.trim());
-      edit.lineSelect.dispatchEvent(new Event('change'));
+      // ── 1. LINE ──────────────────────────────────────────────────────────
+      choices.editLine.setChoiceByValue(lineVal);
+      edit.lineSelect.value = lineVal;
   
-      choices.editMachine.setChoiceByValue(cells[2].textContent.trim());
-      edit.machineSelect.dispatchEvent(new Event('change'));
+      // ── 2. MACHINE (built from selected line) ────────────────────────────
+      const machChoices = getMachines(lineVal);
+      choices.editMachine.clearChoices()
+                         .setChoices(machChoices,'value','label',true)
+                         .enable();
+      choices.editMachine.setChoiceByValue(machVal);
+      edit.machineSelect.value = machVal;
   
-      choices.editCat.setChoiceByValue(cells[3].textContent.trim());
-      edit.catSelect.dispatchEvent(new Event('change'));
+      // ── 3. CATEGORY (independent of machine) ─────────────────────────────
+      choices.editCat.clearChoices()
+                     .setChoices(getCats(),'value','label',true)
+                     .enable();
+      choices.editCat.setChoiceByValue(catCode);
+      edit.catSelect.value = catCode;
   
-      choices.editSub.setChoiceByValue(cells[4].textContent.trim());
+      // ── 4. SUB-CATEGORY (depends on category) ────────────────────────────
+      choices.editSub.clearChoices()
+                     .setChoices(getSubs(catCode),'value','label',true)
+                     .enable();
+      choices.editSub.setChoiceByValue(subCode);
+      edit.subSelect.value = subCode;
   
-      // show the modal
+      // show modal
       new bootstrap.Modal(edit.modal).show();
     });
   
-    // ─── DELETE BUTTON ──────────────────────────────────────────────────
+    // ─── DELETE ENTRY (unchanged) ──────────────────────────────────────────
     edit.deleteBtn.addEventListener('click', () => {
-      if (!confirm("Are you sure you want to delete this downtime entry?")) return;
-      const entryId = edit.idInput.value;
+      if (!confirm('Delete this downtime entry?')) return;
+      const id = edit.idInput.value;
+  
       fetch("{% url 'delete_downtime_entry' %}", {
-        method: "POST",
+        method : 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+          'Content-Type' : 'application/json',
+          'X-CSRFToken'  : document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: JSON.stringify({ entry_id: entryId })
+        body: JSON.stringify({ entry_id:id })
       })
-      .then(r => {
-        if (!r.ok) throw new Error("Delete failed");
-        return r.json();
-      })
+      .then(r => { if (!r.ok) throw new Error('Delete failed'); return r.json(); })
       .then(() => {
         bootstrap.Modal.getInstance(edit.modal).hide();
-        const row = tbody.querySelector(`tr[data-entry-id="${entryId}"]`);
-        if (row) row.remove();
+        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
       })
-      .catch(err => {
-        console.error(err);
-        alert("Error deleting entry.");
-      });
+      .catch(err => { console.error(err); alert('Error deleting entry.'); });
     });
-  
   })();
   </script>
   
-  
+
   
 {% endblock %}

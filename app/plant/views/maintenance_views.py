@@ -173,16 +173,18 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
     batch   = list(qs[offset : offset + page_size])
 
     entries = [
-        {
-            'start_at':    e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'line':        e.line,
-            'machine':     e.machine,
-            'category':    e.category,
-            'subcategory': e.subcategory,
-            'code':        e.code,
-            'comment':     e.comment,
-        }
-        for e in batch
+    {
+        'start_at'      : e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'line'          : e.line,
+        'machine'       : e.machine,
+        'category'      : e.category,
+        'subcategory'   : e.subcategory,
+        'code'          : e.code,                       # full sub-category code
+        'category_code' : e.code.split('-')[0],         # e.g. "MECH"
+        'subcategory_code': e.code,                     # e.g. "MECH-TOOL"
+        'comment'       : e.comment,
+    }
+    for e in batch
     ]
     has_more = (offset + page_size) < total
 
