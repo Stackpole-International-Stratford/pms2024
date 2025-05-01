@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse
 from datetime import datetime
+from ..models.maintenance_models import MachineDowntimeEvent
 
 
 # import your lines structure
@@ -83,33 +84,46 @@ DOWNTIME_CODES = [
 
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-        # grab your fields
-        line        = request.POST.get('line')
-        machine     = request.POST.get('machine')
-        category    = request.POST.get('category')
-        subcategory = request.POST.get('subcategory')
-        start_date  = request.POST.get('start_date')   # e.g. "2025-05-01"
-        start_time  = request.POST.get('start_time')   # e.g. "14:30"
-        description = request.POST.get('description')
+        # 1) grab the raw codes from the form
+        line        = request.POST['line']
+        machine     = request.POST['machine']
+        cat_code    = request.POST['category']
+        sub_code    = request.POST['subcategory']
+        start_date  = request.POST['start_date']   # "YYYY-MM-DD"
+        start_time  = request.POST['start_time']   # "HH:MM"
+        description = request.POST['description']
 
-        # combine date + time, parse to datetime
+        # 2) look up the display names
+        # find the category object
+        cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == cat_code), None)
+        category_name = cat_obj['name'] if cat_obj else cat_code
+
+        # within that, find the subcategory object
+        sub_obj = None
+        if cat_obj:
+            sub_obj = next((s for s in cat_obj['subcategories'] if s['code'] == sub_code), None)
+        subcategory_name = sub_obj['name'] if sub_obj else sub_code
+
+        # 3) parse epoch
         dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         epoch_ts = int(dt.timestamp())
 
-        # log it however you like:
-        # -- simple print:
-        print(
-            f"Downtime logged → "
-            f"line={line}, machine={machine}, "
-            f"category={category}, subcategory={subcategory}, "
-            f"start_epoch={epoch_ts}, comment={description}"
+        # 4) save: category_name & subcategory_name go into those fields;
+        #    code stays as the raw sub_code
+        MachineDowntimeEvent.objects.create(
+            line               = line,
+            machine            = machine,
+            category           = category_name,
+            subcategory        = subcategory_name,
+            code               = sub_code,
+            start_epoch        = epoch_ts,
+            comment            = description,
+            # closeout_timestamp left NULL for now
         )
 
-
-        # then just redirect back (or send a minimal response)
         return redirect(request.path)
 
-    # GET: render the form as before
+    # GET handler unchanged
     context = {
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
         'lines_json':          mark_safe(json.dumps(prod_lines)),
