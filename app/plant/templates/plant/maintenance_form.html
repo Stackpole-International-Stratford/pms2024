@@ -83,7 +83,7 @@
     {% endif %}
   </form>
 
-  <!-- Entry ID Modal -->
+  <!-- Entry Details Modal -->
   <div class="modal fade" id="entryModal" tabindex="-1" aria-labelledby="entryModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -92,7 +92,15 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          Database ID: <strong id="modal-entry-id"></strong>
+          <ul class="list-unstyled mb-0">
+            <li><strong>Database ID:</strong> <span id="modal-entry-id"></span></li>
+            <li><strong>Started at:</strong> <span id="modal-started-at"></span></li>
+            <li><strong>Line:</strong> <span id="modal-line"></span></li>
+            <li><strong>Machine:</strong> <span id="modal-machine"></span></li>
+            <li><strong>Category:</strong> <span id="modal-category"></span></li>
+            <li><strong>Sub-category:</strong> <span id="modal-subcategory"></span></li>
+            <li><strong>Comment:</strong> <span id="modal-comment"></span></li>
+          </ul>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -138,7 +146,7 @@
     startTimeInput.value = now.toTimeString().slice(0,5);
   })();
 
-  // Choices.js
+  // Choices.js inits
   const lineChoice        = new Choices(lineSelect,        { searchEnabled:false, itemSelectText:'' });
   const machineChoice     = new Choices(machineSelect,     { searchEnabled:false, itemSelectText:'', shouldSort:false });
   const categoryChoice    = new Choices(categorySelect,    { searchEnabled:false, itemSelectText:'' });
@@ -148,7 +156,7 @@
   categoryChoice.disable();
   subcategoryChoice.disable();
 
-  // filter & validation
+  // filter & add-button logic
   function filterEntries(){
     const fLine    = lineSelect.value;
     const fMachine = machineSelect.value;
@@ -156,7 +164,7 @@
     const fSub     = subcategorySelect.value;
 
     Array.from(tbody.rows).forEach(tr=>{
-      const cols = tr.cells;
+      const cols       = tr.cells;
       const rowLine    = cols[1].textContent.trim();
       const rowMachine = cols[2].textContent.trim();
       const rowCode    = cols[5].textContent.trim();
@@ -178,16 +186,14 @@
     addBtn.disabled = !ok;
   }
 
-  // hook form fields
   [ lineSelect, machineSelect, categorySelect, subcategorySelect ]
-    .forEach(el=>el.addEventListener('change', ()=>{
+    .forEach(el => el.addEventListener('change', ()=>{
       filterEntries();
       updateAddBtnState();
     }));
-
   descriptionInput.addEventListener('input', updateAddBtnState);
 
-  // dropdown population
+  // populate dropdowns
   lineChoice.setChoices(
     prodLines.map(l=>({ value:l.line, label:l.line })),
     'value','label',true
@@ -201,7 +207,7 @@
     machineChoice.setChoices(
       ops.map(op=>({
         label:`Op ${op.op}`,
-        choices:op.machines.map(m=>({value:m.number,label:m.number}))
+        choices: op.machines.map(m=>({ value:m.number, label:m.number }))
       })),
       'value','label',true
     );
@@ -213,7 +219,7 @@
     subcategoryChoice.clearChoices().disable();
     if (!machineSelect.value) return;
     categoryChoice.setChoices(
-      downtimeCodes.map(c=>({value:c.code,label:c.name})),
+      downtimeCodes.map(c=>({ value:c.code, label:c.name })),
       'value','label',true
     );
     categoryChoice.enable().showDropdown();
@@ -226,7 +232,7 @@
       downtimeCodes
         .find(c=>c.code===categorySelect.value)
         .subcategories
-        .map(s=>({value:s.code,label:s.name})),
+        .map(s=>({ value:s.code, label:s.name })),
       'value','label',true
     );
     subcategoryChoice.enable().showDropdown();
@@ -257,18 +263,24 @@
           tbody.appendChild(tr);
         });
         offset += data.entries.length;
-        if (!data.has_more) loadBtn.style.display='none';
+        if (!data.has_more) loadBtn.style.display = 'none';
         filterEntries();
       })
       .catch(console.error);
   });
 
-  // Open modal on row click
+  // Show full details in modal on row click
   tbody.addEventListener('click', e => {
     const tr = e.target.closest('tr[data-entry-id]');
     if (!tr) return;
-    const entryId = tr.dataset.entryId;
-    document.getElementById('modal-entry-id').textContent = entryId;
+    const cells = tr.cells;
+    document.getElementById('modal-entry-id').textContent    = tr.dataset.entryId;
+    document.getElementById('modal-started-at').textContent  = cells[0].textContent.trim();
+    document.getElementById('modal-line').textContent        = cells[1].textContent.trim();
+    document.getElementById('modal-machine').textContent     = cells[2].textContent.trim();
+    document.getElementById('modal-category').textContent    = cells[3].textContent.trim();
+    document.getElementById('modal-subcategory').textContent = cells[4].textContent.trim();
+    document.getElementById('modal-comment').textContent     = cells[6].textContent.trim();
     const entryModal = new bootstrap.Modal(document.getElementById('entryModal'));
     entryModal.show();
   });
