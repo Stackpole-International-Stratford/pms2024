@@ -5,6 +5,9 @@ from django.http import HttpRequest, HttpResponse
 from datetime import datetime
 from ..models.maintenance_models import MachineDowntimeEvent
 from django.http import JsonResponse
+from django.utils import timezone
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.views.decorators.http import require_POST
 
 
 
@@ -82,7 +85,25 @@ DOWNTIME_CODES = [
     },
 ]
 
+@require_POST
+def delete_downtime_entry(request):
+    try:
+        payload = json.loads(request.body)
+        entry_id = payload['entry_id']
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest("Invalid payload")
 
+    try:
+        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest("Entry not found")
+
+    # soft-delete
+    e.is_deleted = True
+    e.deleted_at = timezone.now()
+    e.save(update_fields=['is_deleted', 'deleted_at'])
+
+    return JsonResponse({'status': 'ok'})
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
     """

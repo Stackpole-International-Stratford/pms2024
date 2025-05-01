@@ -49,5 +49,6 @@ urlpatterns = [
 
     path('maintenance/form/', maintenance_form, name='maintenance_form'),
     path('maintenance/form/entries/',    maintenance_entries, name='maintenance_entries'),
+    path('maintenance/delete/', delete_downtime_entry, name='delete_downtime_entry'),
 
 ]
