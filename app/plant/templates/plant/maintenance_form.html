@@ -1,5 +1,4 @@
 {% extends "parent.html" %}
-
 {% block content %}
 <div class="container-fluid py-5">
   <form id="maintenance-form" method="POST">
@@ -10,7 +9,7 @@
           <tr>
             <th style="min-width:140px">
               Started at<br>
-              <input type="date" id="start-date" name="start_date"
+              <input type="hidden" id="start-date" name="start_date"
                      class="form-control form-control-sm" required>
               <input type="time" id="start-time" name="start_time"
                      class="form-control form-control-sm mt-1" required>
@@ -18,29 +17,29 @@
             <th style="min-width:100px">
               Line<br>
               <select id="line-select" name="line"
-                      class="form-select form-select-sm">
-                <option value="">All</option>
+                      class="form-select form-select-sm" required>
+                <option value="">Select Line</option>
               </select>
             </th>
             <th style="min-width:100px">
               Machine<br>
               <select id="machine-select" name="machine"
-                      class="form-select form-form-select-sm" disabled>
-                <option value="">All</option>
+                      class="form-select form-select-sm" required disabled>
+                <option value="">Select Machine</option>
               </select>
             </th>
             <th style="min-width:160px">
               Category<br>
               <select id="category-select" name="category"
-                      class="form-select form-select-sm" disabled>
-                <option value="">All</option>
+                      class="form-select form-select-sm" required disabled>
+                <option value="">Select Category</option>
               </select>
             </th>
             <th style="min-width:180px">
               Sub-category<br>
               <select id="subcategory-select" name="subcategory"
-                      class="form-select form-select-sm" disabled>
-                <option value="">All</option>
+                      class="form-select form-select-sm" required disabled>
+                <option value="">Select Subcategory</option>
               </select>
             </th>
             <th style="min-width:100px">Code</th>
@@ -51,7 +50,12 @@
                         rows="1" maxlength="5000" required></textarea>
             </th>
             <th style="width:1%;">
-              <button type="submit" class="btn btn-dark btn-sm mt-4">Add</button>
+              <button type="submit"
+                      id="add-button"
+                      class="btn btn-dark btn-sm mt-4"
+                      disabled>
+                Add
+              </button>
             </th>
           </tr>
         </thead>
@@ -82,30 +86,22 @@
 
 <style>
 
-  /* **new**: force the table wrapper to stay at least 300px tall */
-  #downtime-table-wrapper {
-    min-height: 800px;
-  }
-  
-  /* Sticky header */
+  /* sticky headers, min-height, etc. */
+  .table-responsive { overflow-x: auto; }
   #downtime-table thead th {
     position: sticky;
     top: 0;
     background: white;
     z-index: 2;
   }
-  /* cap form/table widths */
-  .table-responsive { overflow-x: auto; }
-  #downtime-table { white-space: nowrap; }
+  #downtime-table-wrapper { min-height: 800px; }
 </style>
 
 <script>
 (function(){
-  // parse JSON contexts
   const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
   const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
 
-  // element refs
   const lineSelect        = document.getElementById('line-select');
   const machineSelect     = document.getElementById('machine-select');
   const categorySelect    = document.getElementById('category-select');
@@ -113,20 +109,20 @@
   const startDateInput    = document.getElementById('start-date');
   const startTimeInput    = document.getElementById('start-time');
   const descriptionInput  = document.getElementById('description');
+  const addBtn            = document.getElementById('add-button');
   const tbody             = document.getElementById('entries-body');
   const loadBtn           = document.getElementById('load-more');
   const entriesUrl        = "{% url 'maintenance_entries' %}";
-  let   offset           = {{ entries|length }};
+  let   offset            = {{ entries|length }};
 
-  // set default date & time to now
-  function setDefaultDateTime(){
+  // Prefill date/time
+  (function setDefaultDateTime(){
     const now = new Date();
     startDateInput.value = now.toISOString().slice(0,10);
     startTimeInput.value = now.toTimeString().slice(0,5);
-  }
-  setDefaultDateTime();
+  })();
 
-  // init Choices.js
+  // Choices.js
   const lineChoice        = new Choices(lineSelect,        { searchEnabled:false, itemSelectText:'' });
   const machineChoice     = new Choices(machineSelect,     { searchEnabled:false, itemSelectText:'', shouldSort:false });
   const categoryChoice    = new Choices(categorySelect,    { searchEnabled:false, itemSelectText:'' });
@@ -136,13 +132,7 @@
   categoryChoice.disable();
   subcategoryChoice.disable();
 
-  // populate Line dropdown
-  lineChoice.setChoices(
-    prodLines.map(l=>({value:l.line,label:l.line})),
-    'value','label',true
-  );
-
-  // client‐side filter
+  // filter & validation
   function filterEntries(){
     const fLine    = lineSelect.value;
     const fMachine = machineSelect.value;
@@ -150,41 +140,62 @@
     const fSub     = subcategorySelect.value;
 
     Array.from(tbody.rows).forEach(tr=>{
-      const cols       = tr.cells;
+      const cols = tr.cells;
       const rowLine    = cols[1].textContent.trim();
       const rowMachine = cols[2].textContent.trim();
       const rowCode    = cols[5].textContent.trim();
       let show = true;
-      if (fLine    && rowLine    !== fLine)           show = false;
-      if (fMachine && rowMachine !== fMachine)        show = false;
-      if (fCat     && !rowCode.startsWith(fCat+'-'))  show = false;
-      if (fSub     && rowCode !== fSub)               show = false;
+      if (fLine    && rowLine    !== fLine)          show = false;
+      if (fMachine && rowMachine !== fMachine)       show = false;
+      if (fCat     && !rowCode.startsWith(fCat+'-')) show = false;
+      if (fSub     && rowCode !== fSub)              show = false;
       tr.style.display = show ? '' : 'none';
     });
   }
 
-  // wiring selects
-  lineSelect.addEventListener('change',()=>{
+  function updateAddBtnState(){
+    const ok = lineSelect.value
+            && machineSelect.value
+            && categorySelect.value
+            && subcategorySelect.value
+            && descriptionInput.value.trim();
+    addBtn.disabled = !ok;
+  }
+
+  // hook form fields
+  [ lineSelect, machineSelect, categorySelect, subcategorySelect ]
+    .forEach(el=>el.addEventListener('change', ()=>{
+      filterEntries();
+      updateAddBtnState();
+    }));
+
+  descriptionInput.addEventListener('input', updateAddBtnState);
+
+  // dropdown population
+  lineChoice.setChoices(
+    prodLines.map(l=>({ value:l.line, label:l.line })),
+    'value','label',true
+  );
+  lineSelect.addEventListener('change', ()=>{
     machineChoice.clearChoices().disable();
     categoryChoice.clearChoices().disable();
     subcategoryChoice.clearChoices().disable();
-    filterEntries();
-    const line = lineSelect.value;
-    if (!line) return;
-    const ops = prodLines.find(l=>l.line===line).operations;
+    if (!lineSelect.value) return;
+    const ops = prodLines.find(l=>l.line===lineSelect.value).operations;
     machineChoice.setChoices(
-      ops.map(op=>({label:`Op ${op.op}`,choices:op.machines.map(m=>({value:m.number,label:m.number}))})),
+      ops.map(op=>({
+        label:`Op ${op.op}`,
+        choices:op.machines.map(m=>({value:m.number,label:m.number}))
+      })),
       'value','label',true
     );
     machineChoice.enable().showDropdown();
   });
 
-  machineSelect.addEventListener('change',()=>{
+  machineSelect.addEventListener('change', ()=>{
     categoryChoice.clearChoices().disable();
     subcategoryChoice.clearChoices().disable();
-    filterEntries();
-    const mach = machineSelect.value;
-    if (!mach) return;
+    if (!machineSelect.value) return;
     categoryChoice.setChoices(
       downtimeCodes.map(c=>({value:c.code,label:c.name})),
       'value','label',true
@@ -192,27 +203,25 @@
     categoryChoice.enable().showDropdown();
   });
 
-  categorySelect.addEventListener('change',()=>{
+  categorySelect.addEventListener('change', ()=>{
     subcategoryChoice.clearChoices().disable();
-    filterEntries();
-    const cat = categorySelect.value;
-    if (!cat) return;
+    if (!categorySelect.value) return;
     subcategoryChoice.setChoices(
-      downtimeCodes.find(c=>c.code===cat).subcategories.map(s=>({value:s.code,label:s.name})),
+      downtimeCodes
+        .find(c=>c.code===categorySelect.value)
+        .subcategories
+        .map(s=>({value:s.code,label:s.name})),
       'value','label',true
     );
     subcategoryChoice.enable().showDropdown();
   });
 
-  subcategorySelect.addEventListener('change',()=>{
-    filterEntries();
-    if (subcategorySelect.value) {
-      descriptionInput.focus();
-    }
+  subcategorySelect.addEventListener('change', ()=>{
+    if (subcategorySelect.value) descriptionInput.focus();
   });
 
-  // AJAX load more
-  if (loadBtn) loadBtn.addEventListener('click',()=>{
+  // AJAX Load more
+  if (loadBtn) loadBtn.addEventListener('click', ()=>{
     fetch(`${entriesUrl}?offset=${offset}`)
       .then(r=>r.json())
       .then(data=>{
@@ -237,8 +246,9 @@
       .catch(console.error);
   });
 
-  // initial filter
+  // init
   filterEntries();
+  updateAddBtnState();
 })();
 </script>
 {% endblock %}
