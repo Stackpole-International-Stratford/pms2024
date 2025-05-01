@@ -1,7 +1,7 @@
 {% extends "parent.html" %}
 
 {% block content %}
-  {# ───── Form Container ─────────────────────────────────────────────── #}
+  {# ───── Downtime Entry Form ─────────────────────────────────────── #}
   <div class="container-fluid d-flex justify-content-center py-5">
     <form id="maintenance-form" method="POST">
       {% csrf_token %}
@@ -9,39 +9,36 @@
         <div class="card-body">
           <h5 class="card-title mb-4 text-center">Downtime Entry</h5>
 
-          <!-- form fields… -->
+          <!-- selects: Line, Machine, Category, Sub-category -->
           <div class="d-flex flex-nowrap align-items-start gap-3">
-            <!-- Line -->
             <div class="flex-fill">
               <label for="line-select" class="form-label">Line</label>
               <select id="line-select" name="line" class="form-select">
                 <option value="">Select Line</option>
               </select>
             </div>
-            <!-- Machine -->
             <div class="flex-fill">
               <label for="machine-select" class="form-label">Machine</label>
               <select id="machine-select" name="machine" class="form-select" disabled>
                 <option value="">Select Machine</option>
               </select>
             </div>
-            <!-- Category -->
-            <div id="category-container" class="flex-fill" style="display: none;">
+            <div id="category-container" class="flex-fill" style="display:none;">
               <label for="category-select" class="form-label">Category</label>
               <select id="category-select" name="category" class="form-select" disabled>
                 <option value="">Select Category</option>
               </select>
             </div>
-            <!-- Subcategory -->
-            <div id="subcategory-container" class="flex-fill" style="display: none;">
-              <label for="subcategory-select" class="form-label">Subcategory</label>
+            <div id="subcategory-container" class="flex-fill" style="display:none;">
+              <label for="subcategory-select" class="form-label">Sub-category</label>
               <select id="subcategory-select" name="subcategory" class="form-select" disabled>
                 <option value="">Select Subcategory</option>
               </select>
             </div>
           </div>
 
-          <div class="mt-3" id="description-container" style="display: none;">
+          <!-- date/time + comment -->
+          <div class="mt-3" id="description-container" style="display:none;">
             <div class="row g-2">
               <div class="col">
                 <label for="start-date" class="form-label">Start Date</label>
@@ -53,7 +50,7 @@
               </div>
             </div>
             <div class="mt-3">
-              <label for="description" class="form-label">Comment:</label>
+              <label for="description" class="form-label">Comment</label>
               <textarea id="description"
                         name="description"
                         class="form-control"
@@ -63,7 +60,8 @@
             </div>
           </div>
 
-          <div class="mt-3 text-end" id="submit-container" style="display: none;">
+          <!-- submit -->
+          <div class="mt-3 text-end" id="submit-container" style="display:none;">
             <button type="submit" class="btn btn-dark">Submit</button>
           </div>
         </div>
@@ -71,7 +69,7 @@
     </form>
   </div>
 
-  {# ───── Entries Container ──────────────────────────────────────────── #}
+  {# ───── Recent Downtime Entries ──────────────────────────────────── #}
   {% if entries %}
     <div class="container-fluid py-5">
       <div class="d-flex justify-content-center">
@@ -89,7 +87,7 @@
                 <th>Comment</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="entries-body">
               {% for e in entries %}
                 <tr>
                   <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
@@ -113,14 +111,59 @@
     </div>
   {% endif %}
 
-  {# ───── AJAX Loader Script ────────────────────────────────────────── #}
+  {# ───── Styles ──────────────────────────────────────────────────── #}
+  <style>
+    /* cap form card width */
+    #maintenance-form .card {
+      display: inline-block;
+      width: auto;
+      max-width: 100%;
+    }
+    /* full-width on mobile */
+    @media (max-width: 576px) {
+      #maintenance-form .card {
+        display: block;
+        width: 100%;
+      }
+    }
+    .form-label { margin-bottom: .25rem; }
+    #maintenance-form .form-select {
+      width: auto !important;
+      min-width: 150px;
+    }
+  </style>
+
+  {# ───── AJAX Load More + Client-side Filtering ──────────────────── #}
   <script>
-    (() => {
+    (function(){
       let offset = {{ entries|length }};
       const loadBtn = document.getElementById('load-more');
-      const tbody   = document.querySelector('#recent-entries tbody');
+      const tbody   = document.getElementById('entries-body');
       const url     = "{% url 'maintenance_entries' %}";
 
+      function filterEntries(){
+        const fLine    = document.getElementById('line-select').value;
+        const fMachine = document.getElementById('machine-select').value;
+        const fCat     = document.getElementById('category-select').value;
+        const fSub     = document.getElementById('subcategory-select').value;
+
+        Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+          const cols       = tr.children;
+          const rowLine    = cols[1].textContent.trim();
+          const rowMachine = cols[2].textContent.trim();
+          const rowCode    = cols[5].textContent.trim();
+
+          let show = true;
+          if (fLine    && rowLine    !== fLine)    show = false;
+          if (fMachine && rowMachine !== fMachine) show = false;
+          if (fCat     && !rowCode.startsWith(fCat + '-')) show = false;
+          if (fSub     && rowCode !== fSub)                show = false;
+
+          tr.style.display = show ? '' : 'none';
+        });
+      }
+
+      // wire up "Load more"
       if (loadBtn) {
         loadBtn.addEventListener('click', () => {
           fetch(`${url}?offset=${offset}`)
@@ -141,25 +184,32 @@
               });
               offset += data.entries.length;
               if (!data.has_more) loadBtn.style.display = 'none';
+              filterEntries();
             })
             .catch(console.error);
         });
       }
+
+      // wire up selects for live filtering
+      ['line-select','machine-select','category-select','subcategory-select']
+        .forEach(id => document.getElementById(id)
+          .addEventListener('change', filterEntries)
+        );
+
+      // initial filter on page load
+      filterEntries();
     })();
   </script>
 
-  {# ───── Choices.js & Form Script ─────────────────────────────────── #}
+  {# ───── Choices.js & Form Logic ─────────────────────────────────── #}
   <script>
-    // Data from view
     const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
     const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
 
-    // Element refs
     const lineSelect        = document.getElementById('line-select');
     const machineSelect     = document.getElementById('machine-select');
     const categorySelect    = document.getElementById('category-select');
     const subcategorySelect = document.getElementById('subcategory-select');
-
     const startDateInput    = document.getElementById('start-date');
     const startTimeInput    = document.getElementById('start-time');
 
@@ -168,16 +218,14 @@
     const descCtr              = document.getElementById('description-container');
     const submitCtr            = document.getElementById('submit-container');
 
-    // Initialize Choices.js
     const lineChoice        = new Choices(lineSelect,        { searchEnabled: false, itemSelectText: '' });
     const machineChoice     = new Choices(machineSelect,     { searchEnabled: false, itemSelectText: '', shouldSort: false });
     const categoryChoice    = new Choices(categorySelect,    { searchEnabled: false, itemSelectText: '' });
     const subcategoryChoice = new Choices(subcategorySelect, { searchEnabled: false, itemSelectText: '' });
 
-    function hide(...els) { els.forEach(el => el.style.display = 'none'); }
-    function show(...els) { els.forEach(el => el.style.display = 'block'); }
-
-    function setDefaultDateTime() {
+    function hide(...els) { els.forEach(e => e.style.display = 'none'); }
+    function show(...els) { els.forEach(e => e.style.display = 'block'); }
+    function setDefaultDateTime(){
       const now = new Date();
       startDateInput.value = now.toISOString().slice(0,10);
       startTimeInput.value = now.toTimeString().slice(0,5);
@@ -188,7 +236,6 @@
     categoryChoice.disable();
     subcategoryChoice.disable();
 
-    // Populate Line → Machine
     lineChoice.setChoices(
       prodLines.map(l => ({ value: l.line, label: l.line })),
       'value','label',true
@@ -200,44 +247,47 @@
       subcategoryChoice.clearChoices().disable();
       hide(categoryContainer, subcategoryContainer, descCtr, submitCtr);
       if (!line) return;
-      const lineObj = prodLines.find(l => l.line === line);
-      const groups  = lineObj.operations.map(op => ({
-        label: `Op ${op.op}`,
-        choices: op.machines.map(m => ({ value: m.number, label: `${m.number}` }))
-      }));
+      const groups = prodLines
+        .find(l => l.line===line)
+        .operations.map(op => ({
+          label: `Op ${op.op}`,
+          choices: op.machines.map(m => ({ value: m.number, label: `${m.number}` }))
+        }));
       machineChoice.setChoices(groups,'value','label',true);
       machineChoice.enable().showDropdown();
       show(machineSelect.parentElement);
     });
 
-    // Machine → Category
     machineSelect.addEventListener('change', () => {
-      const machine = machineSelect.value;
+      const mach = machineSelect.value;
       categoryChoice.clearChoices().disable();
       subcategoryChoice.clearChoices().disable();
       hide(subcategoryContainer, descCtr, submitCtr);
-      if (!machine) return;
-      const cats = downtimeCodes.map(c => ({ value: c.code, label: c.name }));
-      categoryChoice.setChoices(cats,'value','label',true);
+      if (!mach) return;
+      categoryChoice.setChoices(
+        downtimeCodes.map(c => ({ value: c.code, label: c.name })),
+        'value','label',true
+      );
       categoryChoice.enable().showDropdown();
       show(categoryContainer);
     });
 
-    // Category → Subcategory
     categorySelect.addEventListener('change', () => {
       const cat = categorySelect.value;
       subcategoryChoice.clearChoices().disable();
       hide(descCtr, submitCtr);
       if (!cat) return;
-      const subcats = downtimeCodes
-        .find(c => c.code === cat).subcategories
-        .map(s => ({ value: s.code, label: s.name }));
-      subcategoryChoice.setChoices(subcats,'value','label',true);
+      subcategoryChoice.setChoices(
+        downtimeCodes
+          .find(c => c.code===cat)
+          .subcategories
+          .map(s => ({ value: s.code, label: s.name })),
+        'value','label',true
+      );
       subcategoryChoice.enable().showDropdown();
       show(subcategoryContainer);
     });
 
-    // Subcategory → Show Date/Time + Comment
     subcategorySelect.addEventListener('change', () => {
       if (subcategorySelect.value) {
         setDefaultDateTime();
