@@ -4,6 +4,8 @@ from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse
 from datetime import datetime
 from ..models.maintenance_models import MachineDowntimeEvent
+from django.http import JsonResponse
+
 
 
 # import your lines structure
@@ -80,7 +82,33 @@ DOWNTIME_CODES = [
     },
 ]
 
+def maintenance_entries(request: HttpRequest) -> JsonResponse:
+    """
+    AJAX endpoint: returns the next page of downtime entries in JSON.
+    Querystring:
+      ?offset=N   — zero-based index to start at
+    """
+    offset    = int(request.GET.get('offset', 0))
+    page_size = 5
 
+    qs      = MachineDowntimeEvent.objects.order_by('-start_epoch')
+    total   = qs.count()
+    batch   = list(qs[offset : offset + page_size])
+    entries = [
+        {
+            'start_epoch': e.start_epoch,
+            'line':        e.line,
+            'machine':     e.machine,
+            'category':    e.category,
+            'subcategory': e.subcategory,
+            'code':        e.code,
+            'comment':     e.comment,
+        }
+        for e in batch
+    ]
+    has_more = (offset + page_size) < total
+
+    return JsonResponse({'entries': entries, 'has_more': has_more})
 
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':

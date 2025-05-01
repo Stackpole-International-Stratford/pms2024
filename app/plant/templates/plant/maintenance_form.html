@@ -87,22 +87,14 @@
   </form>
 
 
-
-
-
   {% if entries %}
   <div class="mt-5">
     <h5>Recent Downtime Entries</h5>
-    <table class="table table-sm table-striped">
+    <table id="recent-entries" class="table table-sm table-striped">
       <thead>
         <tr>
-          <th>Start (epoch)</th>
-          <th>Line</th>
-          <th>Machine</th>
-          <th>Category</th>
-          <th>Subcategory</th>
-          <th>Code</th>
-          <th>Comment</th>
+          <th>When (epoch)</th><th>Line</th><th>Machine</th>
+          <th>Category</th><th>Sub‐category</th><th>Code</th><th>Comment</th>
         </tr>
       </thead>
       <tbody>
@@ -120,15 +112,54 @@
       </tbody>
     </table>
 
-    {% if has_more %}
-      <div class="text-center">
-        <a href="?offset={{ offset|add:page_size }}" class="btn btn-outline-primary">
-          Load more
-        </a>
-      </div>
-    {% endif %}
+    <div class="text-center">
+      <button id="load-more" class="btn btn-outline-primary"
+              {% if not has_more %}style="display:none"{% endif %}>
+        Load more
+      </button>
+    </div>
   </div>
-{% endif %}
+  {% endif %}
+
+  <script>
+    (function(){
+      // start offset at however many you got on first render
+      let offset = {{ entries|length }};
+      const loadBtn = document.getElementById('load-more');
+      const tbody   = document.querySelector('#recent-entries tbody');
+      const url     = "{% url 'maintenance_entries' %}";
+
+      loadBtn.addEventListener('click', () => {
+        fetch(`${url}?offset=${offset}`)
+          .then(r => r.json())
+          .then(data => {
+            data.entries.forEach(e => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${e.start_epoch}</td>
+                <td>${e.line}</td>
+                <td>${e.machine}</td>
+                <td>${e.category}</td>
+                <td>${e.subcategory}</td>
+                <td>${e.code}</td>
+                <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
+              `;
+              tbody.appendChild(tr);
+            });
+            offset += data.entries.length;
+            if (!data.has_more) {
+              loadBtn.style.display = 'none';
+            }
+          })
+          .catch(err => {
+            console.error("Failed to load more entries:", err);
+          });
+      });
+    })();
+  </script>
+
+
+
 
 
 </div>
