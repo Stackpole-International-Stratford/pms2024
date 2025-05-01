@@ -28,6 +28,25 @@
   <!-- Bootstrap CSS -->
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
 
+
+  
+    <!-- Include Flatpickr CSS and JS -->
+    <link rel="stylesheet" href="{% static 'flatpickr/flatpickr.min.css' %}">
+    <link rel="stylesheet" href="{% static 'flatpickr/material_orange.min.css' %}">  <!-- ADD THIS LINE -->
+    <script src="{% static 'flatpickr/flatpickr.min.js' %}"></script>
+
+    <script src={% static "chart.js/chart.umd.js" %}></script>
+    <script src={% static "moment.js/moment.min.js" %}></script>
+    <script src={% static "chart.js/chartjs-adapter-moment.min.js" %}></script>
+    <script src="{% static 'chart.js/chartjs-plugin-regression.min.js' %}"></script> <!-- Added this line -->
+    <script src="{% static 'htmx/htmx.min.js' %}"></script>
+
+    <!-- Bootstrap CSS -->
+    <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+
+    <!-- Additional CSS -->
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+
   <style>
     /* Full-page background */
     body {
