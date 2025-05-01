@@ -96,7 +96,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
     batch   = list(qs[offset : offset + page_size])
     entries = [
         {
-            'start_epoch': e.start_epoch,
+            'start_at':    e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
             'line':        e.line,
             'machine':     e.machine,
             'category':    e.category,
@@ -159,7 +159,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
     qs         = MachineDowntimeEvent.objects.order_by('-start_epoch')
     total      = qs.count()
     page_objs  = list(qs[offset: offset + page_size])
-    entries    = list(reversed(page_objs))
+    entries    = page_objs
     has_more   = (offset + page_size) < total
 
     context = {

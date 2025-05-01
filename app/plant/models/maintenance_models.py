@@ -1,6 +1,8 @@
 # plant/models/maintenance_models.py
 
 from django.db import models
+from datetime import datetime as _datetime
+
 
 class MachineDowntimeEvent(models.Model):
     """
@@ -19,5 +21,14 @@ class MachineDowntimeEvent(models.Model):
     created_at_UTC = models.DateTimeField(auto_now_add=True)
     updated_at_UTC = models.DateTimeField(auto_now=True)
 
+    @property
+    def start_at(self) -> _datetime:
+        """
+        Returns the start timestamp as a Python datetime for easy formatting.
+        """
+        return _datetime.fromtimestamp(self.start_epoch)
+
     def __str__(self):
         return f"{self.code} @ {self.start_epoch} on {self.line}/{self.machine}"
+    
+

@@ -80,7 +80,7 @@
           <table id="recent-entries" class="table table-sm table-striped">
             <thead>
               <tr>
-                <th>When (epoch)</th>
+                <th>Started at</th>
                 <th>Line</th>
                 <th>Machine</th>
                 <th>Category</th>
@@ -92,7 +92,7 @@
             <tbody>
               {% for e in entries %}
                 <tr>
-                  <td>{{ e.start_epoch }}</td>
+                  <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
                   <td>{{ e.line }}</td>
                   <td>{{ e.machine }}</td>
                   <td>{{ e.category }}</td>
@@ -129,7 +129,7 @@
               data.entries.forEach(e => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                  <td>${e.start_epoch}</td>
+                  <td>${e.start_at}</td>
                   <td>${e.line}</td>
                   <td>${e.machine}</td>
                   <td>${e.category}</td>
