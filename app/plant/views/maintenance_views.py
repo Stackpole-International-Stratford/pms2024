@@ -93,9 +93,11 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
     offset    = int(request.GET.get('offset', 0))
     page_size = 100
 
-    qs      = MachineDowntimeEvent.objects.order_by('-start_epoch')
+    # ← only non-deleted
+    qs      = MachineDowntimeEvent.objects.filter(is_deleted=False).order_by('-start_epoch')
     total   = qs.count()
     batch   = list(qs[offset : offset + page_size])
+
     entries = [
         {
             'start_at':    e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
@@ -112,6 +114,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
     return JsonResponse({'entries': entries, 'has_more': has_more})
 
+
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         # 1) grab the raw codes from the form
@@ -124,11 +127,9 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         description = request.POST['description']
 
         # 2) look up the display names
-        # find the category object
         cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == cat_code), None)
-        category_name = cat_obj['name'] if cat_obj else cat_code
+        category_name    = cat_obj['name'] if cat_obj else cat_code
 
-        # within that, find the subcategory object
         sub_obj = None
         if cat_obj:
             sub_obj = next((s for s in cat_obj['subcategories'] if s['code'] == sub_code), None)
@@ -138,36 +139,35 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         epoch_ts = int(dt.timestamp())
 
-        # 4) save: category_name & subcategory_name go into those fields;
-        #    code stays as the raw sub_code
+        # 4) save
         MachineDowntimeEvent.objects.create(
-                    line        = line,
-                    machine     = machine,
-                    category    = category_name,
-                    subcategory = subcategory_name,
-                    code        = sub_code,
-                    start_epoch = epoch_ts,
-                    comment     = description,
-                )
-                # preserve offset on redirect so page doesn’t jump back to page 1
+            line        = line,
+            machine     = machine,
+            category    = category_name,
+            subcategory = subcategory_name,
+            code        = sub_code,
+            start_epoch = epoch_ts,
+            comment     = description,
+            # is_deleted and deleted_at default to False / None
+        )
+
+        # preserve offset so page doesn’t jump back
         return redirect(request.get_full_path())
 
-# ─── GET ────────────────────────────────────────────────────────────────
-    # paging params
+    # ─── GET ────────────────────────────────────────────────────────────────
     offset    = int(request.GET.get('offset', 0))
     page_size = 100
 
-    # fetch the events in descending order, slice, then reverse to ascending
-    qs         = MachineDowntimeEvent.objects.order_by('-start_epoch')
-    total      = qs.count()
-    page_objs  = list(qs[offset: offset + page_size])
-    entries    = page_objs
-    has_more   = (offset + page_size) < total
+    # ← only non-deleted
+    qs        = MachineDowntimeEvent.objects.filter(is_deleted=False).order_by('-start_epoch')
+    total     = qs.count()
+    page_objs = list(qs[offset: offset + page_size])
+    has_more  = (offset + page_size) < total
 
     context = {
         'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
         'lines_json':          mark_safe(json.dumps(prod_lines)),
-        'entries':             entries,
+        'entries':             page_objs,
         'offset':              offset,
         'page_size':           page_size,
         'has_more':            has_more,
