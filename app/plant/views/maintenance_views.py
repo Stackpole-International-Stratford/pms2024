@@ -189,7 +189,8 @@ def closeout_downtime_entry(request):
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
     offset    = int(request.GET.get('offset', 0))
-    page_size = 100
+    # page_size = 100
+    page_size = 15
 
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
@@ -259,7 +260,8 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 
     # ─── GET ───────────────────────────────────────────────────────────────
     offset    = int(request.GET.get('offset', 0))
-    page_size = 100
+    # page_size = 100
+    page_size = 15
 
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
