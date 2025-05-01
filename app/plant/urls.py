@@ -49,6 +49,6 @@ urlpatterns = [
 
     path('maintenance/form/', maintenance_form, name='maintenance_form'),
     path('maintenance/form/entries/',    maintenance_entries, name='maintenance_entries'),
-
+    path('maintenance/form/<int:entry_id>/edit/',maintenance_edit,name='maintenance_edit'),
 
 ]
