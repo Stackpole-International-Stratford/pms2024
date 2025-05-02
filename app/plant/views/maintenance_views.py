@@ -219,48 +219,65 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
     return JsonResponse({'entries': entries, 'has_more': has_more})
 
 
+
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-        # 1) grab the raw codes from the form
+        entry_id    = request.POST.get('entry_id')     # this will be None for “Add” form
         line        = request.POST['line']
         machine     = request.POST['machine']
         cat_code    = request.POST['category']
         sub_code    = request.POST['subcategory']
-        start_date  = request.POST['start_date']   # "YYYY-MM-DD"
-        start_time  = request.POST['start_time']   # "HH:MM"
+        start_date  = request.POST['start_date']       # "YYYY-MM-DD"
+        start_time  = request.POST['start_time']       # "HH:MM"
         description = request.POST['description']
 
-        # 2) look up the display names
+        # look up display names
         cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == cat_code), None)
-        category_name    = cat_obj['name'] if cat_obj else cat_code
+        category_name = cat_obj['name'] if cat_obj else cat_code
 
         sub_obj = None
         if cat_obj:
             sub_obj = next((s for s in cat_obj['subcategories'] if s['code'] == sub_code), None)
         subcategory_name = sub_obj['name'] if sub_obj else sub_code
 
-        # 3) parse epoch
+        # parse into epoch
         dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         epoch_ts = int(dt.timestamp())
 
-        # 4) save
-        MachineDowntimeEvent.objects.create(
-            line        = line,
-            machine     = machine,
-            category    = category_name,
-            subcategory = subcategory_name,
-            code        = sub_code,
-            start_epoch = epoch_ts,
-            comment     = description,
-            # is_deleted and deleted_at default to False / None
-        )
+        if entry_id:
+            # ——— update existing record ———
+            try:
+                e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+            except MachineDowntimeEvent.DoesNotExist:
+                return HttpResponseBadRequest("Entry not found")
+            e.line        = line
+            e.machine     = machine
+            e.category    = category_name
+            e.subcategory = subcategory_name
+            e.code        = sub_code
+            e.start_epoch = epoch_ts
+            e.comment     = description
+            e.save(update_fields=[
+                'line', 'machine', 'category', 'subcategory',
+                'code', 'start_epoch', 'comment'
+            ])
+        else:
+            # ——— create new record ———
+            MachineDowntimeEvent.objects.create(
+                line        = line,
+                machine     = machine,
+                category    = category_name,
+                subcategory = subcategory_name,
+                code        = sub_code,
+                start_epoch = epoch_ts,
+                comment     = description,
+            )
 
-        # preserve offset so page doesn’t jump back
+        # preserve any ?offset=… in the URL so the user stays on the same page
         return redirect(request.get_full_path())
 
     # ─── GET ───────────────────────────────────────────────────────────────
     offset    = int(request.GET.get('offset', 0))
-    # page_size = 100
     page_size = 300
 
     qs = MachineDowntimeEvent.objects.filter(
