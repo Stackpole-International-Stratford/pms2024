@@ -405,12 +405,19 @@ def list_all_downtime_entries(request):
         name='maintenance_managers'
     ).exists()
 
+    # 9) Which maintenance roles (electrician / millwright / tech) does *this* user have?
+    user_group_names = set(request.user.groups.values_list('name', flat=True))
+    user_roles = [
+        role for role, grp in ROLE_TO_GROUP.items() if grp in user_group_names
+    ]       # e.g. ['electrician', 'tech']
+
     return render(request, 'plant/maintenance_all_entries.html', {
         'entries':         entries,
         'page_size':       PAGE_SIZE,
         'line_priorities': line_priorities,
         'is_manager':      is_manager,
         'labour_choices':  MachineDowntimeEvent.LABOUR_CHOICES,
+        'user_roles':      user_roles,            # ← NEW
     })
 
 
