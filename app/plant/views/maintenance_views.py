@@ -324,6 +324,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # ================================================================
 # ================================================================
 
+@login_required(login_url='login')
 def list_all_downtime_entries(request):
     """
     Renders only *open* downtime events (i.e. closeout_epoch IS NULL).
