@@ -191,7 +191,7 @@
           {# Show Join only if *you* don’t already have an open participation #}
           {% if not e.user_has_open %}
             <button
-              class="btn btn-sm btn-outline-success join-btn mt-2"
+              class="btn btn-sm btn-outline-dark join-btn mt-2"
               data-event-id="{{ e.id }}"
             >Join</button>
           {% endif %}
@@ -268,7 +268,7 @@
       });
       return val;
     }
-  
+
     const currentUser    = "{{ request.user.username }}",
           csrftoken      = getCookie('csrftoken'),
           joinUrl        = "{% url 'join_downtime_event' %}",
@@ -278,23 +278,25 @@
           pageSize       = {{ page_size }},
           table          = document.querySelector('table'),
           loadMoreBtn    = document.getElementById('load-more-btn');
-  
+
     let offset = pageSize;
-  
+
     // ── Row Renderer ──────────────────────────────────────────────────
     function renderRow(e) {
       // labour-needed badges
       const labourHtml = Array.isArray(e.labour_types) && e.labour_types.length
         ? e.labour_types.map(l => `<span class="badge bg-info">${l}</span>`).join(' ')
         : '<span class="text-muted">—</span>';
-  
+
       // participants cell
-      const participantsHtml = (() => {
-        if (Array.isArray(e.participants) && e.participants.length) {
-          return e.participants.map(p => {
-            if (p.leave_epoch == null) {
-              // still on the job
-              return `<div>
+      const parts = [];
+
+      if (Array.isArray(e.participants) && e.participants.length) {
+        e.participants.forEach(p => {
+          if (p.leave_epoch == null) {
+            // still on the job
+            parts.push(`
+              <div>
                 ${p.user}
                 ${p.user === currentUser
                   ? `<button
@@ -303,26 +305,34 @@
                        Leave
                      </button>`
                   : ''}
-              </div>`;
-            } else {
-              // finished
-              return `<div>${p.user} <small>– ${p.total_minutes} min</small></div>`;
-            }
-          }).join('');
-        }
-        // no participants yet
-        return `<button
-          class="btn btn-sm btn-outline-success join-btn"
-          data-event-id="${e.id}">
-          Join
-        </button>`;
-      })();
-  
+              </div>`);
+          } else {
+            // finished
+            parts.push(`
+              <div>
+                ${p.user} <small>– ${p.total_minutes} min</small>
+              </div>`);
+          }
+        });
+      }
+
+      // if the user has no open participation, show Join
+      if (!e.user_has_open) {
+        parts.push(`
+          <button
+            class="btn btn-sm btn-outline-dark join-btn mt-2"
+            data-event-id="${e.id}">
+            Join
+          </button>`);
+      }
+
+      const participantsHtml = parts.join('');
+
       // close-out cell
       const closeoutHtml = e.closeout_at
         ? e.closeout_at
         : `<span class="text-muted">— open —</span>`;
-  
+
       return `
         <tr class="${e.closeout_at ? '' : 'table-warning'}">
           <td>${e.start_at}</td>
@@ -338,7 +348,7 @@
           <td>${e.comment}</td>
         </tr>`;
     }
-  
+
     // ── Load More AJAX ────────────────────────────────────────────────
     loadMoreBtn.addEventListener('click', () => {
       loadMoreBtn.disabled = true;
@@ -346,7 +356,6 @@
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
           data.entries.forEach(e => {
-            // ensure the JSON includes a `participants` array for each entry
             document.querySelector('tbody')
                     .insertAdjacentHTML('beforeend', renderRow(e));
           });
@@ -362,13 +371,13 @@
           loadMoreBtn.disabled = false;
         });
     });
-  
-    // ── Delegated Table Clicks: Join, Leave, Close-Out ─────────────────
+
+    // ── Delegated Table Clicks: Join, Leave, Close-Out ────────────────
     table.addEventListener('click', e => {
       const btn = e.target.closest('button');
       if (!btn) return;
       const eventId = btn.dataset.eventId;
-  
+
       // JOIN
       if (btn.classList.contains('join-btn')) {
         fetch(joinUrl, {
@@ -381,7 +390,6 @@
         })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
-          // replace JOIN with currentUser + LEAVE button
           btn.outerHTML = `
             <div>
               ${currentUser}
@@ -395,7 +403,7 @@
         .catch(() => alert('Error joining event'));
         return;
       }
-  
+
       // LEAVE
       if (btn.classList.contains('leave-btn')) {
         fetch(leaveUrl, {
@@ -408,18 +416,29 @@
         })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
-          btn.outerHTML = `<small>– ${data.total_minutes} min</small>`;
+          // swap Leave → minutes
+          const minutesEl = document.createElement('small');
+          minutesEl.textContent = `– ${data.total_minutes} min`;
+          btn.replaceWith(minutesEl);
+
+          // re-add a Join button
+          const cell = minutesEl.closest('.participants-cell');
+          const joinBtn = document.createElement('button');
+          joinBtn.className = 'btn btn-sm btn-outline-dark join-btn mt-2';
+          joinBtn.dataset.eventId = eventId;
+          joinBtn.textContent = 'Join';
+          cell.appendChild(joinBtn);
         })
         .catch(() => alert('Error leaving event'));
         return;
       }
-  
-      // CLOSE-OUT (unmodified)
+
+      // CLOSE-OUT (unchanged)
       if (btn.classList.contains('closeout-btn')) {
         const now = new Date(),
               d   = now.toISOString().slice(0,10),
               t   = now.toTimeString().slice(0,5);
-  
+
         document.getElementById('all-closeout-entry-id').value = eventId;
         document.getElementById('all-closeout-date').value     = d;
         document.getElementById('all-closeout-time').value     = t;
@@ -429,7 +448,7 @@
         ).show();
       }
     });
-  
+
     // ── Confirm Close-Out ─────────────────────────────────────────────
     document.getElementById('all-closeout-confirm')
       .addEventListener('click', () => {
@@ -437,10 +456,10 @@
               date    = document.getElementById('all-closeout-date').value,
               time    = document.getElementById('all-closeout-time').value,
               comment = document.getElementById('all-closeout-comment').value.trim();
-  
+
         if (!date || !time)   return alert('Pick date & time.');
         if (!comment)         return alert('Please describe what you did.');
-  
+
         fetch(allCloseoutUrl, {
           method: 'POST',
           headers: {
@@ -465,17 +484,17 @@
         })
         .catch(() => alert('Error closing out.'));
       });
-  
+
     // ── Labour-Type Live Filtering ─────────────────────────────────────
     const labourCheckboxes = Array.from(
       document.querySelectorAll('.labour-filter')
     );
-  
+
     function filterByLabour() {
       const selected = labourCheckboxes
         .filter(cb => cb.checked)
         .map(cb => cb.value);
-  
+
       document
         .querySelectorAll('table tbody tr')
         .forEach(row => {
@@ -483,23 +502,20 @@
           const rowCodes   = Array.from(
             labourCell.querySelectorAll('span.badge.bg-info')
           ).map(span => span.textContent.trim());
-  
-          if (selected.length === 0) {
-            row.style.display = '';
-          } else {
-            row.style.display = rowCodes.some(c => selected.includes(c))
-              ? ''
-              : 'none';
-          }
+
+          row.style.display = (selected.length === 0 || rowCodes.some(c => selected.includes(c)))
+            ? ''
+            : 'none';
         });
     }
-  
+
     labourCheckboxes.forEach(cb =>
       cb.addEventListener('change', filterByLabour)
     );
     filterByLabour();
-  
+
   })();
-  </script>
+</script>
+
   
 {% endblock %}
