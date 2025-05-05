@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse
 from datetime import datetime
-from ..models.maintenance_models import MachineDowntimeEvent
+from ..models.maintenance_models import MachineDowntimeEvent, LinePriority
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -337,15 +337,21 @@ PAGE_SIZE = 500
 
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
+    # your existing downtime query
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True,
     ).order_by('-start_epoch')
 
     entries = qs[:PAGE_SIZE]
+
+    # grab all lines in priority order (Meta.ordering will sort by priority)
+    line_priorities = LinePriority.objects.all()
+
     return render(request, 'plant/maintenance_all_entries.html', {
-        'entries': entries,
-        'page_size': PAGE_SIZE,
+        'entries':         entries,
+        'page_size':       PAGE_SIZE,
+        'line_priorities': line_priorities,   # ← new
     })
 
 

@@ -2,6 +2,43 @@
 {% block content %}
 <div class="container mt-4">
   <h1 class="mb-4">Open Downtime Events</h1>
+
+<!-- Lines & Priorities Accordion -->
+<div class="accordion mt-4" id="linesPriorityAccordion">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="linesPriorityHeading">
+      <button
+        class="accordion-button collapsed"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#linesPriorityCollapse"
+        aria-expanded="false"
+        aria-controls="linesPriorityCollapse"
+      >
+        Line Priorities
+      </button>
+    </h2>
+    <div
+      id="linesPriorityCollapse"
+      class="accordion-collapse collapse"
+      aria-labelledby="linesPriorityHeading"
+      data-bs-parent="#linesPriorityAccordion"
+    >
+      <div class="accordion-body">
+        <ul class="list-unstyled mb-0">
+          {% for lp in line_priorities %}
+            <li>{{ lp.line }} | {{ lp.priority }}</li>
+          {% empty %}
+            <li class="text-muted">No line priorities defined.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
   <div class="table-responsive">
     <table class="table table-striped table-hover table-bordered align-middle">
       <thead class="table-light">
