@@ -301,266 +301,247 @@
 </div>
 
 <script>
-  (function(){
-    // ── Utilities & Config ────────────────────────────────────────────
-    function getCookie(name) {
-      let val = null;
-      document.cookie?.split(';').forEach(c => {
-        c = c.trim();
-        if (c.startsWith(name + '=')) {
-          val = decodeURIComponent(c.slice(name.length + 1));
-        }
-      });
-      return val;
-    }
-
-    const currentUser    = "{{ request.user.username }}",
-          csrftoken      = getCookie('csrftoken'),
-          joinUrl        = "{% url 'join_downtime_event' %}",
-          leaveUrl       = "{% url 'leave_downtime_event' %}",
-          allCloseoutUrl = "{% url 'closeout_assigned_downtime_entry' %}",
-          loadMoreUrl    = "{% url 'load_more_downtime_entries' %}",
-          pageSize       = {{ page_size }},
-          table          = document.querySelector('table'),
-          loadMoreBtn    = document.getElementById('load-more-btn');
-
-    let offset = pageSize;
-
-    // ── Row Renderer ──────────────────────────────────────────────────
-    function renderRow(e) {
-      // labour-needed badges
-      const labourHtml = Array.isArray(e.labour_types) && e.labour_types.length
-        ? e.labour_types.map(l => `<span class="badge bg-info">${l}</span>`).join(' ')
-        : '<span class="text-muted">—</span>';
-
-      // participants cell
-      const parts = [];
-
-      if (Array.isArray(e.participants) && e.participants.length) {
-        e.participants.forEach(p => {
-          if (p.leave_epoch == null) {
-            // still on the job
-            parts.push(`
-              <div>
-                ${p.user}
-                ${p.user === currentUser
-                  ? `<button
-                       class="btn btn-sm btn-outline-danger leave-btn"
-                       data-event-id="${e.id}">
-                       Leave
-                     </button>`
-                  : ''}
-              </div>`);
-          } else {
-            // finished
-            parts.push(`
-              <div>
-                ${p.user} <small>– ${p.total_minutes} min</small>
-              </div>`);
-          }
-        });
-      }
-
-      // if the user has no open participation, show Join
-      if (!e.user_has_open) {
-        parts.push(`
-          <button
-            class="btn btn-sm btn-outline-dark join-btn mt-2"
-            data-event-id="${e.id}">
-            Join
-          </button>`);
-      }
-
-      const participantsHtml = parts.join('');
-
-      // close-out cell
-      const closeoutHtml = e.closeout_at
-        ? e.closeout_at
-        : `<span class="text-muted">— open —</span>`;
-
-      return `
-        <tr class="${e.closeout_at ? '' : 'table-warning'}">
-          <td>${e.start_at}</td>
-          <td>${closeoutHtml}</td>
-          <td>${e.line}</td>
-          <td>${e.machine}</td>
-          <td><span class="badge bg-dark">${e.category}</span></td>
-          <td><span class="badge bg-secondary">${e.subcategory}</span></td>
-          <td>${labourHtml}</td>
-          <td class="participants-cell" data-event-id="${e.id}">
-            ${participantsHtml}
-          </td>
-          <td>${e.comment}</td>
-        </tr>`;
-    }
-
-    // ── Load More AJAX ────────────────────────────────────────────────
-    loadMoreBtn.addEventListener('click', () => {
-      loadMoreBtn.disabled = true;
-      fetch(`${loadMoreUrl}?offset=${offset}`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          data.entries.forEach(e => {
-            document.querySelector('tbody')
-                    .insertAdjacentHTML('beforeend', renderRow(e));
-          });
-          offset += pageSize;
-          if (!data.has_more) {
-            loadMoreBtn.remove();
-          } else {
-            loadMoreBtn.disabled = false;
-          }
-        })
-        .catch(() => {
-          alert('Error loading more entries');
-          loadMoreBtn.disabled = false;
-        });
-    });
-
-    // ── Delegated Table Clicks: Join, Leave, Close-Out ────────────────
-    table.addEventListener('click', e => {
-      const btn = e.target.closest('button');
+  /*  ───────────  Join / Leave overlay (independent)  ─────────── */
+  (() => {
+    /* helpers --------------------------------------------------------------- */
+    const currentUser = "{{ request.user.username }}",
+          csrftoken   = document.cookie
+                         .split(';')
+                         .map(c => c.trim())
+                         .find(c => c.startsWith('csrftoken='))?.split('=')[1] ?? '',
+          joinUrl     = "{% url 'join_downtime_event' %}",
+          leaveUrl    = "{% url 'leave_downtime_event' %}",
+          table       = document.querySelector('table');
+  
+    if (!table) return;          /* defensive guard */
+  
+    /* cached textarea elements --------------------------------------------- */
+    const joinTA  = document.getElementById('join-comment-text'),
+          leaveTA = document.getElementById('leave-comment-text');
+  
+    let pendingJoinId  = null,
+        pendingLeaveId = null;
+  
+    /* capture‑phase listener ------------------------------------------------ */
+    table.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button.join-btn, button.leave-btn');
       if (!btn) return;
-      const eventId = btn.dataset.eventId;
-
-      // JOIN
+  
+      ev.stopImmediatePropagation();
+      ev.preventDefault();
+  
       if (btn.classList.contains('join-btn')) {
-        fetch(joinUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type':'application/json',
-            'X-CSRFToken': csrftoken
-          },
-          body: JSON.stringify({ event_id: eventId })
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          btn.outerHTML = `
-            <div>
-              ${currentUser}
-              <button
-                class="btn btn-sm btn-outline-danger leave-btn"
-                data-event-id="${eventId}">
-                Leave
-              </button>
-            </div>`;
-        })
-        .catch(() => alert('Error joining event'));
-        return;
-      }
-
-      // LEAVE
-      if (btn.classList.contains('leave-btn')) {
-        fetch(leaveUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type':'application/json',
-            'X-CSRFToken': csrftoken
-          },
-          body: JSON.stringify({ event_id: eventId })
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          // swap Leave → minutes
-          const minutesEl = document.createElement('small');
-          minutesEl.textContent = `– ${data.total_minutes} min`;
-          btn.replaceWith(minutesEl);
-
-          // re-add a Join button
-          const cell = minutesEl.closest('.participants-cell');
-          const joinBtn = document.createElement('button');
-          joinBtn.className = 'btn btn-sm btn-outline-dark join-btn mt-2';
-          joinBtn.dataset.eventId = eventId;
-          joinBtn.textContent = 'Join';
-          cell.appendChild(joinBtn);
-        })
-        .catch(() => alert('Error leaving event'));
-        return;
-      }
-
-      // CLOSE-OUT (unchanged)
-      if (btn.classList.contains('closeout-btn')) {
-        const now = new Date(),
-              d   = now.toISOString().slice(0,10),
-              t   = now.toTimeString().slice(0,5);
-
-        document.getElementById('all-closeout-entry-id').value = eventId;
-        document.getElementById('all-closeout-date').value     = d;
-        document.getElementById('all-closeout-time').value     = t;
-        document.getElementById('all-closeout-comment').value  = '';
-        new bootstrap.Modal(
-          document.getElementById('allCloseoutModal')
+        pendingJoinId   = btn.dataset.eventId;
+        joinTA.value    = '';
+        bootstrap.Modal.getOrCreateInstance(
+          document.getElementById('joinCommentModal')
+        ).show();
+      } else {
+        pendingLeaveId  = btn.dataset.eventId;
+        leaveTA.value   = '';
+        bootstrap.Modal.getOrCreateInstance(
+          document.getElementById('leaveCommentModal')
         ).show();
       }
-    });
-
-    // ── Confirm Close-Out ─────────────────────────────────────────────
-    document.getElementById('all-closeout-confirm')
+    }, true);                       // capture=true
+  
+    /* JOIN confirm ---------------------------------------------------------- */
+    document.getElementById('join-confirm-btn')
       .addEventListener('click', () => {
-        const entryId = document.getElementById('all-closeout-entry-id').value,
-              date    = document.getElementById('all-closeout-date').value,
-              time    = document.getElementById('all-closeout-time').value,
-              comment = document.getElementById('all-closeout-comment').value.trim();
-
-        if (!date || !time)   return alert('Pick date & time.');
-        if (!comment)         return alert('Please describe what you did.');
-
-        fetch(allCloseoutUrl, {
+        const comment = joinTA.value.trim();
+        if (!comment) {
+          alert('Please describe what you plan on doing.');
+          return;
+        }
+  
+        fetch(joinUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type':'application/json',
-            'X-CSRFToken': csrftoken
-          },
-          body: JSON.stringify({
-            entry_id:         entryId,
-            closeout:         `${date} ${time}`,
-            closeout_comment: comment
-          })
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken': csrftoken },
+          body: JSON.stringify({ event_id: pendingJoinId,
+                                 join_comment: comment })
         })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(() => {
+          const cell = table.querySelector(
+            `.participants-cell[data-event-id="${pendingJoinId}"]`
+          );
+          if (cell) {
+            cell.querySelector('.join-btn')?.remove();
+            cell.insertAdjacentHTML('afterbegin', `
+              <div>
+                ${currentUser}
+                <button class="btn btn-sm btn-outline-danger leave-btn"
+                        data-event-id="${pendingJoinId}">Leave</button>
+              </div>`);
+          }
           bootstrap.Modal.getInstance(
-            document.getElementById('allCloseoutModal')
+            document.getElementById('joinCommentModal')
           ).hide();
-          const row = table.querySelector(
-            `button[data-entry-id="${entryId}"]`
-          ).closest('tr');
-          row.remove();
         })
-        .catch(() => alert('Error closing out.'));
+        .catch(() => alert('Error joining event'));
       });
-
-    // ── Labour-Type Live Filtering ─────────────────────────────────────
-    const labourCheckboxes = Array.from(
-      document.querySelectorAll('.labour-filter')
-    );
-
-    function filterByLabour() {
-      const selected = labourCheckboxes
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-
-      document
-        .querySelectorAll('table tbody tr')
-        .forEach(row => {
-          const labourCell = row.cells[6];
-          const rowCodes   = Array.from(
-            labourCell.querySelectorAll('span.badge.bg-info')
-          ).map(span => span.textContent.trim());
-
-          row.style.display = (selected.length === 0 || rowCodes.some(c => selected.includes(c)))
-            ? ''
-            : 'none';
-        });
-    }
-
-    labourCheckboxes.forEach(cb =>
-      cb.addEventListener('change', filterByLabour)
-    );
-    filterByLabour();
-
+  
+    /* LEAVE confirm --------------------------------------------------------- */
+    document.getElementById('leave-confirm-btn')
+      .addEventListener('click', () => {
+        const comment = leaveTA.value.trim();
+        if (!comment) {
+          alert('Please describe what you did.');
+          return;
+        }
+  
+        fetch(leaveUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken': csrftoken },
+          body: JSON.stringify({ event_id: pendingLeaveId,
+                                 leave_comment: comment })
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          const cell = table.querySelector(
+            `.participants-cell[data-event-id="${pendingLeaveId}"]`
+          );
+          if (cell) {
+            const leaveBtn = cell.querySelector(
+              `button.leave-btn[data-event-id="${pendingLeaveId}"]`);
+            if (leaveBtn) {
+              leaveBtn.insertAdjacentHTML(
+                'afterend', `<small>– ${data.total_minutes} min</small>`);
+              leaveBtn.remove();
+            }
+            cell.insertAdjacentHTML('beforeend', `
+              <button class="btn btn-sm btn-outline-dark join-btn mt-2"
+                      data-event-id="${pendingLeaveId}">Join</button>`);
+          }
+          bootstrap.Modal.getInstance(
+            document.getElementById('leaveCommentModal')
+          ).hide();
+        })
+        .catch(() => alert('Error leaving event'));
+      });
   })();
-</script>
+  </script>
+  
+
+  <script>
+    (function () {
+      /* ─────────────────────────── Utilities & config ────────────────────────── */
+      function getCookie(name) {
+        let v = null;
+        document.cookie?.split(';').forEach(c => {
+          c = c.trim();
+          if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
+        });
+        return v;
+      }
+    
+      const currentUser = "{{ request.user.username }}",            // used by renderer
+            loadMoreUrl = "{% url 'load_more_downtime_entries' %}",
+            pageSize    = {{ page_size }},
+            table       = document.querySelector('table'),
+            loadMoreBtn = document.getElementById('load-more-btn');
+    
+      /* ───────────────────────────── Row renderer ────────────────────────────── */
+      function renderRow(e) {
+        const labourHtml = Array.isArray(e.labour_types) && e.labour_types.length
+          ? e.labour_types.map(l => `<span class="badge bg-info">${l}</span>`).join(' ')
+          : '<span class="text-muted">—</span>';
+    
+        /* participants (Join/Leave buttons stay so the add‑on can hook them) */
+        const parts = [];
+        if (Array.isArray(e.participants) && e.participants.length) {
+          e.participants.forEach(p => {
+            if (p.leave_epoch == null) {
+              parts.push(`
+                <div>
+                  ${p.user}
+                  ${p.user === currentUser ? `
+                    <button class="btn btn-sm btn-outline-danger leave-btn"
+                            data-event-id="${e.id}">Leave</button>` : ''}
+                </div>`);
+            } else {
+              parts.push(`<div>${p.user} <small>– ${p.total_minutes} min</small></div>`);
+            }
+          });
+        }
+    
+        if (!e.user_has_open) {
+          parts.push(`
+            <button class="btn btn-sm btn-outline-dark join-btn mt-2"
+                    data-event-id="${e.id}">Join</button>`);
+        }
+    
+        const closeoutHtml = e.closeout_at
+          ? e.closeout_at
+          : `<span class="text-muted">— open —</span>`;
+    
+        return `
+          <tr class="${e.closeout_at ? '' : 'table-warning'}">
+            <td>${e.start_at}</td>
+            <td>${closeoutHtml}</td>
+            <td>${e.line}</td>
+            <td>${e.machine}</td>
+            <td><span class="badge bg-dark">${e.category}</span></td>
+            <td><span class="badge bg-secondary">${e.subcategory}</span></td>
+            <td>${labourHtml}</td>
+            <td class="participants-cell" data-event-id="${e.id}">
+              ${parts.join('')}
+            </td>
+            <td>${e.comment}</td>
+          </tr>`;
+      }
+    
+      /* ───────────────────────────── Load‑More AJAX ──────────────────────────── */
+      let offset = pageSize;
+    
+      loadMoreBtn.addEventListener('click', () => {
+        loadMoreBtn.disabled = true;
+        fetch(`${loadMoreUrl}?offset=${offset}`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            data.entries.forEach(e => {
+              document.querySelector('tbody')
+                      .insertAdjacentHTML('beforeend', renderRow(e));
+            });
+            offset += pageSize;
+            if (!data.has_more) {
+              loadMoreBtn.remove();
+            } else {
+              loadMoreBtn.disabled = false;
+            }
+          })
+          .catch(() => {
+            alert('Error loading more entries');
+            loadMoreBtn.disabled = false;
+          });
+      });
+    
+      /* ──────────────────────── Labour‑type live filter ──────────────────────── */
+      const labourCheckboxes = Array.from(document.querySelectorAll('.labour-filter'));
+    
+      function filterByLabour() {
+        const selected = labourCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+    
+        document.querySelectorAll('table tbody tr').forEach(row => {
+          const rowCodes = Array.from(
+            row.cells[6].querySelectorAll('span.badge.bg-info')
+          ).map(span => span.textContent.trim());
+    
+          row.style.display =
+            selected.length === 0 || rowCodes.some(c => selected.includes(c))
+              ? ''
+              : 'none';
+        });
+      }
+    
+      labourCheckboxes.forEach(cb => cb.addEventListener('change', filterByLabour));
+      filterByLabour();     // initial state
+    })();
+    </script>
+    
+  
 
   
 {% endblock %}
