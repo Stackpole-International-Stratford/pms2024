@@ -161,15 +161,18 @@ def delete_downtime_entry(request):
 
     return JsonResponse({'status': 'ok'})
 
+
+
 @require_POST
 def closeout_downtime_entry(request):
     try:
-        payload   = json.loads(request.body)
-        entry_id  = payload['entry_id']
-        close_str = payload['closeout']     # e.g. "2025-05-01 18:08"
-        # parse into a naive datetime in server local time (America/Toronto)
-        close_dt  = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
-    except Exception:
+        payload        = json.loads(request.body)
+        entry_id       = payload['entry_id']
+        close_str      = payload['closeout']           # e.g. "2025-05-01 18:08"
+        closeout_comment = payload['closeout_comment'] # NEW
+        # parse into a naive datetime in server local time
+        close_dt       = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
+    except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
     try:
@@ -180,15 +183,20 @@ def closeout_downtime_entry(request):
     # compute epoch exactly like you do for start_epoch
     epoch_ts = int(close_dt.timestamp())
 
-    # save the epoch
+    # save the epoch and the comment
     e.closeout_epoch     = epoch_ts
-    e.save(update_fields=['closeout_epoch'])
+    e.closeout_comment   = closeout_comment  # NEW
+    e.save(update_fields=['closeout_epoch', 'closeout_comment'])
 
     # return the epoch back to the JS caller
     return JsonResponse({
-        'status':           'ok',
-        'closed_at_epoch':  epoch_ts,
+        'status':          'ok',
+        'closed_at_epoch': epoch_ts,
     })
+
+
+
+
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
     offset    = int(request.GET.get('offset', 0))
