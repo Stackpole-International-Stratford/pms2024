@@ -628,9 +628,10 @@ def move_line_priority(request, pk, direction):
 
 @require_POST
 def add_employee(request):
-    first = request.POST.get('first_name')
-    last  = request.POST.get('last_name')
-    roles = request.POST.getlist('roles')  # ['electrician', 'millwright', ...]
+    # force‑lowercase the names and each selected role
+    first = request.POST.get('first_name', '').strip().lower()
+    last  = request.POST.get('last_name', '').strip().lower()
+    roles = [r.strip().lower() for r in request.POST.getlist('roles')]
 
     print(f"[DEBUG] New employee → {first} {last}, roles: {roles}")
 
