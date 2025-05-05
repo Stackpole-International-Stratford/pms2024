@@ -117,6 +117,7 @@
 </div>
 
 <script>
+  // Utility to read CSRF token from cookies
   function getCookie(name) {
     let val = null;
     if (document.cookie) {
@@ -129,64 +130,89 @@
     }
     return val;
   }
-  const csrftoken      = getCookie('csrftoken'),
+
+  // Configuration
+  const currentUser    = "{{ request.user.username }}",
+        csrftoken      = getCookie('csrftoken'),
         assignUrl      = "{% url 'assign_downtime_entry' %}",
         unassignUrl    = "{% url 'unassign_downtime_entry' %}",
         allCloseoutUrl = "{% url 'closeout_assigned_downtime_entry' %}";
 
   const table = document.querySelector('table');
 
+  // Delegate clicks for Assign, Unassign, and Close-Out buttons
   table.addEventListener('click', e => {
-    const btn = e.target.closest('button');
+    const btn     = e.target.closest('button');
     if (!btn) return;
-    const entryId = btn.dataset.entryId;
 
-    // Assign / Unassign
+    const entryId = btn.dataset.entryId;
+    const row     = btn.closest('tr');
+
+    // ─── ASSIGN / UNASSIGN ─────────────────────────────────────────────
     if (btn.classList.contains('assign-btn') ||
         btn.classList.contains('unassign-btn')) {
-      const url = btn.classList.contains('assign-btn') ? assignUrl : unassignUrl;
+
+      const isAssign = btn.classList.contains('assign-btn'),
+            url      = isAssign ? assignUrl : unassignUrl;
+
       fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type':'application/json',
-          'X-CSRFToken': csrftoken
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  csrftoken
         },
         body: JSON.stringify({ entry_id: entryId })
       })
-      .then(r => { if (!r.ok) throw Error(); return r.json(); })
+      .then(response => {
+        if (!response.ok) throw new Error('Network error');
+        return response.json();
+      })
       .then(data => {
-        const cell = btn.closest('td.assigned-to-cell');
+        // Update Assigned-To cell
+        const assignedCell = row.querySelector('td.assigned-to-cell');
         if (data.assigned_to) {
-          cell.innerHTML = `
+          assignedCell.innerHTML = `
             ${data.assigned_to}
             <button class="btn btn-sm btn-outline-warning unassign-btn"
                     data-entry-id="${entryId}">
               Unassign
             </button>`;
         } else {
-          cell.innerHTML = `
+          assignedCell.innerHTML = `
             <button class="btn btn-sm btn-outline-primary assign-btn"
                     data-entry-id="${entryId}">
               Assign to me
             </button>`;
+        }
+
+        // Update Closeout cell (column index 1)
+        const closeoutCell = row.cells[1];
+        if (data.assigned_to === currentUser) {
+          closeoutCell.innerHTML = `
+            <button class="btn btn-sm btn-info closeout-btn"
+                    data-entry-id="${entryId}">
+              Close Out
+            </button>`;
+        } else {
+          closeoutCell.innerHTML = `<span class="text-muted">— open —</span>`;
         }
       })
       .catch(() => alert('Error performing request.'));
       return;
     }
 
-    // Close-out
+    // ─── OPEN CLOSE-OUT MODAL ──────────────────────────────────────────
     if (btn.classList.contains('closeout-btn')) {
-      document.getElementById('all-closeout-entry-id').value = entryId;
       const now = new Date();
-      document.getElementById('all-closeout-date').value    = now.toISOString().slice(0,10);
-      document.getElementById('all-closeout-time').value    = now.toTimeString().slice(0,5);
-      document.getElementById('all-closeout-comment').value = '';
+      document.getElementById('all-closeout-entry-id').value = entryId;
+      document.getElementById('all-closeout-date').value     = now.toISOString().slice(0,10);
+      document.getElementById('all-closeout-time').value     = now.toTimeString().slice(0,5);
+      document.getElementById('all-closeout-comment').value  = '';
       new bootstrap.Modal(document.getElementById('allCloseoutModal')).show();
-      return;
     }
   });
 
+  // ─── CONFIRM CLOSE-OUT ─────────────────────────────────────────────
   document.getElementById('all-closeout-confirm').addEventListener('click', () => {
     const entryId = document.getElementById('all-closeout-entry-id').value,
           date    = document.getElementById('all-closeout-date').value,
@@ -199,8 +225,8 @@
     fetch(allCloseoutUrl, {
       method: 'POST',
       headers: {
-        'Content-Type':'application/json',
-        'X-CSRFToken': csrftoken
+        'Content-Type': 'application/json',
+        'X-CSRFToken':  csrftoken
       },
       body: JSON.stringify({
         entry_id:         entryId,
@@ -208,9 +234,22 @@
         closeout_comment: comment
       })
     })
-    .then(r => { if (!r.ok) throw Error(); return r.json(); })
-    .then(() => window.location.reload())
+    .then(response => {
+      if (!response.ok) throw new Error('Network error');
+      return response.json();
+    })
+    .then(() => {
+      // Hide the modal
+      const modalEl = document.getElementById('allCloseoutModal');
+      bootstrap.Modal.getInstance(modalEl).hide();
+
+      // Remove the closed row
+      const row = table.querySelector(`button[data-entry-id="${entryId}"]`).closest('tr');
+      row.remove();
+    })
     .catch(() => alert('Error closing out.'));
   });
 </script>
+
+
 {% endblock %}
