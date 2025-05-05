@@ -2,6 +2,8 @@
 {% load static %}
 {% block content %}
 <div class="container mt-4">
+  {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
+
   <h1 class="mb-4">Open Downtime Events</h1>
 
 
@@ -362,10 +364,38 @@
       </div>
     </div>
   </div>
+  
 </div>
+
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    /* ---- read the roles we just embedded ---- */
+    const userRoles = JSON.parse(
+          document.getElementById('user‑roles-json').textContent
+        ).map(r => r.toUpperCase());           // ['ELECTRICIAN', 'TECH']
+  
+    /* ---- delay the auto‑tick by one second ---- */
+    setTimeout(() => {
+      /* check the corresponding boxes */
+      userRoles.forEach(code => {
+        const cb = document.querySelector(`.labour-filter[value="${code}"]`);
+        if (cb) cb.checked = true;
+      });
+  
+      /* refresh the table filter */
+      if (typeof filterByLabour === 'function') filterByLabour();
+    }, 1000);   // 1 000 ms = 1 s
+  });
+  </script>
+  
+  
+
 
 <!-- 2.  JavaScript that powers the modal -->
 <script>
+  
   /* ───────── loader guard ───────── */
   document.addEventListener('DOMContentLoaded', () => {
     /* if the Bootstrap bundle hasn’t executed yet, wait for the window load‑event */
@@ -697,6 +727,9 @@
               : 'none';
         });
       }
+
+      window.filterByLabour = filterByLabour;
+
     
       labourCheckboxes.forEach(cb => cb.addEventListener('change', filterByLabour));
       filterByLabour();     // initial state
