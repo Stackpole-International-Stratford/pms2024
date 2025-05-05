@@ -479,3 +479,56 @@ def closeout_assigned_downtime_entry(request):
     e.save(update_fields=['closeout_epoch', 'closeout_comment'])
 
     return JsonResponse({'status':'ok', 'closed_at_epoch': epoch_ts})
+
+
+
+@login_required
+@require_POST
+def move_line_priority(request, pk, direction):
+    """
+    Swap the priority of LinePriority(pk) with its neighbor:
+    - direction='up'   → swap with the next-higher-urgency (lower number)
+    - direction='down' → swap with the next-lower-urgency (higher number)
+    """
+    if direction not in ('up', 'down'):
+        return HttpResponseBadRequest("Invalid move direction.")
+
+    current = get_object_or_404(LinePriority, pk=pk)
+
+    # find the neighbor to swap with
+    if direction == 'up':
+        neighbor = (
+            LinePriority.objects
+            .filter(priority__lt=current.priority)
+            .order_by('-priority')
+            .first()
+        )
+    else:  # down
+        neighbor = (
+            LinePriority.objects
+            .filter(priority__gt=current.priority)
+            .order_by('priority')
+            .first()
+        )
+
+    if neighbor:
+        # atomic swap
+        with transaction.atomic():
+            current.priority, neighbor.priority = neighbor.priority, current.priority
+            current.save(update_fields=['priority'])
+            neighbor.save(update_fields=['priority'])
+
+    # If AJAX, return new values; otherwise redirect back
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'status': 'ok',
+            'id': current.pk,
+            'new_priority': current.priority,
+            'swapped_with': neighbor.pk if neighbor else None,
+        })
+
+    # fallback: redirect back to referring page (or a named view)
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        return HttpResponseRedirect(referer)
+    return redirect(reverse('list_all_downtime_entries'))
