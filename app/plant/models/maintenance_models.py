@@ -3,6 +3,7 @@
 from django.db import models
 from datetime import datetime as _datetime
 from django.utils import timezone
+from django.conf import settings
 
 
 
@@ -88,3 +89,27 @@ class LinePriority(models.Model):
 
     def __str__(self):
         return f"{self.line} (prio {self.priority})"
+
+
+
+
+class DowntimeParticipation(models.Model):
+    event = models.ForeignKey(
+        MachineDowntimeEvent,
+        related_name='participants',
+        on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    join_epoch     = models.BigIntegerField()
+    leave_epoch    = models.BigIntegerField(null=True, blank=True)
+    join_comment   = models.TextField(blank=True, default='')
+    leave_comment  = models.TextField(null=True, blank=True)
+    total_minutes  = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-join_epoch']
+        # If you want to prevent duplicates:
+        unique_together = ('event', 'user', 'join_epoch')

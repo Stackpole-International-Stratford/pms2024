@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from datetime import datetime
-from ..models.maintenance_models import MachineDowntimeEvent, LinePriority
+from ..models.maintenance_models import MachineDowntimeEvent, LinePriority, DowntimeParticipation
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.db import transaction
 from django.db.models import OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
-
+import time
 
 
 
@@ -364,33 +364,39 @@ def list_all_downtime_entries(request):
         closeout_epoch__isnull=True,
     )
 
-    # 2) Build a subquery that, for each MachineDowntimeEvent, looks up
-    #    the matching LinePriority.priority by comparing name-to-name.
+    # 2) Subquery to pull in each line's priority (or default to 999)
     priority_subquery = (
         LinePriority.objects
         .filter(line=OuterRef('line'))
         .values('priority')[:1]
     )
 
-    # 3) Annotate each event with its line_priority (defaulting to 999 if none)
+    # 3) Annotate with line_priority, then order by it and start time
     qs = base_qs.annotate(
         line_priority=Coalesce(
             Subquery(priority_subquery, output_field=IntegerField()),
             Value(999),
             output_field=IntegerField()
         )
-    )
+    ).order_by('line_priority', '-start_epoch')
 
-    # 4) Order first by that annotated priority, then by descending start time
-    qs = qs.order_by('line_priority', '-start_epoch')
+    # 4) Prefetch participants so we can iterate them in template
+    qs = qs.prefetch_related('participants')
 
-    # 5) Slice to your page size
-    entries = qs[:PAGE_SIZE]
+    # 5) Take the first PAGE_SIZE
+    entries = list(qs[:PAGE_SIZE])
 
-    # 6) Fetch the list of priorities for the accordion (if manager)
+    # 6) For each event, record whether THIS user currently has an open participation
+    for e in entries:
+        e.user_has_open = e.participants.filter(
+            user=request.user,
+            leave_epoch__isnull=True
+        ).exists()
+
+    # 7) Line priorities for the accordion (only shown to managers)
     line_priorities = LinePriority.objects.all()
 
-    # 7) Check if the user is in maintenance_managers
+    # 8) Is this user a maintenance manager?
     is_manager = request.user.groups.filter(
         name='maintenance_managers'
     ).exists()
@@ -400,8 +406,7 @@ def list_all_downtime_entries(request):
         'page_size':       PAGE_SIZE,
         'line_priorities': line_priorities,
         'is_manager':      is_manager,
-        'labour_choices':  MachineDowntimeEvent.LABOUR_CHOICES,   # ← add this
-
+        'labour_choices':  MachineDowntimeEvent.LABOUR_CHOICES,
     })
 
 
@@ -451,48 +456,74 @@ def load_more_downtime_entries(request):
 
 
 @require_POST
-def assign_downtime_entry(request):
+@login_required
+def join_downtime_event(request):
+    """
+    Called when a user clicks “Join”.  Creates a new participation row.
+    """
     try:
-        payload  = json.loads(request.body)
-        entry_id = payload['entry_id']
+        payload = json.loads(request.body)
+        event_id = payload['event_id']
+        comment  = payload.get('join_comment', '').strip()
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    try:
-        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
-        return HttpResponseBadRequest("Entry not found")
+    event = MachineDowntimeEvent.objects.filter(
+        pk=event_id,
+        is_deleted=False
+    ).first()
+    if not event:
+        return HttpResponseBadRequest("Event not found")
 
-    e.assigned_to = request.user.username
-    e.save(update_fields=['assigned_to'])
+    now = int(time.time())
+    participation = DowntimeParticipation.objects.create(
+        event        = event,
+        user         = request.user,
+        join_epoch   = now,
+        join_comment = comment
+    )
 
     return JsonResponse({
-        'status':      'ok',
-        'assigned_to': request.user.username,
+        'status':           'ok',
+        'participation_id': participation.id,
+        'join_epoch':       now,
     })
 
 
 @require_POST
-def unassign_downtime_entry(request):
+@login_required
+def leave_downtime_event(request):
+    """
+    Called when a user clicks “Leave”.  Closes out their most recent open participation.
+    """
     try:
-        payload  = json.loads(request.body)
-        entry_id = payload['entry_id']
+        payload = json.loads(request.body)
+        event_id = payload['event_id']
+        comment  = payload.get('leave_comment', '').strip()
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    try:
-        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
-        return HttpResponseBadRequest("Entry not found")
+    # find the user’s most recent open participation
+    part = DowntimeParticipation.objects.filter(
+        event__pk=event_id,
+        user=request.user,
+        leave_epoch__isnull=True
+    ).order_by('-join_epoch').first()
 
-    # only let the current assignee clear it
-    if e.assigned_to != request.user.username:
-        return HttpResponseBadRequest("Not your assignment")
+    if not part:
+        return HttpResponseBadRequest("No active participation to leave")
 
-    e.assigned_to = ''
-    e.save(update_fields=['assigned_to'])
+    now = int(time.time())
+    part.leave_epoch   = now
+    part.leave_comment = comment
+    part.total_minutes = (now - part.join_epoch) // 60
+    part.save(update_fields=['leave_epoch','leave_comment','total_minutes'])
 
-    return JsonResponse({'status': 'ok'})
+    return JsonResponse({
+        'status':        'ok',
+        'leave_epoch':   now,
+        'total_minutes': part.total_minutes,
+    })
 
 
 
