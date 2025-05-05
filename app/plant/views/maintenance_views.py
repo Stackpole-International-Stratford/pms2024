@@ -19,6 +19,7 @@ import time
 from django.contrib import messages
 from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
+from django.http        import HttpResponseForbidden
 
 
 
@@ -360,66 +361,84 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # how many at a time
 PAGE_SIZE = 500
 
+
+# group names you consider “maintenance”
+MAINT_GROUPS = {
+    "maintenance_managers",
+    "maintenance_electrician",
+    "maintenance_millwright",
+    "maintenance_tech",
+}
+
+def user_has_maintenance_access(user) -> bool:
+    """True if the user may enter the maintenance dashboard."""
+    return (
+        user.is_active
+        and (
+            user.is_superuser
+            or user.groups.filter(name__in=MAINT_GROUPS).exists()
+        )
+    )
+
+# --------------------------- rewritten view ---------------------------------- #
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    # 1) Base queryset of open downtimes
+    # ── 0)  ACCESS GATE ────────────────────────────────────────────────────────
+    if not user_has_maintenance_access(request.user):
+        return HttpResponseForbidden("You are not authorized to view this page. Ask the Maintenance Manager to add your profile " \
+        "to its appropriate group(s) (electrician / tech / millwright)")
+
+    # ── 1)  Base queryset of open downtimes ───────────────────────────────────
     base_qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True,
     )
 
-    # 2) Subquery to pull in each line's priority (or default to 999)
-    priority_subquery = (
+    # ── 2)  Subquery to pull each line’s priority (default 999) ───────────────
+    priority_sq = (
         LinePriority.objects
-        .filter(line=OuterRef('line'))
-        .values('priority')[:1]
+        .filter(line=OuterRef("line"))
+        .values("priority")[:1]
     )
 
-    # 3) Annotate with line_priority, then order by it and start time
-    qs = base_qs.annotate(
-        line_priority=Coalesce(
-            Subquery(priority_subquery, output_field=IntegerField()),
-            Value(999),
-            output_field=IntegerField()
+    # ── 3)  Annotate + order by priority, then most‑recent start ──────────────
+    qs = (
+        base_qs
+        .annotate(
+            line_priority=Coalesce(
+                Subquery(priority_sq, output_field=IntegerField()),
+                Value(999),
+                output_field=IntegerField(),
+            )
         )
-    ).order_by('line_priority', '-start_epoch')
+        .order_by("line_priority", "-start_epoch")
+        .prefetch_related("participants")
+    )
 
-    # 4) Prefetch participants so we can iterate them in template
-    qs = qs.prefetch_related('participants')
-
-    # 5) Take the first PAGE_SIZE
+    # ── 4)  First PAGE_SIZE rows as a list (so we can mutate attrs) ───────────
     entries = list(qs[:PAGE_SIZE])
 
-    # 6) For each event, record whether THIS user currently has an open participation
+    # ── 5)  Mark whether *this* user already has an open participation ────────
     for e in entries:
         e.user_has_open = e.participants.filter(
-            user=request.user,
-            leave_epoch__isnull=True
+            user=request.user, leave_epoch__isnull=True
         ).exists()
 
-    # 7) Line priorities for the accordion (only shown to managers)
-    line_priorities = LinePriority.objects.all()
-
-    # 8) Is this user a maintenance manager?
-    is_manager = request.user.groups.filter(
-        name='maintenance_managers'
-    ).exists()
-
-    # 9) Which maintenance roles (electrician / millwright / tech) does *this* user have?
-    user_group_names = set(request.user.groups.values_list('name', flat=True))
+    # ── 6)  Figure out roles & manager flag for the template ──────────────────
+    user_group_names = set(request.user.groups.values_list("name", flat=True))
     user_roles = [
         role for role, grp in ROLE_TO_GROUP.items() if grp in user_group_names
-    ]       # e.g. ['electrician', 'tech']
+    ]  # e.g. ['electrician', 'tech']
 
-    return render(request, 'plant/maintenance_all_entries.html', {
-        'entries':         entries,
-        'page_size':       PAGE_SIZE,
-        'line_priorities': line_priorities,
-        'is_manager':      is_manager,
-        'labour_choices':  MachineDowntimeEvent.LABOUR_CHOICES,
-        'user_roles':      user_roles,            # ← NEW
-    })
-
+    context = {
+        "entries":         entries,
+        "page_size":       PAGE_SIZE,
+        "line_priorities": LinePriority.objects.all(),
+        "is_manager":      "maintenance_managers" in user_group_names,
+        "labour_choices":  MachineDowntimeEvent.LABOUR_CHOICES,
+        "user_roles":      user_roles,
+    }
+    return render(request, "plant/maintenance_all_entries.html", context)
 
 def load_more_downtime_entries(request):
     """
