@@ -3,19 +3,20 @@
 <div class="container mt-4">
   <h1 class="mb-4">Open Downtime Events</h1>
 
-<!-- Lines & Priorities Accordion -->
-<div class="accordion mt-4" id="linesPriorityAccordion">
+
+<div class="accordion mt-5" id="linesPriorityAccordion">
   <div class="accordion-item">
     <h2 class="accordion-header" id="linesPriorityHeading">
       <button
-        class="accordion-button collapsed"
+        class="accordion-button d-flex justify-content-between"
         type="button"
         data-bs-toggle="collapse"
         data-bs-target="#linesPriorityCollapse"
         aria-expanded="false"
         aria-controls="linesPriorityCollapse"
       >
-        Line Priorities
+        <span>Line Priorities</span>
+        <small class="text-muted">{{ line_priorities|length }} total</small>
       </button>
     </h2>
     <div
@@ -24,18 +25,31 @@
       aria-labelledby="linesPriorityHeading"
       data-bs-parent="#linesPriorityAccordion"
     >
-      <div class="accordion-body">
-        <ul class="list-unstyled mb-0">
+      <div class="accordion-body p-0">
+        <ul class="list-group list-group-flush">
           {% for lp in line_priorities %}
-            <li>{{ lp.line }} | {{ lp.priority }}</li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ lp.line }}
+              {# color-code badges: 1–3 red, 4–7 yellow, ≥8 green #}
+              {% if lp.priority <= 3 %}
+                <span class="badge bg-danger rounded-pill">{{ lp.priority }}</span>
+              {% elif lp.priority <= 7 %}
+                <span class="badge bg-warning text-dark rounded-pill">{{ lp.priority }}</span>
+              {% else %}
+                <span class="badge bg-success rounded-pill">{{ lp.priority }}</span>
+              {% endif %}
+            </li>
           {% empty %}
-            <li class="text-muted">No line priorities defined.</li>
+            <li class="list-group-item text-muted">
+              No line priorities defined.
+            </li>
           {% endfor %}
         </ul>
       </div>
     </div>
   </div>
 </div>
+
 
 
 
