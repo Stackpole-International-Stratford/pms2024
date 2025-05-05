@@ -40,12 +40,6 @@ class MachineDowntimeEvent(models.Model):
         blank=True,
         help_text="List of labour roles needed (one or more of OPERATOR,ELECTRICIAN,TECH,MILLWRIGHT)"
     )
-    assigned_to = models.CharField(
-        max_length=100,
-        blank=True,
-        default='',
-        help_text="Username of the labourer this is assigned to"
-    )
     closeout_comment = models.TextField(
         "Close-out Comment",
         null=True,
