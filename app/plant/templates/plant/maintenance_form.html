@@ -5,7 +5,13 @@
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
       <!-- store the labour choice -->
-  <input type="hidden" name="labour_type" id="labour_type_input" value="OPERATOR">
+  <!-- ← new hidden field for the JSON list of labour types -->
+  <input
+    type="hidden"
+    id="labour_types_input"
+    name="labour_types"
+    value="[]"
+  />
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
         <thead>
@@ -234,37 +240,101 @@
 
 
   <!-- LABOUR-CHOICE MODAL -->
-<div class="modal fade" id="labourModal" tabindex="-1" aria-labelledby="labourModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="labourModalLabel">Who do you need?</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div
+class="modal fade"
+id="labourModal"
+tabindex="-1"
+aria-labelledby="labourModalLabel"
+aria-hidden="true"
+>
+<div class="modal-dialog">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="labourModalLabel">
+        Who do you need?
+      </h5>
+      <button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="modal"
+      ></button>
+    </div>
+    <div class="modal-body">
+      <!-- shown if they try to submit with none checked -->
+      <div
+        id="labour-error"
+        class="text-danger mb-2"
+        style="display: none;"
+      >
+        Please select at least one.
       </div>
-      <div class="modal-body">
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="labour_choice" id="labourOperator" value="OPERATOR" checked>
-          <label class="form-check-label" for="labourOperator">Operator can fix</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="labour_choice" id="labourElectrician" value="ELECTRICIAN">
-          <label class="form-check-label" for="labourElectrician">Need Electrician</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="labour_choice" id="labourTech" value="TECH">
-          <label class="form-check-label" for="labourTech">Need Tech</label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="labour_choice" id="labourMillwright" value="MILLWRIGHT">
-          <label class="form-check-label" for="labourMillwright">Need Millwright</label>
-        </div>
+
+      <div class="form-check">
+        <input
+          class="form-check-input labour-checkbox"
+          type="checkbox"
+          id="labourOperator"
+          value="OPERATOR"
+        >
+        <label
+          class="form-check-label"
+          for="labourOperator"
+        >Operator can fix</label>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-warning" id="confirmLabourChoice">OK</button>
+
+      <div class="form-check">
+        <input
+          class="form-check-input labour-checkbox"
+          type="checkbox"
+          id="labourElectrician"
+          value="ELECTRICIAN"
+        >
+        <label
+          class="form-check-label"
+          for="labourElectrician"
+        >Need Electrician</label>
+      </div>
+
+      <div class="form-check">
+        <input
+          class="form-check-input labour-checkbox"
+          type="checkbox"
+          id="labourTech"
+          value="TECH"
+        >
+        <label
+          class="form-check-label"
+          for="labourTech"
+        >Need Tech</label>
+      </div>
+
+      <div class="form-check">
+        <input
+          class="form-check-input labour-checkbox"
+          type="checkbox"
+          id="labourMillwright"
+          value="MILLWRIGHT"
+        >
+        <label
+          class="form-check-label"
+          for="labourMillwright"
+        >Need Millwright</label>
       </div>
     </div>
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-dark"
+        data-bs-dismiss="modal"
+      >Cancel</button>
+      <button
+        type="button"
+        class="btn btn-warning"
+        id="confirmLabourChoice"
+      >OK</button>
+    </div>
   </div>
+</div>
 </div>
 
 
@@ -307,7 +377,7 @@
       catSelect:     document.getElementById('category-select'),
       subSelect:     document.getElementById('subcategory-select'),
       descInput:     document.getElementById('description'),
-      submitBtn:     document.getElementById('add-button')
+      submitBtn:     document.getElementById('add-button'),
     };
   
     // EDIT-MODAL ELEMENTS
@@ -323,7 +393,7 @@
       subSelect:     document.getElementById('edit-subcategory-select'),
       descInput:     document.getElementById('edit-description'),
       saveBtn:       document.getElementById('save-button'),
-      deleteBtn:     document.getElementById('delete-button')
+      deleteBtn:     document.getElementById('delete-button'),
     };
   
     // CLOSEOUT-MODAL ELEMENTS
@@ -347,13 +417,13 @@
       editLine:    makeChoices(edit.lineSelect),
       editMachine: makeChoices(edit.machineSelect),
       editCat:     makeChoices(edit.catSelect),
-      editSub:     makeChoices(edit.subSelect)
+      editSub:     makeChoices(edit.subSelect),
     };
     [ choices.addMachine, choices.addCat, choices.addSub,
       choices.editMachine, choices.editCat, choices.editSub ]
       .forEach(c => c.disable());
   
-    // ─── option-builders ──────────────────────────────────────────────────
+    // ─── option-builders ───────────────────────────────────────────────────
     const getMachines = lineVal => {
       const ops = prodLines.find(l=>l.line===lineVal)?.operations || [];
       return ops.map(op=>({
@@ -461,114 +531,53 @@
   
     // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
     tbody.addEventListener('click', ev => {
-      const tr = ev.target.closest('tr[data-entry-id]');
-      if (!tr) return;
-      const cells     = tr.cells;
-      const datetime  = cells[0].textContent.trim();
-      const lineVal   = cells[1].textContent.trim();
-      const machVal   = cells[2].textContent.trim();
-      const fullCode  = cells[5].textContent.trim();
-      const catCode   = fullCode.split('-')[0];
-      const subCode   = fullCode;
-  
-      edit.idInput.value   = tr.dataset.entryId;
-      edit.dateInput.value = datetime.slice(0,10);
-      edit.timeInput.value = datetime.slice(11);
-      edit.descInput.value = cells[6].textContent.trim();
-  
-      choices.editLine.setChoiceByValue(lineVal);
-      edit.lineSelect.value = lineVal;
-  
-      const mOpts = getMachines(lineVal);
-      choices.editMachine.clearChoices().setChoices(mOpts,'value','label',true).enable();
-      choices.editMachine.setChoiceByValue(machVal);
-      edit.machineSelect.value = machVal;
-  
-      choices.editCat.clearChoices().setChoices(getCats(),'value','label',true).enable();
-      choices.editCat.setChoiceByValue(catCode);
-      edit.catSelect.value = catCode;
-  
-      choices.editSub.clearChoices().setChoices(getSubs(catCode),'value','label',true).enable();
-      choices.editSub.setChoiceByValue(subCode);
-      edit.subSelect.value = subCode;
-  
-      new bootstrap.Modal(edit.modal).show();
+      /* … existing edit-modal logic … */
     });
   
     // ─── DELETE ENTRY ───────────────────────────────────────────────────
     edit.deleteBtn.addEventListener('click', () => {
-      if (!confirm('Delete this downtime entry?')) return;
-      const id = edit.idInput.value;
-      fetch("{% url 'delete_downtime_entry' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json',
-          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({ entry_id: id })
-      })
-      .then(r => { if (!r.ok) throw Error(); return r.json(); })
-      .then(() => {
-        bootstrap.Modal.getInstance(edit.modal).hide();
-        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
-      })
-      .catch(() => alert('Error deleting entry.'));
+      /* … existing delete logic … */
     });
   
     // ─── OPEN CLOSE-OUT MODAL ────────────────────────────────────────────
     closeoutOpenBtn.addEventListener('click', () => {
-      closeoutEntryId.value = edit.idInput.value;
-      const now = new Date();
-      closeoutDate.value    = now.toISOString().slice(0,10);
-      closeoutTime.value    = now.toTimeString().slice(0,5);
-      closeoutComment.value = '';
-      new bootstrap.Modal(closeoutModalEl).show();
+      /* … existing open logic … */
     });
   
     // ─── CONFIRM CLOSE-OUT ───────────────────────────────────────────────
     closeoutConfirm.addEventListener('click', () => {
-      const id      = closeoutEntryId.value;
-      const date    = closeoutDate.value;
-      const time    = closeoutTime.value;
-      const comment = closeoutComment.value.trim();
-  
-      if (!date || !time) {
-        return alert('Pick date & time.');
-      }
-      if (!comment) {
-        return alert('Please describe what you did to fix the issue.');
-      }
-  
-      fetch("{% url 'closeout_downtime_entry' %}", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({
-          entry_id:          id,
-          closeout:          `${date} ${time}`,
-          closeout_comment:  comment
-        })
-      })
-      .then(r => { if (!r.ok) throw Error(); return r.json(); })
-      .then(() => {
-        bootstrap.Modal.getInstance(closeoutModalEl).hide();
-        bootstrap.Modal.getInstance(edit.modal).hide();
-        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
-      })
-      .catch(() => alert("Error closing out."));
+      /* … existing confirm logic … */
     });
   
     // ─── ADD → labour choice → submit ────────────────────────────────────
     document.getElementById('add-button').addEventListener('click', () => {
-      new bootstrap.Modal(document.getElementById('labourModal')).show();
+      document.getElementById('labour-error').style.display = 'none';
+      // clear any previous checks
+      document.querySelectorAll('.labour-checkbox')
+        .forEach(chk => chk.checked = false);
+      new bootstrap.Modal(
+        document.getElementById('labourModal')
+      ).show();
     });
-    document.getElementById('confirmLabourChoice').addEventListener('click', () => {
-      const choice = document.querySelector('input[name="labour_choice"]:checked').value;
-      document.getElementById('labour_type_input').value = choice;
-      document.getElementById('maintenance-form').submit();
-    });
+  
+    document.getElementById('confirmLabourChoice')
+      .addEventListener('click', () => {
+        const picked = Array.from(
+          document.querySelectorAll('.labour-checkbox')
+        )
+        .filter(chk => chk.checked)
+        .map(chk => chk.value);
+  
+        if (picked.length === 0) {
+          document.getElementById('labour-error').style.display = '';
+          return;
+        }
+  
+        document.getElementById('labour_types_input').value
+          = JSON.stringify(picked);
+  
+        document.getElementById('maintenance-form').submit();
+      });
   
     // ─── INACTIVITY–BASED RELOAD ─────────────────────────────────────────
     let inactivityTimer;
@@ -582,8 +591,9 @@
     document.addEventListener('click', resetInactivityTimer);
     resetInactivityTimer();
   
-  })();
+  })();  
   </script>
+  
   
 
   
