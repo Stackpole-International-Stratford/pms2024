@@ -5,6 +5,7 @@ from datetime import datetime as _datetime
 from django.utils import timezone
 
 
+
 class MachineDowntimeEvent(models.Model):
     """
     Represents a single downtime event on a production line.
@@ -33,11 +34,10 @@ class MachineDowntimeEvent(models.Model):
         ('TECH',        'Need Tech'),
         ('MILLWRIGHT',  'Need Millwright'),
     ]
-    labour_type = models.CharField(
-        max_length=20,
-        choices=LABOUR_CHOICES,
-        default='OPERATOR',
-        help_text="Who is needed to fix this downtime"
+    labour_types = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of labour roles needed (one or more of OPERATOR,ELECTRICIAN,TECH,MILLWRIGHT)"
     )
     assigned_to = models.CharField(
         max_length=100,

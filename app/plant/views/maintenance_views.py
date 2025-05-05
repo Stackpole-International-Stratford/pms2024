@@ -237,72 +237,87 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
 
 
+
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-        entry_id    = request.POST.get('entry_id')     # this will be None for “Add” form
-        line        = request.POST['line']
-        machine     = request.POST['machine']
-        cat_code    = request.POST['category']
-        sub_code    = request.POST['subcategory']
-        start_date  = request.POST['start_date']       # "YYYY-MM-DD"
-        start_time  = request.POST['start_time']       # "HH:MM"
-        description = request.POST['description']
-        labour_type = request.POST.get('labour_type', 'OPERATOR')
+        # ——— pull form data ———
+        entry_id    = request.POST.get('entry_id')      # None for “Add”
+        line        = request.POST.get('line', '').strip()
+        machine     = request.POST.get('machine', '').strip()
+        cat_code    = request.POST.get('category', '').strip()
+        sub_code    = request.POST.get('subcategory', '').strip()
+        start_date  = request.POST.get('start_date', '') # "YYYY-MM-DD"
+        start_time  = request.POST.get('start_time', '') # "HH:MM"
+        description = request.POST.get('description', '').strip()
 
-        # look up display names
+        # ——— parse out the list of labour codes ———
+        raw_labour = request.POST.get('labour_types', '[]')
+        try:
+            labour_list = json.loads(raw_labour)
+            if not isinstance(labour_list, list):
+                labour_list = []
+        except json.JSONDecodeError:
+            labour_list = []
+
+        # ——— lookup display names from your DOWNTIME_CODES ———
         cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == cat_code), None)
         category_name = cat_obj['name'] if cat_obj else cat_code
 
         sub_obj = None
         if cat_obj:
-            sub_obj = next((s for s in cat_obj['subcategories'] if s['code'] == sub_code), None)
+            sub_obj = next((s for s in cat_obj['subcategories']
+                            if s['code'] == sub_code), None)
         subcategory_name = sub_obj['name'] if sub_obj else sub_code
 
-        # parse into epoch
-        dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+        # ——— build epoch timestamp ———
+        try:
+            dt = datetime.strptime(f"{start_date} {start_time}",
+                                   "%Y-%m-%d %H:%M")
+        except ValueError:
+            return HttpResponseBadRequest("Invalid date/time")
         epoch_ts = int(dt.timestamp())
 
+        # ——— create or update ———
         if entry_id:
-            # ——— update existing record ———
-            try:
-                e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-            except MachineDowntimeEvent.DoesNotExist:
-                return HttpResponseBadRequest("Entry not found")
-            e.line        = line
-            e.machine     = machine
-            e.category    = category_name
-            e.subcategory = subcategory_name
-            e.code        = sub_code
-            e.start_epoch = epoch_ts
-            e.comment     = description
-            e.labour_type = labour_type
+            # update existing
+            e = get_object_or_404(MachineDowntimeEvent,
+                                  pk=entry_id,
+                                  is_deleted=False)
+            e.line           = line
+            e.machine        = machine
+            e.category       = category_name
+            e.subcategory    = subcategory_name
+            e.code           = sub_code
+            e.start_epoch    = epoch_ts
+            e.comment        = description
+            e.labour_types   = labour_list
             e.save(update_fields=[
                 'line', 'machine', 'category', 'subcategory',
-                'code', 'start_epoch', 'comment', 'labour_type'
+                'code', 'start_epoch', 'comment', 'labour_types'
             ])
         else:
-            # ——— create new record ———
+            # create new
             MachineDowntimeEvent.objects.create(
-                line        = line,
-                machine     = machine,
-                category    = category_name,
-                subcategory = subcategory_name,
-                code        = sub_code,
-                start_epoch = epoch_ts,
-                comment     = description,
-                labour_type = labour_type,
+                line          = line,
+                machine       = machine,
+                category      = category_name,
+                subcategory   = subcategory_name,
+                code          = sub_code,
+                start_epoch   = epoch_ts,
+                comment       = description,
+                labour_types  = labour_list,
             )
 
-        # preserve any ?offset=… in the URL so the user stays on the same page
+        # stay on same page (preserve ?offset=…)
         return redirect(request.get_full_path())
 
-    # ─── GET ───────────────────────────────────────────────────────────────
+    # ——— GET: render form + list of open entries ———
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
 
     qs = MachineDowntimeEvent.objects.filter(
-        is_deleted=False,
-        closeout_epoch__isnull=True
+        is_deleted        = False,
+        closeout_epoch__isnull = True
     ).order_by('-start_epoch')
 
     total     = qs.count()
@@ -316,9 +331,10 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         'offset':              offset,
         'page_size':           page_size,
         'has_more':            has_more,
+        # you can also pass your labour-choices to the template if needed:
+        # 'labour_choices': MachineDowntimeEvent.LABOUR_CHOICES,
     }
     return render(request, 'plant/maintenance_form.html', context)
-
 
 
 
