@@ -326,14 +326,14 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    """
-    Renders only *open* downtime events (i.e. closeout_epoch IS NULL).
-    """
+    # this will print to your console / server logs
+    print(f"[downtime] view hit by user: {request.user.username!r}")
+
     entries = (
         MachineDowntimeEvent.objects
         .filter(
             is_deleted=False,
-            closeout_epoch__isnull=True,    # ← only open events
+            closeout_epoch__isnull=True,
         )
         .order_by('-start_epoch')
     )
