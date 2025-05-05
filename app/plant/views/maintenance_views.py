@@ -12,6 +12,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import transaction
+from django.db.models import OuterRef, Subquery, IntegerField, Value
+from django.db.models.functions import Coalesce
 
 
 
@@ -340,18 +342,39 @@ PAGE_SIZE = 500
 
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    # your existing downtime query
-    qs = MachineDowntimeEvent.objects.filter(
+    # 1) Base queryset of open downtimes
+    base_qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True,
-    ).order_by('-start_epoch')
+    )
 
+    # 2) Build a subquery that, for each MachineDowntimeEvent, looks up
+    #    the matching LinePriority.priority by comparing name-to-name.
+    priority_subquery = (
+        LinePriority.objects
+        .filter(line=OuterRef('line'))
+        .values('priority')[:1]
+    )
+
+    # 3) Annotate each event with its line_priority (defaulting to 999 if none)
+    qs = base_qs.annotate(
+        line_priority=Coalesce(
+            Subquery(priority_subquery, output_field=IntegerField()),
+            Value(999),
+            output_field=IntegerField()
+        )
+    )
+
+    # 4) Order first by that annotated priority, then by descending start time
+    qs = qs.order_by('line_priority', '-start_epoch')
+
+    # 5) Slice to your page size
     entries = qs[:PAGE_SIZE]
 
-    # grab all lines in priority order
+    # 6) Fetch the list of priorities for the accordion (if manager)
     line_priorities = LinePriority.objects.all()
 
-    # check group membership
+    # 7) Check if the user is in maintenance_managers
     is_manager = request.user.groups.filter(
         name='maintenance_managers'
     ).exists()
@@ -360,7 +383,7 @@ def list_all_downtime_entries(request):
         'entries':         entries,
         'page_size':       PAGE_SIZE,
         'line_priorities': line_priorities,
-        'is_manager':      is_manager,    # ← new
+        'is_manager':      is_manager,
     })
 
 
