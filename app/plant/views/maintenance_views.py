@@ -363,3 +363,26 @@ def assign_downtime_entry(request):
         'status':      'ok',
         'assigned_to': request.user.username,
     })
+
+
+@require_POST
+def unassign_downtime_entry(request):
+    try:
+        payload  = json.loads(request.body)
+        entry_id = payload['entry_id']
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest("Invalid payload")
+
+    try:
+        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest("Entry not found")
+
+    # only let the current assignee clear it
+    if e.assigned_to != request.user.username:
+        return HttpResponseBadRequest("Not your assignment")
+
+    e.assigned_to = ''
+    e.save(update_fields=['assigned_to'])
+
+    return JsonResponse({'status': 'ok'})

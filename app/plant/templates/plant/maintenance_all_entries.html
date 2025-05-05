@@ -38,6 +38,14 @@
           <td class="assigned-to-cell" data-entry-id="{{ e.id }}">
             {% if e.assigned_to %}
               {{ e.assigned_to }}
+              {% if e.assigned_to == request.user.username %}
+                <button
+                  class="btn btn-sm btn-outline-warning unassign-btn"
+                  data-entry-id="{{ e.id }}"
+                >
+                  Unassign
+                </button>
+              {% endif %}
             {% else %}
               <button
                 class="btn btn-sm btn-outline-primary assign-btn"
@@ -59,48 +67,72 @@
   </div>
 </div>
 
-{# ——— AJAX for “Assign to me” ——— #}
 <script>
-  // Grab CSRF token from cookie
+  // CSRF helper
   function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
+    let val = null;
+    if (document.cookie) {
       document.cookie.split(';').forEach(c => {
         c = c.trim();
         if (c.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(c.slice(name.length + 1));
+          val = decodeURIComponent(c.slice(name.length + 1));
         }
       });
     }
-    return cookieValue;
+    return val;
   }
-  const csrftoken = getCookie('csrftoken');
+  const csrftoken   = getCookie('csrftoken');
+  const assignUrl   = "{% url 'assign_downtime_entry' %}";
+  const unassignUrl = "{% url 'unassign_downtime_entry' %}";
 
-  document.querySelectorAll('.assign-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const entryId = this.dataset.entryId;
-      fetch("{% url 'assign_downtime_entry' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken':  csrftoken,
-        },
-        body: JSON.stringify({ entry_id: entryId }),
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'ok') {
-          // swap button for the username
-          const cell = this.closest('td');
-          cell.textContent = data.assigned_to;
-        } else {
-          alert('Assignment failed.');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        alert('Error assigning.');
-      });
+  document.querySelector('table').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const cell    = btn.closest('td.assigned-to-cell');
+    const entryId = btn.dataset.entryId;
+    let url, success;
+
+    if (btn.classList.contains('assign-btn')) {
+      url = assignUrl;
+      success = data => {
+        cell.innerHTML = 
+          `${data.assigned_to}
+           <button class="btn btn-sm btn-outline-warning unassign-btn" data-entry-id="${entryId}">Unassign</button>`;
+      };
+    } 
+    else if (btn.classList.contains('unassign-btn')) {
+      url = unassignUrl;
+      success = () => {
+        cell.innerHTML = 
+          `<button class="btn btn-sm btn-outline-primary assign-btn" data-entry-id="${entryId}">Assign to me</button>`;
+      };
+    } 
+    else {
+      return;
+    }
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken':  csrftoken,
+      },
+      body: JSON.stringify({ entry_id: entryId }),
+    })
+    .then(r => {
+      if (!r.ok) throw new Error("Bad response");
+      return r.json();
+    })
+    .then(data => {
+      if (data.status === 'ok') {
+        success(data);
+      } else {
+        alert('Operation failed.');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error performing request.');
     });
   });
 </script>
