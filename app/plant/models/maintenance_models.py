@@ -39,6 +39,12 @@ class MachineDowntimeEvent(models.Model):
         default='OPERATOR',
         help_text="Who is needed to fix this downtime"
     )
+    assigned_to = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text="Username of the labourer this is assigned to"
+    )
 
     @property
     def start_at(self) -> _datetime:

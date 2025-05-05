@@ -8,6 +8,9 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
+
 
 
 
@@ -302,3 +305,100 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         'has_more':            has_more,
     }
     return render(request, 'plant/maintenance_form.html', context)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ================================================================
+# ================================================================
+# ======================= Labour Dashboard =======================
+# ================================================================
+# ================================================================
+
+
+User = get_user_model()
+
+@login_required
+def labour_dashboard(request):
+    lt = request.GET.get('labour_type')
+
+    base_qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_epoch__isnull=True
+    ).exclude(labour_type='OPERATOR')
+
+    if lt:
+        open_events = base_qs.filter(labour_type=lt).order_by('start_epoch')
+    else:
+        open_events = base_qs.order_by('start_epoch')
+
+    assigned_qs = MachineDowntimeEvent.objects.filter(
+        assigned_to__gt='',
+        is_deleted=False,
+        closeout_epoch__isnull=True
+    ).exclude(labour_type='OPERATOR').order_by('assigned_to','start_epoch')
+
+    assignments = {}
+    for e in assigned_qs:
+        assignments.setdefault(e.assigned_to, []).append(e)
+
+    # FILTER OUT the OPERATOR choice here:
+    labour_choices = [
+        (code, label)
+        for code, label in MachineDowntimeEvent.LABOUR_CHOICES
+        if code != 'OPERATOR'
+    ]
+
+    context = {
+        'open_events':    open_events,
+        'assignments':    assignments,
+        'labour_choices': labour_choices,
+        'current_filter': lt or '',
+    }
+    return render(request, 'plant/labour_dashboard.html', context)
+
+
+
+@login_required
+@require_POST
+def assign_downtime(request):
+    try:
+        eid = int(request.POST['entry_id'])
+        e = MachineDowntimeEvent.objects.get(pk=eid, is_deleted=False)
+    except Exception:
+        return HttpResponseBadRequest("Invalid entry")
+    # Only non-operator jobs
+    if e.labour_type == 'OPERATOR':
+        return HttpResponseBadRequest("Cannot assign operator jobs here")
+    user = request.user
+    # format firstname.lastname (lowercase)
+    username = f"{user.first_name}.{user.last_name}".lower()
+    e.assigned_to = username
+    e.save(update_fields=['assigned_to'])
+    return JsonResponse({'status':'ok','assigned_to':username})
+
+
+@login_required
+@require_POST
+def unassign_downtime(request):
+    try:
+        eid = int(request.POST['entry_id'])
+        e = MachineDowntimeEvent.objects.get(pk=eid, is_deleted=False)
+    except Exception:
+        return HttpResponseBadRequest("Invalid entry")
+    # only the user themself (or admin) can unassign
+    me = f"{request.user.first_name}.{request.user.last_name}".lower()
+    if e.assigned_to != me:
+        return HttpResponseBadRequest("Not your assignment")
+    e.assigned_to = ''
+    e.save(update_fields=['assigned_to'])
+    return JsonResponse({'status':'ok'})

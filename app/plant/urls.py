@@ -52,4 +52,12 @@ urlpatterns = [
     path('maintenance/delete/', delete_downtime_entry, name='delete_downtime_entry'),
     path('maintenance/closeout/', closeout_downtime_entry, name='closeout_downtime_entry'),  # ← new
 
+
+
+    # labour dashboard (filter open, non-OPR events)
+    path('maintenance/labour/', labour_dashboard, name='labour_dashboard'),
+    # AJAX endpoints
+    path('maintenance/assign/',   assign_downtime,   name='assign_downtime'),
+    path('maintenance/unassign/', unassign_downtime, name='unassign_downtime'),
+
 ]
