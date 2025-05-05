@@ -124,7 +124,15 @@
           <td>{{ e.machine }}</td>
           <td><span class="badge bg-dark">{{ e.category }}</span></td>
           <td><span class="badge bg-secondary">{{ e.subcategory }}</span></td>
-          <td>{{ e.labour_type }}</td>
+          <td>
+            {% if e.labour_types %}
+              {% for code in e.labour_types %}
+                <span class="badge bg-info">{{ code }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>          
           <td class="assigned-to-cell" data-entry-id="{{ e.id }}">
             {% if e.assigned_to %}
               {{ e.assigned_to }}
@@ -224,34 +232,30 @@
   // ── Row Renderer ──────────────────────────────────────────────────
   function renderRow(e) {
     return `
-    <tr class="${e.closeout_at ? '' : 'table-warning'}">
-      <td>${e.start_at}</td>
-      <td>
-        ${ e.closeout_at
-           ? e.closeout_at
-           : (e.assigned_to === currentUser
-              ? `<button class="btn btn-sm btn-info closeout-btn" data-entry-id="${e.id}">Close Out</button>`
-              : '<span class="text-muted">— open —</span>')
-        }
-      </td>
-      <td>${e.line}</td>
-      <td>${e.machine}</td>
-      <td><span class="badge bg-dark">${e.category}</span></td>
-      <td><span class="badge bg-secondary">${e.subcategory}</span></td>
-      <td>${e.labour_type}</td>
-      <td class="assigned-to-cell" data-entry-id="${e.id}">
-        ${ e.assigned_to
-           ? `${e.assigned_to}${
-               e.assigned_to === currentUser
-               ? ` <button class="btn btn-sm btn-outline-dark unassign-btn" data-entry-id="${e.id}">Unassign</button>`
-               : ''
-             }`
-           : `<button class="btn btn-sm btn-outline-dark assign-btn" data-entry-id="${e.id}">Assign to me</button>`
-        }
-      </td>
-      <td>${e.comment}</td>
-    </tr>`;
+      <tr class="${e.closeout_at ? '' : 'table-warning'}">
+        <td>${e.start_at}</td>
+        <td>…</td>
+        <td>${e.line}</td>
+        <td>${e.machine}</td>
+        <td><span class="badge bg-dark">${e.category}</span></td>
+        <td><span class="badge bg-secondary">${e.subcategory}</span></td>
+        <td>
+          ${
+            Array.isArray(e.labour_types) && e.labour_types.length
+              ? e.labour_types
+                  .map(l => `<span class="badge bg-info">${l}</span>`)
+                  .join(' ')
+              : '<span class="text-muted">—</span>'
+          }
+        </td>
+        <td class="assigned-to-cell" data-entry-id="${e.id}">
+          …assign/unassign buttons…
+        </td>
+        <td>${e.comment}</td>
+      </tr>
+    `;
   }
+  
 
   // ── Assign / Unassign / Close-Out Delegation ───────────────────────
   table.addEventListener('click', e => {

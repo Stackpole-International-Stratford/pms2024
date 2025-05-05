@@ -434,7 +434,7 @@ def load_more_downtime_entries(request):
             'machine':       e.machine,
             'category':      e.category,
             'subcategory':   e.subcategory,
-            'labour_type':   e.labour_type,
+            'labour_types':   e.labour_types,
             'assigned_to':   e.assigned_to,
             'comment':       e.comment,
         })
