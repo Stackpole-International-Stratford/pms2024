@@ -332,21 +332,64 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # ================================================================
 # ================================================================
 
+# how many at a time
+PAGE_SIZE = 5
+
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    # this will print to your console / server logs
-    print(f"[downtime] view hit by user: {request.user.username!r}")
+    qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_epoch__isnull=True,
+    ).order_by('-start_epoch')
 
-    entries = (
-        MachineDowntimeEvent.objects
-        .filter(
-            is_deleted=False,
-            closeout_epoch__isnull=True,
-        )
-        .order_by('-start_epoch')
-    )
+    entries = qs[:PAGE_SIZE]
     return render(request, 'plant/maintenance_all_entries.html', {
         'entries': entries,
+        'page_size': PAGE_SIZE,
+    })
+
+
+def load_more_downtime_entries(request):
+    """
+    AJAX endpoint: GET /plant/downtime/load-more/?offset=N
+    → returns JSON {
+         "entries": [ {id, start_at, closeout_at, …}, … ],
+         "has_more": bool
+       }
+    """
+    try:
+        offset = int(request.GET.get('offset', 0))
+    except (TypeError, ValueError):
+        offset = 0
+
+    qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_epoch__isnull=True,
+    ).order_by('-start_epoch')
+
+    batch = qs[offset:offset + PAGE_SIZE]
+    entries = []
+    for e in batch:
+        entries.append({
+            'id':            e.id,
+            'start_at':      e.start_at.strftime('%Y-%m-%d %H:%M'),
+            # use Python None, not `null`
+            'closeout_at':   e.closeout_epoch.strftime('%Y-%m-%d %H:%M')
+                              if e.closeout_epoch else None,
+            'line':          e.line,
+            'machine':       e.machine,
+            'category':      e.category,
+            'subcategory':   e.subcategory,
+            'labour_type':   e.labour_type,
+            'assigned_to':   e.assigned_to,
+            'comment':       e.comment,
+        })
+
+    has_more = qs.count() > offset + PAGE_SIZE
+
+    return JsonResponse({
+        'entries':  entries,
+        'has_more': has_more,
     })
 
 

@@ -54,9 +54,10 @@ urlpatterns = [
 
 
 
-    path('maintenance/assign/',         assign_downtime_entry,      name='assign_downtime_entry'),  # ← new
+    path('maintenance/assign/', assign_downtime_entry, name='assign_downtime_entry'),  # ← new
     path('maintenance/unassign/', unassign_downtime_entry,  name='unassign_downtime_entry'),  # ← new
     path('maintenance/closeout_assigned/',closeout_assigned_downtime_entry,name='closeout_assigned_downtime_entry'),
-    path('maintenance/all/',            list_all_downtime_entries,  name='maintenance_all'),
+    path('maintenance/all/', list_all_downtime_entries,  name='maintenance_all'),
+    path('downtime/load-more/', load_more_downtime_entries, name='load_more_downtime_entries'),
 
 ]
