@@ -216,6 +216,51 @@
 
 
 
+  <!-- ─────────────────── Join Comment Modal ─────────────────── -->
+  <div class="modal fade" id="joinCommentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Joining Downtime Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="join-comment-text" class="form-label">What do you plan on doing?</label>
+            <textarea id="join-comment-text" class="form-control" rows="3" maxlength="2000" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="join-confirm-btn" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────── Leave Comment Modal ─────────────────── -->
+  <div class="modal fade" id="leaveCommentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Leaving Downtime Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="leave-comment-text" class="form-label">What did you do?</label>
+            <textarea id="leave-comment-text" class="form-control" rows="3" maxlength="2000" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="leave-confirm-btn" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 {# ───────────────────────── Close‑out modal (unchanged) ────────────────────────── #}
 <div class="modal fade" id="allCloseoutModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
