@@ -54,10 +54,6 @@ urlpatterns = [
 
 
 
-    # labour dashboard (filter open, non-OPR events)
-    path('maintenance/labour/', labour_dashboard, name='labour_dashboard'),
-    # AJAX endpoints
-    path('maintenance/assign/',   assign_downtime,   name='assign_downtime'),
-    path('maintenance/unassign/', unassign_downtime, name='unassign_downtime'),
+    path('maintenance/all/', list_all_downtime_entries, name='maintenance_all'),
 
 ]
