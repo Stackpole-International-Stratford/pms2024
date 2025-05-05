@@ -15,6 +15,10 @@ from django.db import transaction
 from django.db.models import OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
 import time
+# views/employee_views.py
+from django.contrib import messages
+from django.contrib.auth.models import Group
+from django.utils.crypto import get_random_string
 
 
 
@@ -626,13 +630,84 @@ def move_line_priority(request, pk, direction):
 # ====================================================================
 
 
+# role → group name mapping (change here if you rename groups later)
+ROLE_TO_GROUP = {
+    "electrician": "maintenance_electrician",
+    "millwright":  "maintenance_millwright",
+    "tech":        "maintenance_tech",
+}
+
 @require_POST
 def add_employee(request):
-    # force‑lowercase the names and each selected role
-    first = request.POST.get('first_name', '').strip().lower()
-    last  = request.POST.get('last_name', '').strip().lower()
-    roles = [r.strip().lower() for r in request.POST.getlist('roles')]
+    """
+    Create or update a (real or preload) user and sync them to the
+    correct maintenance_* groups, based on the manager’s selections.
+    """
+    first = request.POST.get("first_name", "").strip().lower()
+    last  = request.POST.get("last_name",  "").strip().lower()
+    roles = [r.strip().lower() for r in request.POST.getlist("roles")]   # list[]
 
-    print(f"[DEBUG] New employee → {first} {last}, roles: {roles}")
+    if not first or not last:
+        messages.error(request, "First and last name are required.")
+        return redirect(request.META.get("HTTP_REFERER", "index"))
 
-    return redirect(request.META.get('HTTP_REFERER', 'index'))
+    base_username = f"{first}.{last}"            # e.g. tyler.careless
+    preload_un    = f"{base_username}@preload"   # e.g. tyler.careless@preload
+    User = get_user_model()
+
+    # 1️⃣ does a real account already exist?
+    user = User.objects.filter(username=base_username).first()
+
+    # 2️⃣ else: is there a preload account?
+    if user is None:
+        user = User.objects.filter(username=preload_un).first()
+
+    # 3️⃣ else: create a fresh preload account
+    if user is None:
+        dummy_pw = get_random_string(20)
+        user = User.objects.create_user(
+            username=preload_un,
+            password=dummy_pw,
+            is_staff=True  # keep admin access consistent with your backend
+        )
+        created = True
+    else:
+        created = False
+
+    # ------------------------------------------------------------------ #
+    # Sync their group memberships
+    # ------------------------------------------------------------------ #
+    desired_group_names = {
+        ROLE_TO_GROUP[r] for r in roles if r in ROLE_TO_GROUP
+    }
+
+    for role, group_name in ROLE_TO_GROUP.items():
+        grp, _ = Group.objects.get_or_create(name=group_name)
+
+        if group_name in desired_group_names:
+            user.groups.add(grp)
+        else:
+            user.groups.remove(grp)
+
+    user.save()
+
+    # ------------------------------------------------------------------ #
+    # Friendly feedback
+    # ------------------------------------------------------------------ #
+    if created:
+        messages.success(
+            request,
+            f"Pre‑load account “{user.username}” created with roles: "
+            f"{', '.join(roles) if roles else 'none'}."
+        )
+    else:
+        messages.success(
+            request,
+            f"Updated {user.username}: now in groups "
+            f"{', '.join(sorted(desired_group_names)) or 'none'}."
+        )
+
+    # [DEBUG] console output, as you requested earlier
+    print(f"[DEBUG] New/updated employee → {first} {last}, roles: {roles}")
+
+    return redirect(request.META.get("HTTP_REFERER", "index"))
