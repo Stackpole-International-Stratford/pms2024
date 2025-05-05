@@ -348,13 +348,19 @@ def list_all_downtime_entries(request):
 
     entries = qs[:PAGE_SIZE]
 
-    # grab all lines in priority order (Meta.ordering will sort by priority)
+    # grab all lines in priority order
     line_priorities = LinePriority.objects.all()
+
+    # check group membership
+    is_manager = request.user.groups.filter(
+        name='maintenance_managers'
+    ).exists()
 
     return render(request, 'plant/maintenance_all_entries.html', {
         'entries':         entries,
         'page_size':       PAGE_SIZE,
-        'line_priorities': line_priorities,   # ← new
+        'line_priorities': line_priorities,
+        'is_manager':      is_manager,    # ← new
     })
 
 

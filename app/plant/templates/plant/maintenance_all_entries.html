@@ -4,6 +4,8 @@
 <div class="container mt-4">
   <h1 class="mb-4">Open Downtime Events</h1>
 
+
+  {% if is_manager %}
   {# ───────────────────────── Line priorities accordion ────────────────────────── #}
   <div class="accordion mt-5" id="linesPriorityAccordion">
     <div class="accordion-item">
@@ -82,6 +84,7 @@
     </div>
   </div>
   {# ───────────────────────── end accordion ────────────────────────────────────── #}
+  {% endif %}
 
   {# ───────────────────────── downtime events table (unchanged) ────────────────── #}
   <div class="table-responsive mt-4">
