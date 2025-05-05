@@ -614,3 +614,24 @@ def move_line_priority(request, pk, direction):
     if referer:
         return HttpResponseRedirect(referer)
     return redirect(reverse('list_all_downtime_entries'))
+
+
+
+
+
+# ====================================================================
+# ====================================================================
+# ====================== New Employee ================================
+# ====================================================================
+# ====================================================================
+
+
+@require_POST
+def add_employee(request):
+    first = request.POST.get('first_name')
+    last  = request.POST.get('last_name')
+    roles = request.POST.getlist('roles')  # ['electrician', 'millwright', ...]
+
+    print(f"[DEBUG] New employee → {first} {last}, roles: {roles}")
+
+    return redirect(request.META.get('HTTP_REFERER', 'index'))

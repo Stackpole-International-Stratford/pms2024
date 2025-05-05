@@ -60,7 +60,9 @@ urlpatterns = [
     path('downtime/load-more/', load_more_downtime_entries, name='load_more_downtime_entries'),
 
 
-    path('line-priority/<int:pk>/move/<str:direction>/', move_line_priority, name='move_line_priority'
-    ),
+    path('line-priority/<int:pk>/move/<str:direction>/', move_line_priority, name='move_line_priority'),
+
+    path('employees/add/', add_employee, name='add_employee'),
+
 
 ]
