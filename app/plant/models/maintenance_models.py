@@ -26,6 +26,20 @@ class MachineDowntimeEvent(models.Model):
     created_at_UTC     = models.DateTimeField(auto_now_add=True)
     updated_at_UTC     = models.DateTimeField(auto_now=True)
 
+    # new:
+    LABOUR_CHOICES = [
+        ('OPERATOR',    'Operator can fix'),
+        ('ELECTRICIAN', 'Need Electrician'),
+        ('TECH',        'Need Tech'),
+        ('MILLWRIGHT',  'Need Millwright'),
+    ]
+    labour_type = models.CharField(
+        max_length=20,
+        choices=LABOUR_CHOICES,
+        default='OPERATOR',
+        help_text="Who is needed to fix this downtime"
+    )
+
     @property
     def start_at(self) -> _datetime:
         """

@@ -211,6 +211,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
             'category_code'   : e.code.split('-')[0],
             'subcategory_code': e.code,
             'comment'         : e.comment,
+            'labour_type':     e.labour_type,
         }
         for e in batch
     ]
@@ -230,6 +231,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         start_date  = request.POST['start_date']       # "YYYY-MM-DD"
         start_time  = request.POST['start_time']       # "HH:MM"
         description = request.POST['description']
+        labour_type = request.POST.get('labour_type', 'OPERATOR')
 
         # look up display names
         cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == cat_code), None)
@@ -257,9 +259,10 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             e.code        = sub_code
             e.start_epoch = epoch_ts
             e.comment     = description
+            e.labour_type = labour_type
             e.save(update_fields=[
                 'line', 'machine', 'category', 'subcategory',
-                'code', 'start_epoch', 'comment'
+                'code', 'start_epoch', 'comment', 'labour_type'
             ])
         else:
             # ——— create new record ———
@@ -271,6 +274,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
                 code        = sub_code,
                 start_epoch = epoch_ts,
                 comment     = description,
+                labour_type = labour_type,
             )
 
         # preserve any ?offset=… in the URL so the user stays on the same page

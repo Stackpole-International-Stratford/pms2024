@@ -4,6 +4,8 @@
   <!-- ADD FORM & TABLE -->
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
+      <!-- store the labour choice -->
+  <input type="hidden" name="labour_type" id="labour_type_input" value="OPERATOR">
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
         <thead>
@@ -51,13 +53,14 @@
                         rows="1" maxlength="5000" required></textarea>
             </th>
             <th style="width:1%;">
-              <button type="submit"
+              <!-- this button now opens the modal; it stays disabled until your fields are valid -->
+              <button type="button"
                       id="add-button"
                       class="btn btn-dark btn-sm mt-4"
                       disabled>
                 Add
               </button>
-            </th>
+            </th>            
           </tr>
         </thead>
         <tbody id="entries-body">
@@ -217,6 +220,41 @@
       </div>
     </div>
   </div>
+
+
+  <!-- LABOUR-CHOICE MODAL -->
+<div class="modal fade" id="labourModal" tabindex="-1" aria-labelledby="labourModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="labourModalLabel">Who do you need?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="labour_choice" id="labourOperator" value="OPERATOR" checked>
+          <label class="form-check-label" for="labourOperator">Operator can fix</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="labour_choice" id="labourElectrician" value="ELECTRICIAN">
+          <label class="form-check-label" for="labourElectrician">Need Electrician</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="labour_choice" id="labourTech" value="TECH">
+          <label class="form-check-label" for="labourTech">Need Tech</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="labour_choice" id="labourMillwright" value="MILLWRIGHT">
+          <label class="form-check-label" for="labourMillwright">Need Millwright</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmLabourChoice">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 </div>
@@ -496,6 +534,24 @@
     });
   
   })();
+
+
+  // when you click Add (it’s type="button" now), show the labour modal
+  document.getElementById('add-button')
+    .addEventListener('click', () => {
+      new bootstrap.Modal(document.getElementById('labourModal')).show();
+    });
+
+  // when you confirm your choice, stash it in the hidden field and submit
+  document.getElementById('confirmLabourChoice')
+    .addEventListener('click', () => {
+      const choice = document.querySelector('input[name="labour_choice"]:checked').value;
+      document.getElementById('labour_type_input').value = choice;
+      document.getElementById('maintenance-form').submit();
+    });
+
+
+
 
 // ─── DEBUG: log every click ────────────────────────────────────────────
 document.addEventListener('click', () => {
