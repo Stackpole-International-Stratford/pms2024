@@ -69,3 +69,22 @@ class MachineDowntimeEvent(models.Model):
 
     def __str__(self):
         return f"{self.code} @ {self.start_epoch} on {self.line}/{self.machine}"
+    
+
+    
+
+
+
+
+class LinePriority(models.Model):
+    """
+    A single Line and its priority (lower = more urgent).
+    """
+    line     = models.CharField(max_length=50, unique=True)
+    priority = models.PositiveIntegerField(default=0, help_text="Lower numbers are higher priority")
+
+    class Meta:
+        ordering = ['priority']
+
+    def __str__(self):
+        return f"{self.line} (prio {self.priority})"
