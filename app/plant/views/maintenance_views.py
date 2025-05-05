@@ -400,6 +400,8 @@ def list_all_downtime_entries(request):
         'page_size':       PAGE_SIZE,
         'line_priorities': line_priorities,
         'is_manager':      is_manager,
+        'labour_choices':  MachineDowntimeEvent.LABOUR_CHOICES,   # ← add this
+
     })
 
 
