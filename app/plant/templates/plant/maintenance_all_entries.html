@@ -167,18 +167,28 @@
           {% for p in e.participants.all %}
             <div class="mb-1">
               {{ p.user.username }}
-              {% if p.leave_epoch is None %}
-                <button
-                  class="btn btn-sm btn-outline-danger leave-btn"
-                  data-event-id="{{ e.id }}"
-                >Leave</button>
+        
+              {% if p.user == request.user %}
+                {# only *you* get a Leave button on your own open participation #}
+                {% if p.leave_epoch is None %}
+                  <button
+                    class="btn btn-sm btn-outline-danger leave-btn"
+                    data-event-id="{{ e.id }}"
+                  >Leave</button>
+                {% else %}
+                  <small>– {{ p.total_minutes }} min</small>
+                {% endif %}
+        
               {% else %}
-                <small>– {{ p.total_minutes }} min</small>
+                {# for everyone else, if they’ve left show minutes, otherwise nothing #}
+                {% if p.leave_epoch %}
+                  <small>– {{ p.total_minutes }} min</small>
+                {% endif %}
               {% endif %}
             </div>
           {% endfor %}
-
-          {# Show Join if user doesn’t currently have an open participation #}
+        
+          {# Show Join only if *you* don’t already have an open participation #}
           {% if not e.user_has_open %}
             <button
               class="btn btn-sm btn-outline-success join-btn mt-2"
@@ -186,6 +196,7 @@
             >Join</button>
           {% endif %}
         </td>
+        
 
         {# Comment #}
         <td>{{ e.comment }}</td>
