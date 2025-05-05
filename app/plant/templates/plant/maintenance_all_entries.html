@@ -37,7 +37,7 @@
           </td>
           <td>{{ e.line }}</td>
           <td>{{ e.machine }}</td>
-          <td><span class="badge bg-primary">{{ e.category }}</span></td>
+          <td><span class="badge bg-dark">{{ e.category }}</span></td>
           <td><span class="badge bg-secondary">{{ e.subcategory }}</span></td>
           <td>{{ e.labour_type }}</td>
           <td class="assigned-to-cell" data-entry-id="{{ e.id }}">
@@ -45,13 +45,13 @@
               {{ e.assigned_to }}
               {% if e.assigned_to == request.user.username %}
                 <button
-                  class="btn btn-sm btn-outline-warning unassign-btn"
+                  class="btn btn-sm btn-outline-dark unassign-btn"
                   data-entry-id="{{ e.id }}"
                 >Unassign</button>
               {% endif %}
             {% else %}
               <button
-                class="btn btn-sm btn-outline-primary assign-btn"
+                class="btn btn-sm btn-outline-dark assign-btn"
                 data-entry-id="{{ e.id }}"
               >Assign to me</button>
             {% endif %}
@@ -173,13 +173,13 @@
         if (data.assigned_to) {
           assignedCell.innerHTML = `
             ${data.assigned_to}
-            <button class="btn btn-sm btn-outline-warning unassign-btn"
+            <button class="btn btn-sm btn-outline-dark unassign-btn"
                     data-entry-id="${entryId}">
               Unassign
             </button>`;
         } else {
           assignedCell.innerHTML = `
-            <button class="btn btn-sm btn-outline-primary assign-btn"
+            <button class="btn btn-sm btn-outline-dark assign-btn"
                     data-entry-id="${entryId}">
               Assign to me
             </button>`;
