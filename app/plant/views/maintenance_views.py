@@ -326,11 +326,16 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 
 def list_all_downtime_entries(request):
     """
-    Renders an HTML page showing all downtime events (including closed out).
+    Renders only *open* downtime events (i.e. closeout_epoch IS NULL).
     """
-    # Pull everything that hasn’t been soft-deleted:
-    entries = MachineDowntimeEvent.objects.filter(is_deleted=False) \
-                   .order_by('-start_epoch')
+    entries = (
+        MachineDowntimeEvent.objects
+        .filter(
+            is_deleted=False,
+            closeout_epoch__isnull=True,    # ← only open events
+        )
+        .order_by('-start_epoch')
+    )
     return render(request, 'plant/maintenance_all_entries.html', {
         'entries': entries,
     })
