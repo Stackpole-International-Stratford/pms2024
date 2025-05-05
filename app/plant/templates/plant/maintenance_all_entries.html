@@ -134,14 +134,10 @@
           {% if e.closeout_epoch %}
             {{ e.closeout_epoch|date:"Y-m-d H:i" }}
           {% else %}
-            {% if e.assigned_to == request.user.username %}
-              <button class="btn btn-sm btn-info closeout-btn"
-                      data-entry-id="{{ e.id }}">
-                Close Out
-              </button>
-            {% else %}
-              <span class="text-muted">— open —</span>
-            {% endif %}
+            <button class="btn btn-sm btn-info closeout-btn"
+                    data-entry-id="{{ e.id }}">
+              Close&nbsp;out
+            </button>
           {% endif %}
         </td>
 
@@ -215,7 +211,6 @@
 </div>
 
 
-
   <!-- ─────────────────── Join Comment Modal ─────────────────── -->
   <div class="modal fade" id="joinCommentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm">
@@ -261,44 +256,154 @@
   </div>
 
 
-{# ───────────────────────── Close‑out modal (unchanged) ────────────────────────── #}
-<div class="modal fade" id="allCloseoutModal" tabindex="-1" aria-hidden="true">
+{# ─────────────── CLOSE‑OUT MODAL + SCRIPT (self‑contained) ─────────────── #}
+
+<!-- 1.  The modal itself -->
+<div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Close Out Assigned Downtime</h5>
+        <h5 class="modal-title">Close Out Downtime</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+
       <div class="modal-body">
-        <form id="all-closeout-form">
-          {% csrf_token %}
-          <input type="hidden" id="all-closeout-entry-id">
-          <div class="mb-3">
-            <label for="all-closeout-date" class="form-label">Date</label>
-            <input type="date" id="all-closeout-date" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="all-closeout-time" class="form-label">Time</label>
-            <input type="time" id="all-closeout-time" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="all-closeout-comment" class="form-label">What was done?</label>
-            <textarea id="all-closeout-comment" class="form-control"
-                      rows="3" maxlength="2000" required></textarea>
-          </div>
-        </form>
+        <!-- hidden id -->
+        <input type="hidden" id="closeout-entry-id">
+
+        <div class="mb-3">
+          <label for="closeout-date" class="form-label">Date</label>
+          <input type="date" id="closeout-date" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="closeout-time" class="form-label">Time</label>
+          <input type="time" id="closeout-time" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="closeout-comment" class="form-label">What was done?</label>
+          <textarea id="closeout-comment"
+                    class="form-control"
+                    rows="3"
+                    maxlength="2000"
+                    required></textarea>
+        </div>
       </div>
+
       <div class="modal-footer">
         <button type="button"
                 class="btn btn-secondary"
-                data-bs-dismiss="modal">Cancel</button>
+                data-bs-dismiss="modal">
+          Cancel
+        </button>
         <button type="button"
-                id="all-closeout-confirm"
-                class="btn btn-info">Confirm</button>
+                id="closeout-confirm"
+                class="btn btn-info">
+          Confirm
+        </button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- 2.  JavaScript that powers the modal -->
+<script>
+  /* ───────── loader guard ───────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    /* if the Bootstrap bundle hasn’t executed yet, wait for the window load‑event */
+    if (typeof bootstrap === 'undefined') {
+      window.addEventListener('load', initCloseout);
+    } else {
+      initCloseout();
+    }
+  
+    /* ─────── the original script, moved into a function ─────── */
+    function initCloseout () {
+  
+      /* ------------------------------------------------------------------
+       *  configuration
+       * -----------------------------------------------------------------*/
+      const closeoutUrl = "{% url 'closeout_downtime_entry' %}";
+      const csrfToken   =
+            document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  
+      /* ------------------------------------------------------------------
+       *  quick handles to modal elements
+       * -----------------------------------------------------------------*/
+      const modalEl      = document.getElementById('closeoutModal');
+      const entryIdInput = document.getElementById('closeout-entry-id');
+      const dateInput    = document.getElementById('closeout-date');
+      const timeInput    = document.getElementById('closeout-time');
+      const commentInput = document.getElementById('closeout-comment');
+      const confirmBtn   = document.getElementById('closeout-confirm');
+      const bsModal      = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+  
+      /* helper: open the modal with fresh defaults ----------------------- */
+      function openModal(entryId) {
+        entryIdInput.value = entryId;
+  
+        const now = new Date();
+        dateInput.value    = now.toISOString().slice(0, 10);
+        timeInput.value    = now.toTimeString().slice(0, 5);
+        commentInput.value = '';
+  
+        bsModal.show();
+      }
+  
+      /* helper: POST the close‑out to the server ------------------------- */
+      function submitCloseout() {
+        const id   = entryIdInput.value;
+        const date = dateInput.value;
+        const time = timeInput.value;
+        const note = commentInput.value.trim();
+  
+        if (!id)   return alert('Missing entry id.');
+        if (!date || !time) return alert('Pick both date and time.');
+        if (!note)          return alert('Please describe what you did.');
+  
+        confirmBtn.disabled = true;
+  
+        fetch(closeoutUrl, {
+          method : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken' : csrfToken
+          },
+          body: JSON.stringify({
+            entry_id        : id,
+            closeout        : `${date} ${time}`,
+            closeout_comment: note
+          })
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(() => {
+          /* success: remove the row, then hide modal */
+          document
+            .querySelector(`button.closeout-btn[data-entry-id="${id}"]`)
+            ?.closest('tr')?.remove();
+          bsModal.hide();
+        })
+        .catch(() => alert('Error closing out entry.'))
+        .finally(() => confirmBtn.disabled = false);
+      }
+  
+      /* attach listeners -------------------------------------------------- */
+      document.addEventListener('click', ev => {
+        const btn = ev.target.closest('.closeout-btn');
+        if (!btn) return;
+        openModal(btn.dataset.entryId);
+      });
+  
+      confirmBtn.addEventListener('click', submitCloseout);
+    }  /* end initCloseout */
+  });
+  </script>
+  
+<!-- ─────────────────────────────────────────────────────────────────────── -->
+
+
+
 
 <script>
   /*  ───────────  Join / Leave overlay (independent)  ─────────── */

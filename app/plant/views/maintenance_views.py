@@ -493,37 +493,38 @@ def join_downtime_event(request):
 @require_POST
 @login_required
 def leave_downtime_event(request):
-    """
-    Called when a user clicks “Leave”.  Closes out their most recent open participation.
-    """
     try:
-        payload = json.loads(request.body)
-        event_id = payload['event_id']
-        comment  = payload.get('leave_comment', '').strip()
+        payload   = json.loads(request.body)
+        event_id  = payload['event_id']
+        comment   = payload.get('leave_comment', '').strip()
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    # find the user’s most recent open participation
-    part = DowntimeParticipation.objects.filter(
-        event__pk=event_id,
-        user=request.user,
-        leave_epoch__isnull=True
-    ).order_by('-join_epoch').first()
+    part = (DowntimeParticipation.objects
+            .filter(event__pk=event_id,
+                    user=request.user,
+                    leave_epoch__isnull=True)
+            .order_by('-join_epoch')
+            .first())
 
     if not part:
         return HttpResponseBadRequest("No active participation to leave")
 
-    now = int(time.time())
+    now   = int(time.time())
+    delta = now - part.join_epoch          # seconds
+
+    import math
     part.leave_epoch   = now
     part.leave_comment = comment
-    part.total_minutes = (now - part.join_epoch) // 60
-    part.save(update_fields=['leave_epoch','leave_comment','total_minutes'])
+    part.total_minutes = math.ceil(delta / 60)   # ⬅ round‑up
+    part.save(update_fields=['leave_epoch', 'leave_comment', 'total_minutes'])
 
     return JsonResponse({
-        'status':        'ok',
-        'leave_epoch':   now,
+        'status'       : 'ok',
+        'leave_epoch'  : now,
         'total_minutes': part.total_minutes,
     })
+
 
 
 
