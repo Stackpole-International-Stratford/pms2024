@@ -45,6 +45,12 @@ class MachineDowntimeEvent(models.Model):
         default='',
         help_text="Username of the labourer this is assigned to"
     )
+    closeout_comment = models.TextField(
+        "Close-out Comment",
+        null=True,
+        blank=True,
+        help_text="What the labourer did to fix the issue when closing out",
+    )
 
     @property
     def start_at(self) -> _datetime:
