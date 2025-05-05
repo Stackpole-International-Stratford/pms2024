@@ -54,6 +54,7 @@ urlpatterns = [
 
 
 
-    path('maintenance/all/', list_all_downtime_entries, name='maintenance_all'),
+    path('maintenance/assign/',         assign_downtime_entry,      name='assign_downtime_entry'),  # ← new
+    path('maintenance/all/',            list_all_downtime_entries,  name='maintenance_all'),
 
 ]

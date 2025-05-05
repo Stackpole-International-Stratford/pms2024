@@ -35,11 +35,16 @@
           <td><span class="badge bg-primary">{{ e.category }}</span></td>
           <td><span class="badge bg-secondary">{{ e.subcategory }}</span></td>
           <td>{{ e.labour_type }}</td>
-          <td>
+          <td class="assigned-to-cell" data-entry-id="{{ e.id }}">
             {% if e.assigned_to %}
               {{ e.assigned_to }}
             {% else %}
-              <span class="text-muted">Unassigned</span>
+              <button
+                class="btn btn-sm btn-outline-primary assign-btn"
+                data-entry-id="{{ e.id }}"
+              >
+                Assign to me
+              </button>
             {% endif %}
           </td>
           <td>{{ e.comment }}</td>
@@ -53,4 +58,50 @@
     </table>
   </div>
 </div>
+
+{# ——— AJAX for “Assign to me” ——— #}
+<script>
+  // Grab CSRF token from cookie
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(c.slice(name.length + 1));
+        }
+      });
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  document.querySelectorAll('.assign-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const entryId = this.dataset.entryId;
+      fetch("{% url 'assign_downtime_entry' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  csrftoken,
+        },
+        body: JSON.stringify({ entry_id: entryId }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'ok') {
+          // swap button for the username
+          const cell = this.closest('td');
+          cell.textContent = data.assigned_to;
+        } else {
+          alert('Assignment failed.');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error assigning.');
+      });
+    });
+  });
+</script>
 {% endblock %}
