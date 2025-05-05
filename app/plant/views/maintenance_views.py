@@ -333,7 +333,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # ================================================================
 
 # how many at a time
-PAGE_SIZE = 5
+PAGE_SIZE = 500
 
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
