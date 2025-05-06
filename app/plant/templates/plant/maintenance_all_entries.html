@@ -2,6 +2,7 @@
 {% load static %}
 {% block content %}
 <div class="container mt-4">
+  {% csrf_token %}
   {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
 
   <h1 class="mb-4">Open Downtime Events</h1>
