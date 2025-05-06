@@ -293,6 +293,7 @@
           <thead>
             <tr>
               <th>User</th>
+              <th>Roles</th>            <!-- ← new column -->
               <th>Joined At</th>
               <th>Join Comment</th>
               <th>Left At</th>
@@ -306,25 +307,14 @@
         </table>
       </div>
       <div class="modal-footer">
-        <button id="history-join-btn"
-                type="button"
-                class="btn btn-warning">
-          Join
-        </button>
-        <button id="history-leave-btn"
-                type="button"
-                class="btn btn-outline-danger">
-          Leave
-        </button>
-        <button type="button"
-                class="btn btn-dark"
-                data-bs-dismiss="modal">
-          Close
-        </button>
+        <button id="history-join-btn" type="button" class="btn btn-warning">Join</button>
+        <button id="history-leave-btn" type="button" class="btn btn-outline-danger">Leave</button>
+        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
 </div>
+
 
 <!-- 2. Join Modal -->
 <div class="modal fade" id="joinModal" tabindex="-1" aria-hidden="true">
@@ -548,10 +538,17 @@
                 tbody.innerHTML = '';
                 let userHasOpen = false;
                 data.history.forEach(p => {
+
+                  // build a little badge list (or comma-list if you prefer)
+                  const rolesHtml = p.roles.length
+                  ? p.roles.map(r => `<span class="badge bg-secondary me-1">${r}</span>`).join('')
+                  : '<span class="text-muted">—</span>';
+                  
                   if (p.user === currentUser && !p.leave_at) userHasOpen = true;
                   tbody.insertAdjacentHTML('beforeend', `
                     <tr>
                       <td>${p.user}</td>
+                      <td>${rolesHtml}</td>           <!-- ← render roles here -->
                       <td>${p.join_at}</td>
                       <td>${p.join_comment}</td>
                       <td>${p.leave_at || '—'}</td>
