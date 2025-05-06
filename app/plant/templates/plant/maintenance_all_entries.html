@@ -13,13 +13,7 @@
 
     {# ───────────────────── New‑employee button + modal ───────────────────── #}
 
-  <!-- Button -->
-  <button type="button"
-          class="btn btn-warning mb-3"
-          data-bs-toggle="modal"
-          data-bs-target="#newEmployeeModal">
-    Add New or Update Employee
-  </button>
+
 
   <!-- Modal (place it once per page, usually near bottom) -->
   <div class="modal fade" id="newEmployeeModal" tabindex="-1" aria-hidden="true">
@@ -145,7 +139,22 @@
     </div>
   </div>
   {# ───────────────────────── end accordion ────────────────────────────────────── #}
+
+
+
+    <!-- Button -->
+    <button type="button"
+    class="btn btn-warning mb-3"
+    data-bs-toggle="modal"
+    data-bs-target="#newEmployeeModal">
+Add New or Update Employee
+</button>
   {% endif %}
+
+
+
+
+
 
 
 
@@ -167,7 +176,7 @@
               <td>
                 <div class="row gx-2 gy-1">
                   <div class="col-6">
-                    <strong>Start:</strong> {{ e.start_display }}
+                    <strong>Started:</strong> {{ e.start_display }}
                   </div>
                   <div class="col-6">
                     <strong>Machine:</strong> {{ e.machine }}
@@ -236,7 +245,7 @@
                   data-bs-target="#activeListCollapse"
                   aria-expanded="false"
                   aria-controls="activeListCollapse">
-            Active List
+            Active List (who's working)
           </button>
         </h2>
         <div id="activeListCollapse"
