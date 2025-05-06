@@ -492,6 +492,9 @@ def list_all_downtime_entries(request):
         "is_manager":      "maintenance_managers" in user_groups,
         "labour_choices":  MachineDowntimeEvent.LABOUR_CHOICES,
         "user_roles":      roles,
+        
+        "lines_json":            mark_safe(json.dumps(prod_lines)),
+        "downtime_codes_json":   mark_safe(json.dumps(DOWNTIME_CODES)),
     })
 
 
