@@ -20,7 +20,7 @@ from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
 from django.http        import HttpResponseForbidden
 import math
-from django.utils.timezone import is_naive, make_aware, get_default_timezone
+from django.utils.timezone import is_naive, make_aware, get_default_timezone, utc
 
 
 
@@ -583,38 +583,44 @@ def downtime_history(request, event_id):
 
     return JsonResponse({'history': history})
 
+
+
 @require_POST
 @login_required
 def join_downtime_event(request):
-    """
-    Called when a user clicks “Join”.  Creates a new participation row.
-    """
     try:
-        payload = json.loads(request.body)
-        event_id = payload['event_id']
-        comment  = payload.get('join_comment', '').strip()
+        payload      = json.loads(request.body)
+        event_id     = payload['event_id']
+        comment      = payload.get('join_comment', '').strip()
+        dt_str       = payload['join_datetime']       # e.g. "2025-05-06T14:30"
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    event = MachineDowntimeEvent.objects.filter(
-        pk=event_id,
-        is_deleted=False
-    ).first()
+    # fetch the event…
+    event = MachineDowntimeEvent.objects.filter(pk=event_id, is_deleted=False).first()
     if not event:
         return HttpResponseBadRequest("Event not found")
 
-    now = int(time.time())
+    # parse the local-time string into a timezone-aware UTC datetime
+    try:
+        naive_dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return HttpResponseBadRequest("Bad datetime format")
+    local_tz = get_default_timezone()   # should be America/Toronto
+    aware_dt = make_aware(naive_dt, local_tz)
+    utc_dt   = aware_dt.astimezone(utc)
+    epoch_ts = int(utc_dt.timestamp())
+
     participation = DowntimeParticipation.objects.create(
         event        = event,
         user         = request.user,
-        join_epoch   = now,
+        join_epoch   = epoch_ts,
         join_comment = comment
     )
-
     return JsonResponse({
         'status':           'ok',
         'participation_id': participation.id,
-        'join_epoch':       now,
+        'join_epoch':       epoch_ts,
     })
 
 
@@ -622,37 +628,44 @@ def join_downtime_event(request):
 @login_required
 def leave_downtime_event(request):
     try:
-        payload   = json.loads(request.body)
-        event_id  = payload['event_id']
-        comment   = payload.get('leave_comment', '').strip()
+        payload       = json.loads(request.body)
+        event_id      = payload['event_id']
+        comment       = payload.get('leave_comment', '').strip()
+        dt_str        = payload['leave_datetime']
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
+    # find the open participation…
     part = (DowntimeParticipation.objects
-            .filter(event__pk=event_id,
-                    user=request.user,
-                    leave_epoch__isnull=True)
+            .filter(event__pk=event_id, user=request.user, leave_epoch__isnull=True)
             .order_by('-join_epoch')
             .first())
-
     if not part:
         return HttpResponseBadRequest("No active participation to leave")
 
-    now   = int(time.time())
-    delta = now - part.join_epoch          # seconds
+    # parse and convert to UTC epoch
+    try:
+        naive_dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return HttpResponseBadRequest("Bad datetime format")
+    local_tz = get_default_timezone()
+    aware_dt = make_aware(naive_dt, local_tz)
+    utc_dt   = aware_dt.astimezone(utc)
+    now_ts   = int(utc_dt.timestamp())
 
+    # compute minutes
     import math
-    part.leave_epoch   = now
+    delta_s = now_ts - part.join_epoch
+    part.leave_epoch   = now_ts
     part.leave_comment = comment
-    part.total_minutes = math.ceil(delta / 60)   # ⬅ round‑up
+    part.total_minutes = math.ceil(delta_s / 60)
     part.save(update_fields=['leave_epoch', 'leave_comment', 'total_minutes'])
 
     return JsonResponse({
         'status'       : 'ok',
-        'leave_epoch'  : now,
+        'leave_epoch'  : now_ts,
         'total_minutes': part.total_minutes,
     })
-
 
 
 

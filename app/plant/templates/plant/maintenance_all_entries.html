@@ -342,8 +342,7 @@
           <label class="form-label">Date &amp; Time</label>
           <input type="datetime-local"
                  id="join-datetime"
-                 class="form-control"
-                 readonly>
+                 class="form-control">
         </div>
         <div class="mb-3">
           <label for="join-comment" class="form-label">What will you do?</label>
@@ -383,8 +382,7 @@
           <label class="form-label">Date &amp; Time</label>
           <input type="datetime-local"
                  id="leave-datetime"
-                 class="form-control"
-                 readonly>
+                 class="form-control">
         </div>
         <div class="mb-3">
           <label for="leave-comment" class="form-label">What did you do?</label>
@@ -622,12 +620,24 @@
             .catch(() => alert('Could not load history.'));
         });
       });
+
+
+      function getLocalDateTimeValue() {
+        const now = new Date();
+        const pad = n => String(n).padStart(2,'0');
+        const YYYY = now.getFullYear();
+        const MM   = pad(now.getMonth()+1);
+        const DD   = pad(now.getDate());
+        const hh   = pad(now.getHours());
+        const mm   = pad(now.getMinutes());
+        return `${YYYY}-${MM}-${DD}T${hh}:${mm}`;
+      }
     
       // 2) “Join” in History → open Join Modal
       document.getElementById('history-join-btn').addEventListener('click', evt => {
         const id = evt.currentTarget.dataset.eventId;
         document.getElementById('join-event-id').value   = id;
-        document.getElementById('join-datetime').value   = new Date().toISOString().slice(0,16);
+        document.getElementById('join-datetime').value = getLocalDateTimeValue();
         document.getElementById('join-comment').value    = '';
         historyModal.hide();
         joinModal.show();
@@ -644,7 +654,11 @@
             'Content-Type': 'application/json',
             'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
           },
-          body: JSON.stringify({ event_id: id, join_comment: note })
+          body: JSON.stringify({
+            event_id:     id,
+            join_comment: note,
+            join_datetime: document.getElementById('join-datetime').value
+          })
         })
         .then(r => r.ok ? location.reload() : Promise.reject())
         .catch(() => alert('Could not join event.'));
@@ -654,7 +668,7 @@
       document.getElementById('history-leave-btn').addEventListener('click', evt => {
         const id = evt.currentTarget.dataset.eventId;
         document.getElementById('leave-event-id').value   = id;
-        document.getElementById('leave-datetime').value   = new Date().toISOString().slice(0,16);
+        document.getElementById('leave-datetime').value = getLocalDateTimeValue();
         document.getElementById('leave-comment').value    = '';
         historyModal.hide();
         leaveModal.show();
@@ -671,7 +685,12 @@
             'Content-Type': 'application/json',
             'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
           },
-          body: JSON.stringify({ event_id: id, leave_comment: note })
+          body: JSON.stringify({
+            event_id:      id,
+            leave_comment: note,
+            leave_datetime: document.getElementById('leave-datetime').value
+          })
+          
         })
         .then(r => r.ok ? location.reload() : Promise.reject())
         .catch(() => alert('Could not leave event.'));
