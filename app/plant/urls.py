@@ -55,7 +55,6 @@ urlpatterns = [
 
     path('maintenance/join/',  join_downtime_event,  name='join_downtime_event'),
     path('maintenance/leave/', leave_downtime_event, name='leave_downtime_event'),
-    path('maintenance/closeout_assigned/',closeout_assigned_downtime_entry,name='closeout_assigned_downtime_entry'),
     path('maintenance/all/', list_all_downtime_entries,  name='maintenance_all'),
     path('downtime/load-more/', load_more_downtime_entries, name='load_more_downtime_entries'),
 

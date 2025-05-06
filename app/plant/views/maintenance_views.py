@@ -572,40 +572,6 @@ def leave_downtime_event(request):
 
 
 
-@require_POST
-def closeout_assigned_downtime_entry(request):
-    """
-    Close out only entries assigned to the current user.
-    """
-    try:
-        payload = json.loads(request.body)
-        entry_id       = payload['entry_id']
-        close_str      = payload['closeout']           # "YYYY-MM-DD HH:MM"
-        close_comment  = payload['closeout_comment']
-        close_dt       = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
-    except (ValueError, KeyError):
-        return HttpResponseBadRequest("Invalid payload")
-
-    try:
-        e = MachineDowntimeEvent.objects.get(
-            pk=entry_id,
-            is_deleted=False
-        )
-    except MachineDowntimeEvent.DoesNotExist:
-        return HttpResponseBadRequest("Entry not found")
-
-    # Only the assignee may close it out
-    if e.assigned_to != request.user.username:
-        return HttpResponseBadRequest("Not your assignment")
-
-    # compute & save
-    epoch_ts = int(close_dt.timestamp())
-    e.closeout_epoch   = epoch_ts
-    e.closeout_comment = close_comment
-    e.save(update_fields=['closeout_epoch', 'closeout_comment'])
-
-    return JsonResponse({'status':'ok', 'closed_at_epoch': epoch_ts})
-
 
 
 @login_required
