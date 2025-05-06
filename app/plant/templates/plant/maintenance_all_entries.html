@@ -191,21 +191,19 @@
           {# Labour needed badges #}
           <td>
             {% if e.labour_types %}
-            {% for code in e.labour_types %}
-            <button
-            type="button"
-            class="btn btn-outline-dark btn-sm labour-btn me-1"
-            data-event-id="{{ e.id }}"
-            data-role="{{ code|title }}"
-          >
-            {{ code|title }}
-          </button>
-          
-          
-            {% endfor %}
-          {% else %}
-            <span class="text-muted">—</span>
-          {% endif %}        
+              {% for code in e.labour_types %}
+                <button
+                  type="button"
+                  class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm labour-btn me-1"
+                  data-event-id="{{ e.id }}"
+                  data-role="{{ code|title }}"
+                >
+                  {{ code|title }}
+                </button>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
           </td>
 
           {# Comment #}

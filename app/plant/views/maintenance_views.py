@@ -21,6 +21,8 @@ from django.utils.crypto import get_random_string
 from django.http        import HttpResponseForbidden
 import math
 from django.utils.timezone import is_naive, make_aware, get_default_timezone, utc
+from django.db.models import Exists, OuterRef
+
 
 
 
@@ -407,6 +409,22 @@ def user_has_maintenance_access(user) -> bool:
         )
     )
 
+
+def annotate_being_worked_on(qs):
+    """
+    Takes a MachineDowntimeEvent queryset `qs` and returns it
+    annotated with a boolean `being_worked_on` that’s True
+    if any DowntimeParticipation for that event has no leave_epoch.
+    """
+    return qs.annotate(
+        being_worked_on=Exists(
+            DowntimeParticipation.objects
+              .filter(event_id=OuterRef('pk'), leave_epoch__isnull=True)
+        )
+    )
+
+
+
 # --------------------------- rewritten view ---------------------------------- #
 
 @login_required(login_url='login')
@@ -418,13 +436,13 @@ def list_all_downtime_entries(request):
             "Ask your Maintenance Manager to add you to the appropriate group."
         )
 
-    # ── build queryset
+    # ── build base queryset with line priority
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
         .values("priority")[:1]
     )
-    qs = (
+    base_qs = (
         MachineDowntimeEvent.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
         .annotate(
@@ -438,6 +456,9 @@ def list_all_downtime_entries(request):
         .prefetch_related("participants__user")
     )
 
+    # ── annotate whether anybody is still working
+    qs = annotate_being_worked_on(base_qs)
+
     entries = list(qs[:PAGE_SIZE])
     today = timezone.localdate()
     default_tz = get_default_timezone()
@@ -447,16 +468,16 @@ def list_all_downtime_entries(request):
         dt = e.start_at
         if is_naive(dt):
             dt = make_aware(dt, default_tz)
-        # convert to localtime
         local_dt = timezone.localtime(dt)
 
         # format display
-        if local_dt.date() == today:
-            e.start_display = local_dt.strftime('%H:%M')
-        else:
-            e.start_display = local_dt.strftime('%m/%d')
+        e.start_display = (
+            local_dt.strftime('%H:%M')
+            if local_dt.date() == today
+            else local_dt.strftime('%m/%d')
+        )
 
-        # flag whether current user already joined
+        # flag whether current user already joined (for your own logic)
         e.user_has_open = e.participants.filter(
             user=request.user, leave_epoch__isnull=True
         ).exists()
@@ -464,15 +485,14 @@ def list_all_downtime_entries(request):
     user_groups = set(request.user.groups.values_list("name", flat=True))
     roles = [r for r, g in ROLE_TO_GROUP.items() if g in user_groups]
 
-    context = {
+    return render(request, "plant/maintenance_all_entries.html", {
         "entries":         entries,
         "page_size":       PAGE_SIZE,
         "line_priorities": LinePriority.objects.all(),
         "is_manager":      "maintenance_managers" in user_groups,
         "labour_choices":  MachineDowntimeEvent.LABOUR_CHOICES,
         "user_roles":      roles,
-    }
-    return render(request, "plant/maintenance_all_entries.html", context)
+    })
 
 
 @login_required
@@ -483,12 +503,16 @@ def load_more_downtime_entries(request):
     except (TypeError, ValueError):
         offset = 0
 
-    qs = (
+    # base queryset
+    base_qs = (
         MachineDowntimeEvent.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
-        .order_by('-start_epoch')
-        .prefetch_related('participants__user')
+        .order_by("-start_epoch")
+        .prefetch_related("participants__user")
     )
+    # annotate working-on flag
+    qs = annotate_being_worked_on(base_qs)
+
     total = qs.count()
     batch = qs[offset:offset + PAGE_SIZE]
 
@@ -503,39 +527,39 @@ def load_more_downtime_entries(request):
             dt = make_aware(dt, default_tz)
         local_dt = timezone.localtime(dt)
 
-        # choose display
-        if local_dt.date() == today:
-            start_display = local_dt.strftime('%H:%M')
-        else:
-            start_display = local_dt.strftime('%m/%d')
+        start_display = (
+            local_dt.strftime('%H:%M')
+            if local_dt.date() == today
+            else local_dt.strftime('%m/%d')
+        )
 
         # gather open participants
         open_parts = e.participants.filter(leave_epoch__isnull=True)
         users = [p.user.username for p in open_parts]
 
         data.append({
-            'id':             e.id,
-            'start_at':       e.start_at.strftime('%Y-%m-%d %H:%M'),
-            'start_display':  start_display,
-            'closeout_at':    (
-                                 e.closeout_epoch and
-                                 datetime.fromtimestamp(e.closeout_epoch)
-                                         .strftime('%Y-%m-%d %H:%M')
-                               ) or None,
-            'line':           e.line,
-            'machine':        e.machine,
-            'category':       e.category,
-            'subcategory':    e.subcategory,
-            'labour_types':   e.labour_types,
-            'assigned_to':    users,
-            'comment':        e.comment,
+            'id':                e.id,
+            'start_at':          e.start_at.strftime('%Y-%m-%d %H:%M'),
+            'start_display':     start_display,
+            'closeout_at':       (
+                                    e.closeout_epoch and
+                                    datetime.fromtimestamp(e.closeout_epoch)
+                                            .strftime('%Y-%m-%d %H:%M')
+                                  ) or None,
+            'line':              e.line,
+            'machine':           e.machine,
+            'category':          e.category,
+            'subcategory':       e.subcategory,
+            'labour_types':      e.labour_types,
+            'assigned_to':       users,
+            'being_worked_on':   e.being_worked_on,
+            'comment':           e.comment,
         })
 
     return JsonResponse({
         'entries':  data,
         'has_more': total > offset + PAGE_SIZE,
     })
-
 
 
 @login_required
