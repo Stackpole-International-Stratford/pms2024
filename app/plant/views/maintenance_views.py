@@ -431,14 +431,11 @@ def annotate_being_worked_on(qs):
 
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    # ── access control
+    # ── Access control ──────────────────────────────────────────────
     if not user_has_maintenance_access(request.user):
-        return HttpResponseForbidden(
-            "You are not authorized to view this page. "
-            "Ask your Maintenance Manager to add you to the appropriate group."
-        )
+        return HttpResponseForbidden("Not authorized; please ask a manager.")
 
-    # ── build base queryset with line priority
+    # ── Build downtime‐events qs with priority & “being_worked_on” ────
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
@@ -457,35 +454,64 @@ def list_all_downtime_entries(request):
         .order_by("line_priority", "-start_epoch")
         .prefetch_related("participants__user")
     )
-
-    # ── annotate whether anybody is still working
     qs = annotate_being_worked_on(base_qs)
 
+    # ── Format entries for left table ────────────────────────────────
     entries = list(qs[:PAGE_SIZE])
     today = timezone.localdate()
-    default_tz = get_default_timezone()
+    tz    = get_default_timezone()
 
     for e in entries:
-        # make e.start_at timezone-aware if necessary
         dt = e.start_at
         if is_naive(dt):
-            dt = make_aware(dt, default_tz)
-        local_dt = timezone.localtime(dt)
-
-        # format display
+            dt = make_aware(dt, tz)
+        local_dt = localtime(dt)
         e.start_display = (
             local_dt.strftime('%H:%M')
             if local_dt.date() == today
             else local_dt.strftime('%m/%d')
         )
-
-        # flag whether current user already joined (for your own logic)
         e.user_has_open = e.participants.filter(
             user=request.user, leave_epoch__isnull=True
         ).exists()
 
+    # ── Build workers list: **all** electricians/millwrights/techs ──
+    User = get_user_model()
+    maintenance_group_names = set(ROLE_TO_GROUP.values())
+    users = (
+        User.objects
+        .filter(groups__name__in=maintenance_group_names, is_active=True)
+        .distinct()
+        .order_by('username')
+    )
+
+    workers = []
+    for u in users:
+        name = u.get_full_name() or u.username
+        user_groups = set(u.groups.values_list("name", flat=True))
+        roles = [
+            role for role, grp in ROLE_TO_GROUP.items()
+            if grp in user_groups
+        ]
+        parts = DowntimeParticipation.objects.filter(
+            user=u,
+            leave_epoch__isnull=True,
+            event__closeout_epoch__isnull=True
+        ).select_related('event')
+        jobs = [
+            {"machine": p.event.machine, "subcategory": p.event.subcategory}
+            for p in parts
+        ]
+        workers.append({"name": name, "roles": roles, "jobs": jobs})
+
+    workers = sorted(workers, key=lambda w: w["name"])
+
+    # ── Render ───────────────────────────────────────────────────────
     user_groups = set(request.user.groups.values_list("name", flat=True))
-    roles = [r for r, g in ROLE_TO_GROUP.items() if g in user_groups]
+    user_roles  = [
+        r for r, grp in ROLE_TO_GROUP.items()
+        if grp in user_groups
+    ]
 
     return render(request, "plant/maintenance_all_entries.html", {
         "entries":         entries,
@@ -493,8 +519,10 @@ def list_all_downtime_entries(request):
         "line_priorities": LinePriority.objects.all(),
         "is_manager":      "maintenance_managers" in user_groups,
         "labour_choices":  MachineDowntimeEvent.LABOUR_CHOICES,
-        "user_roles":      roles,
+        "user_roles":      user_roles,
+        "workers":         workers,
     })
+
 
 
 @login_required
