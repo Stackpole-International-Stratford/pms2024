@@ -359,7 +359,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # ================================================================
 
 # how many at a time
-PAGE_SIZE = 500
+PAGE_SIZE = 5
 
 
 # group names you consider “maintenance”
@@ -440,6 +440,7 @@ def list_all_downtime_entries(request):
     }
     return render(request, "plant/maintenance_all_entries.html", context)
 
+@login_required
 def load_more_downtime_entries(request):
     """
     AJAX endpoint: GET /plant/downtime/load-more/?offset=N
@@ -448,41 +449,54 @@ def load_more_downtime_entries(request):
          "has_more": bool
        }
     """
+    # 1) parse offset
     try:
         offset = int(request.GET.get('offset', 0))
     except (TypeError, ValueError):
         offset = 0
 
-    qs = MachineDowntimeEvent.objects.filter(
-        is_deleted=False,
-        closeout_epoch__isnull=True,
-    ).order_by('-start_epoch')
+    # 2) grab open downtimes, newest first, prefetch participants & users
+    qs = (
+        MachineDowntimeEvent.objects
+        .filter(is_deleted=False, closeout_epoch__isnull=True)
+        .order_by('-start_epoch')
+        .prefetch_related('participants__user')
+    )
 
+    total_count = qs.count()
     batch = qs[offset:offset + PAGE_SIZE]
+
+    # 3) build JSON payload
     entries = []
     for e in batch:
+        # find all users who have joined but not yet left
+        open_parts = e.participants.filter(leave_epoch__isnull=True)
+        assigned_usernames = [p.user.username for p in open_parts]
+
         entries.append({
             'id':            e.id,
             'start_at':      e.start_at.strftime('%Y-%m-%d %H:%M'),
-            # use Python None, not `null`
-            'closeout_at':   e.closeout_epoch.strftime('%Y-%m-%d %H:%M')
-                              if e.closeout_epoch else None,
+            'closeout_at':   (
+                                e.closeout_epoch and
+                                _datetime.fromtimestamp(e.closeout_epoch)
+                                          .strftime('%Y-%m-%d %H:%M')
+                             ) or None,
             'line':          e.line,
             'machine':       e.machine,
             'category':      e.category,
             'subcategory':   e.subcategory,
-            'labour_types':   e.labour_types,
-            'assigned_to':   e.assigned_to,
+            'labour_types':  e.labour_types,
+            'assigned_to':   assigned_usernames,
             'comment':       e.comment,
         })
 
-    has_more = qs.count() > offset + PAGE_SIZE
+    # 4) tell client if there’s more to load
+    has_more = total_count > offset + PAGE_SIZE
 
     return JsonResponse({
         'entries':  entries,
         'has_more': has_more,
     })
-
 
 
 @require_POST
