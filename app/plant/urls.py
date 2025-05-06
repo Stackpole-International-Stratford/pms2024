@@ -64,4 +64,6 @@ urlpatterns = [
     path('employees/add/', add_employee, name='add_employee'),
 
     path('downtime/<int:event_id>/history/', downtime_history, name='downtime_history'),
+
+    path("toggle_active/", toggle_active, name="toggle_active"),
 ]
