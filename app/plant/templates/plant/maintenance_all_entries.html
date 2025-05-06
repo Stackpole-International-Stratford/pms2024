@@ -182,7 +182,6 @@
         <th>Category</th>
         <th>Sub-category</th>
         <th>Labour&nbsp;Needed</th>
-        <th>Participants</th>
         <th>Comment</th>
       </tr>
     </thead>
@@ -229,42 +228,6 @@
         {% endif %}        
         </td>
 
-        {# Participants column #}
-        <td class="participants-cell" data-event-id="{{ e.id }}">
-          {% for p in e.participants.all %}
-            <div class="mb-1">
-              {{ p.user.username }}
-        
-              {% if p.user == request.user %}
-                {# only *you* get a Leave button on your own open participation #}
-                {% if p.leave_epoch is None %}
-                  <button
-                    class="btn btn-sm btn-outline-danger leave-btn"
-                    data-event-id="{{ e.id }}"
-                  >Leave</button>
-                {% else %}
-                  <small>– {{ p.total_minutes }} min</small>
-                {% endif %}
-        
-              {% else %}
-                {# for everyone else, if they’ve left show minutes, otherwise nothing #}
-                {% if p.leave_epoch %}
-                  <small>– {{ p.total_minutes }} min</small>
-                {% endif %}
-              {% endif %}
-            </div>
-          {% endfor %}
-        
-          {# Show Join only if *you* don’t already have an open participation #}
-          {% if not e.user_has_open %}
-            <button
-              class="btn btn-sm btn-outline-dark join-btn mt-2"
-              data-event-id="{{ e.id }}"
-            >Join</button>
-          {% endif %}
-        </td>
-        
-
         {# Comment #}
         <td>{{ e.comment }}</td>
       </tr>
@@ -282,81 +245,6 @@
 </div>
 
 
-  <!-- ─────────────────── Join Comment Modal ─────────────────── -->
-  <div class="modal fade" id="joinCommentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Joining Downtime Event</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="join-comment-text" class="form-label">Plan of action:</label>
-            <textarea id="join-comment-text" class="form-control" rows="3" maxlength="2000" required></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" id="join-confirm-btn" class="btn btn-warning">Confirm</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─────────────────── Leave Comment Modal ─────────────────── -->
-  <div class="modal fade" id="leaveCommentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Leaving Downtime Event</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="leave-comment-text" class="form-label">Reason for leaving:</label>
-            <textarea id="leave-comment-text" class="form-control" rows="3" maxlength="2000" required></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" id="leave-confirm-btn" class="btn btn-warning">Confirm</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-
-  <!-- ─────────── Labour History Modal ─────────── -->
-<div class="modal fade" id="labourHistoryModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Work History</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <ul id="labour-history-list" class="list-group"></ul>
-      </div>
-      <div class="modal-footer">
-        <!-- “Join” here will just re-use your existing joinCommentModal -->
-        <button 
-        type="button"
-        class="btn btn-warning join-in-history"
-        data-bs-dismiss="modal"             
-        data-bs-target="#joinCommentModal"
-        data-bs-toggle="modal">
-        Join
-      </button>
-      
-        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 
@@ -535,53 +423,10 @@
 
 
 <!-- ─────────────────────────────────────────────────────────────────────── -->
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const table        = document.querySelector('table');
-    const historyModal = document.getElementById('labourHistoryModal');
-    const historyList  = document.getElementById('labour-history-list');
+
   
-    if (!table || !historyModal || !historyList) return;
   
-    // When you click E/M/T
-    table.addEventListener('click', async function(ev) {
-      const btn = ev.target.closest('button.labour-btn');
-      if (!btn) return;
-      ev.preventDefault();
   
-      const eventId = btn.dataset.eventId;
-      try {
-        const res  = await fetch(`/plant/downtime/${eventId}/history/`);
-        if (!res.ok) throw new Error('Network error');
-        const { history } = await res.json();
-  
-        // Build out the list items
-        historyList.innerHTML = history.length
-          ? history.map(p => `
-              <li class="list-group-item">
-                <strong>${p.user}</strong><br>
-                <small>
-                  Joined: ${p.join_at}<br>
-                  Plan: ${p.join_comment || '—'}<br>
-                  ${p.leave_at
-                    ? `Left: ${p.leave_at}<br>
-                       Note: ${p.leave_comment || '—'}<br>
-                       Duration: ${p.total_minutes} min`
-                    : `<em>(still working)</em>`}
-                </small>
-              </li>
-            `).join('')
-          : '<li class="list-group-item text-muted">No history yet.</li>';
-  
-        // Show the modal
-        bootstrap.Modal.getOrCreateInstance(historyModal).show();
-      } catch (err) {
-        console.error(err);
-        alert('Could not load history.');
-      }
-    });
-  });
-  </script>
   
 
 
