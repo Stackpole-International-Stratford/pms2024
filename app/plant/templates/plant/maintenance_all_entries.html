@@ -743,25 +743,26 @@
     
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        const editModalEl   = document.getElementById('editEntryModal');
-        const editModal     = new bootstrap.Modal(editModalEl);
-        const csrfToken     = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        // ── grab elements ─────────────────────────────────────────────────────────
+        const editModalEl      = document.getElementById('editEntryModal');
+        const editModal        = new bootstrap.Modal(editModalEl);
+        const csrfToken        = document.querySelector('[name=csrfmiddlewaretoken]').value;
       
-        // form fields
-        const idInput       = document.getElementById('edit-entry-id');
-        const dateInput     = document.getElementById('edit-start-date');
-        const timeInput     = document.getElementById('edit-start-time');
-        const lineInput     = document.getElementById('edit-line-select');
-        const machInput     = document.getElementById('edit-machine-select');
-        const catInput      = document.getElementById('edit-category-select');
-        const subInput      = document.getElementById('edit-subcategory-select');
-        const commentInput  = document.getElementById('edit-comment');
+        // form fields inside edit modal
+        const idInput          = document.getElementById('edit-entry-id');
+        const dateInput        = document.getElementById('edit-start-date');
+        const timeInput        = document.getElementById('edit-start-time');
+        const lineInput        = document.getElementById('edit-line-select');
+        const machineInput     = document.getElementById('edit-machine-select');
+        const categoryInput    = document.getElementById('edit-category-select');
+        const subcategoryInput = document.getElementById('edit-subcategory-select');
+        const commentInput     = document.getElementById('edit-comment');
       
-        const saveBtn       = document.getElementById('save-entry-btn');
-        const deleteBtn     = document.getElementById('delete-entry-btn');
-        const closeoutBtn   = document.getElementById('open-closeout-from-edit');
+        const saveBtn          = document.getElementById('save-entry-btn');
+        const deleteBtn        = document.getElementById('delete-entry-btn');
+        const closeoutBtn      = document.getElementById('open-closeout-from-edit');
       
-        // 1) On row-click → populate & show edit modal
+        // ── 1) ROW CLICK → POPULATE & SHOW EDIT MODAL ─────────────────────────────
         document.querySelector('table tbody').addEventListener('click', ev => {
           const tr = ev.target.closest('tr[data-entry-id]');
           if (!tr) return;
@@ -769,17 +770,18 @@
           idInput.value       = tr.dataset.entryId;
           [ dateInput.value, timeInput.value ] = tr.dataset.start.split(' ');
           lineInput.value     = tr.dataset.line;
-          machInput.value     = tr.dataset.machine;
-          catInput.value      = tr.dataset.category;
-          subInput.value      = tr.dataset.subcategory;
+          machineInput.value  = tr.dataset.machine;
+          categoryInput.value = tr.dataset.category;
+          subcategoryInput.value = tr.dataset.subcategory;
           commentInput.value  = tr.dataset.comment;
       
           editModal.show();
         });
       
-        // 2) Delete via AJAX
+        // ── 2) DELETE VIA AJAX ─────────────────────────────────────────────────────
         deleteBtn.addEventListener('click', () => {
           if (!confirm('Delete this downtime entry?')) return;
+      
           fetch("{% url 'delete_downtime_entry' %}", {
             method: 'POST',
             headers: {
@@ -790,28 +792,34 @@
           })
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(() => {
-            document.querySelector(`tr[data-entry-id="${idInput.value}"]`)?.remove();
+            // remove row & hide modal
+            document
+              .querySelector(`tr[data-entry-id="${idInput.value}"]`)
+              ?.remove();
             editModal.hide();
           })
           .catch(() => alert('Error deleting entry.'));
         });
       
-        // 3) Open your existing Close-Out modal
+        // ── 3) LAUNCH CLOSE-OUT MODAL ───────────────────────────────────────────────
         closeoutBtn.addEventListener('click', () => {
+          // pass the same entry ID into your existing close-out form
           document.getElementById('closeout-entry-id').value = idInput.value;
-          new bootstrap.Modal(document.getElementById('closeoutModal')).show();
+          new bootstrap.Modal(
+            document.getElementById('closeoutModal')
+          ).show();
         });
       
-        // 4) Save changes via AJAX
+        // ── 4) SAVE CHANGES VIA AJAX ────────────────────────────────────────────────
         saveBtn.addEventListener('click', () => {
           const payload = {
             entry_id:    idInput.value,
             start_date:  dateInput.value,
             start_time:  timeInput.value,
             line:        lineInput.value.trim(),
-            machine:     machInput.value.trim(),
-            category:    catInput.value.trim(),
-            subcategory: subInput.value.trim(),
+            machine:     machineInput.value.trim(),
+            category:    categoryInput.value.trim(),
+            subcategory: subcategoryInput.value.trim(),
             comment:     commentInput.value.trim(),
           };
       
@@ -825,22 +833,34 @@
           })
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(data => {
-            // update just that one <tr> in place
+            // patch both the data-attrs and visible cells
             const tr = document.querySelector(`tr[data-entry-id="${data.id}"]`);
-            if (tr) {
-              tr.cells[0].textContent = data.start_display;
-              tr.cells[2].textContent = data.line;
-              tr.cells[3].textContent = data.machine;
-              tr.cells[4].innerHTML  = `<span class="badge bg-dark">${data.category}</span>`;
-              tr.cells[5].innerHTML  = `<span class="badge bg-secondary">${data.subcategory}</span>`;
-              tr.cells[7].textContent = data.comment;
-            }
+            if (!tr) return;
+      
+            // 1) update data-* attributes
+            tr.dataset.start       = `${data.start_date} ${data.start_time}`;
+            tr.dataset.line        = data.line;
+            tr.dataset.machine     = data.machine;
+            tr.dataset.category    = data.category;
+            tr.dataset.subcategory = data.subcategory;
+            tr.dataset.comment     = data.comment;
+      
+            // 2) update the <td> contents
+            //    [0]=start, [1]=closeout, [2]=line, [3]=machine, [4]=category, [5]=subcategory, [7]=comment
+            tr.cells[0].textContent = data.start_display;
+            tr.cells[2].textContent = data.line;
+            tr.cells[3].textContent = data.machine;
+            tr.cells[4].innerHTML   = `<span class="badge bg-dark">${data.category}</span>`;
+            tr.cells[5].innerHTML   = `<span class="badge bg-secondary">${data.subcategory}</span>`;
+            tr.cells[7].textContent = data.comment;
+      
             editModal.hide();
           })
           .catch(() => alert('Error saving changes.'));
         });
       });
       </script>
+      
       
     
   
