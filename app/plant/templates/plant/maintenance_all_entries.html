@@ -327,6 +327,36 @@
   </div>
 
 
+
+  <!-- ─────────── Labour History Modal ─────────── -->
+<div class="modal fade" id="labourHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Work History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul id="labour-history-list" class="list-group"></ul>
+      </div>
+      <div class="modal-footer">
+        <!-- “Join” here will just re-use your existing joinCommentModal -->
+        <button type="button"
+                class="btn btn-warning join-in-history"
+                data-bs-target="#joinCommentModal"
+                data-bs-toggle="modal">
+          Join
+        </button>
+        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
 {# ─────────────── CLOSE‑OUT MODAL + SCRIPT (self‑contained) ─────────────── #}
 
 <!-- 1.  The modal itself -->
@@ -500,133 +530,142 @@
   </script>
   
 <!-- ─────────────────────────────────────────────────────────────────────── -->
-
-
-
-
 <script>
-  /*  ───────────  Join / Leave overlay (independent)  ─────────── */
-  (() => {
-    /* helpers --------------------------------------------------------------- */
-    const currentUser = "{{ request.user.username }}",
-          csrftoken   = document.cookie
-                         .split(';')
-                         .map(c => c.trim())
-                         .find(c => c.startsWith('csrftoken='))?.split('=')[1] ?? '',
-          joinUrl     = "{% url 'join_downtime_event' %}",
-          leaveUrl    = "{% url 'leave_downtime_event' %}",
-          table       = document.querySelector('table');
-  
-    if (!table) return;          /* defensive guard */
-  
-    /* cached textarea elements --------------------------------------------- */
-    const joinTA  = document.getElementById('join-comment-text'),
-          leaveTA = document.getElementById('leave-comment-text');
-  
-    let pendingJoinId  = null,
-        pendingLeaveId = null;
-  
-    /* capture‑phase listener ------------------------------------------------ */
-    table.addEventListener('click', (ev) => {
+  document.addEventListener('DOMContentLoaded', () => {
+    // if Bootstrap hasn’t loaded yet, wait for window.load
+    if (typeof bootstrap === 'undefined') {
+      window.addEventListener('load', initLabourHistory);
+    } else {
+      initLabourHistory();
+    }
+  });
+
+  function initLabourHistory() {
+    const table = document.querySelector('table');
+    if (!table) return;
+
+    const joinCommentModalElem  = document.getElementById('joinCommentModal');
+    const leaveCommentModalElem = document.getElementById('leaveCommentModal');
+    const historyModalElem      = document.getElementById('labourHistoryModal');
+    const historyList           = document.getElementById('labour-history-list');
+    const joinInHistoryBtn      = historyModalElem.querySelector('.join-in-history');
+
+    const joinModal    = new bootstrap.Modal(joinCommentModalElem,  { backdrop: 'static' });
+    const leaveModal   = new bootstrap.Modal(leaveCommentModalElem, { backdrop: 'static' });
+    const historyModal = new bootstrap.Modal(historyModalElem,      { backdrop: 'static' });
+
+    let pendingJoinId, pendingLeaveId;
+    const joinTA  = document.getElementById('join-comment-text');
+    const leaveTA = document.getElementById('leave-comment-text');
+    const csrftoken = document.cookie
+      .split(';')
+      .map(c => c.trim())
+      .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+
+    table.addEventListener('click', ev => {
+      // 1) Labour-history buttons
+      const labBtn = ev.target.closest('button.labour-btn');
+      if (labBtn) {
+        ev.preventDefault();
+        const entryId = labBtn.dataset.eventId;
+
+        // build history
+        const cell = table.querySelector(`.participants-cell[data-event-id="${entryId}"]`);
+        const items = Array.from(cell.querySelectorAll('div')).map(div => {
+          const user = div.childNodes[0]?.textContent.trim() || '';
+          const mins = div.querySelector('small')?.textContent.trim();
+          return `<li class="list-group-item"><strong>${user}</strong>${mins ? ' – ' + mins : ''}</li>`;
+        }).join('');
+        historyList.innerHTML = items || '<li class="list-group-item text-muted">No history yet.</li>';
+
+        // wire the “Join” inside history modal
+        joinInHistoryBtn.onclick = () => {
+          pendingJoinId = entryId;
+          joinTA.value = '';
+          historyModal.hide();
+          joinModal.show();
+        };
+
+        historyModal.show();
+        return;
+      }
+
+      // 2) Join / Leave buttons
       const btn = ev.target.closest('button.join-btn, button.leave-btn');
       if (!btn) return;
-  
       ev.stopImmediatePropagation();
       ev.preventDefault();
-  
+
       if (btn.classList.contains('join-btn')) {
-        pendingJoinId   = btn.dataset.eventId;
-        joinTA.value    = '';
-        bootstrap.Modal.getOrCreateInstance(
-          document.getElementById('joinCommentModal')
-        ).show();
+        pendingJoinId = btn.dataset.eventId;
+        joinTA.value = '';
+        joinModal.show();
       } else {
-        pendingLeaveId  = btn.dataset.eventId;
-        leaveTA.value   = '';
-        bootstrap.Modal.getOrCreateInstance(
-          document.getElementById('leaveCommentModal')
-        ).show();
+        pendingLeaveId = btn.dataset.eventId;
+        leaveTA.value = '';
+        leaveModal.show();
       }
-    }, true);                       // capture=true
-  
-    /* JOIN confirm ---------------------------------------------------------- */
-    document.getElementById('join-confirm-btn')
-      .addEventListener('click', () => {
-        const comment = joinTA.value.trim();
-        if (!comment) {
-          alert('Please describe what you plan on doing.');
-          return;
-        }
-  
-        fetch(joinUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-                     'X-CSRFToken': csrftoken },
-          body: JSON.stringify({ event_id: pendingJoinId,
-                                 join_comment: comment })
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => {
-          const cell = table.querySelector(
-            `.participants-cell[data-event-id="${pendingJoinId}"]`
-          );
-          if (cell) {
-            cell.querySelector('.join-btn')?.remove();
-            cell.insertAdjacentHTML('afterbegin', `
-              <div>
-                ${currentUser}
-                <button class="btn btn-sm btn-outline-danger leave-btn"
-                        data-event-id="${pendingJoinId}">Leave</button>
-              </div>`);
-          }
-          bootstrap.Modal.getInstance(
-            document.getElementById('joinCommentModal')
-          ).hide();
-        })
-        .catch(() => alert('Error joining event'));
-      });
-  
-    /* LEAVE confirm --------------------------------------------------------- */
-    document.getElementById('leave-confirm-btn')
-      .addEventListener('click', () => {
-        const comment = leaveTA.value.trim();
-        if (!comment) {
-          alert('Please describe what you did.');
-          return;
-        }
-  
-        fetch(leaveUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json',
-                     'X-CSRFToken': csrftoken },
-          body: JSON.stringify({ event_id: pendingLeaveId,
-                                 leave_comment: comment })
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          const cell = table.querySelector(
-            `.participants-cell[data-event-id="${pendingLeaveId}"]`
-          );
-          if (cell) {
-            const leaveBtn = cell.querySelector(
-              `button.leave-btn[data-event-id="${pendingLeaveId}"]`);
-            if (leaveBtn) {
-              leaveBtn.insertAdjacentHTML(
-                'afterend', `<small>– ${data.total_minutes} min</small>`);
-              leaveBtn.remove();
-            }
-            cell.insertAdjacentHTML('beforeend', `
-              <button class="btn btn-sm btn-outline-dark join-btn mt-2"
-                      data-event-id="${pendingLeaveId}">Join</button>`);
-          }
-          bootstrap.Modal.getInstance(
-            document.getElementById('leaveCommentModal')
-          ).hide();
-        })
-        .catch(() => alert('Error leaving event'));
-      });
-  })();
-  </script>
+    }, true);
+
+    // join confirmation (same as you already have)
+    document.getElementById('join-confirm-btn').addEventListener('click', () => {
+      const comment = joinTA.value.trim();
+      if (!comment) return alert('Please describe what you plan on doing.');
+      fetch("{% url 'join_downtime_event' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  csrftoken
+        },
+        body: JSON.stringify({ event_id: pendingJoinId, join_comment: comment })
+      })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(() => {
+        const cell = table.querySelector(`.participants-cell[data-event-id="${pendingJoinId}"]`);
+        cell.querySelector('.join-btn')?.remove();
+        cell.insertAdjacentHTML('afterbegin', `
+          <div>
+            ${"{{ request.user.username }}"}
+            <button class="btn btn-sm btn-outline-danger leave-btn"
+                    data-event-id="${pendingJoinId}">Leave</button>
+          </div>`);
+        joinModal.hide();
+      })
+      .catch(() => alert('Error joining event'));
+    });
+
+    // leave confirmation (same as you already have)
+    document.getElementById('leave-confirm-btn').addEventListener('click', () => {
+      const comment = leaveTA.value.trim();
+      if (!comment) return alert('Please describe what you did.');
+      fetch("{% url 'leave_downtime_event' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  csrftoken
+        },
+        body: JSON.stringify({ event_id: pendingLeaveId, leave_comment: comment })
+      })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        const cell = table.querySelector(`.participants-cell[data-event-id="${pendingLeaveId}"]`);
+        const leaveBtn = cell.querySelector(`button.leave-btn[data-event-id="${pendingLeaveId}"]`);
+        leaveBtn.insertAdjacentHTML('afterend', `<small>– ${data.total_minutes} min</small>`);
+        leaveBtn.remove();
+        cell.insertAdjacentHTML('beforeend', `
+          <button class="btn btn-sm btn-outline-dark join-btn mt-2"
+                  data-event-id="${pendingLeaveId}">Join</button>`);
+        leaveModal.hide();
+      })
+      .catch(() => alert('Error leaving event'));
+    });
+  }
+</script>
+
+
+
+
+
   
 
   <script>
