@@ -149,74 +149,74 @@
 
 
 {# ───────────────────────── downtime events table ────────────────── #}
-  <div class="table-responsive mt-4">
-    <table class="table table-striped table-hover table-bordered align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Start</th>
-          <th>Close-out</th>
-          <th>Machine</th>
-          <th>Category</th>
-          <th>Labour&nbsp;Needed</th>
-          <th>Comment</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for e in entries %}
-        <tr class="{% if not e.closeout_epoch %}table-warning{% endif %}">
-          {# ── Start time, conditionally formatted ── #}
-          <td>{{ e.start_display }}</td>
-
-
-          {# Close-out #}
-          <td>
+<div class="table-responsive mt-4">
+  <table class="table table-striped table-hover table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Info</th>
+        <th>Labour Needed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr class="{% if not e.closeout_epoch %}table-warning{% endif %}">
+        {# ── Consolidated Info column ── #}
+        <td>
+          <div><strong>Start:</strong> {{ e.start_display }}</div>
+          <div class="mt-1"><strong>Machine:</strong> {{ e.machine }}</div>
+          <div class="mt-1">
+            <span class="badge bg-secondary">{{ e.subcategory }}</span>
+          </div>
+          {% if e.comment %}
+          <div class="mt-1 text-muted">{{ e.comment }}</div>
+          {% endif %}
+          <div class="mt-2">
             {% if e.closeout_epoch %}
-              {{ e.closeout_epoch|date:"Y-m-d H:i" }}
+              <small class="text-muted">
+                Closed out at {{ e.closeout_epoch|date:"Y-m-d H:i" }}
+              </small>
             {% else %}
               <button class="btn btn-sm btn-info closeout-btn"
                       data-entry-id="{{ e.id }}">
                 Close&nbsp;out
               </button>
             {% endif %}
-          </td>
+          </div>
+        </td>
 
-          {# Line, Machine, Category, Sub-category #}
-          <td>{{ e.machine }}</td>
-          <td><span class="badge bg-secondary">{{ e.subcategory }}</span></td>
+        {# ── Labour needed ── #}
+        <td>
+          {% if e.labour_types %}
+            {% for code in e.labour_types %}
+              <button
+                type="button"
+                class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm labour-btn me-1"
+                data-event-id="{{ e.id }}"
+                data-role="{{ code|title }}"
+              >
+                {{ code|title }}
+              </button>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="2" class="text-center py-4">No downtime events found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-          {# Labour needed badges #}
-          <td>
-            {% if e.labour_types %}
-              {% for code in e.labour_types %}
-                <button
-                  type="button"
-                  class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} btn-sm labour-btn me-1"
-                  data-event-id="{{ e.id }}"
-                  data-role="{{ code|title }}"
-                >
-                  {{ code|title }}
-                </button>
-              {% endfor %}
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
+<div class="text-center mt-3">
+  <button id="load-more-btn" class="btn btn-dark">Load&nbsp;More</button>
+</div>
 
-          {# Comment #}
-          <td>{{ e.comment }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="9" class="text-center py-4">No downtime events found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
 
-  <div class="text-center mt-3">
-    <button id="load-more-btn" class="btn btn-dark">Load&nbsp;More</button>
-  </div>
+
 
 
 
