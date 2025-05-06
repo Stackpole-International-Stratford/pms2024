@@ -478,7 +478,7 @@ def load_more_downtime_entries(request):
             'start_at':      e.start_at.strftime('%Y-%m-%d %H:%M'),
             'closeout_at':   (
                                 e.closeout_epoch and
-                                _datetime.fromtimestamp(e.closeout_epoch)
+                                datetime.fromtimestamp(e.closeout_epoch)
                                           .strftime('%Y-%m-%d %H:%M')
                              ) or None,
             'line':          e.line,
