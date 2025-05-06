@@ -570,6 +570,9 @@ def list_all_downtime_entries(request):
         "user_roles":        user_roles,
         "active_workers":    active_workers,
         "inactive_workers":  inactive_workers,
+
+        'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
+        'lines_json':          mark_safe(json.dumps(prod_lines)),
     })
 
 
