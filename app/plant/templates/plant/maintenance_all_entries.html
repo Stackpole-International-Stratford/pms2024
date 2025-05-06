@@ -165,41 +165,30 @@
       </thead>
       <tbody>
         {% for e in entries %}
-        {# in your for-loop #}
-        <tr
-        data-entry-id="{{ e.id }}"
-        data-start="{{ e.start_at|date:'Y-m-d H:i' }}"
-        data-line="{{ e.line|escapejs }}"
-        data-machine="{{ e.machine|escapejs }}"
-        data-category="{{ e.category_code }}"
-        data-subcategory="{{ e.subcategory_code }}"        
-        data-comment="{{ e.comment|escapejs }}"
-      >
-
-          {# Start display (hh:mm or MM/DD) #}
+        <tr class="{% if not e.closeout_epoch %}table-warning{% endif %}">
+          {# ── Start time, conditionally formatted ── #}
           <td>{{ e.start_display }}</td>
-      
-          {# Close-out or button #}
+
+
+          {# Close-out #}
           <td>
             {% if e.closeout_epoch %}
               {{ e.closeout_epoch|date:"Y-m-d H:i" }}
             {% else %}
               <button class="btn btn-sm btn-info closeout-btn"
                       data-entry-id="{{ e.id }}">
-                Close out
+                Close&nbsp;out
               </button>
             {% endif %}
           </td>
-      
-          {# Line, Machine #}
+
+          {# Line, Machine, Category, Sub-category #}
           <td>{{ e.line }}</td>
           <td>{{ e.machine }}</td>
-      
-          {# Category & Sub-category badges #}
           <td><span class="badge bg-dark">{{ e.category }}</span></td>
           <td><span class="badge bg-secondary">{{ e.subcategory }}</span></td>
-      
-          {# Labour-needed buttons #}
+
+          {# Labour needed badges #}
           <td>
             {% if e.labour_types %}
               {% for code in e.labour_types %}
@@ -216,18 +205,16 @@
               <span class="text-muted">—</span>
             {% endif %}
           </td>
-      
+
           {# Comment #}
           <td>{{ e.comment }}</td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8" class="text-center py-4">
-            No downtime events found.
-          </td>
+          <td colspan="9" class="text-center py-4">No downtime events found.</td>
         </tr>
         {% endfor %}
-      </tbody>      
+      </tbody>
     </table>
   </div>
 
@@ -323,88 +310,6 @@
         <button id="history-join-btn" type="button" class="btn btn-warning">Join</button>
         <button id="history-leave-btn" type="button" class="btn btn-outline-danger">Leave</button>
         <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- EDIT ENTRY MODAL -->
-<div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editEntryModalLabel">Edit Downtime Entry</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        {% csrf_token %}
-        <input type="hidden" id="edit-entry-id">
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label for="edit-start-date" class="form-label">Date</label>
-            <input type="date" id="edit-start-date" class="form-control form-control-sm" required>
-          </div>
-          <div class="col-md-6">
-            <label for="edit-start-time" class="form-label">Time</label>
-            <input type="time" id="edit-start-time" class="form-control form-control-sm" required>
-          </div>
-          <div class="col-md-4">
-            <label for="edit-line-select" class="form-label">Line</label>
-            <select id="edit-line-select" class="form-select form-select-sm" required>
-              <option value="">Select Line</option>
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label for="edit-machine-select" class="form-label">Machine</label>
-            <select id="edit-machine-select" class="form-select form-select-sm" required disabled>
-              <option value="">Select Machine</option>
-            </select>
-          </div>
-          <div class="col-md-4">
-            <label for="edit-category-select" class="form-label">Category</label>
-            <select id="edit-category-select" class="form-select form-select-sm" required disabled>
-              <option value="">Select Category</option>
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label for="edit-subcategory-select" class="form-label">Sub-category</label>
-            <select id="edit-subcategory-select" class="form-select form-select-sm" required disabled>
-              <option value="">Select Sub-category</option>
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label for="edit-comment" class="form-label">Comment</label>
-            <textarea id="edit-comment"
-                      class="form-control form-control-sm"
-                      rows="2"
-                      maxlength="2000"
-                      required></textarea>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button"
-                id="delete-entry-btn"
-                class="btn btn-danger me-auto">
-          Delete
-        </button>
-        <button type="button"
-                id="open-closeout-from-edit"
-                class="btn btn-info">
-          Close Out
-        </button>
-        <button type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal">
-          Cancel
-        </button>
-        <button type="button"
-                id="save-entry-btn"
-                class="btn btn-warning">
-          Save Changes
-        </button>
       </div>
     </div>
   </div>
@@ -750,190 +655,7 @@
     </script>
     
     
-
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        // ── JSON fixtures ─────────────────────────────────────────────────────────
-        const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
-        const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
-        const csrfToken     = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-      
-        // ── Choices.js setup ─────────────────────────────────────────────────────
-        function makeChoices(selector) {
-          return new Choices(document.querySelector(selector), {
-            searchEnabled:  false,
-            itemSelectText: ''
-          });
-        }
-        const editChoices = {
-          line:        makeChoices('#edit-line-select'),
-          machine:     makeChoices('#edit-machine-select'),
-          category:    makeChoices('#edit-category-select'),
-          subcategory: makeChoices('#edit-subcategory-select'),
-        };
-        // disable downstream until upstream chosen
-        editChoices.machine.disable();
-        editChoices.category.disable();
-        editChoices.subcategory.disable();
-      
-        // ── Populate the LINE dropdown right away ────────────────────────────────
-        const lineOptions = prodLines.map(l => ({ value: l.line, label: l.line }));
-        editChoices.line.setChoices(lineOptions, 'value','label', true);
-      
-        // ── Cascade helper functions ────────────────────────────────────────────
-        function getMachines(lineVal) {
-          const ops = prodLines.find(l => l.line === lineVal)?.operations || [];
-          return ops.map(op => ({
-            label:   `Op ${op.op}`,
-            choices: op.machines.map(m => ({ value: m.number, label: m.number }))
-          }));
-        }
-        function getCats() {
-          return downtimeCodes.map(c => ({ value: c.code, label: c.name }));
-        }
-        function getSubs(catCode) {
-          const cat = downtimeCodes.find(c => c.code === catCode) || { subcategories: [] };
-          return cat.subcategories.map(s => ({ value: s.code, label: s.name }));
-        }
-      
-        // ── Wire up cascades ────────────────────────────────────────────────────
-        document.getElementById('edit-line-select').addEventListener('change', e => {
-          const v = e.target.value;
-          editChoices.machine.clearChoices()
-            .setChoices(getMachines(v), 'value','label', true)
-            .enable()
-            .showDropdown();
-          editChoices.category.clearChoices().disable();
-          editChoices.subcategory.clearChoices().disable();
-        });
-        document.getElementById('edit-machine-select').addEventListener('change', () => {
-          editChoices.category.clearChoices()
-            .setChoices(getCats(), 'value','label', true)
-            .enable()
-            .showDropdown();
-          editChoices.subcategory.clearChoices().disable();
-        });
-        document.getElementById('edit-category-select').addEventListener('change', e => {
-          editChoices.subcategory.clearChoices()
-            .setChoices(getSubs(e.target.value), 'value','label', true)
-            .enable()
-            .showDropdown();
-        });
-      
-        // ── Modal & form elements ───────────────────────────────────────────────
-        const editModal   = new bootstrap.Modal(document.getElementById('editEntryModal'));
-        const idInput     = document.getElementById('edit-entry-id');
-        const dateInput   = document.getElementById('edit-start-date');
-        const timeInput   = document.getElementById('edit-start-time');
-        const commentIn   = document.getElementById('edit-comment');
-        const saveBtn     = document.getElementById('save-entry-btn');
-        const delBtn      = document.getElementById('delete-entry-btn');
-        const closeBtn    = document.getElementById('open-closeout-from-edit');
-      
-        // ── 1) Row-click → populate & show ─────────────────────────────────────
-        document.querySelector('table tbody').addEventListener('click', e => {
-          const tr = e.target.closest('tr[data-entry-id]');
-          if (!tr) return;
-      
-          idInput.value = tr.dataset.entryId;
-          [ dateInput.value, timeInput.value ] = tr.dataset.start.split(' ');
-          commentIn.value = tr.dataset.comment;
-      
-          // populate each Choices
-          editChoices.line.setChoiceByValue(tr.dataset.line);
-          editChoices.machine.clearChoices()
-            .setChoices(getMachines(tr.dataset.line), 'value','label', true)
-            .enable()
-            .setChoiceByValue(tr.dataset.machine);
-          editChoices.category.clearChoices()
-            .setChoices(getCats(), 'value','label', true)
-            .enable()
-            .setChoiceByValue(tr.dataset.category);
-          editChoices.subcategory.clearChoices()
-            .setChoices(getSubs(tr.dataset.category), 'value','label', true)
-            .enable()
-            .setChoiceByValue(tr.dataset.subcategory);
-      
-          editModal.show();
-        });
-      
-        // ── 2) Delete via AJAX ─────────────────────────────────────────────────
-        delBtn.addEventListener('click', () => {
-          if (!confirm('Delete this downtime entry?')) return;
-          fetch("{% url 'delete_downtime_entry' %}", {
-            method: 'POST',
-            headers: {
-              'Content-Type':'application/json',
-              'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ entry_id: idInput.value })
-          })
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(() => {
-            document.querySelector(`tr[data-entry-id="${idInput.value}"]`)?.remove();
-            editModal.hide();
-          })
-          .catch(() => alert('Error deleting entry.'));
-        });
-      
-        // ── 3) Open Close-out Modal ─────────────────────────────────────────────
-        closeBtn.addEventListener('click', () => {
-          document.getElementById('closeout-entry-id').value = idInput.value;
-          new bootstrap.Modal(document.getElementById('closeoutModal')).show();
-        });
-      
-        // ── 4) Save Changes via AJAX ────────────────────────────────────────────
-        saveBtn.addEventListener('click', () => {
-          const payload = {
-            entry_id:    idInput.value,
-            start_date:  dateInput.value,
-            start_time:  timeInput.value,
-            line:        editChoices.line.getValue(true),
-            machine:     editChoices.machine.getValue(true),
-            category:    editChoices.category.getValue(true),
-            subcategory: editChoices.subcategory.getValue(true),
-            comment:     commentIn.value.trim(),
-          };
-      
-          fetch("{% url 'edit_downtime_entry' %}", {
-            method: 'POST',
-            headers: {
-              'Content-Type':'application/json',
-              'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify(payload)
-          })
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => {
-            const tr = document.querySelector(`tr[data-entry-id="${data.id}"]`);
-            if (!tr) return;
-            // update data-attributes
-            tr.dataset.start       = `${data.start_date} ${data.start_time}`;
-            tr.dataset.line        = data.line;
-            tr.dataset.machine     = data.machine;
-            tr.dataset.category    = data.category;
-            tr.dataset.subcategory = data.subcategory;
-            tr.dataset.comment     = data.comment;
-      
-            // update visible cells
-            tr.cells[0].textContent = data.start_display;
-            tr.cells[2].textContent = data.line;
-            tr.cells[3].textContent = data.machine;
-            tr.cells[4].innerHTML   = `<span class="badge bg-dark">${data.category}</span>`;
-            tr.cells[5].innerHTML   = `<span class="badge bg-secondary">${data.subcategory}</span>`;
-            tr.cells[7].textContent = data.comment;
-      
-            editModal.hide();
-          })
-          .catch(() => alert('Error saving changes.'));
-        });
-      });
-      </script>
     
-      
-      
-      
-      
     
   
 

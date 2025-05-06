@@ -492,9 +492,6 @@ def list_all_downtime_entries(request):
         "is_manager":      "maintenance_managers" in user_groups,
         "labour_choices":  MachineDowntimeEvent.LABOUR_CHOICES,
         "user_roles":      roles,
-        
-        "lines_json":            mark_safe(json.dumps(prod_lines)),
-        "downtime_codes_json":   mark_safe(json.dumps(DOWNTIME_CODES)),
     })
 
 
@@ -855,69 +852,3 @@ def add_employee(request):
     print(f"[DEBUG] New/updated employee → {first} {last}, roles: {roles}")
 
     return redirect(request.META.get("HTTP_REFERER", "index"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@require_POST
-@login_required
-def edit_downtime_entry(request):
-    try:
-        payload       = json.loads(request.body)
-        entry_id      = payload['entry_id']
-        sd, st        = payload['start_date'], payload['start_time']
-        line          = payload['line']
-        machine       = payload['machine']
-        category      = payload['category']
-        subcategory   = payload['subcategory']
-        comment       = payload['comment']
-    except (KeyError, ValueError):
-        return HttpResponseBadRequest("Invalid payload")
-
-    # parse and compute epoch
-    try:
-        dt = datetime.strptime(f"{sd} {st}", "%Y-%m-%d %H:%M")
-    except ValueError:
-        return HttpResponseBadRequest("Bad date/time")
-
-    event = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
-    event.start_epoch = int(dt.timestamp())
-    event.line        = line
-    event.machine     = machine
-    event.category    = category
-    event.subcategory = subcategory
-    event.comment     = comment
-    event.save(update_fields=[
-      'start_epoch','line','machine','category','subcategory','comment'
-    ])
-
-    # compute the new display string
-    local_dt = timezone.localtime(timezone.make_aware(dt, timezone.get_default_timezone()))
-    today    = timezone.localdate()
-    start_display = (
-      local_dt.strftime('%H:%M')
-      if local_dt.date() == today
-      else local_dt.strftime('%m/%d')
-    )
-
-    return JsonResponse({
-      'id':             event.id,
-      'start_display':  start_display,
-      'line':           event.line,
-      'machine':        event.machine,
-      'category':       event.category,
-      'subcategory':    event.subcategory,
-      'comment':        event.comment,
-    })

@@ -64,8 +64,4 @@ urlpatterns = [
     path('employees/add/', add_employee, name='add_employee'),
 
     path('downtime/<int:event_id>/history/', downtime_history, name='downtime_history'),
-
-    # at the bottom, alongside delete & closeout & join/leave:
-    path('maintenance/edit/', edit_downtime_entry, name='edit_downtime_entry'),
-
 ]
