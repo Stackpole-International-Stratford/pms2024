@@ -196,11 +196,10 @@
             class="btn btn-outline-dark labour-btn me-1"
             data-event-id="{{ e.id }}"
             data-role="{{ code|title }}"
-            data-bs-toggle="modal"
-            data-bs-target="#labourModal"
           >
             {{ code|title }}
           </button>
+          
           
             {% endfor %}
           {% else %}
@@ -280,46 +279,140 @@
   </div>
     
 
-
-  <!-- Join-as Role Modal -->
-  <div class="modal fade" id="labourModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            Join as <span id="labour-role-label"></span>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <!-- store event id -->
-          <input type="hidden" id="labour-event-id">
-          <div class="mb-3">
-            <label for="labour-comment" class="form-label">
-              Comment (optional)
-            </label>
-            <textarea id="labour-comment"
-                      class="form-control"
-                      rows="2"
-                      maxlength="2000"
-            ></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button"
-                  class="btn btn-secondary"
-                  data-bs-dismiss="modal">
-            Cancel
-          </button>
-          <button type="button"
-                  id="labour-confirm-btn"
-                  class="btn btn-primary">
-            Join
-          </button>
-        </div>
+<!-- -------------------------------------------------------------------------------------->
+  
+<!-- 1. History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Labour History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Joined At</th>
+              <th>Join Comment</th>
+              <th>Left At</th>
+              <th>Leave Comment</th>
+              <th>Total Min</th>
+            </tr>
+          </thead>
+          <tbody id="history-body">
+            <!-- JS will inject <tr>…</tr> here -->
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button id="history-join-btn"
+                type="button"
+                class="btn btn-outline-dark">
+          Join
+        </button>
+        <button id="history-leave-btn"
+                type="button"
+                class="btn btn-outline-danger">
+          Leave
+        </button>
+        <button type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal">
+          Close
+        </button>
       </div>
     </div>
   </div>
+</div>
+
+<!-- 2. Join Modal -->
+<div class="modal fade" id="joinModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Join Event</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="join-event-id">
+        <div class="mb-3">
+          <label class="form-label">Date &amp; Time</label>
+          <input type="datetime-local"
+                 id="join-datetime"
+                 class="form-control"
+                 readonly>
+        </div>
+        <div class="mb-3">
+          <label for="join-comment" class="form-label">What will you do?</label>
+          <textarea id="join-comment"
+                    class="form-control"
+                    rows="2"
+                    required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button id="join-confirm-btn"
+                type="button"
+                class="btn btn-primary">
+          Confirm Join
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Leave Modal -->
+<div class="modal fade" id="leaveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Leave Event</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="leave-event-id">
+        <div class="mb-3">
+          <label class="form-label">Date &amp; Time</label>
+          <input type="datetime-local"
+                 id="leave-datetime"
+                 class="form-control"
+                 readonly>
+        </div>
+        <div class="mb-3">
+          <label for="leave-comment" class="form-label">What did you do?</label>
+          <textarea id="leave-comment"
+                    class="form-control"
+                    rows="2"
+                    required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button id="leave-confirm-btn"
+                type="button"
+                class="btn btn-danger">
+          Confirm Leave
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- -------------------------------------------------------------------------------------->
 
 
   
@@ -386,181 +479,254 @@
 
 
 
-<!-- 3) Load-More, filters, and labour-modal hookup -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // — keep track of current user for renderRow —
-    const currentUser = "{{ request.user.username }}";
-  
-    // — Load More —
-    const loadMoreBtn = document.getElementById('load-more-btn');
-    const pageSize    = {{ page_size }};
-    let offset        = pageSize;
-    const loadUrl     = "{% url 'load_more_downtime_entries' %}";
-    loadMoreBtn?.addEventListener('click', () => {
-      loadMoreBtn.disabled = true;
-      fetch(`${loadUrl}?offset=${offset}`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          const tbody = document.querySelector('table tbody');
-          data.entries.forEach(e => tbody.insertAdjacentHTML('beforeend', renderRow(e)));
-          offset += pageSize;
-          if (!data.has_more) loadMoreBtn.remove();
-          else loadMoreBtn.disabled = false;
-        })
-        .catch(() => {
-          alert('Error loading more entries');
-          loadMoreBtn.disabled = false;
-        });
-    });
-  
-    // — Labour-type live filter —
-    const labourCheckboxes = Array.from(document.querySelectorAll('.labour-filter'));
-    function filterByLabour() {
-      const sel = labourCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
-      document.querySelectorAll('table tbody tr').forEach(row => {
-        const codes = Array.from(row.cells[6].querySelectorAll('span.badge.bg-info'))
-                           .map(s => s.textContent.trim());
-        row.style.display = sel.length === 0 || codes.some(c => sel.includes(c))
-                            ? '' : 'none';
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // ─── Track current user ───────────────────────────────────────────────
+      const currentUser = "{{ request.user.username }}";
+    
+      // ─── Load-More logic ─────────────────────────────────────────────────
+      const loadMoreBtn = document.getElementById('load-more-btn');
+      const pageSize    = {{ page_size }};
+      let offset        = pageSize;
+      const loadUrl     = "{% url 'load_more_downtime_entries' %}";
+    
+      loadMoreBtn?.addEventListener('click', () => {
+        loadMoreBtn.disabled = true;
+        fetch(`${loadUrl}?offset=${offset}`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            const tbody = document.querySelector('table tbody');
+            data.entries.forEach(e => tbody.insertAdjacentHTML('beforeend', renderRow(e)));
+            offset += pageSize;
+            if (!data.has_more) loadMoreBtn.remove();
+            else loadMoreBtn.disabled = false;
+          })
+          .catch(() => {
+            alert('Error loading more entries');
+            loadMoreBtn.disabled = false;
+          });
       });
-    }
-    labourCheckboxes.forEach(cb => cb.addEventListener('change', filterByLabour));
-    filterByLabour();
-  
-    // — Participant filters —
-    const container = document.getElementById('participant-filters');
-    if (container) {
-      const namesSet = new Set();
-      document.querySelectorAll('.participants-cell').forEach(cell =>
-        cell.querySelectorAll('div').forEach(div => {
-          const txt = div.childNodes[0]?.textContent.trim();
-          if (txt) namesSet.add(txt);
-        })
-      );
-      const names    = Array.from(namesSet).sort();
-      const selected = new Set();
-  
-      function renderButtons() {
-        container.innerHTML = '';
-        names.forEach(name => {
-          const btn = document.createElement('button');
-          btn.type        = 'button';
-          btn.className   = 'btn btn-sm btn-outline-dark me-2 mb-2';
-          btn.textContent = name;
-          btn.dataset.name= name;
-          if (selected.has(name)) btn.classList.add('active');
-          container.appendChild(btn);
-        });
-      }
-  
-      function filterRows() {
+    
+      // ─── Labour-type live filter ──────────────────────────────────────────
+      const labourCheckboxes = Array.from(document.querySelectorAll('.labour-filter'));
+      function filterByLabour() {
+        const sel = labourCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
         document.querySelectorAll('table tbody tr').forEach(row => {
-          if (selected.size === 0) {
-            row.style.display = '';
-            return;
-          }
-          const rowNames = Array.from(
-            row.querySelectorAll('.participants-cell > div')
-          ).map(div => div.childNodes[0]?.textContent.trim());
-          row.style.display = Array.from(selected).some(n => rowNames.includes(n))
+          const codes = Array.from(row.cells[6].querySelectorAll('span.badge.bg-info'))
+                             .map(s => s.textContent.trim());
+          row.style.display = sel.length === 0 || codes.some(c => sel.includes(c))
                               ? '' : 'none';
         });
       }
-  
-      container.addEventListener('click', e => {
-        const btn = e.target.closest('button');
-        if (!btn?.dataset.name) return;
-        const name = btn.dataset.name;
-        if (selected.has(name)) {
-          selected.delete(name);
-          btn.classList.remove('active');
-        } else {
-          selected.add(name);
-          btn.classList.add('active');
+      labourCheckboxes.forEach(cb => cb.addEventListener('change', filterByLabour));
+      filterByLabour();
+    
+      // ─── Participant filters ─────────────────────────────────────────────
+      const container = document.getElementById('participant-filters');
+      if (container) {
+        const namesSet = new Set();
+        document.querySelectorAll('.participants-cell').forEach(cell =>
+          cell.querySelectorAll('div').forEach(div => {
+            const txt = div.childNodes[0]?.textContent.trim();
+            if (txt) namesSet.add(txt);
+          })
+        );
+        const names    = Array.from(namesSet).sort();
+        const selected = new Set();
+    
+        function renderButtons() {
+          container.innerHTML = '';
+          names.forEach(name => {
+            const btn = document.createElement('button');
+            btn.type        = 'button';
+            btn.className   = 'btn btn-sm btn-outline-dark me-2 mb-2';
+            btn.textContent = name;
+            btn.dataset.name= name;
+            if (selected.has(name)) btn.classList.add('active');
+            container.appendChild(btn);
+          });
         }
-        filterRows();
+    
+        function filterRows() {
+          document.querySelectorAll('table tbody tr').forEach(row => {
+            if (selected.size === 0) {
+              row.style.display = '';
+              return;
+            }
+            const rowNames = Array.from(
+              row.querySelectorAll('.participants-cell > div')
+            ).map(div => div.childNodes[0]?.textContent.trim());
+            row.style.display = Array.from(selected).some(n => rowNames.includes(n))
+                                ? '' : 'none';
+          });
+        }
+    
+        container.addEventListener('click', e => {
+          const btn = e.target.closest('button');
+          if (!btn?.dataset.name) return;
+          const name = btn.dataset.name;
+          if (selected.has(name)) {
+            selected.delete(name);
+            btn.classList.remove('active');
+          } else {
+            selected.add(name);
+            btn.classList.add('active');
+          }
+          filterRows();
+        });
+    
+        renderButtons();
+      }
+    
+      // ─── Modals: History, Join & Leave ──────────────────────────────────
+      const historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
+      const joinModal    = new bootstrap.Modal(document.getElementById('joinModal'));
+      const leaveModal   = new bootstrap.Modal(document.getElementById('leaveModal'));
+    
+      // 1) Click any labour-btn → load history & show History Modal
+      document.querySelectorAll('.labour-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const eventId = btn.dataset.eventId;
+          fetch(`/plant/downtime/${eventId}/history/`)
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
+              const tbody = document.getElementById('history-body');
+              tbody.innerHTML = '';
+              let userHasOpen = false;
+    
+              data.history.forEach(p => {
+                if (p.user === currentUser && !p.leave_at) userHasOpen = true;
+                tbody.insertAdjacentHTML('beforeend', `
+                  <tr>
+                    <td>${p.user}</td>
+                    <td>${p.join_at}</td>
+                    <td>${p.join_comment}</td>
+                    <td>${p.leave_at || '—'}</td>
+                    <td>${p.leave_comment}</td>
+                    <td>${p.total_minutes}</td>
+                  </tr>
+                `);
+              });
+    
+              // Show only the appropriate action button
+              document.getElementById('history-join-btn').style.display  = userHasOpen ? 'none' : 'inline-block';
+              document.getElementById('history-leave-btn').style.display = userHasOpen ? 'inline-block' : 'none';
+    
+              // Store eventId for the next steps
+              document.getElementById('history-join-btn').dataset.eventId  = eventId;
+              document.getElementById('history-leave-btn').dataset.eventId = eventId;
+    
+              historyModal.show();
+            })
+            .catch(() => alert('Could not load history.'));
+        });
       });
-  
-      renderButtons();
-    }
-  
-    // — Labour-Modal hookup via data-bs attributes —
-    const labourModalEl = document.getElementById('labourModal');
-    labourModalEl?.addEventListener('show.bs.modal', evt => {
-      const btn = evt.relatedTarget;
-      document.getElementById('labour-role-label').textContent    = btn.getAttribute('data-role');
-      document.getElementById('labour-event-id').value           = btn.getAttribute('data-event-id');
-      document.getElementById('labour-comment').value            = '';
-    });
-  
-    document.getElementById('labour-confirm-btn')
-      ?.addEventListener('click', () => {
-        const id      = document.getElementById('labour-event-id').value;
-        const comment = document.getElementById('labour-comment').value.trim();
+    
+      // 2) “Join” in History → open Join Modal
+      document.getElementById('history-join-btn').addEventListener('click', evt => {
+        const id = evt.currentTarget.dataset.eventId;
+        document.getElementById('join-event-id').value   = id;
+        document.getElementById('join-datetime').value   = new Date().toISOString().slice(0,16);
+        document.getElementById('join-comment').value    = '';
+        historyModal.hide();
+        joinModal.show();
+      });
+    
+      // 3) Confirm Join → POST → reload
+      document.getElementById('join-confirm-btn').addEventListener('click', () => {
+        const id   = document.getElementById('join-event-id').value;
+        const note = document.getElementById('join-comment').value.trim();
+        if (!note) return alert('Please say what you plan to do.');
         fetch("{% url 'join_downtime_event' %}", {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
           },
-          body: JSON.stringify({ event_id: id, join_comment: comment })
+          body: JSON.stringify({ event_id: id, join_comment: note })
         })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => window.location.reload())
-        .catch(() => alert('Could not join event. Try again.'));
+        .then(r => r.ok ? location.reload() : Promise.reject())
+        .catch(() => alert('Could not join event.'));
       });
-  });
-  
-  // — helper to render a row from AJAX payload —
-  function renderRow(e) {
-    const labourHtml = Array.isArray(e.labour_types) && e.labour_types.length
-      ? e.labour_types.map(l => `<span class="badge bg-info">${l}</span>`).join(' ')
-      : '<span class="text-muted">—</span>';
-  
-    const parts = [];
-    if (Array.isArray(e.participants)) {
-      e.participants.forEach(p => {
-        if (p.leave_epoch == null) {
-          parts.push(`
-            <div>
-              ${p.user}
-              ${p.user === currentUser
-                ? `<button class="btn btn-sm btn-outline-danger leave-btn"
-                           data-event-id="${e.id}">Leave</button>`
-                : ''}
-            </div>`);
-        } else {
-          parts.push(`<div>${p.user} <small>– ${p.total_minutes} min</small></div>`);
+    
+      // 4) “Leave” in History → open Leave Modal
+      document.getElementById('history-leave-btn').addEventListener('click', evt => {
+        const id = evt.currentTarget.dataset.eventId;
+        document.getElementById('leave-event-id').value   = id;
+        document.getElementById('leave-datetime').value   = new Date().toISOString().slice(0,16);
+        document.getElementById('leave-comment').value    = '';
+        historyModal.hide();
+        leaveModal.show();
+      });
+    
+      // 5) Confirm Leave → POST → reload
+      document.getElementById('leave-confirm-btn').addEventListener('click', () => {
+        const id   = document.getElementById('leave-event-id').value;
+        const note = document.getElementById('leave-comment').value.trim();
+        if (!note) return alert('Please describe what you did.');
+        fetch("{% url 'leave_downtime_event' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
+          },
+          body: JSON.stringify({ event_id: id, leave_comment: note })
+        })
+        .then(r => r.ok ? location.reload() : Promise.reject())
+        .catch(() => alert('Could not leave event.'));
+      });
+    
+      // ─── Helper: renderRow (unchanged) ────────────────────────────────────
+      function renderRow(e) {
+        const labourHtml = Array.isArray(e.labour_types) && e.labour_types.length
+          ? e.labour_types.map(l => `<span class="badge bg-info">${l}</span>`).join(' ')
+          : '<span class="text-muted">—</span>';
+    
+        const parts = [];
+        if (Array.isArray(e.participants)) {
+          e.participants.forEach(p => {
+            if (p.leave_epoch == null) {
+              parts.push(`
+                <div>
+                  ${p.user}
+                  ${p.user === currentUser
+                    ? `<button class="btn btn-sm btn-outline-danger leave-btn"
+                               data-event-id="${e.id}">Leave</button>`
+                    : ''}
+                </div>`);
+            } else {
+              parts.push(`<div>${p.user} <small>– ${p.total_minutes} min</small></div>`);
+            }
+          });
         }
-      });
-    }
-    if (!e.user_has_open) {
-      parts.push(`
-        <button class="btn btn-sm btn-outline-dark join-btn mt-2"
-                data-event-id="${e.id}">Join</button>`);
-    }
-  
-    const closeoutHtml = e.closeout_at
-      ? e.closeout_at
-      : `<span class="text-muted">— open —</span>`;
-  
-    return `
-      <tr class="${e.closeout_at ? '' : 'table-warning'}">
-        <td>${e.start_at}</td>
-        <td>${closeoutHtml}</td>
-        <td>${e.line}</td>
-        <td>${e.machine}</td>
-        <td><span class="badge bg-dark">${e.category}</span></td>
-        <td><span class="badge bg-secondary">${e.subcategory}</span></td>
-        <td>${labourHtml}</td>
-        <td class="participants-cell" data-event-id="${e.id}">
-          ${parts.join('')}
-        </td>
-        <td>${e.comment}</td>
-      </tr>`;
-  }
-  </script>
+        if (!e.user_has_open) {
+          parts.push(`
+            <button class="btn btn-sm btn-outline-dark join-btn mt-2"
+                    data-event-id="${e.id}">Join</button>`);
+        }
+    
+        const closeoutHtml = e.closeout_at
+          ? e.closeout_at
+          : `<span class="text-muted">— open —</span>`;
+    
+        return `
+          <tr class="${e.closeout_at ? '' : 'table-warning'}">
+            <td>${e.start_at}</td>
+            <td>${closeoutHtml}</td>
+            <td>${e.line}</td>
+            <td>${e.machine}</td>
+            <td><span class="badge bg-dark">${e.category}</span></td>
+            <td><span class="badge bg-secondary">${e.subcategory}</span></td>
+            <td>${labourHtml}</td>
+            <td class="participants-cell" data-event-id="${e.id}">
+              ${parts.join('')}
+            </td>
+            <td>${e.comment}</td>
+          </tr>`;
+      }
+    });
+    </script>
+    
   
 
 
