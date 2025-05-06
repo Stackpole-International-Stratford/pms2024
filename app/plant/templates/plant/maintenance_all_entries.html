@@ -145,29 +145,6 @@
   {# ───────────────────────── end accordion ────────────────────────────────────── #}
   {% endif %}
 
-    {# ────── Labour-type filters (exclude OPERATOR) ────── #}
-    <div class="mb-4">
-      {% for code,label in labour_choices %}
-        {% if code != 'OPERATOR' %}
-          <div class="form-check form-check-inline">
-            <input
-              class="form-check-input labour-filter"
-              type="checkbox"
-              id="filter{{ code }}"
-              value="{{ code }}"
-            >
-            <label
-              class="form-check-label"
-              for="filter{{ code }}"
-            >{{ label }}</label>
-          </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-  
-
-    {# ────── Participant filters will go here ────── #}
-    <div id="participant-filters" class="mb-3"></div>
 
 
 {# ───────────────────────── downtime events table ────────────────── #}
@@ -216,13 +193,13 @@
             {% for code in e.labour_types %}
             <button
             type="button"
-            class="btn btn-outline-dark btn-sm labour-btn me-1"
+            class="btn btn-outline-dark labour-btn me-1"
             data-event-id="{{ e.id }}"
-            data-role="{{ code|upper }}"
+            data-role="{{ code|title }}"
             data-bs-toggle="modal"
             data-bs-target="#labourModal"
           >
-            {{ code|slice:":1"|upper }}
+            {{ code|title }}
           </button>
           
             {% endfor %}
@@ -300,6 +277,7 @@
         </div>
       </div>
     </div>
+  </div>
     
 
 
@@ -343,26 +321,8 @@
     </div>
   </div>
 
-<!-- 1) Auto-tick labour filters based on user-roles -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const roles = JSON.parse(
-      document.getElementById('user-roles-json').textContent
-    ).map(r => r.toUpperCase());
-  
-    // wait a moment for the DOM & any other scripts
-    setTimeout(() => {
-      roles.forEach(code => {
-        const cb = document.querySelector(`.labour-filter[value="${code}"]`);
-        if (cb) cb.checked = true;
-      });
-      if (typeof filterByLabour === 'function') filterByLabour();
-    }, 1000);
-  });
-  </script>
-  
 
-
+  
 <!-- 2) Close-out modal logic -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -423,6 +383,8 @@
   });
   </script>
   
+
+
 
 <!-- 3) Load-More, filters, and labour-modal hookup -->
 <script>
