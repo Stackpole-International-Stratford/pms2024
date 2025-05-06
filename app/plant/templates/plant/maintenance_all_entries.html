@@ -5,9 +5,34 @@
   {% csrf_token %}
   {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
 
-  <h1 class="mb-4 text-center">Open Downtime Events</h1>
+  <div class="title-container">
+    <h1 class="mb-4 text-center">Open Downtime Events</h1>
+    <div class="todo">
+      ToDo: edit the entry in-line (this will take a couple of hours)
+    </div>
+  </div>
+  
 
-
+<style>
+  .title-container {
+    position: relative;
+    width: 100%;
+    text-align: center; /* center the H1 */
+  }
+  
+  .title-container .todo {
+    display: none;
+    margin-top: 0.5em;
+    font-size: 0.9em;
+    color: #555;
+  }
+  
+  .title-container:hover .todo {
+    display: block;
+  }
+  
+  
+</style>
 
   {% if is_manager %}
 
