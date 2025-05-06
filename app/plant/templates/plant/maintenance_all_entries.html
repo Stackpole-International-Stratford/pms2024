@@ -189,8 +189,9 @@
     <tbody>
       {% for e in entries %}
       <tr class="{% if not e.closeout_epoch %}table-warning{% endif %}">
-        {# Start time #}
-        <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
+        {# ── Start time, conditionally formatted ── #}
+        <td>{{ e.start_display }}</td>
+
 
         {# Close-out #}
         <td>

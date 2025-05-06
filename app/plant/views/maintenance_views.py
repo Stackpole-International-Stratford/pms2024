@@ -20,6 +20,7 @@ from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
 from django.http        import HttpResponseForbidden
 import math
+from django.utils.timezone import is_naive, make_aware, get_default_timezone
 
 
 
@@ -407,29 +408,25 @@ def user_has_maintenance_access(user) -> bool:
     )
 
 # --------------------------- rewritten view ---------------------------------- #
+
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    # ── 0)  ACCESS GATE ────────────────────────────────────────────────────────
+    # ── access control
     if not user_has_maintenance_access(request.user):
-        return HttpResponseForbidden("You are not authorized to view this page. Ask the Maintenance Manager to add your profile " \
-        "to its appropriate group(s) (electrician / tech / millwright)")
+        return HttpResponseForbidden(
+            "You are not authorized to view this page. "
+            "Ask your Maintenance Manager to add you to the appropriate group."
+        )
 
-    # ── 1)  Base queryset of open downtimes ───────────────────────────────────
-    base_qs = MachineDowntimeEvent.objects.filter(
-        is_deleted=False,
-        closeout_epoch__isnull=True,
-    )
-
-    # ── 2)  Subquery to pull each line’s priority (default 999) ───────────────
+    # ── build queryset
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
         .values("priority")[:1]
     )
-
-    # ── 3)  Annotate + order by priority, then most‑recent start ──────────────
     qs = (
-        base_qs
+        MachineDowntimeEvent.objects
+        .filter(is_deleted=False, closeout_epoch__isnull=True)
         .annotate(
             line_priority=Coalesce(
                 Subquery(priority_sq, output_field=IntegerField()),
@@ -438,91 +435,107 @@ def list_all_downtime_entries(request):
             )
         )
         .order_by("line_priority", "-start_epoch")
-        .prefetch_related("participants")
+        .prefetch_related("participants__user")
     )
 
-    # ── 4)  First PAGE_SIZE rows as a list (so we can mutate attrs) ───────────
     entries = list(qs[:PAGE_SIZE])
+    today = timezone.localdate()
+    default_tz = get_default_timezone()
 
-    # ── 5)  Mark whether *this* user already has an open participation ────────
     for e in entries:
+        # make e.start_at timezone-aware if necessary
+        dt = e.start_at
+        if is_naive(dt):
+            dt = make_aware(dt, default_tz)
+        # convert to localtime
+        local_dt = timezone.localtime(dt)
+
+        # format display
+        if local_dt.date() == today:
+            e.start_display = local_dt.strftime('%H:%M')
+        else:
+            e.start_display = local_dt.strftime('%m/%d')
+
+        # flag whether current user already joined
         e.user_has_open = e.participants.filter(
             user=request.user, leave_epoch__isnull=True
         ).exists()
 
-    # ── 6)  Figure out roles & manager flag for the template ──────────────────
-    user_group_names = set(request.user.groups.values_list("name", flat=True))
-    user_roles = [
-        role for role, grp in ROLE_TO_GROUP.items() if grp in user_group_names
-    ]  # e.g. ['electrician', 'tech']
+    user_groups = set(request.user.groups.values_list("name", flat=True))
+    roles = [r for r, g in ROLE_TO_GROUP.items() if g in user_groups]
 
     context = {
         "entries":         entries,
         "page_size":       PAGE_SIZE,
         "line_priorities": LinePriority.objects.all(),
-        "is_manager":      "maintenance_managers" in user_group_names,
+        "is_manager":      "maintenance_managers" in user_groups,
         "labour_choices":  MachineDowntimeEvent.LABOUR_CHOICES,
-        "user_roles":      user_roles,
+        "user_roles":      roles,
     }
     return render(request, "plant/maintenance_all_entries.html", context)
 
+
 @login_required
 def load_more_downtime_entries(request):
-    """
-    AJAX endpoint: GET /plant/downtime/load-more/?offset=N
-    → returns JSON {
-         "entries": [ {id, start_at, closeout_at, …}, … ],
-         "has_more": bool
-       }
-    """
-    # 1) parse offset
+    # parse offset
     try:
         offset = int(request.GET.get('offset', 0))
     except (TypeError, ValueError):
         offset = 0
 
-    # 2) grab open downtimes, newest first, prefetch participants & users
     qs = (
         MachineDowntimeEvent.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
         .order_by('-start_epoch')
         .prefetch_related('participants__user')
     )
-
-    total_count = qs.count()
+    total = qs.count()
     batch = qs[offset:offset + PAGE_SIZE]
 
-    # 3) build JSON payload
-    entries = []
-    for e in batch:
-        # find all users who have joined but not yet left
-        open_parts = e.participants.filter(leave_epoch__isnull=True)
-        assigned_usernames = [p.user.username for p in open_parts]
+    today = timezone.localdate()
+    default_tz = get_default_timezone()
 
-        entries.append({
-            'id':            e.id,
-            'start_at':      e.start_at.strftime('%Y-%m-%d %H:%M'),
-            'closeout_at':   (
-                                e.closeout_epoch and
-                                datetime.fromtimestamp(e.closeout_epoch)
-                                          .strftime('%Y-%m-%d %H:%M')
-                             ) or None,
-            'line':          e.line,
-            'machine':       e.machine,
-            'category':      e.category,
-            'subcategory':   e.subcategory,
-            'labour_types':  e.labour_types,
-            'assigned_to':   assigned_usernames,
-            'comment':       e.comment,
+    data = []
+    for e in batch:
+        # timezone-aware start_at
+        dt = e.start_at
+        if is_naive(dt):
+            dt = make_aware(dt, default_tz)
+        local_dt = timezone.localtime(dt)
+
+        # choose display
+        if local_dt.date() == today:
+            start_display = local_dt.strftime('%H:%M')
+        else:
+            start_display = local_dt.strftime('%m/%d')
+
+        # gather open participants
+        open_parts = e.participants.filter(leave_epoch__isnull=True)
+        users = [p.user.username for p in open_parts]
+
+        data.append({
+            'id':             e.id,
+            'start_at':       e.start_at.strftime('%Y-%m-%d %H:%M'),
+            'start_display':  start_display,
+            'closeout_at':    (
+                                 e.closeout_epoch and
+                                 datetime.fromtimestamp(e.closeout_epoch)
+                                         .strftime('%Y-%m-%d %H:%M')
+                               ) or None,
+            'line':           e.line,
+            'machine':        e.machine,
+            'category':       e.category,
+            'subcategory':    e.subcategory,
+            'labour_types':   e.labour_types,
+            'assigned_to':    users,
+            'comment':        e.comment,
         })
 
-    # 4) tell client if there’s more to load
-    has_more = total_count > offset + PAGE_SIZE
-
     return JsonResponse({
-        'entries':  entries,
-        'has_more': has_more,
+        'entries':  data,
+        'has_more': total > offset + PAGE_SIZE,
     })
+
 
 
 @require_POST
