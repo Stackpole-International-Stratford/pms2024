@@ -15,11 +15,11 @@ from django.db import transaction
 from django.db.models import OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
 import time
-# views/employee_views.py
 from django.contrib import messages
 from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
 from django.http        import HttpResponseForbidden
+import math
 
 
 
@@ -175,30 +175,56 @@ def delete_downtime_entry(request):
 
 @require_POST
 def closeout_downtime_entry(request):
+    """
+    Close out a downtime event and auto-leave all participants.
+    Expects JSON body:
+      {
+        "entry_id":           <int>,
+        "closeout":           "YYYY-MM-DD HH:MM",
+        "closeout_comment":   <string>
+      }
+    """
+    # ── 1) parse payload ───────────────────────────────────────────────────────
     try:
-        payload        = json.loads(request.body)
-        entry_id       = payload['entry_id']
-        close_str      = payload['closeout']           # e.g. "2025-05-01 18:08"
-        closeout_comment = payload['closeout_comment'] # NEW
-        # parse into a naive datetime in server local time
-        close_dt       = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
+        payload          = json.loads(request.body)
+        entry_id         = payload['entry_id']
+        close_str        = payload['closeout']            # e.g. "2025-05-01 18:08"
+        closeout_comment = payload['closeout_comment']
+        close_dt         = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
+    # ── 2) fetch event ─────────────────────────────────────────────────────────
     try:
-        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+        event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # compute epoch exactly like you do for start_epoch
+    # ── 3) compute epoch ───────────────────────────────────────────────────────
     epoch_ts = int(close_dt.timestamp())
 
-    # save the epoch and the comment
-    e.closeout_epoch     = epoch_ts
-    e.closeout_comment   = closeout_comment  # NEW
-    e.save(update_fields=['closeout_epoch', 'closeout_comment'])
+    # ── 4) perform updates atomically ─────────────────────────────────────────
+    with transaction.atomic():
+        # 4a) close out the event itself
+        event.closeout_epoch   = epoch_ts
+        event.closeout_comment = closeout_comment
+        event.save(update_fields=['closeout_epoch', 'closeout_comment'])
 
-    # return the epoch back to the JS caller
+        # 4b) find all still-joined participations
+        open_parts = DowntimeParticipation.objects.filter(
+            event=event,
+            leave_epoch__isnull=True
+        )
+
+        # 4c) mark each one as left at the same epoch
+        for part in open_parts:
+            part.leave_epoch   = epoch_ts
+            part.leave_comment = f"Job is finished: {closeout_comment}"
+            # round up to whole minutes
+            part.total_minutes = math.ceil((epoch_ts - part.join_epoch) / 60)
+            part.save(update_fields=['leave_epoch', 'leave_comment', 'total_minutes'])
+
+    # ── 5) respond to caller ───────────────────────────────────────────────────
     return JsonResponse({
         'status':          'ok',
         'closed_at_epoch': epoch_ts,
