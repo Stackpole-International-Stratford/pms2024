@@ -165,16 +165,17 @@
       </thead>
       <tbody>
         {% for e in entries %}
+        {# in your for-loop #}
         <tr
-          class="{% if not e.closeout_epoch %}table-warning{% endif %}"
-          data-entry-id="{{ e.id }}"
-          data-start="{{ e.start_at|date:'Y-m-d H:i' }}"
-          data-line="{{ e.line|escapejs }}"
-          data-machine="{{ e.machine|escapejs }}"
-          data-category="{{ e.category|escapejs }}"
-          data-subcategory="{{ e.subcategory|escapejs }}"
-          data-comment="{{ e.comment|escapejs }}"
-        >
+        data-entry-id="{{ e.id }}"
+        data-start="{{ e.start_at|date:'Y-m-d H:i' }}"
+        data-line="{{ e.line|escapejs }}"
+        data-machine="{{ e.machine|escapejs }}"
+        data-category="{{ e.category_code }}"
+        data-subcategory="{{ e.subcategory_code }}"        
+        data-comment="{{ e.comment|escapejs }}"
+      >
+
           {# Start display (hh:mm or MM/DD) #}
           <td>{{ e.start_display }}</td>
       
@@ -749,18 +750,19 @@
     </script>
     
     
+
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        // ── JSON fixtures from the view
+        // ── JSON fixtures ─────────────────────────────────────────────────────────
         const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
         const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
-        const csrfToken     = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfToken     = document.querySelector('[name="csrfmiddlewaretoken"]').value;
       
-        // ── Choices.js setup
-        function makeChoices(sel) {
-          return new Choices(document.querySelector(sel), {
+        // ── Choices.js setup ─────────────────────────────────────────────────────
+        function makeChoices(selector) {
+          return new Choices(document.querySelector(selector), {
             searchEnabled:  false,
-            itemSelectText: '',
+            itemSelectText: ''
           });
         }
         const editChoices = {
@@ -769,110 +771,119 @@
           category:    makeChoices('#edit-category-select'),
           subcategory: makeChoices('#edit-subcategory-select'),
         };
-        // disable children
+        // disable downstream until upstream chosen
         editChoices.machine.disable();
         editChoices.category.disable();
         editChoices.subcategory.disable();
       
-        // ── Cascade helpers (same as your add page)
-        function getMachines(line) {
-          const ops = prodLines.find(l=>l.line===line)?.operations||[];
-          return ops.map(op=>({
+        // ── Populate the LINE dropdown right away ────────────────────────────────
+        const lineOptions = prodLines.map(l => ({ value: l.line, label: l.line }));
+        editChoices.line.setChoices(lineOptions, 'value','label', true);
+      
+        // ── Cascade helper functions ────────────────────────────────────────────
+        function getMachines(lineVal) {
+          const ops = prodLines.find(l => l.line === lineVal)?.operations || [];
+          return ops.map(op => ({
             label:   `Op ${op.op}`,
-            choices: op.machines.map(m=>({value:m.number,label:m.number}))
+            choices: op.machines.map(m => ({ value: m.number, label: m.number }))
           }));
         }
-        function getCats(){
-          return downtimeCodes.map(c=>({value:c.code,label:c.name}));
+        function getCats() {
+          return downtimeCodes.map(c => ({ value: c.code, label: c.name }));
         }
-        function getSubs(cat){
-          const c = downtimeCodes.find(x=>x.code===cat);
-          return (c?.subcategories||[]).map(s=>({value:s.code,label:s.name}));
+        function getSubs(catCode) {
+          const cat = downtimeCodes.find(c => c.code === catCode) || { subcategories: [] };
+          return cat.subcategories.map(s => ({ value: s.code, label: s.name }));
         }
       
-        // ── Wire up cascades
-        document.getElementById('edit-line-select').addEventListener('change', e=>{
+        // ── Wire up cascades ────────────────────────────────────────────────────
+        document.getElementById('edit-line-select').addEventListener('change', e => {
           const v = e.target.value;
           editChoices.machine.clearChoices()
-            .setChoices(getMachines(v),'value','label',true)
-            .enable().showDropdown();
+            .setChoices(getMachines(v), 'value','label', true)
+            .enable()
+            .showDropdown();
           editChoices.category.clearChoices().disable();
           editChoices.subcategory.clearChoices().disable();
         });
-        document.getElementById('edit-machine-select').addEventListener('change', ()=>{
+        document.getElementById('edit-machine-select').addEventListener('change', () => {
           editChoices.category.clearChoices()
-            .setChoices(getCats(),'value','label',true)
-            .enable().showDropdown();
+            .setChoices(getCats(), 'value','label', true)
+            .enable()
+            .showDropdown();
           editChoices.subcategory.clearChoices().disable();
         });
-        document.getElementById('edit-category-select').addEventListener('change', e=>{
+        document.getElementById('edit-category-select').addEventListener('change', e => {
           editChoices.subcategory.clearChoices()
-            .setChoices(getSubs(e.target.value),'value','label',true)
-            .enable().showDropdown();
+            .setChoices(getSubs(e.target.value), 'value','label', true)
+            .enable()
+            .showDropdown();
         });
       
-        // ── Modal + buttons
-        const editModalEl = document.getElementById('editEntryModal'),
-              editModal   = new bootstrap.Modal(editModalEl);
+        // ── Modal & form elements ───────────────────────────────────────────────
+        const editModal   = new bootstrap.Modal(document.getElementById('editEntryModal'));
+        const idInput     = document.getElementById('edit-entry-id');
+        const dateInput   = document.getElementById('edit-start-date');
+        const timeInput   = document.getElementById('edit-start-time');
+        const commentIn   = document.getElementById('edit-comment');
+        const saveBtn     = document.getElementById('save-entry-btn');
+        const delBtn      = document.getElementById('delete-entry-btn');
+        const closeBtn    = document.getElementById('open-closeout-from-edit');
       
-        const idInput    = document.getElementById('edit-entry-id'),
-              dateInput  = document.getElementById('edit-start-date'),
-              timeInput  = document.getElementById('edit-start-time'),
-              commentIn  = document.getElementById('edit-comment'),
-              saveBtn    = document.getElementById('save-entry-btn'),
-              delBtn     = document.getElementById('delete-entry-btn'),
-              closeBtn   = document.getElementById('open-closeout-from-edit');
-      
-        // 1) click row → populate + show
-        document.querySelector('table tbody').addEventListener('click', e=>{
+        // ── 1) Row-click → populate & show ─────────────────────────────────────
+        document.querySelector('table tbody').addEventListener('click', e => {
           const tr = e.target.closest('tr[data-entry-id]');
           if (!tr) return;
+      
           idInput.value = tr.dataset.entryId;
           [ dateInput.value, timeInput.value ] = tr.dataset.start.split(' ');
           commentIn.value = tr.dataset.comment;
       
-          // set each Choices in order:
+          // populate each Choices
           editChoices.line.setChoiceByValue(tr.dataset.line);
           editChoices.machine.clearChoices()
-            .setChoices(getMachines(tr.dataset.line),'value','label',true)
-            .enable().setChoiceByValue(tr.dataset.machine);
+            .setChoices(getMachines(tr.dataset.line), 'value','label', true)
+            .enable()
+            .setChoiceByValue(tr.dataset.machine);
           editChoices.category.clearChoices()
-            .setChoices(getCats(),'value','label',true)
-            .enable().setChoiceByValue(tr.dataset.category);
+            .setChoices(getCats(), 'value','label', true)
+            .enable()
+            .setChoiceByValue(tr.dataset.category);
           editChoices.subcategory.clearChoices()
-            .setChoices(getSubs(tr.dataset.category),'value','label',true)
-            .enable().setChoiceByValue(tr.dataset.subcategory);
+            .setChoices(getSubs(tr.dataset.category), 'value','label', true)
+            .enable()
+            .setChoiceByValue(tr.dataset.subcategory);
       
           editModal.show();
         });
       
-        // 2) delete
-        delBtn.addEventListener('click', ()=>{
+        // ── 2) Delete via AJAX ─────────────────────────────────────────────────
+        delBtn.addEventListener('click', () => {
           if (!confirm('Delete this downtime entry?')) return;
           fetch("{% url 'delete_downtime_entry' %}", {
-            method:'POST',
-            headers:{
+            method: 'POST',
+            headers: {
               'Content-Type':'application/json',
-              'X-CSRFToken':csrfToken
+              'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({ entry_id: idInput.value })
           })
-          .then(r=>r.ok?r.json():Promise.reject())
-          .then(()=>{
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(() => {
             document.querySelector(`tr[data-entry-id="${idInput.value}"]`)?.remove();
             editModal.hide();
           })
-          .catch(()=>alert('Error deleting entry.'));
+          .catch(() => alert('Error deleting entry.'));
         });
       
-        // 3) open close-out
-        closeBtn.addEventListener('click', ()=>{
+        // ── 3) Open Close-out Modal ─────────────────────────────────────────────
+        closeBtn.addEventListener('click', () => {
           document.getElementById('closeout-entry-id').value = idInput.value;
           new bootstrap.Modal(document.getElementById('closeoutModal')).show();
         });
       
-        // 4) save
-        saveBtn.addEventListener('click', ()=>{
+        // ── 4) Save Changes via AJAX ────────────────────────────────────────────
+        saveBtn.addEventListener('click', () => {
           const payload = {
             entry_id:    idInput.value,
             start_date:  dateInput.value,
@@ -881,41 +892,45 @@
             machine:     editChoices.machine.getValue(true),
             category:    editChoices.category.getValue(true),
             subcategory: editChoices.subcategory.getValue(true),
-            comment:     commentIn.value.trim()
+            comment:     commentIn.value.trim(),
           };
+      
           fetch("{% url 'edit_downtime_entry' %}", {
-            method:'POST',
-            headers:{
+            method: 'POST',
+            headers: {
               'Content-Type':'application/json',
-              'X-CSRFToken':csrfToken
+              'X-CSRFToken': csrfToken
             },
             body: JSON.stringify(payload)
           })
-          .then(r=>r.ok?r.json():Promise.reject())
-          .then(data=>{
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
             const tr = document.querySelector(`tr[data-entry-id="${data.id}"]`);
             if (!tr) return;
-            // update data-attrs
+            // update data-attributes
             tr.dataset.start       = `${data.start_date} ${data.start_time}`;
             tr.dataset.line        = data.line;
             tr.dataset.machine     = data.machine;
             tr.dataset.category    = data.category;
             tr.dataset.subcategory = data.subcategory;
             tr.dataset.comment     = data.comment;
-            // update cells
+      
+            // update visible cells
             tr.cells[0].textContent = data.start_display;
             tr.cells[2].textContent = data.line;
             tr.cells[3].textContent = data.machine;
             tr.cells[4].innerHTML   = `<span class="badge bg-dark">${data.category}</span>`;
             tr.cells[5].innerHTML   = `<span class="badge bg-secondary">${data.subcategory}</span>`;
             tr.cells[7].textContent = data.comment;
+      
             editModal.hide();
           })
-          .catch(()=>alert('Error saving changes.'));
+          .catch(() => alert('Error saving changes.'));
         });
-      
       });
       </script>
+    
+      
       
       
       
