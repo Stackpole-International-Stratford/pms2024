@@ -166,6 +166,10 @@
     </div>
   
 
+    {# ────── Participant filters will go here ────── #}
+    <div id="participant-filters" class="mb-3"></div>
+
+
 {# ───────────────────────── downtime events table ────────────────── #}
 <div class="table-responsive mt-4">
   <table class="table table-striped table-hover table-bordered align-middle">
@@ -737,6 +741,74 @@
     </script>
     
   
-
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('participant-filters');
+        if (!container) return;
+      
+        // 1) collect all names
+        const namesSet = new Set();
+        document.querySelectorAll('.participants-cell').forEach(cell => {
+          cell.querySelectorAll('div').forEach(div => {
+            // grab the text before any child button/small
+            const txt = div.childNodes[0]?.textContent.trim();
+            if (txt) namesSet.add(txt);
+          });
+        });
+        const names = Array.from(namesSet).sort();
+      
+        // 2) state of which names are selected
+        const selected = new Set();
+      
+        // 3) render the buttons
+        function renderButtons() {
+          container.innerHTML = '';
+          names.forEach(name => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-dark me-2 mb-2 participant-filter-btn';
+            btn.textContent = name;
+            btn.dataset.name = name;
+            if (selected.has(name)) btn.classList.add('active');
+            container.appendChild(btn);
+          });
+        }
+      
+        // 4) filter table rows by any selected name
+        function filterRows() {
+          const rows = document.querySelectorAll('table tbody tr');
+          if (selected.size === 0) {
+            rows.forEach(r => r.style.display = '');
+            return;
+          }
+          rows.forEach(row => {
+            const rowNames = Array.from(
+              row.querySelectorAll('.participants-cell > div')
+            ).map(div => div.childNodes[0]?.textContent.trim());
+            const match = Array.from(selected).some(n => rowNames.includes(n));
+            row.style.display = match ? '' : 'none';
+          });
+        }
+      
+        // 5) click‐handler to toggle selection + re‐filter
+        container.addEventListener('click', e => {
+          const btn = e.target.closest('.participant-filter-btn');
+          if (!btn) return;
+          const name = btn.dataset.name;
+          if (selected.has(name)) {
+            selected.delete(name);
+            btn.classList.remove('active');
+          } else {
+            selected.add(name);
+            btn.classList.add('active');
+          }
+          filterRows();
+        });
+      
+        // init
+        renderButtons();
+      });
+      </script>
+      
   
 {% endblock %}
