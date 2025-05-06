@@ -214,12 +214,19 @@
         {# Labour needed badges #}
         <td>
           {% if e.labour_types %}
-            {% for code in e.labour_types %}
-              <span class="badge bg-info">{{ code }}</span>
-            {% endfor %}
-          {% else %}
-            <span class="text-muted">—</span>
-          {% endif %}
+          {% for code in e.labour_types %}
+            <button
+              type="button"
+              class="btn btn-outline-dark btn-sm labour-btn me-1"
+              data-event-id="{{ e.id }}"
+              data-role="{{ code|lower }}"
+            >
+              {{ code|slice:":1"|upper }}
+            </button>
+          {% endfor %}
+        {% else %}
+          <span class="text-muted">—</span>
+        {% endif %}        
         </td>
 
         {# Participants column #}
