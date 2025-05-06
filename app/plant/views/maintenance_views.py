@@ -359,7 +359,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
 # ================================================================
 
 # how many at a time
-PAGE_SIZE = 5
+PAGE_SIZE = 500
 
 
 # group names you consider “maintenance”
