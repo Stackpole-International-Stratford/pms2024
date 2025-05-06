@@ -538,6 +538,51 @@ def load_more_downtime_entries(request):
 
 
 
+@login_required
+def downtime_history(request, event_id):
+    # 1) ensure the event exists
+    event = get_object_or_404(MachineDowntimeEvent, pk=event_id, is_deleted=False)
+
+    # 2) pull all participations for that event, in chronological order
+    parts = (
+        DowntimeParticipation.objects
+        .filter(event=event)
+        .order_by('join_epoch')
+        .select_related('user')
+    )
+
+    # 3) serialize them
+    tz = get_default_timezone()
+    history = []
+    for p in parts:
+        # join time
+        jdt = datetime.fromtimestamp(p.join_epoch)
+        if is_naive(jdt):
+            jdt = make_aware(jdt, tz)
+        jdt = timezone.localtime(jdt)
+        join_at = jdt.strftime('%Y-%m-%d %H:%M')
+
+        # leave time (may be null)
+        if p.leave_epoch:
+            ldt = datetime.fromtimestamp(p.leave_epoch)
+            if is_naive(ldt):
+                ldt = make_aware(ldt, tz)
+            ldt = timezone.localtime(ldt)
+            leave_at = ldt.strftime('%Y-%m-%d %H:%M')
+        else:
+            leave_at = None
+
+        history.append({
+            'user':           p.user.username,
+            'join_comment':   p.join_comment,
+            'join_at':        join_at,
+            'leave_comment':  p.leave_comment or '',
+            'leave_at':       leave_at or '',
+            'total_minutes':  p.total_minutes or 0,
+        })
+
+    return JsonResponse({'history': history})
+
 @require_POST
 @login_required
 def join_downtime_event(request):
