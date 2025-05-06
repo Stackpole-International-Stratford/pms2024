@@ -423,29 +423,33 @@ Add New or Update Employee
   
 <!-- 1. History Modal -->
 <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <!-- fullscreen-sm-down makes it modal-lg on md+ but fullscreen on sm and xs -->
+  <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Labour History</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Roles</th>            <!-- ← new column -->
-              <th>Joined At</th>
-              <th>Join Comment</th>
-              <th>Left At</th>
-              <th>Leave Comment</th>
-              <th>Total Min</th>
-            </tr>
-          </thead>
-          <tbody id="history-body">
-            <!-- JS will inject <tr>…</tr> here -->
-          </tbody>
-        </table>
+        <!-- Wrap table in table-responsive -->
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Roles</th>
+                <th>Joined At</th>
+                <th>Join Comment</th>
+                <th>Left At</th>
+                <th>Leave Comment</th>
+                <th>Total Min</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <!-- JS will inject <tr>…</tr> here -->
+            </tbody>
+          </table>
+        </div>
       </div>
       <div class="modal-footer">
         <button id="history-join-btn" type="button" class="btn btn-warning">Join</button>
@@ -455,6 +459,7 @@ Add New or Update Employee
     </div>
   </div>
 </div>
+
 
 
 <!-- 2. Join Modal -->
