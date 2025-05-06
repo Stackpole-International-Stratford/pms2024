@@ -553,6 +553,7 @@ def list_all_downtime_entries(request):
     # ── 6) Determine manager flag & roles for current user ─────────────────────
     user_groups = set(request.user.groups.values_list("name", flat=True))
     is_manager  = "maintenance_managers" in user_groups
+    is_supervisor = "maintenance_supervisors" in user_groups    # ← add this
     user_roles  = [
         r for r, grp in ROLE_TO_GROUP.items()
         if grp in user_groups
@@ -564,6 +565,7 @@ def list_all_downtime_entries(request):
         "page_size":         PAGE_SIZE,
         "line_priorities":   LinePriority.objects.all(),
         "is_manager":        is_manager,
+        "is_supervisor":     is_supervisor,       # ← and add this
         "labour_choices":    MachineDowntimeEvent.LABOUR_CHOICES,
         "user_roles":        user_roles,
         "active_workers":    active_workers,
