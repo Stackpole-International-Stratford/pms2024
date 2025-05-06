@@ -460,6 +460,23 @@ def toggle_active(request):
 
 # --------------------------- rewritten view ---------------------------------- #
 
+def filter_out_operator_only_events(qs):
+    """
+    Given a MachineDowntimeEvent queryset, return a new queryset
+    with all events whose labour_types == ["OPERATOR"] removed.
+    """
+    # Find IDs of operator‑only events
+    operator_only_ids = list(
+        qs
+        .filter(labour_types=["OPERATOR"])   # If your JSONField supports direct list lookups
+        .values_list("id", flat=True)
+    )
+    if operator_only_ids:
+        print(f"Excluding operator‑only event IDs: {operator_only_ids}")
+    # Return qs without those IDs
+    return qs.exclude(id__in=operator_only_ids)
+
+
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
     # ── 1) Access control ─────────────────────────────────────────────────────
@@ -486,6 +503,9 @@ def list_all_downtime_entries(request):
         .prefetch_related("participants__user")
     )
     qs = annotate_being_worked_on(base_qs)
+
+    # ── 2b) Strip out operator‑only events ────────────────────────────────────
+    qs = filter_out_operator_only_events(qs)
 
     # ── 3) Format first PAGE_SIZE entries for left table ──────────────────────
     entries = list(qs[:PAGE_SIZE])
@@ -551,10 +571,10 @@ def list_all_downtime_entries(request):
     inactive_workers = build_worker_list(inactive_qs)
 
     # ── 6) Determine manager flag & roles for current user ─────────────────────
-    user_groups = set(request.user.groups.values_list("name", flat=True))
-    is_manager  = "maintenance_managers" in user_groups
-    is_supervisor = "maintenance_supervisors" in user_groups    # ← add this
-    user_roles  = [
+    user_groups   = set(request.user.groups.values_list("name", flat=True))
+    is_manager    = "maintenance_managers" in user_groups
+    is_supervisor = "maintenance_supervisors" in user_groups
+    user_roles    = [
         r for r, grp in ROLE_TO_GROUP.items()
         if grp in user_groups
     ]
@@ -565,7 +585,7 @@ def list_all_downtime_entries(request):
         "page_size":         PAGE_SIZE,
         "line_priorities":   LinePriority.objects.all(),
         "is_manager":        is_manager,
-        "is_supervisor":     is_supervisor,       # ← and add this
+        "is_supervisor":     is_supervisor,
         "labour_choices":    MachineDowntimeEvent.LABOUR_CHOICES,
         "user_roles":        user_roles,
         "active_workers":    active_workers,
