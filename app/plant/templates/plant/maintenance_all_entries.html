@@ -5,7 +5,8 @@
   {% csrf_token %}
   {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
 
-  <h1 class="mb-4">Open Downtime Events</h1>
+  <h1 class="mb-4 text-center">Open Downtime Events</h1>
+
 
 
   {% if is_manager %}
@@ -149,8 +150,8 @@
 
 
 {# ───────────────────────── downtime events table ────────────────── #}
-<div class="row mt-4">
-  <!-- Left: downtime events -->
+<div class="row mt-4{% if not is_manager %} justify-content-center{% endif %}">
+  <!-- Left: downtime events (always col-md-8) -->
   <div class="col-md-8 mb-4">
     <div class="table-responsive mb-3">
       <table class="table table-striped table-hover table-bordered align-middle">
@@ -229,6 +230,7 @@
     </div>
   </div>
 
+  {% if is_manager %}
   <!-- Right: all electricians/millwrights/techs, showing “Free” if no job -->
   <div class="col-md-4">
     <h5>Maintenance Staff Status</h5>
@@ -273,7 +275,9 @@
       </table>
     </div>
   </div>
+  {% endif %}
 </div>
+
 
 
 
