@@ -204,25 +204,25 @@ Add New or Update Employee
                 <div class="d-flex align-items-center flex-grow-1">
                   <!-- Info text -->
                   <span>
-                    {{ e.start_display }} – {{ e.machine }} – {{ e.subcategory }} || Need:
+                    {{ e.start_display }} – {{ e.machine }} - <!-- Labour buttons -->
+                    {% if e.labour_types %}
+                      {% for code in e.labour_types %}
+                        {% with code|title as role %}
+                          <button
+                            type="button"
+                            class="btn {% if e.being_worked_on %}btn-dark labour-btn{% else %}btn-outline-dark labour-btn{% endif %} btn-sm ms-2 py-0 px-1"
+                            data-event-id="{{ e.id }}"
+                            data-role="{{ role }}">
+                            {{ role|slice:":1" }}
+                          </button>
+                        {% endwith %}
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted ms-2">–</span>
+                    {% endif %}  – {{ e.subcategory }} 
                   </span>
 
-                  <!-- Labour buttons -->
-                  {% if e.labour_types %}
-                    {% for code in e.labour_types %}
-                      {% with code|title as role %}
-                        <button
-                          type="button"
-                          class="btn {% if e.being_worked_on %}btn-dark labour-btn{% else %}btn-outline-dark labour-btn{% endif %} btn-sm ms-2 py-0 px-1"
-                          data-event-id="{{ e.id }}"
-                          data-role="{{ role }}">
-                          {{ role|slice:":1" }}
-                        </button>
-                      {% endwith %}
-                    {% endfor %}
-                  {% else %}
-                    <span class="text-muted ms-2">–</span>
-                  {% endif %}
+                  
                 </div>
 
                 <!-- Close button or closed timestamp -->
