@@ -32,7 +32,13 @@
     display: block;
   }
   
-  
+    /* prevent any auto-detected phone links from being clickable or styled as links */
+    a[href^="tel"] {
+      pointer-events: none;
+      color: inherit;
+      text-decoration: none;
+      cursor: default;
+    }
 </style>
 
   {% if is_manager %}
