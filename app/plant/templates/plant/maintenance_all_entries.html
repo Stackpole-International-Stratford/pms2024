@@ -244,7 +244,7 @@ Add New or Update Employee
                   data-start-at="{{ e.start_at|date:'Y-m-d H:i' }}"
                   data-original-comment="{{ e.comment|escapejs }}"
                 >
-                  Close
+                  Edit/Close
                 </button>
               {% endif %}
               
@@ -618,13 +618,17 @@ Add New or Update Employee
   <!-- 2) Close-out modal logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // URLs & CSRF
+      // Grab the modal element and instantiate it once
+      const modalEl       = document.getElementById('closeoutModal');
+      const closeoutModal = new bootstrap.Modal(modalEl);
+    
+      // URLs & CSRF token
       const fetchUrl    = "{% url 'maintenance_edit' %}";
       const updateUrl   = "{% url 'maintenance_update_event' %}";
       const closeoutUrl = "{% url 'closeout_downtime_entry' %}";
       const token       = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
-      // form fields
+      // Form fields
       const idIn        = document.getElementById('closeout-entry-id');
       const lineSel     = document.getElementById('closeout-line');
       const machineSel  = document.getElementById('closeout-machine');
@@ -640,7 +644,7 @@ Add New or Update Employee
       const btnSave     = document.getElementById('closeout-save');
       const btnConfirm  = document.getElementById('closeout-confirm');
     
-      // helper to fill a <select>
+      // Helper to fill a <select>
       function populateSelect(sel, items, isSimple=false) {
         sel.innerHTML = '';
         items.forEach(i => {
@@ -655,13 +659,12 @@ Add New or Update Employee
         });
       }
     
-      // wire up each “Close” button
+      // Wire up each “Close” button to load and show the modal
       document.querySelectorAll('.closeout-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const entryId = btn.dataset.entryId;
           idIn.value = entryId;
     
-          // 1) fetch event + full lists + lines_data
           fetch(fetchUrl, {
             method: 'POST',
             headers: {
@@ -672,39 +675,37 @@ Add New or Update Employee
           })
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(data => {
-            // data.lines_data: full line→ops→machines structure
             const linesData  = data.lines_data;
             const allSubcats = data.subcategories;
     
-            // populate top-level selects
+            // Top-level selects
             populateSelect(lineSel,  data.lines,       true);
             populateSelect(catSel,   data.categories);
     
-            // dependent: machines for selected line
+            // Dependent: machines for the selected line
             function updateMachines() {
-              const selLine = lineSel.value;
-              const lineObj = linesData.find(l => l.line === selLine);
+              const lineObj = linesData.find(l => l.line === lineSel.value);
               const machinesForLine = lineObj
                 ? lineObj.operations.flatMap(op => op.machines.map(m => m.number))
                 : [];
               populateSelect(machineSel, machinesForLine, true);
             }
-            // dependent: subcats for selected category
+    
+            // Dependent: subcats for the selected category
             function updateSubcats() {
-              const selCat = catSel.value;
               const subcatsForCat = allSubcats
-                .filter(s => s.parent === selCat)
+                .filter(s => s.parent === catSel.value)
                 .map(s => ({ code: s.code, name: s.name }));
               populateSelect(subcatSel, subcatsForCat);
             }
     
-            // run once on load, and hook into change events
+            // Initialize and hook change events
             updateMachines();
             updateSubcats();
             lineSel.addEventListener('change', updateMachines);
             catSel.addEventListener('change', updateSubcats);
     
-            // now set current values
+            // Set current values
             lineSel.value       = data.line;
             updateMachines();
             machineSel.value    = data.machine;
@@ -713,21 +714,21 @@ Add New or Update Employee
             updateSubcats();
             subcatSel.value     = data.subcategory_code;
     
-            // set start date/time
+            // Start timestamp
             startDate.value     = data.start_date;
             startTime.value     = data.start_time;
     
-            // original comment
+            // Original comment
             origComm.value      = data.comment;
     
-            // preload close-out fields
+            // Preload close-out inputs
             const now = new Date();
             closeDate.value     = now.toISOString().slice(0,10);
             closeTime.value     = now.toTimeString().slice(0,5);
             closeComm.value     = '';
     
-            // show modal
-            new bootstrap.Modal(document.getElementById('closeoutModal')).show();
+            // Finally show the modal
+            closeoutModal.show();
           })
           .catch(() => alert('Could not load event details.'));
         });
@@ -753,7 +754,10 @@ Add New or Update Employee
           body: JSON.stringify(payload)
         })
         .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => alert('Saved changes.'))
+        .then(() => {
+          alert('Saved changes.');
+          closeoutModal.hide();
+        })
         .catch(() => alert('Error saving changes.'));
       });
     
@@ -783,6 +787,7 @@ Add New or Update Employee
       });
     });
     </script>
+    
     
     
     
