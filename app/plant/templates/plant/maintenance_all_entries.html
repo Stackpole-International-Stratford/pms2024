@@ -202,53 +202,44 @@ Add New or Update Employee
       </thead>
       <tbody>
         {% for e in entries %}
-          <tr class="{% if not e.closeout_epoch %}table-warning{% endif %}">
+          <tr
+            class="editable-row {% if not e.closeout_epoch %}table-warning{% endif %}"
+            data-entry-id="{{ e.id }}"
+          >
             <td class="py-1">
               <div class="d-flex align-items-center">
                 
                 <!-- Left block: info + labour -->
                 <div class="d-flex align-items-center flex-grow-1">
-                  <!-- Info text -->
                   <span>
-                    {{ e.start_display }} – {{ e.machine }} - <!-- Labour buttons -->
+                    {{ e.start_display }} – {{ e.machine }} – 
                     {% if e.labour_types %}
                       {% for code in e.labour_types %}
                         {% with code|title as role %}
                           <button
                             type="button"
-                            class="btn {% if e.being_worked_on %}btn-dark labour-btn{% else %}btn-outline-dark labour-btn{% endif %} btn-sm ms-2 py-0 px-1"
+                            class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn btn-sm ms-2 py-0 px-1"
                             data-event-id="{{ e.id }}"
-                            data-role="{{ role }}">
-                            {{ role|slice:":1" }}
-                          </button>
+                            data-role="{{ role }}"
+                          >{{ role|slice:":1" }}</button>
                         {% endwith %}
                       {% endfor %}
                     {% else %}
                       <span class="text-muted ms-2">–</span>
-                    {% endif %}  – {{ e.subcategory }} 
+                    {% endif %}
+                     – {{ e.subcategory }}
                   </span>
-
-                  
                 </div>
-
-                <!-- Close button or closed timestamp -->
+      
+                {# hidden, used by row-click to trigger the same handler #}
                 {% if not e.closeout_epoch %}
-                <button
-                  type="button"
-                  class="btn btn-info btn-sm py-0 px-1 ms-2 closeout-btn"
-                  data-entry-id="{{ e.id }}"
-                  data-line="{{ e.line }}"
-                  data-machine="{{ e.machine }}"
-                  data-category="{{ e.category }}"
-                  data-subcategory="{{ e.subcategory }}"
-                  data-start-at="{{ e.start_at|date:'Y-m-d H:i' }}"
-                  data-original-comment="{{ e.comment|escapejs }}"
-                >
-                  Edit/Close
-                </button>
-              {% endif %}
+                  <button
+                    type="button"
+                    class="closeout-btn d-none"
+                    data-entry-id="{{ e.id }}"
+                  ></button>
+                {% endif %}
               
-                
               </div>
             </td>
           </tr>
@@ -258,6 +249,7 @@ Add New or Update Employee
           </tr>
         {% endfor %}
       </tbody>
+      
     </table>
   </div>
 </div>
@@ -912,6 +904,21 @@ Add New or Update Employee
         });
       }
       attachLabourHandlers();
+
+
+      // allow clicking the row (but not labour buttons) to open the edit/closeout modal
+      document.querySelectorAll('.editable-row').forEach(row => {
+        row.addEventListener('click', e => {
+          // ignore clicks on labour buttons
+          if (e.target.closest('.labour-btn')) return;
+          // forward to the hidden closeout-btn
+          const btn = row.querySelector('.closeout-btn');
+          if (btn) btn.click();
+        });
+      });
+
+
+
     
       // ── Load-More logic ───────────────────────────────────────────────────────
       const loadMoreBtn = document.getElementById('load-more-btn');
