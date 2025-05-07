@@ -5,33 +5,11 @@
   {% csrf_token %}
   {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
 
-  <div class="title-container">
-    <h1 class="mb-4 text-center">Open Downtime Events</h1>
-    <div class="todo">
-      ToDo: build ability to edit the entry (this will take a couple of hours)<br>
-      ToDo: allow for filtering by profession and auto-filter on page load  based on user
-    </div>
-  </div>
+  <h1 class="mb-4 text-center">Open Downtime Events</h1>
   
 
 <style>
-  .title-container {
-    position: relative;
-    width: 100%;
-    text-align: center; /* center the H1 */
-  }
-  
-  .title-container .todo {
-    display: none;
-    margin-top: 0.5em;
-    font-size: 0.9em;
-    color: #555;
-  }
-  
-  .title-container:hover .todo {
-    display: block;
-  }
-  
+
     /* prevent any auto-detected phone links from being clickable or styled as links */
     a[href^="tel"] {
       pointer-events: none;
