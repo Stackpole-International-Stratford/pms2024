@@ -379,64 +379,97 @@ Add New or Update Employee
 
   {# ─────────────── CLOSE‑OUT MODAL + SCRIPT (self‑contained) ─────────────── #}
 
-  <!-- 1.  The modal itself -->
-  <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog"><!-- no more modal-sm -->
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Close Out Downtime</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  {# ───────── CLOSE-OUT / EDIT MODAL ───────── #}
+<div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"><!-- full size now -->
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit / Close Out Downtime</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        {# ─── EDITABLE FIELDS ───────────────────────────────────────────── #}
+        <input type="hidden" id="closeout-entry-id">
+
+        <div class="mb-3">
+          <label for="closeout-line" class="form-label">Line</label>
+          <select id="closeout-line" class="form-select"></select>
         </div>
-  
-        <div class="modal-body">
-          <!-- Event details -->
-          <div class="mb-3">
-            <p><strong>Event ID:</strong> <span id="closeout-entry-id-display"></span></p>
-            <p><strong>Line:</strong> <span id="closeout-line-display"></span></p>
-            <p><strong>Machine:</strong> <span id="closeout-machine-display"></span></p>
-            <p><strong>Category:</strong> <span id="closeout-category-display"></span></p>
-            <p><strong>Subcategory:</strong> <span id="closeout-subcategory-display"></span></p>
-            <p><strong>Started At:</strong> <span id="closeout-start-display"></span></p>
-            <p><strong>Original Comment:</strong> <span id="closeout-comment-display"></span></p>
-          </div>
-  
-          <!-- hidden field for your POST -->
-          <input type="hidden" id="closeout-entry-id">
-  
-          <!-- Your existing close-out inputs -->
-          <div class="mb-3">
-            <label for="closeout-date" class="form-label">Date</label>
-            <input type="date" id="closeout-date" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="closeout-time" class="form-label">Time</label>
-            <input type="time" id="closeout-time" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="closeout-comment" class="form-label">What was done?</label>
-            <textarea id="closeout-comment"
-                      class="form-control"
-                      rows="3"
-                      maxlength="2000"
-                      required></textarea>
+        <div class="mb-3">
+          <label for="closeout-machine" class="form-label">Machine</label>
+          <select id="closeout-machine" class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+          <label for="closeout-category" class="form-label">Category</label>
+          <select id="closeout-category" class="form-select"></select>
+        </div>
+        <div class="mb-3">
+          <label for="closeout-subcategory" class="form-label">Subcategory</label>
+          <select id="closeout-subcategory" class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Started At</label>
+          <div class="d-flex gap-2">
+            <input type="date" id="closeout-start-date" class="form-control" required>
+            <input type="time" id="closeout-start-time" class="form-control" required>
           </div>
         </div>
-  
-        <div class="modal-footer">
-          <button type="button"
-                  class="btn btn-secondary"
-                  data-bs-dismiss="modal">
-            Cancel
-          </button>
-          <button type="button"
-                  id="closeout-confirm"
-                  class="btn btn-info">
-            Confirm
-          </button>
+
+        <div class="mb-3">
+          <label for="closeout-original-comment" class="form-label">Original Comment</label>
+          <textarea id="closeout-original-comment"
+                    class="form-control"
+                    rows="2"
+                    maxlength="2000"></textarea>
         </div>
+
+        <hr>
+
+        {# ─── CLOSE-OUT FIELDS ───────────────────────────────────────────── #}
+        <div class="mb-3">
+          <label for="closeout-date" class="form-label">Close-out Date</label>
+          <input type="date" id="closeout-date" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label for="closeout-time" class="form-label">Close-out Time</label>
+          <input type="time" id="closeout-time" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label for="closeout-comment" class="form-label">What was done?</label>
+          <textarea id="closeout-comment"
+                    class="form-control"
+                    rows="3"
+                    maxlength="2000"
+                    required></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button type="button"
+                id="closeout-save"
+                class="btn btn-warning">
+          Save Changes
+        </button>
+        <button type="button"
+                id="closeout-confirm"
+                class="btn btn-info">
+          Confirm Close
+        </button>
       </div>
     </div>
   </div>
+</div>
+
   
     
 
@@ -572,100 +605,144 @@ Add New or Update Employee
   <!-- 2) Close-out modal logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const modalEl            = document.getElementById('closeoutModal');
-      const closeoutModal      = new bootstrap.Modal(modalEl);
-      const entryIdIn          = document.getElementById('closeout-entry-id');
-      const entryIdDisplay     = document.getElementById('closeout-entry-id-display');
-      const lineDisplay        = document.getElementById('closeout-line-display');
-      const machineDisplay     = document.getElementById('closeout-machine-display');
-      const categoryDisplay    = document.getElementById('closeout-category-display');
-      const subcatDisplay      = document.getElementById('closeout-subcategory-display');
-      const startDisplay       = document.getElementById('closeout-start-display');
-      const origCommentDisplay = document.getElementById('closeout-comment-display');
-      const dateIn             = document.getElementById('closeout-date');
-      const timeIn             = document.getElementById('closeout-time');
-      const commentIn          = document.getElementById('closeout-comment');
-      const confirmBtn         = document.getElementById('closeout-confirm');
-      const csrfToken          = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      // URLs & token
+      const fetchUrl    = "{% url 'maintenance_edit' %}";
+      const updateUrl   = "{% url 'maintenance_update_event' %}";
+      const closeoutUrl = "{% url 'closeout_downtime_entry' %}";
+      const token       = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
-      const fetchDetailsUrl    = "{% url 'maintenance_edit' %}";
-      const closeoutUrl        = "{% url 'closeout_downtime_entry' %}";
+      // form fields
+      const idIn        = document.getElementById('closeout-entry-id');
+      const lineSel     = document.getElementById('closeout-line');
+      const machineSel  = document.getElementById('closeout-machine');
+      const catSel      = document.getElementById('closeout-category');
+      const subcatSel   = document.getElementById('closeout-subcategory');
+      const startDate   = document.getElementById('closeout-start-date');
+      const startTime   = document.getElementById('closeout-start-time');
+      const origComm    = document.getElementById('closeout-original-comment');
+      const closeDate   = document.getElementById('closeout-date');
+      const closeTime   = document.getElementById('closeout-time');
+      const closeComm   = document.getElementById('closeout-comment');
     
-      // wire up each Close button
+      const btnSave     = document.getElementById('closeout-save');
+      const btnConfirm  = document.getElementById('closeout-confirm');
+    
+      function populateSelect(sel, items, isSimple=false) {
+        sel.innerHTML = '';
+        items.forEach(i => {
+          const opt = document.createElement('option');
+          if (isSimple) {
+            opt.value = opt.text = i;
+          } else {
+            opt.value = i.code;
+            opt.text  = i.name;
+          }
+          sel.appendChild(opt);
+        });
+      }
+    
+      // “Edit/Close” buttons open the modal
       document.querySelectorAll('.closeout-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const id = btn.dataset.entryId;
-          entryIdIn.value = id;
+          const entryId = btn.dataset.entryId;
+          idIn.value = entryId;
     
-          // 1) fetch the full details
-          fetch(fetchDetailsUrl, {
+          fetch(fetchUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRFToken':  csrfToken,
+              'X-CSRFToken':  token
             },
-            body: JSON.stringify({ entry_id: id }),
+            body: JSON.stringify({ entry_id: entryId })
           })
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(data => {
-            // 2) populate the display fields
-            entryIdDisplay.innerText     = data.entry_id;
-            lineDisplay.innerText        = data.line;
-            machineDisplay.innerText     = data.machine;
-            categoryDisplay.innerText    = data.category;
-            subcatDisplay.innerText      = data.subcategory;
-            startDisplay.innerText       = data.start_at;
-            origCommentDisplay.innerText = data.comment;
+            // refill dropdowns
+            populateSelect(lineSel,    data.lines,       true);
+            populateSelect(machineSel, data.machines,    true);
+            populateSelect(catSel,     data.categories);
+            populateSelect(subcatSel,  data.subcategories);
     
-            // 3) prefill date/time for the close-out form
+            // now select by code, not by name
+            lineSel.value       = data.line;
+            machineSel.value    = data.machine;
+            catSel.value        = data.category_code;
+            subcatSel.value     = data.subcategory_code;
+    
+            // use split fields instead of parsing a single timestamp
+            startDate.value     = data.start_date;
+            startTime.value     = data.start_time;
+    
+            origComm.value      = data.comment;
+    
+            // preload the close-out fields
             const now = new Date();
-            dateIn.value    = now.toISOString().slice(0,10);
-            timeIn.value    = now.toTimeString().slice(0,5);
-            commentIn.value = '';
-            confirmBtn.disabled = false;
+            closeDate.value     = now.toISOString().slice(0,10);
+            closeTime.value     = now.toTimeString().slice(0,5);
+            closeComm.value     = '';
     
-            // 4) show the modal
-            closeoutModal.show();
+            new bootstrap.Modal(document.getElementById('closeoutModal')).show();
           })
-          .catch(() => alert('Error loading event details.'));
+          .catch(() => alert('Could not load event details.'));
         });
       });
     
-      // unchanged: your confirm→closeout handler here…
-      confirmBtn.addEventListener('click', () => {
-        const id   = entryIdIn.value;
-        const date = dateIn.value;
-        const time = timeIn.value;
-        const note = commentIn.value.trim();
-        if (!id || !date || !time || !note) {
-          return alert('All fields are required.');
-        }
-        confirmBtn.disabled = true;
+      // Save edits
+      btnSave.addEventListener('click', () => {
+        const payload = {
+          entry_id:    idIn.value,
+          line:        lineSel.value,
+          machine:     machineSel.value,
+          category:    catSel.value,
+          subcategory: subcatSel.value,
+          start_at:    `${startDate.value} ${startTime.value}`,
+          comment:     origComm.value,
+        };
+        fetch(updateUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  token
+          },
+          body: JSON.stringify(payload)
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(() => alert('Saved changes.'))
+        .catch(() => alert('Error saving changes.'));
+      });
+    
+      // Confirm Close
+      btnConfirm.addEventListener('click', () => {
+        const id   = idIn.value;
+        const date = closeDate.value;
+        const time = closeTime.value;
+        const note = closeComm.value.trim();
+        if (!date || !time || !note) return alert('All fields are required.');
+    
         fetch(closeoutUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken':  csrfToken,
+            'X-CSRFToken':  token
           },
           body: JSON.stringify({
             entry_id:         id,
             closeout:         `${date} ${time}`,
-            closeout_comment: note,
-          }),
+            closeout_comment: note
+          })
         })
         .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => {
-          document
-            .querySelector(`button.closeout-btn[data-entry-id="${id}"]`)
-            .closest('tr')
-            .remove();
-          closeoutModal.hide();
-        })
-        .catch(() => alert('Error closing out entry.'))
-        .finally(() => confirmBtn.disabled = false);
+        .then(() => location.reload())
+        .catch(() => alert('Error closing out entry.'));
       });
     });
     </script>
+    
+    
+
+
+
+
     
 
 

@@ -69,5 +69,7 @@ urlpatterns = [
 
 
     path('maintenance/edit/', maintenance_edit, name='maintenance_edit'),
+    path('maintenance/update/', maintenance_update_event, name='maintenance_update_event'),
+
 
 ]

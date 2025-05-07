@@ -973,34 +973,124 @@ def add_employee(request):
 @require_POST
 def maintenance_edit(request):
     """
-    AJAX endpoint to fetch an event’s details for editing. 
-    Returns JSON with all the fields we need.
+    Return a minimal, flat JSON blob:
+     - entry_id
+     - line, machine
+     - category_code, subcategory_code
+     - start_date (YYYY-MM-DD), start_time (HH:MM)
+     - comment
+     - lists: lines[], machines[], categories[{code,name}], subcategories[{code,name,parent}]
     """
     try:
-        payload  = json.loads(request.body)
-        entry_id = payload['entry_id']
+        entry_id = json.loads(request.body)['entry_id']
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid JSON")
 
+    try:
+        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest("Entry not found")
+
+    # human-readable split start timestamp
+    dt = datetime.fromtimestamp(e.start_epoch)
+    if is_naive(dt):
+        dt = make_aware(dt, get_default_timezone())
+    local = localtime(dt)
+    start_date = local.strftime('%Y-%m-%d')
+    start_time = local.strftime('%H:%M')
+
+    # flat machine list
+    machines = sorted({
+        m['number']
+        for line in prod_lines
+        for op   in line['operations']
+        for m    in op['machines']
+    })
+
+    # flatten categories & subcats
+    categories = [{'code': c['code'], 'name': c['name']} for c in DOWNTIME_CODES]
+    subcategories = [
+        {'code': s['code'], 'name': s['name'], 'parent': c['code']}
+        for c in DOWNTIME_CODES
+        for s in c['subcategories']
+    ]
+
+    return JsonResponse({
+        'status':            'ok',
+        'entry_id':          e.pk,
+        'line':              e.line,
+        'machine':           e.machine,
+        'category_code':     e.code.split('-', 1)[0],
+        'subcategory_code':  e.code,
+        'start_date':        start_date,
+        'start_time':        start_time,
+        'comment':           e.comment,
+
+        'lines':             [l['line'] for l in prod_lines],
+        'machines':          machines,
+        'categories':        categories,
+        'subcategories':     subcategories,
+    })
+
+
+@require_POST
+def maintenance_update_event(request):
+    """
+    Receive edited fields and update the downtime event in the DB.
+    """
+    try:
+        payload      = json.loads(request.body)
+        entry_id     = payload['entry_id']
+        line         = payload['line']
+        machine      = payload['machine']
+        category_code    = payload['category']     # e.g. "MECH"
+        subcategory_code = payload['subcategory']  # e.g. "MECH-TOOL"
+        start_at_str = payload['start_at']         # "YYYY-MM-DD HH:MM"
+        comment      = payload['comment']
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest("Invalid JSON")
+
+    # 1) Lookup the event
     try:
         event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # build human‐readable start time
-    dt = datetime.fromtimestamp(event.start_epoch)
-    if is_naive(dt):
-        dt = make_aware(dt, get_default_timezone())
-    human_start = localtime(dt).strftime('%Y-%m-%d %H:%M:%S')
+    # 2) Derive display names from your DOWNTIME_CODES
+    cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == category_code), None)
+    category_name   = cat_obj['name'] if cat_obj else category_code
 
-    # return everything as JSON
-    return JsonResponse({
-        'status':      'ok',
-        'entry_id':    event.pk,
-        'line':        event.line,
-        'machine':     event.machine,
-        'category':    event.category,
-        'subcategory': event.subcategory,
-        'start_at':    human_start,
-        'comment':     event.comment,
-    })
+    sub_obj = None
+    if cat_obj:
+        sub_obj = next((s for s in cat_obj['subcategories']
+                        if s['code'] == subcategory_code), None)
+    subcategory_name = sub_obj['name'] if sub_obj else subcategory_code
+
+    # 3) Parse start_at into an epoch
+    from datetime import datetime
+    from django.utils.timezone import make_aware, get_default_timezone
+
+    try:
+        # assume local date/time in America/Toronto
+        dt_naive = datetime.strptime(start_at_str, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return HttpResponseBadRequest("Bad start_at format")
+    local_tz = get_default_timezone()
+    dt_aware = make_aware(dt_naive, local_tz)
+    epoch_ts  = int(dt_aware.timestamp())
+
+    # 4) Apply updates
+    event.line         = line
+    event.machine      = machine
+    event.category     = category_name
+    event.subcategory  = subcategory_name
+    event.code         = subcategory_code
+    event.start_epoch  = epoch_ts
+    event.comment      = comment
+    event.save(update_fields=[
+        'line', 'machine', 'category', 'subcategory',
+        'code', 'start_epoch', 'comment'
+    ])
+
+    print(f"[DEBUG] Updated downtime {entry_id}")
+    return JsonResponse({'status': 'ok'})
