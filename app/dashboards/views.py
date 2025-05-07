@@ -403,6 +403,7 @@ def cell_track_9341(request, target):
         line_spec_9341, target_production_9341, '"50-9341"', shift_start, shift_time)
 
     context['codes'] = machine_production_9341
+    context['actual_counts'] = [mp[1] for mp in machine_production_9341]
     context['op'] = op_production_9341
     context['wip'] = []
 
@@ -470,6 +471,8 @@ def cell_track_9341(request, target):
         template = 'dashboards/cell_track_9341.html'
 
     return render(request, template, context)
+
+
 
 @cache_page(5)
 def cell_track_1467(request, template):
