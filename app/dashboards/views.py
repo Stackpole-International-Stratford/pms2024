@@ -1237,7 +1237,7 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     # ——— EDIT THIS: list machine IDs here that need part_list targets ———
     machines_requiring_part_list = [
         # e.g. '1723', '1504', ...
-        '1723',
+        '1723', '1724',
     ]
     # ————————————————————————————————————————————————————————————————
 
