@@ -975,7 +975,8 @@ def add_employee(request):
 def maintenance_edit(request):
     """
     AJAX endpoint to kick off an “edit” flow.
-    For now, just print the incoming entry_id to the console.
+    For now, print the incoming entry_id plus line, machine,
+    category, subcategory, start time, and comment.
     """
     try:
         payload = json.loads(request.body)
@@ -983,7 +984,25 @@ def maintenance_edit(request):
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid JSON")
 
-    # this will show up in your Django runserver or uwsgi logs
+    # fetch the event
+    try:
+        event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest("Entry not found")
+
+    # convert epoch → human‐readable
+    dt = datetime.fromtimestamp(event.start_epoch)
+    if is_naive(dt):
+        dt = make_aware(dt, get_default_timezone())
+    human_start = localtime(dt).strftime('%Y-%m-%d %H:%M:%S')
+
+    # debug print
     print(f"[DEBUG] maintenance_edit called with entry_id={entry_id}")
+    print(f"[DEBUG]   line:        {event.line}")
+    print(f"[DEBUG]   machine:     {event.machine}")
+    print(f"[DEBUG]   category:    {event.category}")
+    print(f"[DEBUG]   subcategory: {event.subcategory}")
+    print(f"[DEBUG]   start_epoch: {event.start_epoch}  ({human_start})")
+    print(f"[DEBUG]   comment:     {event.comment}")
 
     return JsonResponse({'status': 'ok'})
