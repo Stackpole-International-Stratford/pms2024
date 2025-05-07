@@ -388,6 +388,13 @@ Add New or Update Employee
           <!-- hidden id -->
           <input type="hidden" id="closeout-entry-id">
 
+
+          <div class="mb-3">
+            <label class="form-label">Event ID</label>
+            <span id="closeout-entry-id-display" class="form-control-plaintext"></span>
+          </div>
+          
+          
           <div class="mb-3">
             <label for="closeout-date" class="form-label">Date</label>
             <input type="date" id="closeout-date" class="form-control" required>
@@ -554,23 +561,30 @@ Add New or Update Employee
 <!-- -------------------------------------------------------------------------------------->
 
 
-  
-<!-- 2) Close-out modal logic -->
+  <!-- 2) Close-out modal logic -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const modalEl      = document.getElementById('closeoutModal');
-    const closeoutModal= new bootstrap.Modal(modalEl);
-    const entryIdIn    = document.getElementById('closeout-entry-id');
-    const dateIn       = document.getElementById('closeout-date');
-    const timeIn       = document.getElementById('closeout-time');
-    const commentIn    = document.getElementById('closeout-comment');
-    const confirmBtn   = document.getElementById('closeout-confirm');
-    const csrfToken    = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    const url          = "{% url 'closeout_downtime_entry' %}";
-  
+    const modalEl            = document.getElementById('closeoutModal');
+    const closeoutModal      = new bootstrap.Modal(modalEl);
+    const entryIdIn          = document.getElementById('closeout-entry-id');
+    const entryIdDisplay     = document.getElementById('closeout-entry-id-display');
+    const dateIn             = document.getElementById('closeout-date');
+    const timeIn             = document.getElementById('closeout-time');
+    const commentIn          = document.getElementById('closeout-comment');
+    const confirmBtn         = document.getElementById('closeout-confirm');
+    const csrfToken          = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const url                = "{% url 'closeout_downtime_entry' %}";
+
+    // wire up each “Close” button
     document.querySelectorAll('.closeout-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        entryIdIn.value = btn.dataset.entryId;
+        const id = btn.dataset.entryId;
+        // hidden input for POST
+        entryIdIn.value = id;
+        // visible display
+        entryIdDisplay.innerText = id;    // if you used <span>, otherwise .value for an <input>
+
+        // preload date/time to now
         const now = new Date();
         dateIn.value    = now.toISOString().slice(0,10);
         timeIn.value    = now.toTimeString().slice(0,5);
@@ -579,15 +593,18 @@ Add New or Update Employee
         closeoutModal.show();
       });
     });
-  
+
+    // confirm & POST
     confirmBtn.addEventListener('click', () => {
       const id   = entryIdIn.value;
       const date = dateIn.value;
       const time = timeIn.value;
       const note = commentIn.value.trim();
+
       if (!id || !date || !time || !note) {
         return alert('All fields are required.');
       }
+
       confirmBtn.disabled = true;
       fetch(url, {
         method: 'POST',
@@ -596,24 +613,26 @@ Add New or Update Employee
           'X-CSRFToken': csrfToken,
         },
         body: JSON.stringify({
-          entry_id: id,
-          closeout: `${date} ${time}`,
-          closeout_comment: note
-        })
+          entry_id:          id,
+          closeout:          `${date} ${time}`,
+          closeout_comment:  note,
+        }),
       })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(() => {
-        document
+        // remove the row & hide modal
+        const row = document
           .querySelector(`button.closeout-btn[data-entry-id="${id}"]`)
-          .closest('tr')
-          .remove();
+          .closest('tr');
+        row && row.remove();
         closeoutModal.hide();
       })
       .catch(() => alert('Error closing out entry.'))
       .finally(() => confirmBtn.disabled = false);
     });
   });
-  </script>
+</script>
+
   
 
 
