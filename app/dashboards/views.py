@@ -1256,7 +1256,9 @@ def log_shift_times(shift_start, shift_time, actual_counts):
         adjusted_target = raw_target * (minutes_elapsed / 7200.0)
         pct = (count / adjusted_target * 100) if adjusted_target else 0.0
 
-        print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {pct:.1f}%")
+        # truncate to integer and drop '%' symbol
+        print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {int(pct)}")
+
 
 
 
