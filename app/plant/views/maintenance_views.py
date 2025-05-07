@@ -953,3 +953,37 @@ def add_employee(request):
     print(f"[DEBUG] New/updated employee → {first} {last}, roles: {roles}")
 
     return redirect(request.META.get("HTTP_REFERER", "index"))
+
+
+
+
+
+
+
+
+
+
+# =============================================================
+# =============================================================
+# ================== One modal to rule them all ===============
+# =============================================================
+# =============================================================
+
+
+
+@require_POST
+def maintenance_edit(request):
+    """
+    AJAX endpoint to kick off an “edit” flow.
+    For now, just print the incoming entry_id to the console.
+    """
+    try:
+        payload = json.loads(request.body)
+        entry_id = payload.get('entry_id')
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest("Invalid JSON")
+
+    # this will show up in your Django runserver or uwsgi logs
+    print(f"[DEBUG] maintenance_edit called with entry_id={entry_id}")
+
+    return JsonResponse({'status': 'ok'})
