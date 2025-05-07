@@ -379,9 +379,9 @@ Add New or Update Employee
 
   {# ─────────────── CLOSE‑OUT MODAL + SCRIPT (self‑contained) ─────────────── #}
 
-  {# ───────── CLOSE-OUT / EDIT MODAL ───────── #}
+ {# ───────── CLOSE-OUT / EDIT MODAL ───────── #}
 <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog"><!-- full size now -->
+  <div class="modal-dialog modal-xl"><!-- make it wider -->
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Edit / Close Out Downtime</h5>
@@ -389,64 +389,86 @@ Add New or Update Employee
       </div>
 
       <div class="modal-body">
-
-        {# ─── EDITABLE FIELDS ───────────────────────────────────────────── #}
         <input type="hidden" id="closeout-entry-id">
 
-        <div class="mb-3">
-          <label for="closeout-line" class="form-label">Line</label>
-          <select id="closeout-line" class="form-select"></select>
-        </div>
-        <div class="mb-3">
-          <label for="closeout-machine" class="form-label">Machine</label>
-          <select id="closeout-machine" class="form-select"></select>
-        </div>
+        <div class="row">
+          <!-- ─── Left column: Edit fields + Save button ──────────────────── -->
+          <div class="col-md-6 border-end pe-4">
+            <h6>Edit Details</h6>
 
-        <div class="mb-3">
-          <label for="closeout-category" class="form-label">Category</label>
-          <select id="closeout-category" class="form-select"></select>
-        </div>
-        <div class="mb-3">
-          <label for="closeout-subcategory" class="form-label">Subcategory</label>
-          <select id="closeout-subcategory" class="form-select"></select>
-        </div>
+            <div class="mb-3">
+              <label for="closeout-line" class="form-label">Line</label>
+              <select id="closeout-line" class="form-select"></select>
+            </div>
+            <div class="mb-3">
+              <label for="closeout-machine" class="form-label">Machine</label>
+              <select id="closeout-machine" class="form-select"></select>
+            </div>
 
-        <div class="mb-3">
-          <label class="form-label">Started At</label>
-          <div class="d-flex gap-2">
-            <input type="date" id="closeout-start-date" class="form-control" required>
-            <input type="time" id="closeout-start-time" class="form-control" required>
+            <div class="mb-3">
+              <label for="closeout-category" class="form-label">Category</label>
+              <select id="closeout-category" class="form-select"></select>
+            </div>
+            <div class="mb-3">
+              <label for="closeout-subcategory" class="form-label">Subcategory</label>
+              <select id="closeout-subcategory" class="form-select"></select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Started At</label>
+              <div class="d-flex gap-2">
+                <input type="date" id="closeout-start-date" class="form-control" required>
+                <input type="time" id="closeout-start-time" class="form-control" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="closeout-original-comment" class="form-label">Original Comment</label>
+              <textarea id="closeout-original-comment"
+                        class="form-control"
+                        rows="2"
+                        maxlength="2000"></textarea>
+            </div>
+
+            <div class="d-grid">
+              <button type="button"
+                      id="closeout-save"
+                      class="btn btn-warning">
+                Save Changes
+              </button>
+            </div>
+          </div>
+
+          <!-- ─── Right column: Close-out fields + Confirm button ─────────── -->
+          <div class="col-md-6 ps-4">
+            <h6>Close Out</h6>
+
+            <div class="mb-3">
+              <label for="closeout-date" class="form-label">Close-out Date</label>
+              <input type="date" id="closeout-date" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label for="closeout-time" class="form-label">Close-out Time</label>
+              <input type="time" id="closeout-time" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label for="closeout-comment" class="form-label">What was done?</label>
+              <textarea id="closeout-comment"
+                        class="form-control"
+                        rows="3"
+                        maxlength="2000"
+                        required></textarea>
+            </div>
+
+            <div class="d-grid">
+              <button type="button"
+                      id="closeout-confirm"
+                      class="btn btn-info">
+                Confirm Close
+              </button>
+            </div>
           </div>
         </div>
-
-        <div class="mb-3">
-          <label for="closeout-original-comment" class="form-label">Original Comment</label>
-          <textarea id="closeout-original-comment"
-                    class="form-control"
-                    rows="2"
-                    maxlength="2000"></textarea>
-        </div>
-
-        <hr>
-
-        {# ─── CLOSE-OUT FIELDS ───────────────────────────────────────────── #}
-        <div class="mb-3">
-          <label for="closeout-date" class="form-label">Close-out Date</label>
-          <input type="date" id="closeout-date" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <label for="closeout-time" class="form-label">Close-out Time</label>
-          <input type="time" id="closeout-time" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <label for="closeout-comment" class="form-label">What was done?</label>
-          <textarea id="closeout-comment"
-                    class="form-control"
-                    rows="3"
-                    maxlength="2000"
-                    required></textarea>
-        </div>
-
       </div>
 
       <div class="modal-footer">
@@ -455,20 +477,11 @@ Add New or Update Employee
                 data-bs-dismiss="modal">
           Cancel
         </button>
-        <button type="button"
-                id="closeout-save"
-                class="btn btn-warning">
-          Save Changes
-        </button>
-        <button type="button"
-                id="closeout-confirm"
-                class="btn btn-info">
-          Confirm Close
-        </button>
       </div>
     </div>
   </div>
 </div>
+
 
   
     
