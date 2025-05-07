@@ -1276,22 +1276,50 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     return swapped_counts
 
 
+MACHINE_TARGET_ALIASES = {
+    '733': ['1701L', '1701R'],
+    # Add more as needed
+}
+
 def get_machine_target(machine_id, shift_start_unix, part_list=None):
     """
-    Returns the most recent non-deleted target for a given machine 
-    (and, if provided, filtered to only those parts) at or before the shift start.
+    Returns the most recent non-deleted target for a given machine (or its alias group),
+    optionally filtered by part_list, at or before the shift start.
+    Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
     """
-    qs = (
-        OAMachineTargets.objects
-        .filter(
-            machine_id=machine_id,
-            isDeleted=False,
-            effective_date_unix__lte=shift_start_unix
-        )
-    )
-    if part_list:
-        # assumes your model has a 'part' field; only include targets for those parts
-        qs = qs.filter(part__in=part_list)
 
-    qs = qs.order_by('-effective_date_unix')
-    return qs.first().target if qs.exists() else None
+    def query_target(mid):
+        qs = (
+            OAMachineTargets.objects
+            .filter(
+                machine_id=mid,
+                isDeleted=False,
+                effective_date_unix__lte=shift_start_unix
+            )
+        )
+        if part_list:
+            qs = qs.filter(part__in=part_list)
+        return qs.order_by('-effective_date_unix').first()
+
+    # Case 1: use machine_id directly
+    result = query_target(machine_id)
+    if result:
+        return result.target
+
+    # Case 2: if ends in a letter and no match, try stripping it
+    if machine_id and machine_id[-1].isalpha():
+        fallback_id = machine_id[:-1]
+        fallback_result = query_target(fallback_id)
+        if fallback_result:
+            return fallback_result.target
+
+    # Case 3: piggyback logic (sum of other machine targets)
+    if machine_id in MACHINE_TARGET_ALIASES:
+        total = 0
+        for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
+            aliased_result = query_target(aliased_id)
+            if aliased_result:
+                total += aliased_result.target
+        return total if total > 0 else None
+
+    return None

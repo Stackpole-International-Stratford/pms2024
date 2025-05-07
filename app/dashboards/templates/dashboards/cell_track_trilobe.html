@@ -193,22 +193,22 @@
                     <div class="dashboard-table-row-asset-number">Compact</div>
                     <div class="dashboard-table-row-asset-count">({{op_col1.10}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col1.0 %}
-                {% include "dashboards/asset_block.html" with data=codes_col1.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col1.0 pct=actual_counts_col1.0.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col1.1 pct=actual_counts_col1.1.1 %}                
             </div>
             <div class="dashboard-table-row">  <!--  Assembly  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Assemb</div>
                     <div class="dashboard-table-row-asset-count">({{op_col1.20}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col1.2 %}
+                {% include "dashboards/asset_block.html" with data=codes_col1.2 pct=actual_counts_col1.2.1 %}
             </div>
             <div class="dashboard-table-row">  <!--  Furnace Unload  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Unload</div>
                     <div class="dashboard-table-row-asset-count">({{op_col1.30}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col1.3 %}
+                {% include "dashboards/asset_block.html" with data=codes_col1.3 pct=actual_counts_col1.3.1 %}
             </div>
         </div>
         <div class="dashboard-spacer"> </div>
@@ -222,31 +222,35 @@
                     <div class="dashboard-table-row-asset-number">Broach</div>
                     <div class="dashboard-table-row-asset-count">({{op_col2.10}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col2.0 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.0 pct=actual_counts_col2.0.1 %}
+
             </div>
             <div class="dashboard-table-row">  <!--  Heat Treatment  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Heat</div>
                     <div class="dashboard-table-row-asset-count">({{op_col2.20}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col2.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.1 pct=actual_counts_col2.1.1 %}
+
             </div>
             <div class="dashboard-table-row">  <!--  Machining  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Machine</div>
                     <div class="dashboard-table-row-asset-count">({{op_col2.30}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col2.2 %}
-                {% include "dashboards/asset_block.html" with data=codes_col2.3 %}
-                {% include "dashboards/asset_block.html" with data=codes_col2.4 %}
-                {% include "dashboards/asset_block.html" with data=codes_col2.5 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.2 pct=actual_counts_col2.2.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.3 pct=actual_counts_col2.3.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.4 pct=actual_counts_col2.4.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.5 pct=actual_counts_col2.5.1 %}
+                
             </div>
             <div class="dashboard-table-row">  <!--  Slurry  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Slurry</div>
                     <div class="dashboard-table-row-asset-count">({{op_col2.40}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col2.6 %}
+                {% include "dashboards/asset_block.html" with data=codes_col2.6 pct=actual_counts_col2.6.1 %}
+
             </div>
         </div>
         <div class="dashboard-spacer"> </div>
@@ -260,32 +264,36 @@
                     <div class="dashboard-table-row-asset-number">Broach</div>
                     <div class="dashboard-table-row-asset-count">({{op_col3.10}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col3.0 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.0 pct=actual_counts_col3.0.1 %}
+
             </div>
             <div class="dashboard-table-row">  <!--  Heat Treatment  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Heat</div>
                     <div class="dashboard-table-row-asset-count">({{op_col3.20}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col3.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.1 pct=actual_counts_col3.1.1 %}
+
             </div>
             <div class="dashboard-table-row">  <!--  Machining  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Machine</div>
                     <div class="dashboard-table-row-asset-count">({{op_col3.30}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col3.2 %}
-                {% include "dashboards/asset_block.html" with data=codes_col3.3 %}
-                {% include "dashboards/asset_block.html" with data=codes_col3.4 %}
-                {% include "dashboards/asset_block.html" with data=codes_col3.5 %}
-                {% include "dashboards/asset_block.html" with data=codes_col3.6 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.2 pct=actual_counts_col3.2.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.3 pct=actual_counts_col3.3.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.4 pct=actual_counts_col3.4.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.5 pct=actual_counts_col3.5.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.6 pct=actual_counts_col3.6.1 %}
+                
             </div>
             <div class="dashboard-table-row">  <!--  Slurry  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Slurry</div>
                     <div class="dashboard-table-row-asset-count">({{op_col3.40}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col3.7 %}
+                {% include "dashboards/asset_block.html" with data=codes_col3.7 pct=actual_counts_col3.7.1 %}
+
             </div>
         </div>
         <div class="dashboard-spacer"> </div>
@@ -299,14 +307,16 @@
                     <div class="dashboard-table-row-asset-number">Machine</div>
                     <div class="dashboard-table-row-asset-count">({{op_col4.10}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col4.0 %}
+                {% include "dashboards/asset_block.html" with data=codes_col4.0 pct=actual_counts_col4.0.1 %}
+
             </div>
             <div class="dashboard-table-row">  <!--  Machining  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">Machine</div>
                     <div class="dashboard-table-row-asset-count">({{op_col4.20}})</div>
                 </div>
-                {% include "dashboards/asset_block.html" with data=codes_col4.1 %}
+                {% include "dashboards/asset_block.html" with data=codes_col4.1 pct=actual_counts_col4.1.1 %}
+
             </div>
         </div>
         <div class="dashboard-spacer"> </div>
