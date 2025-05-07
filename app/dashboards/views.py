@@ -1253,22 +1253,27 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     minutes_elapsed = shift_time / 60.0
     print("[Shift] per-machine actuals vs targets:")
 
+    # Prepare new list to hold (machine, int_pct)
+    swapped_counts = []
+
     for machine, count in actual_counts:
-        # if this machine is in your special list *and* you passed a part_list,
-        # hand that list to get_machine_target; otherwise ignore it.
+        # decide whether to pass part_list into the target lookup
         if part_list and machine in machines_requiring_part_list:
             raw_target = get_machine_target(machine, shift_start, part_list) or 0
         else:
             raw_target = get_machine_target(machine, shift_start) or 0
 
-        # original targets are for 7200 minutes
+        # adjust for shift duration
         adjusted_target = raw_target * (minutes_elapsed / 7200.0)
         pct = (count / adjusted_target * 100) if adjusted_target else 0.0
 
-        # truncated percent, no '%' symbol
+        # print with truncated percent
         print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {int(pct)}")
 
-    return actual_counts
+        # swap out the count for the int pct
+        swapped_counts.append((machine, int(pct)))
+
+    return swapped_counts
 
 
 def get_machine_target(machine_id, shift_start_unix, part_list=None):

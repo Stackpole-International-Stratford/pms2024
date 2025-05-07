@@ -4,5 +4,5 @@
             onclick="window.open('{% url 'dashboards:track_graph' data.0 %}', 'newwindow', 'width=1400, height=600'); return false;">
             {{data.0}}</a>
     </div>
-    <div class="dashboard-table-row-asset-count asset-count">({{data.3}}) {{data.1}}</div>
+    <div class="dashboard-table-row-asset-count asset-count">({{data.3}}) {{pct}}%</div>
 </div>
