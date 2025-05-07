@@ -1232,21 +1232,46 @@ def rejects_dashboard_finder(request):
 
 def log_shift_times(shift_start, shift_time, actual_counts):
     from datetime import datetime, timedelta
-    from zoneinfo import ZoneInfo  
+    from zoneinfo import ZoneInfo
 
     """
-    Print shift timing and actual count per machine.
+    Print shift timing and actual count per machine, alongside adjusted target and % of target.
+    If no target record exists, treat target as 0 and percent as 0%.
     """
     est = ZoneInfo("America/New_York")
     start_dt = datetime.fromtimestamp(shift_start, tz=est)
     elapsed = timedelta(seconds=shift_time)
 
-    print(f"[Shift] start: {start_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')} "
-          f"| elapsed: {elapsed}")
+    print(f"[Shift] start: {start_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')} | elapsed: {elapsed}")
 
     total_actual = sum(count for _, count in actual_counts)
     print(f"[Shift] total actual count: {total_actual}")
 
-    print("[Shift] per-machine actuals:")
+    minutes_elapsed = shift_time / 60.0
+    print("[Shift] per-machine actuals vs targets:")
+
     for machine, count in actual_counts:
-        print(f"  - {machine}: {count}")
+        raw_target = get_machine_target(machine, shift_start) or 0
+        # original targets are for 7200 minutes
+        adjusted_target = raw_target * (minutes_elapsed / 7200.0)
+        pct = (count / adjusted_target * 100) if adjusted_target else 0.0
+
+        print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {pct:.1f}%")
+
+
+
+
+
+def get_machine_target(machine_id, shift_start_unix):
+    """
+    Returns the most recent non-deleted target for a given machine at or before the shift start.
+    Returns None if no valid target is found.
+    """
+    target_qs = (
+        OAMachineTargets.objects
+        .filter(machine_id=machine_id, isDeleted=False, effective_date_unix__lte=shift_start_unix)
+        .order_by('-effective_date_unix')
+    )
+    if target_qs.exists():
+        return target_qs.first().target
+    return None
