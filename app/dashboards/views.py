@@ -404,7 +404,8 @@ def cell_track_9341(request, target):
 
     context['codes'] = machine_production_9341
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_9341]
-    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = ["50-9341"]
+    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production_9341
     context['wip'] = []
 
@@ -501,7 +502,8 @@ def cell_track_1467(request, template):
 
     context['codes'] = machine_production
     actual_counts = [(mp[0], mp[1]) for mp in machine_production]
-    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = ["50-1467"]
+    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production
     context['wip'] = []
 
@@ -552,7 +554,8 @@ def cell_track_trilobe(request, template):
 
     context['codes_col1'] = machine_production_col1
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_col1]
-    context['actual_counts_col1'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = None
+    context['actual_counts_col1'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col1'] = op_production_col1
     context['wip'] = []
 
@@ -571,7 +574,8 @@ def cell_track_trilobe(request, template):
 
     context['codes_col2'] = machine_production_col2
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_col2]
-    context['actual_counts_col2'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = None
+    context['actual_counts_col2'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col2'] = op_production_col2
     context['wip_col2'] = []
 
@@ -591,7 +595,8 @@ def cell_track_trilobe(request, template):
 
     context['codes_col3'] = machine_production_col3
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_col3]
-    context['actual_counts_col3'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = None
+    context['actual_counts_col3'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col3'] = op_production_col3
     context['wip_col3'] = []
 
@@ -606,7 +611,8 @@ def cell_track_trilobe(request, template):
 
     context['codes_col4'] = machine_production_col4
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_col4]
-    context['actual_counts_col4'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = None
+    context['actual_counts_col4'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col4'] = op_production_col4
     context['wip_col4'] = []
 
@@ -676,7 +682,8 @@ def cell_track_8670(request, template):
 
     context['codes_10R140'] = machine_production_10R140
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
-    context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = ["50-3214", "50-5214"]
+    context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_10R140'] = op_production_10R140
     context['wip_10R140'] = []
 
@@ -708,7 +715,8 @@ def cell_track_8670(request, template):
 
     context['codes'] = machine_production_8670
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
-    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = ["50-8670", "50-0450"]
+    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production_8670
     context['wip'] = []
 
@@ -732,7 +740,8 @@ def cell_track_8670(request, template):
 
     context['codes_5401'] = machine_production_5401
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
-    context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = ["50-5401", "50-0447"]
+    context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_5401'] = op_production_5401
     context['wip_5401'] = []
 
@@ -759,7 +768,8 @@ def cell_track_8670(request, template):
 
     context['codes_5404'] = machine_production_5404
     actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
-    context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts)
+    part_list = ["50-5404", "50-0519"]
+    context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_5404'] = op_production_5404
     context['wip_5404'] = []
 
@@ -1220,14 +1230,17 @@ def rejects_dashboard_finder(request):
 
 
 
-def log_shift_times(shift_start, shift_time, actual_counts):
+def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
 
-    """
-    Print shift timing and actual count per machine, alongside adjusted target and % of target.
-    If no target record exists, treat target as 0 and percent as 0%.
-    """
+    # ——— EDIT THIS: list machine IDs here that need part_list targets ———
+    machines_requiring_part_list = [
+        # e.g. '1723', '1504', ...
+        '1723',
+    ]
+    # ————————————————————————————————————————————————————————————————
+
     est = ZoneInfo("America/New_York")
     start_dt = datetime.fromtimestamp(shift_start, tz=est)
     elapsed = timedelta(seconds=shift_time)
@@ -1241,7 +1254,13 @@ def log_shift_times(shift_start, shift_time, actual_counts):
     print("[Shift] per-machine actuals vs targets:")
 
     for machine, count in actual_counts:
-        raw_target = get_machine_target(machine, shift_start) or 0
+        # if this machine is in your special list *and* you passed a part_list,
+        # hand that list to get_machine_target; otherwise ignore it.
+        if part_list and machine in machines_requiring_part_list:
+            raw_target = get_machine_target(machine, shift_start, part_list) or 0
+        else:
+            raw_target = get_machine_target(machine, shift_start) or 0
+
         # original targets are for 7200 minutes
         adjusted_target = raw_target * (minutes_elapsed / 7200.0)
         pct = (count / adjusted_target * 100) if adjusted_target else 0.0
@@ -1252,21 +1271,22 @@ def log_shift_times(shift_start, shift_time, actual_counts):
     return actual_counts
 
 
-
-
-
-
-
-def get_machine_target(machine_id, shift_start_unix):
+def get_machine_target(machine_id, shift_start_unix, part_list=None):
     """
-    Returns the most recent non-deleted target for a given machine at or before the shift start.
-    Returns None if no valid target is found.
+    Returns the most recent non-deleted target for a given machine 
+    (and, if provided, filtered to only those parts) at or before the shift start.
     """
-    target_qs = (
+    qs = (
         OAMachineTargets.objects
-        .filter(machine_id=machine_id, isDeleted=False, effective_date_unix__lte=shift_start_unix)
-        .order_by('-effective_date_unix')
+        .filter(
+            machine_id=machine_id,
+            isDeleted=False,
+            effective_date_unix__lte=shift_start_unix
+        )
     )
-    if target_qs.exists():
-        return target_qs.first().target
-    return None
+    if part_list:
+        # assumes your model has a 'part' field; only include targets for those parts
+        qs = qs.filter(part__in=part_list)
+
+    qs = qs.order_by('-effective_date_unix')
+    return qs.first().target if qs.exists() else None
