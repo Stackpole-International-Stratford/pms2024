@@ -732,6 +732,7 @@ Add New or Update Employee
         .then(() => {
           alert('Saved changes.');
           closeoutModal.hide();
+          location.reload();
         })
         .catch(() => alert('Error saving changes.'));
       });
