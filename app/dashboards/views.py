@@ -1278,6 +1278,8 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
 
 MACHINE_TARGET_ALIASES = {
     '733': ['1701L', '1701R'],
+    '1746': ['1746R'],
+    '1705': ['1746R']
     # Add more as needed
 }
 
