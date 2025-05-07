@@ -9,6 +9,8 @@ from django.http import Http404
 
 from django.shortcuts import render, redirect
 import MySQLdb
+from prod_query.models import OAMachineTargets
+
 
 
 
@@ -145,8 +147,6 @@ below applies to all these dashboard views
 
 # args csrf token and form
 """
-
-
 def get_line_prod(line_spec, line_target, parts, shift_start, shift_time):
     cursor = connections['prodrpt-md'].cursor()
 
@@ -403,6 +403,8 @@ def cell_track_9341(request, target):
         line_spec_9341, target_production_9341, '"50-9341"', shift_start, shift_time)
 
     context['codes'] = machine_production_9341
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_9341]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts'] = [mp[1] for mp in machine_production_9341]
     context['op'] = op_production_9341
     context['wip'] = []
@@ -499,6 +501,8 @@ def cell_track_1467(request, template):
         line_spec, target_production_1467, '"50-1467"', shift_start, shift_time)
 
     context['codes'] = machine_production
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts'] = [mp[1] for mp in machine_production]  # Add this
     context['op'] = op_production
     context['wip'] = []
@@ -549,6 +553,8 @@ def cell_track_trilobe(request, template):
         line_spec_col_1, target_production_col1, None, shift_start, shift_time)
 
     context['codes_col1'] = machine_production_col1
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col1]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_col1'] = [mp[1] for mp in machine_production_col1]
     context['op_col1'] = op_production_col1
     context['wip'] = []
@@ -567,6 +573,8 @@ def cell_track_trilobe(request, template):
         line_spec_col_2, target_production_col2, None, shift_start, shift_time)
 
     context['codes_col2'] = machine_production_col2
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col2]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_col2'] = [mp[1] for mp in machine_production_col2]
     context['op_col2'] = op_production_col2
     context['wip_col2'] = []
@@ -586,6 +594,8 @@ def cell_track_trilobe(request, template):
         line_spec_col_3, target_production_col3, None, shift_start, shift_time)
 
     context['codes_col3'] = machine_production_col3
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col3]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_col3'] = [mp[1] for mp in machine_production_col3]
     context['op_col3'] = op_production_col3
     context['wip_col3'] = []
@@ -600,6 +610,8 @@ def cell_track_trilobe(request, template):
         line_spec_col_4, target_production_col4, None, shift_start, shift_time)
 
     context['codes_col4'] = machine_production_col4
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col4]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_col4'] = [mp[1] for mp in machine_production_col4]
     context['op_col4'] = op_production_col4
     context['wip_col4'] = []
@@ -669,6 +681,8 @@ def cell_track_8670(request, template):
         line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
 
     context['codes_10R140'] = machine_production_10R140
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_10R140'] = [mp[1] for mp in machine_production_10R140]
     context['op_10R140'] = op_production_10R140
     context['wip_10R140'] = []
@@ -700,6 +714,8 @@ def cell_track_8670(request, template):
         line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
 
     context['codes'] = machine_production_8670
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts'] = [mp[1] for mp in machine_production_8670]
     context['op'] = op_production_8670
     context['wip'] = []
@@ -723,6 +739,8 @@ def cell_track_8670(request, template):
         line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
 
     context['codes_5401'] = machine_production_5401
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_5401'] = [mp[1] for mp in machine_production_5401]
     context['op_5401'] = op_production_5401
     context['wip_5401'] = []
@@ -749,6 +767,8 @@ def cell_track_8670(request, template):
         line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
 
     context['codes_5404'] = machine_production_5404
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
+    log_shift_times(shift_start, shift_time, actual_counts)
     context['actual_counts_5404'] = [mp[1] for mp in machine_production_5404]
     context['op_5404'] = op_production_5404
     context['wip_5404'] = []
@@ -1187,3 +1207,46 @@ def rejects_dashboard_finder(request):
     return render(request,
                   "dashboards/rejects_dashboard_finder.html",
                   {"lines": lines})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ===================================================================
+# ===================================================================
+# ======== New function to fetch targets and then return oee ========
+# ===================================================================
+# ===================================================================
+
+
+
+def log_shift_times(shift_start, shift_time, actual_counts):
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo  
+
+    """
+    Print shift timing and actual count per machine.
+    """
+    est = ZoneInfo("America/New_York")
+    start_dt = datetime.fromtimestamp(shift_start, tz=est)
+    elapsed = timedelta(seconds=shift_time)
+
+    print(f"[Shift] start: {start_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')} "
+          f"| elapsed: {elapsed}")
+
+    total_actual = sum(count for _, count in actual_counts)
+    print(f"[Shift] total actual count: {total_actual}")
+
+    print("[Shift] per-machine actuals:")
+    for machine, count in actual_counts:
+        print(f"  - {machine}: {count}")
