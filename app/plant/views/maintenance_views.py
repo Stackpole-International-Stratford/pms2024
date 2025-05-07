@@ -973,13 +973,11 @@ def add_employee(request):
 @require_POST
 def maintenance_edit(request):
     """
-    Return a minimal, flat JSON blob:
-     - entry_id
-     - line, machine
-     - category_code, subcategory_code
-     - start_date (YYYY-MM-DD), start_time (HH:MM)
-     - comment
-     - lists: lines[], machines[], categories[{code,name}], subcategories[{code,name,parent}]
+    Return a JSON blob with:
+      - entry_id, line, machine, category_code, subcategory_code,
+        start_date, start_time, comment
+      - flat lists: lines[], machines[], categories[{code,name}], subcategories[{code,name,parent}]
+      - and the full lines_data for dependent dropdowns
     """
     try:
         entry_id = json.loads(request.body)['entry_id']
@@ -991,15 +989,13 @@ def maintenance_edit(request):
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # human-readable split start timestamp
+    # human‐readable start
     dt = datetime.fromtimestamp(e.start_epoch)
     if is_naive(dt):
         dt = make_aware(dt, get_default_timezone())
     local = localtime(dt)
-    start_date = local.strftime('%Y-%m-%d')
-    start_time = local.strftime('%H:%M')
 
-    # flat machine list
+    # flat machine list (you can still keep this)
     machines = sorted({
         m['number']
         for line in prod_lines
@@ -1007,7 +1003,7 @@ def maintenance_edit(request):
         for m    in op['machines']
     })
 
-    # flatten categories & subcats
+    # categories & subcats
     categories = [{'code': c['code'], 'name': c['name']} for c in DOWNTIME_CODES]
     subcategories = [
         {'code': s['code'], 'name': s['name'], 'parent': c['code']}
@@ -1016,21 +1012,25 @@ def maintenance_edit(request):
     ]
 
     return JsonResponse({
-        'status':            'ok',
-        'entry_id':          e.pk,
-        'line':              e.line,
-        'machine':           e.machine,
-        'category_code':     e.code.split('-', 1)[0],
-        'subcategory_code':  e.code,
-        'start_date':        start_date,
-        'start_time':        start_time,
-        'comment':           e.comment,
+        'status':           'ok',
+        'entry_id':         e.pk,
+        'line':             e.line,
+        'machine':          e.machine,
+        'category_code':    e.code.split('-',1)[0],
+        'subcategory_code': e.code,
+        'start_date':       local.strftime('%Y-%m-%d'),
+        'start_time':       local.strftime('%H:%M'),
+        'comment':          e.comment,
 
-        'lines':             [l['line'] for l in prod_lines],
-        'machines':          machines,
-        'categories':        categories,
-        'subcategories':     subcategories,
+        'lines':            [l['line'] for l in prod_lines],
+        'machines':         machines,
+        'categories':       categories,
+        'subcategories':    subcategories,
+
+        # ← add this:
+        'lines_data':       prod_lines,
     })
+
 
 
 @require_POST
