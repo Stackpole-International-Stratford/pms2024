@@ -233,17 +233,21 @@ Add New or Update Employee
 
                 <!-- Close button or closed timestamp -->
                 {% if not e.closeout_epoch %}
-                  <button
-                    type="button"
-                    class="btn btn-info btn-sm py-0 px-1 ms-2 closeout-btn"
-                    data-entry-id="{{ e.id }}">
-                    Close
-                  </button>
-                {% else %}
-                  <small class="text-muted ms-2">
-                    Closed {{ e.closeout_epoch|date:"Y-m-d H:i" }}
-                  </small>
-                {% endif %}
+                <button
+                  type="button"
+                  class="btn btn-info btn-sm py-0 px-1 ms-2 closeout-btn"
+                  data-entry-id="{{ e.id }}"
+                  data-line="{{ e.line }}"
+                  data-machine="{{ e.machine }}"
+                  data-category="{{ e.category }}"
+                  data-subcategory="{{ e.subcategory }}"
+                  data-start-at="{{ e.start_at|date:'Y-m-d H:i' }}"
+                  data-original-comment="{{ e.comment|escapejs }}"
+                >
+                  Close
+                </button>
+              {% endif %}
+              
                 
               </div>
             </td>
@@ -377,34 +381,37 @@ Add New or Update Employee
 
   <!-- 1.  The modal itself -->
   <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
+    <div class="modal-dialog"><!-- no more modal-sm -->
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Close Out Downtime</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-
+  
         <div class="modal-body">
-          <!-- hidden id -->
-          <input type="hidden" id="closeout-entry-id">
-
-
+          <!-- Event details -->
           <div class="mb-3">
-            <label class="form-label">Event ID</label>
-            <span id="closeout-entry-id-display" class="form-control-plaintext"></span>
+            <p><strong>Event ID:</strong> <span id="closeout-entry-id-display"></span></p>
+            <p><strong>Line:</strong> <span id="closeout-line-display"></span></p>
+            <p><strong>Machine:</strong> <span id="closeout-machine-display"></span></p>
+            <p><strong>Category:</strong> <span id="closeout-category-display"></span></p>
+            <p><strong>Subcategory:</strong> <span id="closeout-subcategory-display"></span></p>
+            <p><strong>Started At:</strong> <span id="closeout-start-display"></span></p>
+            <p><strong>Original Comment:</strong> <span id="closeout-comment-display"></span></p>
           </div>
-          
-          
+  
+          <!-- hidden field for your POST -->
+          <input type="hidden" id="closeout-entry-id">
+  
+          <!-- Your existing close-out inputs -->
           <div class="mb-3">
             <label for="closeout-date" class="form-label">Date</label>
             <input type="date" id="closeout-date" class="form-control" required>
           </div>
-
           <div class="mb-3">
             <label for="closeout-time" class="form-label">Time</label>
             <input type="time" id="closeout-time" class="form-control" required>
           </div>
-
           <div class="mb-3">
             <label for="closeout-comment" class="form-label">What was done?</label>
             <textarea id="closeout-comment"
@@ -414,7 +421,7 @@ Add New or Update Employee
                       required></textarea>
           </div>
         </div>
-
+  
         <div class="modal-footer">
           <button type="button"
                   class="btn btn-secondary"
@@ -430,6 +437,7 @@ Add New or Update Employee
       </div>
     </div>
   </div>
+  
     
 
 <!-- -------------------------------------------------------------------------------------->
@@ -564,49 +572,66 @@ Add New or Update Employee
   <!-- 2) Close-out modal logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const modalEl           = document.getElementById('closeoutModal');
-      const closeoutModal     = new bootstrap.Modal(modalEl);
-      const entryIdIn         = document.getElementById('closeout-entry-id');
-      const entryIdDisplay    = document.getElementById('closeout-entry-id-display');
-      const dateIn            = document.getElementById('closeout-date');
-      const timeIn            = document.getElementById('closeout-time');
-      const commentIn         = document.getElementById('closeout-comment');
-      const confirmBtn        = document.getElementById('closeout-confirm');
-      const csrfToken         = document.querySelector('[name=csrfmiddlewaretoken]').value;
-      const closeoutUrl       = "{% url 'closeout_downtime_entry' %}";
-      const editUrl           = "{% url 'maintenance_edit' %}";
+      const modalEl            = document.getElementById('closeoutModal');
+      const closeoutModal      = new bootstrap.Modal(modalEl);
+      const entryIdIn          = document.getElementById('closeout-entry-id');
+      const entryIdDisplay     = document.getElementById('closeout-entry-id-display');
+      const lineDisplay        = document.getElementById('closeout-line-display');
+      const machineDisplay     = document.getElementById('closeout-machine-display');
+      const categoryDisplay    = document.getElementById('closeout-category-display');
+      const subcatDisplay      = document.getElementById('closeout-subcategory-display');
+      const startDisplay       = document.getElementById('closeout-start-display');
+      const origCommentDisplay = document.getElementById('closeout-comment-display');
+      const dateIn             = document.getElementById('closeout-date');
+      const timeIn             = document.getElementById('closeout-time');
+      const commentIn          = document.getElementById('closeout-comment');
+      const confirmBtn         = document.getElementById('closeout-confirm');
+      const csrfToken          = document.querySelector('[name=csrfmiddlewaretoken]').value;
     
+      const fetchDetailsUrl    = "{% url 'maintenance_edit' %}";
+      const closeoutUrl        = "{% url 'closeout_downtime_entry' %}";
+    
+      // wire up each Close button
       document.querySelectorAll('.closeout-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.dataset.entryId;
+          entryIdIn.value = id;
     
-          // 1) Set hidden + visible fields
-          entryIdIn.value        = id;
-          entryIdDisplay.innerText = id;
-    
-          // 2) Fire off your “edit” AJAX
-          fetch(editUrl, {
+          // 1) fetch the full details
+          fetch(fetchDetailsUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRFToken': csrfToken,
+              'X-CSRFToken':  csrfToken,
             },
             body: JSON.stringify({ entry_id: id }),
           })
           .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => console.log('maintenance_edit response:', data))
-          .catch(err => console.error('maintenance_edit failed:', err));
+          .then(data => {
+            // 2) populate the display fields
+            entryIdDisplay.innerText     = data.entry_id;
+            lineDisplay.innerText        = data.line;
+            machineDisplay.innerText     = data.machine;
+            categoryDisplay.innerText    = data.category;
+            subcatDisplay.innerText      = data.subcategory;
+            startDisplay.innerText       = data.start_at;
+            origCommentDisplay.innerText = data.comment;
     
-          // 3) Pre-fill date/time/comment & show modal
-          const now = new Date();
-          dateIn.value        = now.toISOString().slice(0,10);
-          timeIn.value        = now.toTimeString().slice(0,5);
-          commentIn.value     = '';
-          confirmBtn.disabled = false;
-          closeoutModal.show();
+            // 3) prefill date/time for the close-out form
+            const now = new Date();
+            dateIn.value    = now.toISOString().slice(0,10);
+            timeIn.value    = now.toTimeString().slice(0,5);
+            commentIn.value = '';
+            confirmBtn.disabled = false;
+    
+            // 4) show the modal
+            closeoutModal.show();
+          })
+          .catch(() => alert('Error loading event details.'));
         });
       });
     
+      // unchanged: your confirm→closeout handler here…
       confirmBtn.addEventListener('click', () => {
         const id   = entryIdIn.value;
         const date = dateIn.value;
@@ -620,7 +645,7 @@ Add New or Update Employee
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
+            'X-CSRFToken':  csrfToken,
           },
           body: JSON.stringify({
             entry_id:         id,
@@ -641,6 +666,16 @@ Add New or Update Employee
       });
     });
     </script>
+    
+
+
+
+
+
+
+
+
+
     
   
 

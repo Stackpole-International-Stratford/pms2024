@@ -970,39 +970,37 @@ def add_employee(request):
 # =============================================================
 
 
-
 @require_POST
 def maintenance_edit(request):
     """
-    AJAX endpoint to kick off an “edit” flow.
-    For now, print the incoming entry_id plus line, machine,
-    category, subcategory, start time, and comment.
+    AJAX endpoint to fetch an event’s details for editing. 
+    Returns JSON with all the fields we need.
     """
     try:
-        payload = json.loads(request.body)
-        entry_id = payload.get('entry_id')
+        payload  = json.loads(request.body)
+        entry_id = payload['entry_id']
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid JSON")
 
-    # fetch the event
     try:
         event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # convert epoch → human‐readable
+    # build human‐readable start time
     dt = datetime.fromtimestamp(event.start_epoch)
     if is_naive(dt):
         dt = make_aware(dt, get_default_timezone())
     human_start = localtime(dt).strftime('%Y-%m-%d %H:%M:%S')
 
-    # debug print
-    print(f"[DEBUG] maintenance_edit called with entry_id={entry_id}")
-    print(f"[DEBUG]   line:        {event.line}")
-    print(f"[DEBUG]   machine:     {event.machine}")
-    print(f"[DEBUG]   category:    {event.category}")
-    print(f"[DEBUG]   subcategory: {event.subcategory}")
-    print(f"[DEBUG]   start_epoch: {event.start_epoch}  ({human_start})")
-    print(f"[DEBUG]   comment:     {event.comment}")
-
-    return JsonResponse({'status': 'ok'})
+    # return everything as JSON
+    return JsonResponse({
+        'status':      'ok',
+        'entry_id':    event.pk,
+        'line':        event.line,
+        'machine':     event.machine,
+        'category':    event.category,
+        'subcategory': event.subcategory,
+        'start_at':    human_start,
+        'comment':     event.comment,
+    })
