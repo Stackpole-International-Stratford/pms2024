@@ -429,6 +429,9 @@ def cell_track_9341(request, target):
         line_spec, target_production_0455, '"50-0455"', shift_start, shift_time)
 
     context['codes_60'] = machine_production_0455
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_0455]
+    part_list = ["50-0455"]
+    context['actual_counts_60'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_60'] = op_production_0455
     context['wip_60'] = []
 
