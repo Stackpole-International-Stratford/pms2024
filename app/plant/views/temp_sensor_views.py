@@ -1,6 +1,7 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 
 def temp_display(request):
-    # This will show up in your console/log when this URL is hit
+    # Log to the console
     print("hello world")
-    return HttpResponse("Temperature display endpoint hit.")
+    # Render the template
+    return render(request, 'plant/temp_display.html')
