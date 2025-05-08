@@ -24,6 +24,10 @@ def humanize_delta(delta):
         return f"{weeks} weeks"
     return f"{days // 30} months"
 
+
+
+
+
 def send_alert_email(zones):
     """
     Send a multipart email (plain text + HTML) listing every zone
@@ -115,6 +119,9 @@ def send_alert_email(zones):
     )
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
+
+
+
 
 def temp_display(request):
     raw_rows = []
