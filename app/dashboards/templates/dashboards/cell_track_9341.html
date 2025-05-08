@@ -351,9 +351,9 @@
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.10.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP10</div>
                         <!-- after -->
-<div class="dashboard-table-row-asset-count asset-count">
-    ({{ op_actual.10 }}) {{ op_oee.10 }}%
-  </div>
+                        <div class="dashboard-table-row-asset-count asset-count">
+                            ({{ op_actual.10 }}) {{ op_oee.10 }}%
+                        </div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.0 pct=actual_counts.0.1 %}
                     {% include "dashboards/asset_block.html" with data=codes.1 pct=actual_counts.1.1 %}
@@ -363,7 +363,7 @@
                 <div class="op dashboard-table-row">  <!-- OP 30  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.30.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP30</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.30.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.30 }}) {{ op_oee.30 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.4 pct=actual_counts.4.1 %}
                     {% include "dashboards/asset_block.html" with data=codes.5 pct=actual_counts.5.1 %}
@@ -371,7 +371,7 @@
                 <div class="op dashboard-table-row">  <!-- OP 40  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.40.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP40</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.40.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.40 }}) {{ op_oee.40 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.6 pct=actual_counts.6.1 %}
                     {% include "dashboards/asset_block.html" with data=codes.7 pct=actual_counts.7.1 %}
@@ -379,7 +379,7 @@
                 <div class="op dashboard-table-row">  <!-- OP 50  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.50.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP50</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.50.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.50 }}) {{ op_oee.50 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.8 pct=actual_counts.8.1 %}
                     {% include "dashboards/asset_block.html" with data=codes.9 pct=actual_counts.9.1 %}
@@ -387,49 +387,49 @@
                 <div class="op dashboard-table-row">  <!-- OP 60  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.60.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP60</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.60.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.60 }}) {{ op_oee.60 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.10 pct=actual_counts.10.1 %}
                 </div>
                 <div class="op dashboard-table-row">  <!-- OP 70  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.70.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP70</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.70.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.70 }}) {{ op_oee.70 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.11 pct=actual_counts.11.1 %}
                 </div>
                 <div class="op dashboard-table-row">  <!-- OP 80  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.80.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP80</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.80.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.80 }}) {{ op_oee.80 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.12 pct=actual_counts.12.1 %}
                 </div>
                 <div class="op dashboard-table-row">  <!-- OP 90  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.90.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP90</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.90.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.90 }}) {{ op_oee.90 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.29 pct=actual_counts.29.1 %}
                 </div>
                 <div class="op dashboard-table-row">  <!-- OP 100  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.100.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP100</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.100.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.100 }}) {{ op_oee.100 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.13 pct=actual_counts.13.1 %}
                 </div>
                 <div class="op dashboard-table-row">  <!-- OP 110  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.110.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">OP110</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.110.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.110 }}) {{ op_oee.110 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.14 pct=actual_counts.14.1 %}
                 </div>
                 <div class="op dashboard-table-row">  <!-- OP 120  -->
                     <div class="dashboard-table-row-operation c-op  dashboard-border borders" style="background-color:{{op.120.1}}">
                         <div class="dashboard-table-row-asset-number asset-number">Final</div>
-                        <div class="dashboard-table-row-asset-count asset-count">({{op.120.0}})</div>
+                        <div class="dashboard-table-row-asset-count asset-count">({{ op_actual.120 }}) {{ op_oee.120 }}%</div>
                     </div>
                     {% include "dashboards/asset_block.html" with data=codes.30 pct=actual_counts.30.1 %}
                 </div>

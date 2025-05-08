@@ -448,6 +448,18 @@ def cell_track_9341(request, target):
     part_list = ["50-0455"]
     context['actual_counts_60'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_60'] = op_production_0455
+
+    # -- surgical insertion here for 0455 OEE stuff --
+    op_actual_60, op_oee_60 = compute_op_actual_and_oee(
+        line_spec,
+        machine_production_0455,
+        shift_start,
+        shift_time,
+        part_list=["50-0455"]
+    )
+    context['op_actual_60'] = op_actual_60
+    context['op_oee_60']    = op_oee_60
+
     context['wip_60'] = []
 
     # Date entry for History
