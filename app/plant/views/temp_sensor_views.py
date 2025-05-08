@@ -21,6 +21,32 @@ def humanize_delta(delta):
         return f"{weeks} weeks"
     return f"{days // 30} months"
 
+def alert_zones(zones):
+    """
+    Print out any zones with humidex >= 43,
+    along with the recommended heat-break duration.
+    """
+    for entry in zones:
+        hx = entry["humidex"]
+        zone = entry["zone"]
+
+        if hx < 43.0:
+            continue
+
+        # Determine recommendation
+        if hx < 45.0:
+            recommendation = "15 minute heat break"
+        elif hx < 47.0:
+            recommendation = "30 minute heat break"
+        elif hx < 50.0:
+            recommendation = "45 minute heat break"
+        else:
+            # 50 or above is hazardous
+            print(f"🚨 Zone {zone}: humidex = {hx:.1f} → HAZARDOUS to continue physical activity!")
+            continue
+
+        print(f"⚠️ Zone {zone}: humidex = {hx:.1f} → {recommendation}")
+
 def temp_display(request):
     raw_rows = []
     try:
@@ -72,7 +98,10 @@ def temp_display(request):
     # Sort by humidex in descending order
     processed.sort(key=lambda x: x["humidex"], reverse=True)
 
-    # Split into two balanced columns
+    # Call the alert function to print any zones in the danger range
+    alert_zones(processed)
+
+    # Split into two balanced columns for the template
     half = (len(processed) + 1) // 2
     columns = [processed[:half], processed[half:]]
 
