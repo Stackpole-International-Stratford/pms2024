@@ -184,13 +184,14 @@
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard">
         <div class="dashboard-spacer"> </div>
         <!--  AB1V Rx  -->
         <div class="dashboard-table">
             <div class="dashboard-border dashboard-table-heading" style="background-color:#D5D5D5;">
-                AB1V Rx (Predict {{op.130}})
+                AB1V Rx ({{ op_actual_8670.130 }}) {{ op_oee_8670.130 }}%
             </div>
             <div class="dashboard-table-row">  <!-- OP 10  -->
                 <div class="dashboard-table-row-operation dashboard-border">
@@ -289,7 +290,7 @@
         <!--  AB1V OD  -->
         <div class="dashboard-table">
             <div class="dashboard-border dashboard-table-heading" style="background-color:#D5D5D5;">
-                AB1V Overdrive (Predict {{op_5404.130}})
+                AB1V Overdrive ({{ op_actual_5404.130 }}) {{ op_oee_5404.130 }}%
             </div>
             <div class="dashboard-table-row">  <!-- OP 10/20  -->
                 <div class="dashboard-table-row-operation dashboard-border">
@@ -390,7 +391,7 @@
         <!--  AB1V IN  -->
         <div class="dashboard-table">
             <div class="dashboard-border dashboard-table-heading" style="background-color:#D5D5D5;">
-                AB1V Input (Predict {{op_5401.130}})
+                AB1V Input ({{ op_actual_5401.130 }}) {{ op_oee_5401.130 }}%
             </div>
             <div class="dashboard-table-row">  <!-- OP 10  -->
                 <div class="dashboard-table-row-operation dashboard-border">
@@ -483,7 +484,7 @@
         <!--  10R140 Rear  -->
         <div class="dashboard-table">
             <div class="dashboard-table-heading dashboard-border" style="background-color:#D5D5D5;">
-                10R140 Rear (Predict {{op_10R140.130}})
+                10R140 Rear ({{ op_actual_10R140.130 }}) {{ op_oee_10R140.130 }}%
             </div>
             <div class="dashboard-table-row">  <!-- OP 10  -->
                 <div class="dashboard-table-row-operation dashboard-border">
