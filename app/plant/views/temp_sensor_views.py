@@ -103,7 +103,7 @@ def send_alert_email(zones):
              {rows}
            </tbody>
           </table>
-          <p style="font-size:0.9em; color:#666;">Sent by Johnson Electric ‐ Stay safe!</p>
+          <p style="font-size:0.9em; color:#666;">Stay safe!</p>
          </body>
         </html>
         """,
