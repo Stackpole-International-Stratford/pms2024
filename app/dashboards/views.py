@@ -1370,7 +1370,7 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
         pct = (count / adjusted_target * 100) if adjusted_target else 0.0
 
         # print with truncated percent
-        print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {int(pct)}")
+        # print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {int(pct)}")
 
         # swap out the count for the int pct
         swapped_counts.append((machine, int(pct)))
@@ -1441,20 +1441,20 @@ def compute_op_actual_and_oee(line_spec,
       op_oee_list[i]    = int OEE% for OP i
     Prints debug info.
     """
-    print(f"compute_op_actual_and_oee: shift_start={shift_start}, shift_time={shift_time}")
+    # print(f"compute_op_actual_and_oee: shift_start={shift_start}, shift_time={shift_time}")
     minutes_elapsed = shift_time / 60.0
     factor          = minutes_elapsed / 7200.0
-    print(f"  minutes_elapsed={minutes_elapsed:.1f}, factor={factor:.5f}")
+    # print(f"  minutes_elapsed={minutes_elapsed:.1f}, factor={factor:.5f}")
 
     # map asset → OP
     asset2op = {asset: op for asset, *_ , op in line_spec}
-    print(f"  asset2op mapping: {asset2op}")
+    # print(f"  asset2op mapping: {asset2op}")
 
     # temporary dicts to accumulate
     op_actual   = defaultdict(int)
     op_adjusted = defaultdict(float)
 
-    print("  per-machine production:")
+    # print("  per-machine production:")
     for asset, actual_count, *_, in machine_production:
         op = asset2op.get(asset)
         if op is None:
@@ -1465,23 +1465,23 @@ def compute_op_actual_and_oee(line_spec,
         raw = None
         if part_list:
             raw = get_machine_target(asset, shift_start, part_list)
-            print(f"    - {asset}: get_machine_target(part_list) → {raw}")
+            # print(f"    - {asset}: get_machine_target(part_list) → {raw}")
         if raw is None:
             raw = get_machine_target(asset, shift_start)
-            print(f"    - {asset}: fallback get_machine_target → {raw}")
+            # print(f"    - {asset}: fallback get_machine_target → {raw}")
         raw = raw or 0
 
         adj = raw * factor
         pct = int(actual_count / adj * 100) if adj else 0
 
-        print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
+        # print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
 
         op_actual[op]   += actual_count
         op_adjusted[op] += adj
 
-    print("  per-OP accumulation:")
-    for op in sorted(op_actual):
-        print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
+    # print("  per-OP accumulation:")
+    # for op in sorted(op_actual):
+    #     # print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
 
     # figure out how big our list needs to be
     max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
@@ -1495,7 +1495,7 @@ def compute_op_actual_and_oee(line_spec,
     for op, adjusted in op_adjusted.items():
         pct = int(op_actual[op] / adjusted * 100) if adjusted else 0
         op_oee_list[op] = pct
-        print(f"    OP{op}: computed OEE={pct}%")
+        # print(f"    OP{op}: computed OEE={pct}%")
 
     return op_actual_list, op_oee_list
 
