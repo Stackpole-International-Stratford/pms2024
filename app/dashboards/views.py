@@ -775,6 +775,20 @@ def cell_track_8670(request, template):
     part_list = ["50-8670", "50-0450"]
     context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production_8670
+
+
+    # -- surgical insertion for 8670 OEE stuff --
+    op_actual_8670, op_oee_8670 = compute_op_actual_and_oee(
+        line_spec_8670,
+        machine_production_8670,
+        shift_start,
+        shift_time,
+        part_list=["50-8670", "50-0450"]
+    )
+    context['op_actual_8670'] = op_actual_8670
+    context['op_oee_8670']    = op_oee_8670
+
+
     context['wip'] = []
 
     line_spec_5401 = [
@@ -793,8 +807,6 @@ def cell_track_8670(request, template):
     ]
 
 
-    # Right here I will call the new function
-
     machine_production_5401, op_production_5401 = get_line_prod(
         line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
 
@@ -803,6 +815,20 @@ def cell_track_8670(request, template):
     part_list = ["50-5401", "50-0447"]
     context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_5401'] = op_production_5401
+
+
+    # -- surgical insertion for 5401 OEE stuff --
+    op_actual_5401, op_oee_5401 = compute_op_actual_and_oee(
+        line_spec_5401,
+        machine_production_5401,
+        shift_start,
+        shift_time,
+        part_list=["50-5401", "50-0447"]
+    )
+    context['op_actual_5401'] = op_actual_5401
+    context['op_oee_5401']    = op_oee_5401
+
+
     context['wip_5401'] = []
 
     line_spec_5404 = [
@@ -823,10 +849,6 @@ def cell_track_8670(request, template):
     ]
 
 
-
-
-    # Right here I will call the new function
-
     target_production = 300
     machine_production_5404, op_production_5404 = get_line_prod(
         line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
@@ -836,6 +858,20 @@ def cell_track_8670(request, template):
     part_list = ["50-5404", "50-0519"]
     context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_5404'] = op_production_5404
+
+
+    # -- surgical insertion for 5404 OEE stuff --
+    op_actual_5404, op_oee_5404 = compute_op_actual_and_oee(
+        line_spec_5404,
+        machine_production_5404,
+        shift_start,
+        shift_time,
+        part_list=["50-5404", "50-0519"]
+    )
+    context['op_actual_5404'] = op_actual_5404
+    context['op_oee_5404']    = op_oee_5404
+
+
     context['wip_5404'] = []
 
     # Date entry for History
@@ -1403,33 +1439,49 @@ def compute_op_actual_and_oee(line_spec,
     Returns two lists:
       op_actual_list[i] = total actual for OP i
       op_oee_list[i]    = int OEE% for OP i
+    Prints debug info.
     """
+    print(f"compute_op_actual_and_oee: shift_start={shift_start}, shift_time={shift_time}")
     minutes_elapsed = shift_time / 60.0
     factor          = minutes_elapsed / 7200.0
+    print(f"  minutes_elapsed={minutes_elapsed:.1f}, factor={factor:.5f}")
 
     # map asset → OP
     asset2op = {asset: op for asset, *_ , op in line_spec}
+    print(f"  asset2op mapping: {asset2op}")
 
     # temporary dicts to accumulate
-    op_actual     = defaultdict(int)
-    op_adjusted   = defaultdict(float)
+    op_actual   = defaultdict(int)
+    op_adjusted = defaultdict(float)
 
+    print("  per-machine production:")
     for asset, actual_count, *_, in machine_production:
         op = asset2op.get(asset)
         if op is None:
+            print(f"    - skipping {asset!r}: no OP mapping")
             continue
 
         # raw target lookup
         raw = None
         if part_list:
             raw = get_machine_target(asset, shift_start, part_list)
+            print(f"    - {asset}: get_machine_target(part_list) → {raw}")
         if raw is None:
             raw = get_machine_target(asset, shift_start)
+            print(f"    - {asset}: fallback get_machine_target → {raw}")
         raw = raw or 0
 
         adj = raw * factor
+        pct = int(actual_count / adj * 100) if adj else 0
+
+        print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
+
         op_actual[op]   += actual_count
         op_adjusted[op] += adj
+
+    print("  per-OP accumulation:")
+    for op in sorted(op_actual):
+        print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
 
     # figure out how big our list needs to be
     max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
@@ -1441,10 +1493,9 @@ def compute_op_actual_and_oee(line_spec,
         op_actual_list[op] = actual
 
     for op, adjusted in op_adjusted.items():
-        if adjusted:
-            pct = int(op_actual[op] / adjusted * 100)
-        else:
-            pct = 0
+        pct = int(op_actual[op] / adjusted * 100) if adjusted else 0
         op_oee_list[op] = pct
+        print(f"    OP{op}: computed OEE={pct}%")
 
     return op_actual_list, op_oee_list
+
