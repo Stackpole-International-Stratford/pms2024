@@ -1395,15 +1395,10 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     start_dt = datetime.fromtimestamp(shift_start, tz=est)
     elapsed = timedelta(seconds=shift_time)
 
-    # print(f"[Shift] start: {start_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')} | elapsed: {elapsed}")
-
     total_actual = sum(count for _, count in actual_counts)
-    # print(f"[Shift] total actual count: {total_actual}")
-
     minutes_elapsed = shift_time / 60.0
-    # print("[Shift] per-machine actuals vs targets:")
 
-    # Prepare new list to hold (machine, int_pct)
+    # Prepare new list to hold (machine, pct_or_NA)
     swapped_counts = []
 
     for machine, count in actual_counts:
@@ -1415,15 +1410,18 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
 
         # adjust for shift duration
         adjusted_target = raw_target * (minutes_elapsed / 7200.0)
-        pct = (count / adjusted_target * 100) if adjusted_target else 0.0
 
-        # print with truncated percent
-        # print(f"  - {machine}: actual={count}, target={adjusted_target:.2f}, {int(pct)}")
+        # compute pct only if we had a real target; otherwise N/A
+        if adjusted_target > 0:
+            pct = int(count / adjusted_target * 100)
+        else:
+            pct = "N/A"
 
-        # swap out the count for the int pct
-        swapped_counts.append((machine, int(pct)))
+        # swap out the count for the pct or "N/A"
+        swapped_counts.append((machine, pct))
 
     return swapped_counts
+
 
 
 MACHINE_TARGET_ALIASES = {
@@ -1531,19 +1529,24 @@ def compute_op_actual_and_oee(line_spec,
     for op in sorted(op_actual):
         print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
 
+   
     # figure out how big our list needs to be
-    max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
-    op_actual_list = [0] * (max_op + 1)
-    op_oee_list    = [0] * (max_op + 1)
+        max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
+        op_actual_list = [0] * (max_op + 1)
+        op_oee_list    = [0] * (max_op + 1)
 
-    # fill them
-    for op, actual in op_actual.items():
-        op_actual_list[op] = actual
+        # fill actuals
+        for op, actual in op_actual.items():
+            op_actual_list[op] = actual
 
-    for op, adjusted in op_adjusted.items():
-        pct = int(op_actual[op] / adjusted * 100) if adjusted else 0
-        op_oee_list[op] = pct
-        print(f"    OP{op}: computed OEE={pct}%")
+        # fill OEE: N/A if no adjusted target, otherwise integer pct (can be 0)
+        for op, adjusted in op_adjusted.items():
+            if adjusted > 0:
+                pct = int(op_actual[op] / adjusted * 100)
+            else:
+                pct = "N/A"
+            op_oee_list[op] = pct
+            print(f"    OP{op}: computed OEE={pct}%")
 
     return op_actual_list, op_oee_list
 
