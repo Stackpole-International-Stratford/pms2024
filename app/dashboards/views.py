@@ -582,8 +582,6 @@ def cell_track_trilobe(request, template):
     ]
 
 
-    # Right here I will call the new function
-
     machine_production_col1, op_production_col1 = get_line_prod(
         line_spec_col_1, target_production_col1, None, shift_start, shift_time)
 
@@ -592,6 +590,19 @@ def cell_track_trilobe(request, template):
     part_list = None
     context['actual_counts_col1'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col1'] = op_production_col1
+
+    # -- surgical insertion here for Col 1 OEE stuff --
+    op_actual_col1, op_oee_col1 = compute_op_actual_and_oee(
+        line_spec_col_1,
+        machine_production_col1,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col1'] = op_actual_col1
+    context['op_oee_col1']    = op_oee_col1
+
+
     context['wip'] = []
 
     line_spec_col_2 = [
@@ -605,8 +616,6 @@ def cell_track_trilobe(request, template):
     ]
 
 
-    # Right here I will call the new function
-
     machine_production_col2, op_production_col2 = get_line_prod(
         line_spec_col_2, target_production_col2, None, shift_start, shift_time)
 
@@ -615,6 +624,21 @@ def cell_track_trilobe(request, template):
     part_list = None
     context['actual_counts_col2'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col2'] = op_production_col2
+
+
+    # -- surgical insertion here for Col 2 OEE stuff --
+    op_actual_col2, op_oee_col2 = compute_op_actual_and_oee(
+        line_spec_col_2,
+        machine_production_col2,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col2'] = op_actual_col2
+    context['op_oee_col2']    = op_oee_col2
+
+
+
     context['wip_col2'] = []
 
     line_spec_col_3 = [
@@ -629,8 +653,6 @@ def cell_track_trilobe(request, template):
     ]
 
 
-    # Right here I will call the new function
-
     machine_production_col3, op_production_col3 = get_line_prod(
         line_spec_col_3, target_production_col3, None, shift_start, shift_time)
 
@@ -639,12 +661,24 @@ def cell_track_trilobe(request, template):
     part_list = None
     context['actual_counts_col3'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col3'] = op_production_col3
+
+    # -- surgical insertion here for Col 3 OEE stuff --
+    op_actual_col3, op_oee_col3 = compute_op_actual_and_oee(
+        line_spec_col_3,
+        machine_production_col3,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col3'] = op_actual_col3
+    context['op_oee_col3']    = op_oee_col3
+
     context['wip_col3'] = []
 
     line_spec_col_4 = [
         ('636', ['636'], 1, 10),  # 50-5710
         ('625', ['625'], 1, 20),  # 50-5710
-        ('Prediction', ['625', '636'], 1, 30),  # Prediction
+        ('Prediction', ['625', '636'], 1, 30),
     ]
 
     machine_production_col4, op_production_col4 = get_line_prod(
@@ -655,6 +689,20 @@ def cell_track_trilobe(request, template):
     part_list = None
     context['actual_counts_col4'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col4'] = op_production_col4
+
+
+    # -- surgical insertion here for Col 4 OEE stuff --
+    op_actual_col4, op_oee_col4 = compute_op_actual_and_oee(
+        line_spec_col_4,
+        machine_production_col4,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col4'] = op_actual_col4
+    context['op_oee_col4']    = op_oee_col4
+
+
     context['wip_col4'] = []
 
     # Date entry for History
@@ -1474,14 +1522,14 @@ def compute_op_actual_and_oee(line_spec,
         adj = raw * factor
         pct = int(actual_count / adj * 100) if adj else 0
 
-        # print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
+        print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
 
         op_actual[op]   += actual_count
         op_adjusted[op] += adj
 
     # print("  per-OP accumulation:")
-    # for op in sorted(op_actual):
-    #     # print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
+    for op in sorted(op_actual):
+        print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
 
     # figure out how big our list needs to be
     max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
@@ -1495,7 +1543,7 @@ def compute_op_actual_and_oee(line_spec,
     for op, adjusted in op_adjusted.items():
         pct = int(op_actual[op] / adjusted * 100) if adjusted else 0
         op_oee_list[op] = pct
-        # print(f"    OP{op}: computed OEE={pct}%")
+        print(f"    OP{op}: computed OEE={pct}%")
 
     return op_actual_list, op_oee_list
 
