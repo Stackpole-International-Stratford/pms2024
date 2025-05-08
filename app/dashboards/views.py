@@ -1504,7 +1504,7 @@ def compute_op_actual_and_oee(line_spec,
     for asset, actual_count, *_, in machine_production:
         op = asset2op.get(asset)
         if op is None:
-            print(f"    - skipping {asset!r}: no OP mapping")
+            # print(f"    - skipping {asset!r}: no OP mapping")
             continue
 
         # raw target lookup
@@ -1520,14 +1520,14 @@ def compute_op_actual_and_oee(line_spec,
         adj = raw * factor
         pct = int(actual_count / adj * 100) if adj else 0
 
-        print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
+        # print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
 
         op_actual[op]   += actual_count
         op_adjusted[op] += adj
 
     # print("  per-OP accumulation:")
     for op in sorted(op_actual):
-        print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
+        # print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
 
    
     # figure out how big our list needs to be
@@ -1546,7 +1546,7 @@ def compute_op_actual_and_oee(line_spec,
             else:
                 pct = "N/A"
             op_oee_list[op] = pct
-            print(f"    OP{op}: computed OEE={pct}%")
+            # print(f"    OP{op}: computed OEE={pct}%")
 
     return op_actual_list, op_oee_list
 
