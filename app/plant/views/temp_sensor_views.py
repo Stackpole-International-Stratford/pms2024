@@ -2,7 +2,10 @@ import mysql.connector
 import pytz
 from datetime import datetime
 from django.conf import settings
+from django.core.mail import send_mail
 from django.shortcuts import render
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import format_html
 
 def humanize_delta(delta):
     total_secs = int(delta.total_seconds())
@@ -21,31 +24,97 @@ def humanize_delta(delta):
         return f"{weeks} weeks"
     return f"{days // 30} months"
 
-def alert_zones(zones):
+def send_alert_email(zones):
     """
-    Print out any zones with humidex >= 43,
-    along with the recommended heat-break duration.
+    Send a multipart email (plain text + HTML) listing every zone
+    whose humidex ≥ 43, with a clean table and clear recommendations.
     """
+    # Build a list of alert entries
+    alerts = []
     for entry in zones:
         hx = entry["humidex"]
-        zone = entry["zone"]
-
         if hx < 43.0:
             continue
 
-        # Determine recommendation
+        zone = entry["zone"]
         if hx < 45.0:
-            recommendation = "15 minute heat break"
+            rec = "15-minute heat break"
         elif hx < 47.0:
-            recommendation = "30 minute heat break"
+            rec = "30-minute heat break"
         elif hx < 50.0:
-            recommendation = "45 minute heat break"
+            rec = "45-minute heat break"
         else:
-            # 50 or above is hazardous
-            print(f"🚨 Zone {zone}: humidex = {hx:.1f} → HAZARDOUS to continue physical activity!")
-            continue
+            rec = "<strong style='color:#c00;'>HAZARDOUS to continue physical activity!</strong>"
 
-        print(f"⚠️ Zone {zone}: humidex = {hx:.1f} → {recommendation}")
+        alerts.append({
+            "zone": zone,
+            "humidex": f"{hx:.1f}",
+            "rec": rec,
+        })
+
+    if not alerts:
+        return  # nothing to report
+
+    subject = "🔴 Heat Alert Notification: Humidex Safety Advisory"
+
+    # Plain-text fallback
+    text_lines = [
+        "The following zones have recorded a humidex of 43 or higher:",
+        ""
+    ]
+    for a in alerts:
+        # strip HTML tags from rec for text version
+        rec_text = a["rec"].replace("<strong>", "").replace("</strong>", "")
+        text_lines.append(f"- Zone {a['zone']}: humidex = {a['humidex']} → {rec_text}")
+    text_body = "\n".join(text_lines)
+
+    # HTML body with inline styles
+    html_rows = "".join([
+        format_html(
+            "<tr>"
+            "  <td style='padding:8px; border:1px solid #ddd;'>Zone {zone}</td>"
+            "  <td style='padding:8px; border:1px solid #ddd; text-align:center;'>{humidex}</td>"
+            "  <td style='padding:8px; border:1px solid #ddd;'>{rec}</td>"
+            "</tr>",
+            zone=a["zone"], humidex=a["humidex"], rec=format_html(a["rec"])
+        )
+        for a in alerts
+    ])
+    html_body = format_html(
+        """
+        <html>
+         <body style="font-family:Arial,sans-serif; color:#333;">
+          <h2 style="color:#c00;">Heat Alert: Humidex Threshold Exceeded</h2>
+          <p>The following zones have recorded a <strong>humidex ≥ 43</strong>. 
+             Please observe the recommended heat‐breaks below:</p>
+          <table style="border-collapse:collapse; width:100%; max-width:600px;">
+           <thead>
+            <tr style="background:#f5f5f5;">
+             <th style="padding:8px; border:1px solid #ddd; text-align:left;">Zone</th>
+             <th style="padding:8px; border:1px solid #ddd; text-align:center;">Humidex</th>
+             <th style="padding:8px; border:1px solid #ddd; text-align:left;">Recommendation</th>
+            </tr>
+           </thead>
+           <tbody>
+             {rows}
+           </tbody>
+          </table>
+          <p style="font-size:0.9em; color:#666;">Sent by Johnson Electric ‐ Stay safe!</p>
+         </body>
+        </html>
+        """,
+        rows=format_html(html_rows)
+    )
+
+    # Assemble and send
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=["tyler.careless@johnsonelectric.com"],
+    )
+    msg.attach_alternative(html_body, "text/html")
+    msg.send(fail_silently=False)
 
 def temp_display(request):
     raw_rows = []
@@ -76,7 +145,6 @@ def temp_display(request):
         humidity = hum_raw / 10.0
         humidex = hex_raw / 10.0
 
-        # Format the timestamp
         if ts_raw is None:
             updated = "n/a"
         else:
@@ -95,13 +163,13 @@ def temp_display(request):
             "alert": humidex >= 43.0,
         })
 
-    # Sort by humidex in descending order
+    # Sort by humidex descending
     processed.sort(key=lambda x: x["humidex"], reverse=True)
 
-    # Call the alert function to print any zones in the danger range
-    alert_zones(processed)
+    # Send your email alert if any zones ≥ 43
+    send_alert_email(processed)
 
-    # Split into two balanced columns for the template
+    # Then split into two columns for display
     half = (len(processed) + 1) // 2
     columns = [processed[:half], processed[half:]]
 
