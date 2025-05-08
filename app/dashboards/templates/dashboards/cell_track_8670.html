@@ -470,8 +470,10 @@
             <div class="dashboard-table-row">  <!-- OP 10  -->
                 <div class="dashboard-table-row-operation dashboard-border">
                     <div class="dashboard-table-row-asset-number">OP10</div>
-                    <div class="dashboard-table-row-asset-count">({{op_10R140.10}})</div>
-                </div>
+                    <div class="dashboard-table-row-asset-count asset-count">
+                        ({{ op_actual_10R140.10 }}) {{ op_oee_10R140.10 }}%
+                      </div>
+                                      </div>
                 {% include "dashboards/asset_block.html" with data=codes_10R140.0 pct=actual_counts_10R140.0.1 %}
                 {% include "dashboards/asset_block.html" with data=codes_10R140.1 pct=actual_counts_10R140.1.1 %}
                 

@@ -719,7 +719,6 @@ def cell_track_8670(request, template):
     ]
 
 
-    # Right here I will call the new function
 
     machine_production_10R140, op_production_10R140 = get_line_prod(
         line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
@@ -729,6 +728,19 @@ def cell_track_8670(request, template):
     part_list = ["50-3214", "50-5214"]
     context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_10R140'] = op_production_10R140
+
+
+    # -- surgical insertion for 10R140 OEE stuff --
+    op_actual_10R140, op_oee_10R140 = compute_op_actual_and_oee(
+        line_spec_10R140,
+        machine_production_10R140,
+        shift_start,
+        shift_time,
+        part_list=["50-3214", "50-5214"]
+    )
+    context['op_actual_10R140'] = op_actual_10R140
+    context['op_oee_10R140']    = op_oee_10R140
+
     context['wip_10R140'] = []
 
     line_spec_8670 = [
@@ -754,8 +766,6 @@ def cell_track_8670(request, template):
         ('1725', ['1725'], 1, 130),
     ]
 
-
-    # Right here I will call the new function
 
     machine_production_8670, op_production_8670 = get_line_prod(
         line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
