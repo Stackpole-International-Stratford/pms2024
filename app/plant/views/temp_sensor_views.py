@@ -37,8 +37,8 @@ def send_alert_email(zones):
     alerts = []
     for entry in zones:
         hx = entry["humidex"]
-        if hx < 43.0:
-            continue
+        # if hx < 43.0:
+        #     continue
 
         zone = entry["zone"]
         if hx < 45.0:
@@ -115,7 +115,14 @@ def send_alert_email(zones):
         subject=subject,
         body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL,
-        to=["tyler.careless@johnsonelectric.com"],
+        to=["tyler.careless@johnsonelectric.com",
+            "tyler.careless@johnsonelectric.com",
+            
+            
+            
+            
+            
+            ],
     )
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
