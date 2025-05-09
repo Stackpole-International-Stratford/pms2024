@@ -6,6 +6,8 @@ from django.core.mail import send_mail
 from django.shortcuts import render
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import format_html
+from django.contrib.auth.models import Group
+
 
 def humanize_delta(delta):
     total_secs = int(delta.total_seconds())
@@ -37,8 +39,8 @@ def send_alert_email(zones):
     alerts = []
     for entry in zones:
         hx = entry["humidex"]
-        # if hx < 43.0:
-        #     continue
+        if hx < 43.0:
+            continue
 
         zone = entry["zone"]
         if hx < 45.0:
@@ -130,6 +132,12 @@ def send_alert_email(zones):
 
 
 
+def is_healthsafety_manager(user):
+    return (
+        user.is_authenticated
+        and user.groups.filter(name="healthsafety_managers").exists()
+    )
+
 def temp_display(request):
     raw_rows = []
     try:
@@ -155,9 +163,9 @@ def temp_display(request):
     now_utc = datetime.now(pytz.utc)
     processed = []
     for temp_raw, hum_raw, hex_raw, zone, ts_raw in raw_rows:
-        temp = temp_raw / 10.0
-        humidity = hum_raw / 10.0
-        humidex = hex_raw / 10.0
+        temp     = temp_raw   / 10.0
+        humidity = hum_raw    / 10.0
+        humidex  = hex_raw    / 10.0
 
         if ts_raw is None:
             updated = "n/a"
@@ -169,24 +177,24 @@ def temp_display(request):
             updated = humanize_delta(now_utc - ts_aware)
 
         processed.append({
-            "temp": temp,
+            "temp":     temp,
             "humidity": humidity,
-            "humidex": humidex,
-            "zone": zone,
-            "updated": updated,
-            "alert": humidex >= 43.0,
+            "humidex":  humidex,
+            "zone":     zone,
+            "updated":  updated,
+            "alert":    humidex >= 43.0,
         })
 
-    # Sort by humidex descending
     processed.sort(key=lambda x: x["humidex"], reverse=True)
-
-    # Send your email alert if any zones ≥ 43
     send_alert_email(processed)
 
-    # Then split into two columns for display
-    half = (len(processed) + 1) // 2
+    half    = (len(processed) + 1) // 2
     columns = [processed[:half], processed[half:]]
 
+    # <-- new bit, works for anonymous or logged-in users
+    is_manager = is_healthsafety_manager(request.user)
+
     return render(request, "plant/temp_display.html", {
-        "columns": columns,
+        "columns":    columns,
+        "is_manager": is_manager,
     })

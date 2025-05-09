@@ -29,6 +29,15 @@
       </h2>
     </div>
 
+    {% if is_manager %}
+  <div class="healthsafety-manager-only">
+    <!-- dummy div for health & safety managers -->
+    <p>
+      You’re in the <strong>healthsafety_managers</strong> group, so you see this extra panel.
+    </p>
+  </div>
+{% endif %}
+
     <div class="row">
       {% for rows in columns %}
         <div class="col-md-6 mb-4">
