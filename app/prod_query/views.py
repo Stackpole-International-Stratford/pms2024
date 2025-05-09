@@ -2351,6 +2351,18 @@ lines = [
             },
         ],
     },
+     {
+        "line": "Furnaces",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "furnace",
+                "machines": [
+                    {"number": "345", "target": 27496,},
+                ],
+            },
+        ],
+    },
 
 ]
 
