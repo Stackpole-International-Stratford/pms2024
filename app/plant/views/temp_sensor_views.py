@@ -117,18 +117,22 @@ def send_alert_email(zones):
     )
 
     # Assemble and send
+    # ----------------------------------
+    # Pull all emails from the DB
+    recipient_list = list(
+        TempSensorEmailList.objects
+            .values_list("email", flat=True)
+    )
+
+    if not recipient_list:
+        # nothing to send to
+        return
+
     msg = EmailMultiAlternatives(
-        subject=subject,
+        subject="Heat Alert",   # you can extract the subject into settings if you like
         body=text_body,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=["tyler.careless@johnsonelectric.com",
-            "tyler.careless@johnsonelectric.com",
-            
-            
-            
-            
-            
-            ],
+        from_email="noreply@johnsonelectric.com",
+        to=recipient_list,
     )
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
