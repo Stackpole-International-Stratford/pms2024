@@ -29,109 +29,126 @@
       </h2>
     </div>
 
-    {% if is_manager %}
-    <div class="card mb-4" id="email-management-card">
-      <div class="card-header">Manage Alert Emails</div>
-      <div class="card-body">
-        <form id="addEmailForm" class="mb-3">
-          {% csrf_token %}
-          <div class="input-group">
+{# plant/templates/plant/temp_display.html #}
+{% if is_manager %}
+  <div class="accordion mb-4" id="emailListAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="headingEmails">
+        <button
+          class="accordion-button collapsed"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapseEmails"
+          aria-expanded="false"
+          aria-controls="collapseEmails"
+        >
+          Emailing List
+        </button>
+      </h2>
+      <div
+        id="collapseEmails"
+        class="accordion-collapse collapse"
+        aria-labelledby="headingEmails"
+        data-bs-parent="#emailListAccordion"
+      >
+        <div class="accordion-body">
+          <form id="addEmailForm" class="mb-3 d-flex">
+            {% csrf_token %}
             <input
               type="email"
               id="newEmail"
               name="email"
-              class="form-control"
-              placeholder="Enter email"
+              class="form-control me-2"
+              placeholder="Enter new alert email"
               required
             >
-            <button class="btn btn-primary" type="submit">Add</button>
-          </div>
-        </form>
-  
-        <ul class="list-group" id="emailList">
-          {% for entry in email_list %}
-            <li class="list-group-item d-flex justify-content-between" data-id="{{ entry.id }}">
-              {{ entry.email }}
-              <button class="btn btn-sm btn-danger delete-email-btn">Delete</button>
-            </li>
-          {% empty %}
-            <li class="list-group-item">No emails yet.</li>
-          {% endfor %}
-        </ul>
+            <button class="btn btn-warning" type="submit">Add</button>
+          </form>
+
+          <ul class="list-group" id="emailList">
+            {% for entry in email_list %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+                data-id="{{ entry.id }}"
+              >
+                {{ entry.email }}
+                <button class="btn btn-sm btn-outline-dark delete-email-btn">
+                  Delete
+                </button>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-muted">No emails yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
       </div>
     </div>
-  
-    <script>
-    (function(){
-      // grab CSRF token from cookie
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          document.cookie.split(';').forEach(c => {
-            let [k,v] = c.trim().split('=');
-            if (k === name) cookieValue = decodeURIComponent(v);
-          });
-        }
-        return cookieValue;
-      }
-      const csrftoken = getCookie('csrftoken');
-  
-      // helper to post form-data
-      function postData(url, data) {
-        return fetch(url, {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': csrftoken,
-            'Accept': 'application/json'
-          },
-          body: new URLSearchParams(data)
-        })
-        .then(r => r.json());
-      }
-  
-      // Add email
-      document.getElementById('addEmailForm')
-        .addEventListener('submit', function(e){
-          e.preventDefault();
-          const email = document.getElementById('newEmail').value.trim();
-          if (!email) return;
-          postData("{% url 'add-temp-sensor-email' %}", { email })
-            .then(json => {
-              if (json.error) {
-                alert(json.error);
-              } else {
-                // append new list item
-                const li = document.createElement('li');
-                li.className = 'list-group-item d-flex justify-content-between';
-                li.dataset.id = json.id;
-                li.innerHTML = `
-                  ${json.email}
-                  <button class="btn btn-sm btn-danger delete-email-btn">Delete</button>
-                `;
-                document.getElementById('emailList').append(li);
-                document.getElementById('newEmail').value = '';
-              }
-            });
+  </div>
+
+  <script>
+  (function(){
+    // grab CSRF token from cookie
+    function getCookie(name) {
+      let cookie = document.cookie.split(';').find(c => c.trim().startsWith(name + '='));
+      return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    function postData(url, data) {
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'application/json'
+        },
+        body: new URLSearchParams(data)
+      })
+      .then(r => r.json());
+    }
+
+    // Add email
+    document.getElementById('addEmailForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const email = document.getElementById('newEmail').value.trim();
+      if (!email) return;
+      postData("{% url 'add-temp-sensor-email' %}", { email })
+        .then(json => {
+          if (json.error) {
+            alert(json.error);
+          } else {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.id = json.id;
+            li.innerHTML = `
+              ${json.email}
+              <button class="btn btn-sm btn-outline-dark delete-email-btn">
+                Delete
+              </button>
+            `;
+            document.getElementById('emailList').append(li);
+            document.getElementById('newEmail').value = '';
+          }
         });
-  
-      // Delegate delete clicks
-      document.getElementById('emailList')
-        .addEventListener('click', function(e){
-          if (!e.target.matches('.delete-email-btn')) return;
-          const li = e.target.closest('li');
-          const id = li.dataset.id;
-          postData("{% url 'delete-temp-sensor-email' %}", { id })
-            .then(json => {
-              if (json.error) {
-                alert(json.error);
-              } else {
-                li.remove();
-              }
-            });
+    });
+
+    // Delete email (event delegation)
+    document.getElementById('emailList').addEventListener('click', function(e){
+      if (!e.target.classList.contains('delete-email-btn')) return;
+      const li = e.target.closest('li');
+      const id = li.dataset.id;
+      postData("{% url 'delete-temp-sensor-email' %}", { id })
+        .then(json => {
+          if (json.error) {
+            alert(json.error);
+          } else {
+            li.remove();
+          }
         });
-    })();
-    </script>
-  {% endif %}
+    });
+  })();
+  </script>
+{% endif %}
+
   
 
     <div class="row">
