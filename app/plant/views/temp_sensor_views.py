@@ -13,6 +13,14 @@ from django.views.decorators.http import require_POST
 from ..models.tempsensor_models import TempSensorEmailList
 
 
+
+
+# =========================================================================
+# =========================================================================
+# ======================= Helper Functions ================================
+# =========================================================================
+# =========================================================================
+
 def humanize_delta(delta):
     total_secs = int(delta.total_seconds())
     mins = total_secs // 60
@@ -146,6 +154,45 @@ def is_healthsafety_manager(user):
         and user.groups.filter(name="healthsafety_managers").exists()
     )
 
+
+
+@require_POST
+def add_temp_sensor_email(request):
+    if not is_healthsafety_manager(request.user):
+        return HttpResponseForbidden()
+    email = request.POST.get("email", "").strip()
+    if not email:
+        return JsonResponse({"error": "No email provided."}, status=400)
+    obj, created = TempSensorEmailList.objects.get_or_create(email=email)
+    if not created:
+        return JsonResponse({"error": "That address is already on the list."}, status=400)
+    return JsonResponse({"id": obj.id, "email": obj.email})
+
+@require_POST
+def delete_temp_sensor_email(request):
+    if not is_healthsafety_manager(request.user):
+        return HttpResponseForbidden()
+    pk = request.POST.get("id")
+    if not pk:
+        return JsonResponse({"error": "No id provided."}, status=400)
+    try:
+        obj = TempSensorEmailList.objects.get(pk=pk)
+        obj.delete()
+        return JsonResponse({"deleted": pk})
+    except TempSensorEmailList.DoesNotExist:
+        return JsonResponse({"error": "Email not found."}, status=404)
+    
+
+
+
+
+
+# =========================================================================
+# =========================================================================
+# ======================= Main Functions ==================================
+# =========================================================================
+# =========================================================================
+
 def temp_display(request):
     raw_rows = []
     try:
@@ -211,29 +258,3 @@ def temp_display(request):
         "email_list": email_list,
     })
 
-
-@require_POST
-def add_temp_sensor_email(request):
-    if not is_healthsafety_manager(request.user):
-        return HttpResponseForbidden()
-    email = request.POST.get("email", "").strip()
-    if not email:
-        return JsonResponse({"error": "No email provided."}, status=400)
-    obj, created = TempSensorEmailList.objects.get_or_create(email=email)
-    if not created:
-        return JsonResponse({"error": "That address is already on the list."}, status=400)
-    return JsonResponse({"id": obj.id, "email": obj.email})
-
-@require_POST
-def delete_temp_sensor_email(request):
-    if not is_healthsafety_manager(request.user):
-        return HttpResponseForbidden()
-    pk = request.POST.get("id")
-    if not pk:
-        return JsonResponse({"error": "No id provided."}, status=400)
-    try:
-        obj = TempSensorEmailList.objects.get(pk=pk)
-        obj.delete()
-        return JsonResponse({"deleted": pk})
-    except TempSensorEmailList.DoesNotExist:
-        return JsonResponse({"error": "Email not found."}, status=404)
