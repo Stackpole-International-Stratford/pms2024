@@ -56,8 +56,8 @@ def send_alert_email(zones):
     alerts = []
     for entry in zones:
         hx = entry["humidex"]
-        # if hx < 43.0:
-        #     continue
+        if hx < 43.0:
+            continue
 
         if hx < 45.0:
             rec = "15-minute heat break"
