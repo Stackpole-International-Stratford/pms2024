@@ -7,6 +7,10 @@ from django.shortcuts import render
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import format_html
 from django.contrib.auth.models import Group
+import json
+from django.http           import JsonResponse, HttpResponseForbidden
+from django.views.decorators.http import require_POST
+from ..models.tempsensor_models import TempSensorEmailList
 
 
 def humanize_delta(delta):
@@ -194,7 +198,38 @@ def temp_display(request):
     # <-- new bit, works for anonymous or logged-in users
     is_manager = is_healthsafety_manager(request.user)
 
+     # load the current list only for managers
+    email_list = TempSensorEmailList.objects.all() if is_manager else []
+
     return render(request, "plant/temp_display.html", {
         "columns":    columns,
         "is_manager": is_manager,
+        "email_list": email_list,
     })
+
+
+@require_POST
+def add_temp_sensor_email(request):
+    if not is_healthsafety_manager(request.user):
+        return HttpResponseForbidden()
+    email = request.POST.get("email", "").strip()
+    if not email:
+        return JsonResponse({"error": "No email provided."}, status=400)
+    obj, created = TempSensorEmailList.objects.get_or_create(email=email)
+    if not created:
+        return JsonResponse({"error": "That address is already on the list."}, status=400)
+    return JsonResponse({"id": obj.id, "email": obj.email})
+
+@require_POST
+def delete_temp_sensor_email(request):
+    if not is_healthsafety_manager(request.user):
+        return HttpResponseForbidden()
+    pk = request.POST.get("id")
+    if not pk:
+        return JsonResponse({"error": "No id provided."}, status=400)
+    try:
+        obj = TempSensorEmailList.objects.get(pk=pk)
+        obj.delete()
+        return JsonResponse({"deleted": pk})
+    except TempSensorEmailList.DoesNotExist:
+        return JsonResponse({"error": "Email not found."}, status=404)
