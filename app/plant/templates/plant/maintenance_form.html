@@ -269,12 +269,18 @@
         <div class="mb-3">
           <label for="labourEmployeeId" class="form-label">Employee ID</label>
           <input
-            type="text"
-            class="form-control"
-            id="labourEmployeeId"
-            placeholder="Enter your employee ID"
-            required
-          >
+          type="text"
+          class="form-control"
+          id="labourEmployeeId"
+          name="employee_id"                       <
+          placeholder="Enter your employee ID"
+          required
+          {% if not user.is_anonymous %}
+            value="{{ request.user.username }}"   
+            readonly                            
+          {% endif %}
+        >
+        
           <div class="invalid-feedback">
             Please enter your employee ID.
           </div>
