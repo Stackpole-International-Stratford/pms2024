@@ -9,6 +9,10 @@ from django.http import Http404
 
 from django.shortcuts import render, redirect
 import MySQLdb
+from prod_query.models import OAMachineTargets
+from collections import defaultdict
+
+
 
 
 
@@ -145,8 +149,6 @@ below applies to all these dashboard views
 
 # args csrf token and form
 """
-
-
 def get_line_prod(line_spec, line_target, parts, shift_start, shift_time):
     cursor = connections['prodrpt-md'].cursor()
 
@@ -365,8 +367,7 @@ def cell_track_9341(request, target):
 
     line_spec_9341 = [  # ('Asset','source', rate, OP)
         # Main line
-        ('1504', '1504', 8, 10), ('1506', '1506', 8,
-                                  10), ('1519', '1519', 8, 10), ('1520', '1520', 8, 10),
+        ('1504', '1504', 8, 10), ('1506', '1506', 8, 10), ('1519', '1519', 8, 10), ('1520', '1520', 8, 10),
         ('1502', '1502', 4, 30), ('1507', '1507', 4, 30),
         ('1501', '1501', 4, 40), ('1515', '1515', 4, 40),
         ('1508', '1508', 4, 50), ('1532', '1532', 4, 50),
@@ -376,8 +377,7 @@ def cell_track_9341(request, target):
         ('1503', '1503', 2, 100),
         ('1511', '1511', 2, 110),
         # Offline
-        ('1518', '1518', 8, 10), ('1521', '1521', 8,
-                                  10), ('1522', '1522', 8, 10), ('1523', '1523', 8, 10),
+        ('1518', '1518', 8, 10), ('1521', '1521', 8, 10), ('1522', '1522', 8, 10), ('1523', '1523', 8, 10),
         ('1539', '1539', 4, 30), ('1540', '1540', 4, 30),
         ('1524', '1524', 4, 40), ('1525', '1525', 4, 40),
         ('1538', '1538', 4, 50),
@@ -399,18 +399,34 @@ def cell_track_9341(request, target):
         ('751', '751', 2, 100),
         ('1554', '1554', 2, 110),
     ]
+
+
     machine_production_9341, op_production_9341 = get_line_prod2(
         line_spec_9341, target_production_9341, '"50-9341"', shift_start, shift_time)
 
     context['codes'] = machine_production_9341
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_9341]
+    part_list = ["50-9341"]
+    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production_9341
+
+    # -- surgical insertion here --
+    op_actual_9341, op_oee_9341 = compute_op_actual_and_oee(
+        line_spec_9341,
+        machine_production_9341,
+        shift_start,
+        shift_time,
+        part_list=["50-9341"]
+    )
+    context['op_actual'] = op_actual_9341
+    context['op_oee']    = op_oee_9341
+
     context['wip'] = []
 
     line_spec = [  # ('Asset','Count', rate, OP)
         # Main line
         ('1800', '1800', 2, 10), ('1801', '1801', 2, 10), ('1802', '1802', 2, 10),
-        ('1529', '1529', 4, 30), ('1543', '1543', 4,
-                                  30), ('776', '776', 4, 30), ('1824', '1824', 4, 30),
+        ('1529', '1529', 4, 30), ('1543', '1543', 4, 30), ('776', '776', 4, 30), ('1824', '1824', 4, 30),
         ('1804', '1804', 2, 40), ('1805', '1805', 2, 40),
         ('1806', '1806', 1, 50),
         ('1808', '1808', 1, 60),
@@ -422,11 +438,28 @@ def cell_track_9341(request, target):
         ('1816', '1816', 1, 120),
     ]
 
+
+
     machine_production_0455, op_production_0455 = get_line_prod2(
         line_spec, target_production_0455, '"50-0455"', shift_start, shift_time)
 
     context['codes_60'] = machine_production_0455
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_0455]
+    part_list = ["50-0455"]
+    context['actual_counts_60'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_60'] = op_production_0455
+
+    # -- surgical insertion here for 0455 OEE stuff --
+    op_actual_60, op_oee_60 = compute_op_actual_and_oee(
+        line_spec,
+        machine_production_0455,
+        shift_start,
+        shift_time,
+        part_list=["50-0455"]
+    )
+    context['op_actual_60'] = op_actual_60
+    context['op_oee_60']    = op_oee_60
+
     context['wip_60'] = []
 
     # Date entry for History
@@ -471,6 +504,8 @@ def cell_track_9341(request, target):
 
     return render(request, template, context)
 
+
+
 @cache_page(5)
 def cell_track_1467(request, template):
     tic = time.time()  # track the execution time
@@ -492,10 +527,15 @@ def cell_track_1467(request, template):
         ('649', ['649'], 6, 10),
     ]
 
+    # Right here I will call the new function
+
     machine_production, op_production = get_line_prod(
         line_spec, target_production_1467, '"50-1467"', shift_start, shift_time)
 
     context['codes'] = machine_production
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production]
+    part_list = ["50-1467"]
+    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production
     context['wip'] = []
 
@@ -541,11 +581,28 @@ def cell_track_trilobe(request, template):
         ('992', ['992'], 1, 30),  # nothing
     ]
 
+
     machine_production_col1, op_production_col1 = get_line_prod(
         line_spec_col_1, target_production_col1, None, shift_start, shift_time)
 
     context['codes_col1'] = machine_production_col1
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col1]
+    part_list = None
+    context['actual_counts_col1'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col1'] = op_production_col1
+
+    # -- surgical insertion here for Col 1 OEE stuff --
+    op_actual_col1, op_oee_col1 = compute_op_actual_and_oee(
+        line_spec_col_1,
+        machine_production_col1,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col1'] = op_actual_col1
+    context['op_oee_col1']    = op_oee_col1
+
+
     context['wip'] = []
 
     line_spec_col_2 = [
@@ -558,11 +615,30 @@ def cell_track_trilobe(request, template):
         ('769', ['769'], 1, 40),  # 50-1467, 50-3050, 50-5710
     ]
 
+
     machine_production_col2, op_production_col2 = get_line_prod(
         line_spec_col_2, target_production_col2, None, shift_start, shift_time)
 
     context['codes_col2'] = machine_production_col2
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col2]
+    part_list = None
+    context['actual_counts_col2'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col2'] = op_production_col2
+
+
+    # -- surgical insertion here for Col 2 OEE stuff --
+    op_actual_col2, op_oee_col2 = compute_op_actual_and_oee(
+        line_spec_col_2,
+        machine_production_col2,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col2'] = op_actual_col2
+    context['op_oee_col2']    = op_oee_col2
+
+
+
     context['wip_col2'] = []
 
     line_spec_col_3 = [
@@ -576,24 +652,57 @@ def cell_track_trilobe(request, template):
         ('742', ['742', '650L', '650R'], 1, 40),  # 50-1467    # 650L and 650R replaced with 742 5/28/2024
     ]
 
+
     machine_production_col3, op_production_col3 = get_line_prod(
         line_spec_col_3, target_production_col3, None, shift_start, shift_time)
 
     context['codes_col3'] = machine_production_col3
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col3]
+    part_list = None
+    context['actual_counts_col3'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col3'] = op_production_col3
+
+    # -- surgical insertion here for Col 3 OEE stuff --
+    op_actual_col3, op_oee_col3 = compute_op_actual_and_oee(
+        line_spec_col_3,
+        machine_production_col3,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col3'] = op_actual_col3
+    context['op_oee_col3']    = op_oee_col3
+
     context['wip_col3'] = []
 
     line_spec_col_4 = [
         ('636', ['636'], 1, 10),  # 50-5710
         ('625', ['625'], 1, 20),  # 50-5710
-        ('Prediction', ['625', '636'], 1, 30),  # Prediction
+        ('Prediction', ['625', '636'], 1, 30),
     ]
 
     machine_production_col4, op_production_col4 = get_line_prod(
         line_spec_col_4, target_production_col4, None, shift_start, shift_time)
 
     context['codes_col4'] = machine_production_col4
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_col4]
+    part_list = None
+    context['actual_counts_col4'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_col4'] = op_production_col4
+
+
+    # -- surgical insertion here for Col 4 OEE stuff --
+    op_actual_col4, op_oee_col4 = compute_op_actual_and_oee(
+        line_spec_col_4,
+        machine_production_col4,
+        shift_start,
+        shift_time,
+        part_list=None
+    )
+    context['op_actual_col4'] = op_actual_col4
+    context['op_oee_col4']    = op_oee_col4
+
+
     context['wip_col4'] = []
 
     # Date entry for History
@@ -657,11 +766,29 @@ def cell_track_8670(request, template):
         ('1725', ['1725'], 1, 130),
     ]
 
+
+
     machine_production_10R140, op_production_10R140 = get_line_prod(
         line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
 
     context['codes_10R140'] = machine_production_10R140
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
+    part_list = ["50-3214", "50-5214"]
+    context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_10R140'] = op_production_10R140
+
+
+    # -- surgical insertion for 10R140 OEE stuff --
+    op_actual_10R140, op_oee_10R140 = compute_op_actual_and_oee(
+        line_spec_10R140,
+        machine_production_10R140,
+        shift_start,
+        shift_time,
+        part_list=["50-3214", "50-5214"]
+    )
+    context['op_actual_10R140'] = op_actual_10R140
+    context['op_oee_10R140']    = op_oee_10R140
+
     context['wip_10R140'] = []
 
     line_spec_8670 = [
@@ -687,11 +814,29 @@ def cell_track_8670(request, template):
         ('1725', ['1725'], 1, 130),
     ]
 
+
     machine_production_8670, op_production_8670 = get_line_prod(
         line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
 
     context['codes'] = machine_production_8670
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
+    part_list = ["50-8670", "50-0450"]
+    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op'] = op_production_8670
+
+
+    # -- surgical insertion for 8670 OEE stuff --
+    op_actual_8670, op_oee_8670 = compute_op_actual_and_oee(
+        line_spec_8670,
+        machine_production_8670,
+        shift_start,
+        shift_time,
+        part_list=["50-8670", "50-0450"]
+    )
+    context['op_actual_8670'] = op_actual_8670
+    context['op_oee_8670']    = op_oee_8670
+
+
     context['wip'] = []
 
     line_spec_5401 = [
@@ -709,11 +854,29 @@ def cell_track_8670(request, template):
         ('1725', ['1725'], 1, 130),
     ]
 
+
     machine_production_5401, op_production_5401 = get_line_prod(
         line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
 
     context['codes_5401'] = machine_production_5401
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
+    part_list = ["50-5401", "50-0447"]
+    context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_5401'] = op_production_5401
+
+
+    # -- surgical insertion for 5401 OEE stuff --
+    op_actual_5401, op_oee_5401 = compute_op_actual_and_oee(
+        line_spec_5401,
+        machine_production_5401,
+        shift_start,
+        shift_time,
+        part_list=["50-5401", "50-0447"]
+    )
+    context['op_actual_5401'] = op_actual_5401
+    context['op_oee_5401']    = op_oee_5401
+
+
     context['wip_5401'] = []
 
     line_spec_5404 = [
@@ -733,12 +896,30 @@ def cell_track_8670(request, template):
         ('1725', ['1725'], 1, 130),
     ]
 
+
     target_production = 300
     machine_production_5404, op_production_5404 = get_line_prod(
         line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
 
     context['codes_5404'] = machine_production_5404
+    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
+    part_list = ["50-5404", "50-0519"]
+    context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
     context['op_5404'] = op_production_5404
+
+
+    # -- surgical insertion for 5404 OEE stuff --
+    op_actual_5404, op_oee_5404 = compute_op_actual_and_oee(
+        line_spec_5404,
+        machine_production_5404,
+        shift_start,
+        shift_time,
+        part_list=["50-5404", "50-0519"]
+    )
+    context['op_actual_5404'] = op_actual_5404
+    context['op_oee_5404']    = op_oee_5404
+
+
     context['wip_5404'] = []
 
     # Date entry for History
@@ -800,6 +981,7 @@ def track_graph_track(request, index):
         ('1813', 1, '50-0455'),  # Op110
         ('1816', 1, '50-0455'),  # Final
     ]
+
 
     for i in mr7:
         if i[0] == index:
@@ -1178,4 +1360,193 @@ def rejects_dashboard_finder(request):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+# ===================================================================
+# ===================================================================
+# ======== New function to fetch targets and then return oee ========
+# ===================================================================
+# ===================================================================
+
+
+
+def log_shift_times(shift_start, shift_time, actual_counts, part_list):
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    # ——— EDIT THIS: list machine IDs here that need part_list targets ———
+    machines_requiring_part_list = [
+        # e.g. '1723', '1504', ...
+        '1723', '1724',
+    ]
+    # ————————————————————————————————————————————————————————————————
+
+    est = ZoneInfo("America/New_York")
+    start_dt = datetime.fromtimestamp(shift_start, tz=est)
+    elapsed = timedelta(seconds=shift_time)
+
+    total_actual = sum(count for _, count in actual_counts)
+    minutes_elapsed = shift_time / 60.0
+
+    # Prepare new list to hold (machine, pct_or_NA)
+    swapped_counts = []
+
+    for machine, count in actual_counts:
+        # decide whether to pass part_list into the target lookup
+        if part_list and machine in machines_requiring_part_list:
+            raw_target = get_machine_target(machine, shift_start, part_list) or 0
+        else:
+            raw_target = get_machine_target(machine, shift_start) or 0
+
+        # adjust for shift duration
+        adjusted_target = raw_target * (minutes_elapsed / 7200.0)
+
+        # compute pct only if we had a real target; otherwise N/A
+        if adjusted_target > 0:
+            pct = int(count / adjusted_target * 100)
+        else:
+            pct = "N/A"
+
+        # swap out the count for the pct or "N/A"
+        swapped_counts.append((machine, pct))
+
+    return swapped_counts
+
+
+
+MACHINE_TARGET_ALIASES = {
+    '733': ['1701L', '1701R'],
+    '1746': ['1746R'],
+    '1705': ['1746R']
+    # Add more as needed
+}
+
+def get_machine_target(machine_id, shift_start_unix, part_list=None):
+    """
+    Returns the most recent non-deleted target for a given machine (or its alias group),
+    optionally filtered by part_list, at or before the shift start.
+    Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
+    """
+
+    def query_target(mid):
+        qs = (
+            OAMachineTargets.objects
+            .filter(
+                machine_id=mid,
+                isDeleted=False,
+                effective_date_unix__lte=shift_start_unix
+            )
+        )
+        if part_list:
+            qs = qs.filter(part__in=part_list)
+        return qs.order_by('-effective_date_unix').first()
+
+    # Case 1: use machine_id directly
+    result = query_target(machine_id)
+    if result:
+        return result.target
+
+    # Case 2: if ends in a letter and no match, try stripping it
+    if machine_id and machine_id[-1].isalpha():
+        fallback_id = machine_id[:-1]
+        fallback_result = query_target(fallback_id)
+        if fallback_result:
+            return fallback_result.target
+
+    # Case 3: piggyback logic (sum of other machine targets)
+    if machine_id in MACHINE_TARGET_ALIASES:
+        total = 0
+        for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
+            aliased_result = query_target(aliased_id)
+            if aliased_result:
+                total += aliased_result.target
+        return total if total > 0 else None
+
+    return None
+
+
+
+def compute_op_actual_and_oee(line_spec,
+                              machine_production,
+                              shift_start,
+                              shift_time,
+                              part_list=None):
+    """
+    Returns two lists:
+      op_actual_list[i] = total actual for OP i
+      op_oee_list[i]    = int OEE% for OP i
+    Prints debug info.
+    """
+    # print(f"compute_op_actual_and_oee: shift_start={shift_start}, shift_time={shift_time}")
+    minutes_elapsed = shift_time / 60.0
+    factor          = minutes_elapsed / 7200.0
+    # print(f"  minutes_elapsed={minutes_elapsed:.1f}, factor={factor:.5f}")
+
+    # map asset → OP
+    asset2op = {asset: op for asset, *_ , op in line_spec}
+    # print(f"  asset2op mapping: {asset2op}")
+
+    # temporary dicts to accumulate
+    op_actual   = defaultdict(int)
+    op_adjusted = defaultdict(float)
+
+    # print("  per-machine production:")
+    for asset, actual_count, *_, in machine_production:
+        op = asset2op.get(asset)
+        if op is None:
+            # print(f"    - skipping {asset!r}: no OP mapping")
+            continue
+
+        # raw target lookup
+        raw = None
+        if part_list:
+            raw = get_machine_target(asset, shift_start, part_list)
+            # print(f"    - {asset}: get_machine_target(part_list) → {raw}")
+        if raw is None:
+            raw = get_machine_target(asset, shift_start)
+            # print(f"    - {asset}: fallback get_machine_target → {raw}")
+        raw = raw or 0
+
+        adj = raw * factor
+        pct = int(actual_count / adj * 100) if adj else 0
+
+        # print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
+
+        op_actual[op]   += actual_count
+        op_adjusted[op] += adj
+
+    # print("  per-OP accumulation:")
+    for op in sorted(op_actual):
+        # print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
+
+   
+    # figure out how big our list needs to be
+        max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
+        op_actual_list = [0] * (max_op + 1)
+        op_oee_list    = [0] * (max_op + 1)
+
+        # fill actuals
+        for op, actual in op_actual.items():
+            op_actual_list[op] = actual
+
+        # fill OEE: N/A if no adjusted target, otherwise integer pct (can be 0)
+        for op, adjusted in op_adjusted.items():
+            if adjusted > 0:
+                pct = int(op_actual[op] / adjusted * 100)
+            else:
+                pct = "N/A"
+            op_oee_list[op] = pct
+            # print(f"    OP{op}: computed OEE={pct}%")
+
+    return op_actual_list, op_oee_list
 
