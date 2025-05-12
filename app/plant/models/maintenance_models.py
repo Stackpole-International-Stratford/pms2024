@@ -40,6 +40,12 @@ class MachineDowntimeEvent(models.Model):
         blank=True,
         help_text="List of labour roles needed (one or more of OPERATOR,ELECTRICIAN,TECH,MILLWRIGHT)"
     )
+    employee_id = models.TextField(
+        "Employee ID",
+        null=True,
+        blank=True,
+        help_text="(optional) ID of the person who logged this downtime"
+    )
     closeout_comment = models.TextField(
         "Close-out Comment",
         null=True,
