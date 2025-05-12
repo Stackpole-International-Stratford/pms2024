@@ -113,3 +113,42 @@ class DowntimeParticipation(models.Model):
         ordering = ['-join_epoch']
         # If you want to prevent duplicates:
         unique_together = ('event', 'user', 'join_epoch')
+
+
+
+
+
+class DowntimeCode(models.Model):
+    """
+    Lookup table for all downtime codes, with their category
+    and subcategory, plus a last‐updated stamp.
+    """
+    code = models.CharField(
+        "Code",
+        max_length=20,
+        unique=True,
+        help_text="Unique downtime code, e.g. MECH-TOOL"
+    )
+    category = models.CharField(
+        "Category",
+        max_length=100,
+        help_text="High‐level category, e.g. Mechanical / Equipment Failure"
+    )
+    subcategory = models.CharField(
+        "Subcategory",
+        max_length=100,
+        help_text="Human‐readable subcategory, e.g. Tooling Failure"
+    )
+    updated_at = models.DateTimeField(
+        "Last Updated",
+        auto_now=True,
+        help_text="When this lookup row was last changed"
+    )
+
+    class Meta:
+        ordering = ['category', 'subcategory', 'code']
+        verbose_name = "Downtime Code"
+        verbose_name_plural = "Downtime Codes"
+
+    def __str__(self):
+        return f"{self.code}: {self.category} → {self.subcategory}"
