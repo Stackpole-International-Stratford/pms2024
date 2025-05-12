@@ -404,6 +404,26 @@ Add New or Update Employee
                         maxlength="2000"></textarea>
             </div>
 
+            <div class="mb-3">
+              <label class="form-label">Labour Types</label>
+              <div id="closeout-labour-container">
+                {% for code,label in labour_choices %}
+                  <div class="form-check">
+                    <input
+                      class="form-check-input closeout-labour-checkbox"
+                      type="checkbox"
+                      id="closeout-labour-{{ code }}"
+                      value="{{ code }}"
+                    >
+                    <label
+                      class="form-check-label"
+                      for="closeout-labour-{{ code }}"
+                    >{{ label }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+
             <div class="d-grid">
               <button type="button"
                       id="closeout-save"
@@ -695,6 +715,19 @@ Add New or Update Employee
             // Original comment
             origComm.value      = data.comment;
     
+
+            // 1) get all labour checkboxes
+            const labourCbs = Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'));
+            // 2) clear them
+            labourCbs.forEach(cb => cb.checked = false);
+            // 3) pre-check whatever the entry already has
+            if (Array.isArray(data.labour_types)) {
+              data.labour_types.forEach(code => {
+                const cb = labourCbs.find(c=>c.value===code);
+                if (cb) cb.checked = true;
+              });
+            }
+
             // Preload close-out inputs
             const now = new Date();
             closeDate.value     = now.toISOString().slice(0,10);
@@ -718,6 +751,9 @@ Add New or Update Employee
           subcategory: subcatSel.value,
           start_at:    `${startDate.value} ${startTime.value}`,
           comment:     origComm.value,
+          labour_types: Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'))
+                    .filter(cb=>cb.checked)
+                    .map(cb=>cb.value),
         };
         fetch(updateUrl, {
           method: 'POST',

@@ -1054,6 +1054,8 @@ def maintenance_edit(request):
         'start_time':       local.strftime('%H:%M'),
         'comment':          e.comment,
 
+        'labour_types':    e.labour_types,       # ← added
+
         'lines':            [l['line'] for l in prod_lines],
         'machines':         machines,
         'categories':       categories,
@@ -1079,6 +1081,7 @@ def maintenance_update_event(request):
         subcategory_code = payload['subcategory']  # e.g. "MECH-TOOL"
         start_at_str = payload['start_at']         # "YYYY-MM-DD HH:MM"
         comment      = payload['comment']
+        labour_list = payload.get('labour_types', [])
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid JSON")
 
@@ -1119,9 +1122,10 @@ def maintenance_update_event(request):
     event.code         = subcategory_code
     event.start_epoch  = epoch_ts
     event.comment      = comment
+    event.labour_types = labour_list
     event.save(update_fields=[
         'line', 'machine', 'category', 'subcategory',
-        'code', 'start_epoch', 'comment'
+        'code', 'start_epoch', 'comment', 'labour_types',
     ])
 
     print(f"[DEBUG] Updated downtime {entry_id}")
