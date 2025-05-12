@@ -6,6 +6,8 @@ from .views.setupfor_views import *
 from .views.password_views import (auth_page, password_list, password_create, password_edit, password_delete, password_recover, deleted_passwords)
 from .views.prodmon_views import *
 from .views.cycle_crud_views import *
+from .views.temp_sensor_views import *
+
 urlpatterns = [
     path('', index, name='index'),  # New index page URL
 
@@ -43,6 +45,12 @@ urlpatterns = [
 
     path('asset_cycle_times/', asset_cycle_times_page, name='asset_cycle_times_page'),
     path('update/asset_cycle_times/', update_asset_cycle_times_page, name='update_asset_cycle_times_page'),
+
+
+
+    path('temp-display/', temp_display, name='temp-display'),
+    path("temp-display/emails/add/", add_temp_sensor_email,   name="add-temp-sensor-email"),
+    path("temp-display/emails/delete/", delete_temp_sensor_email, name="delete-temp-sensor-email"),
 
 
 ]
