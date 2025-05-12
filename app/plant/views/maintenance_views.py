@@ -254,7 +254,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
     entries = [
         {
-            'start_at'        : e.start_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'start_at'        : e.start_at.strftime('%Y-%m-%d %H:%M'),
             'line'            : e.line,
             'machine'         : e.machine,
             'category'        : e.category,
