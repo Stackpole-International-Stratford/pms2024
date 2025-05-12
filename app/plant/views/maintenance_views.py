@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from datetime import datetime
-from ..models.maintenance_models import MachineDowntimeEvent, LinePriority, DowntimeParticipation
+from ..models.maintenance_models import MachineDowntimeEvent, LinePriority, DowntimeParticipation, DowntimeCode
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -304,7 +304,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
 def maintenance_form(request: HttpRequest) -> HttpResponse:
     if request.method == 'POST':
-        # ——— pull form data ———
+        # ——— Pull Form Data ———
         entry_id    = request.POST.get('entry_id')      # None for “Add”
         line        = request.POST.get('line', '').strip()
         machine     = request.POST.get('machine', '').strip()
@@ -313,10 +313,9 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         start_date  = request.POST.get('start_date', '') # "YYYY-MM-DD"
         start_time  = request.POST.get('start_time', '') # "HH:MM"
         description = request.POST.get('description', '').strip()
-        # pull the employee_id from the form
-        employee_id = request.POST.get('employee_id', '').strip()
+        employee_id = request.POST.get('employee_id', '').strip()  # Pull the employee_id from the form
 
-        # ——— parse out the list of labour codes ———
+        # ——— Parse Out the List of Labour Codes ———
         raw_labour = request.POST.get('labour_types', '[]')
         try:
             labour_list = json.loads(raw_labour)
@@ -325,30 +324,29 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         except json.JSONDecodeError:
             labour_list = []
 
-        # ——— lookup display names from your DOWNTIME_CODES ———
-        cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == cat_code), None)
-        category_name = cat_obj['name'] if cat_obj else cat_code
-
-        sub_obj = None
-        if cat_obj:
-            sub_obj = next((s for s in cat_obj['subcategories']
-                            if s['code'] == sub_code), None)
-        subcategory_name = sub_obj['name'] if sub_obj else sub_code
-
-        # ——— build epoch timestamp ———
+        # ——— Lookup Display Names from DowntimeCode Model ———
         try:
-            dt = datetime.strptime(f"{start_date} {start_time}",
-                                   "%Y-%m-%d %H:%M")
+            # Fetch the subcategory DowntimeCode instance
+            sub_code_obj = DowntimeCode.objects.get(code=sub_code)
+            category_name = sub_code_obj.category
+            subcategory_name = sub_code_obj.subcategory
+        except DowntimeCode.DoesNotExist:
+            return HttpResponseBadRequest("Invalid category or subcategory code")
+
+        # ——— Build Epoch Timestamp ———
+        try:
+            dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+            # Make timezone-aware based on your project's settings
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt, timezone.get_default_timezone())
         except ValueError:
-            return HttpResponseBadRequest("Invalid date/time")
+            return HttpResponseBadRequest("Invalid date/time format")
         epoch_ts = int(dt.timestamp())
 
-        # ——— create or update ———
+        # ——— Create or Update Maintenance Downtime Event ———
         if entry_id:
-            # update existing
-            e = get_object_or_404(MachineDowntimeEvent,
-                                  pk=entry_id,
-                                  is_deleted=False)
+            # Update Existing
+            e = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
             e.line           = line
             e.machine        = machine
             e.category       = category_name
@@ -357,53 +355,71 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             e.start_epoch    = epoch_ts
             e.comment        = description
             e.labour_types   = labour_list
-            e.employee_id   = employee_id     # ← set it here
+            e.employee_id    = employee_id     # Set employee_id
             e.save(update_fields=[
                 'line', 'machine', 'category', 'subcategory',
-                'code', 'start_epoch', 'comment', 'labour_types'
+                'code', 'start_epoch', 'comment', 'labour_types', 'employee_id'
             ])
         else:
-            # create new
+            # Create New
             MachineDowntimeEvent.objects.create(
-                line          = line,
-                machine       = machine,
-                category      = category_name,
-                subcategory   = subcategory_name,
-                code          = sub_code,
-                start_epoch   = epoch_ts,
-                comment       = description,
-                labour_types  = labour_list,
-                employee_id   = employee_id      # ← set it here
+                line           = line,
+                machine        = machine,
+                category       = category_name,
+                subcategory    = subcategory_name,
+                code           = sub_code,
+                start_epoch    = epoch_ts,
+                comment        = description,
+                labour_types   = labour_list,
+                employee_id    = employee_id      # Set employee_id
             )
 
-        # stay on same page (preserve ?offset=…)
+        # ——— Redirect to Same Page (Preserve ?offset=…) ———
         return redirect(request.get_full_path())
 
-    # ——— GET: render form + list of open entries ———
+    # ——— GET: Render Form + List of Open Entries ———
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
-
     qs = MachineDowntimeEvent.objects.filter(
-        is_deleted        = False,
-        closeout_epoch__isnull = True
+        is_deleted=False,
+        closeout_epoch__isnull=True
     ).order_by('-start_epoch')
-
     total     = qs.count()
     page_objs = list(qs[offset: offset + page_size])
     has_more  = (offset + page_size) < total
 
+    # ——— Fetch All Downtime Codes and Structure Them ———
+    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
+    structured_codes = {}
+    for code_obj in downtime_codes:
+        cat_code = code_obj.code.split('-', 1)[0]  # Assumes category code is the prefix before '-'
+        if cat_code not in structured_codes:
+            structured_codes[cat_code] = {
+                'name': code_obj.category,
+                'code': cat_code,
+                'subcategories': []
+            }
+        structured_codes[cat_code]['subcategories'].append({
+            'name': code_obj.subcategory,
+            'code': code_obj.code
+        })
+
+    # Convert the structured dictionary to a list
+    downtime_codes_list = list(structured_codes.values())
+
+    # ——— Prepare Context ———
     context = {
-        'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
+        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
         'lines_json':          mark_safe(json.dumps(prod_lines)),
         'entries':             page_objs,
         'offset':              offset,
         'page_size':           page_size,
         'has_more':            has_more,
-        # you can also pass your labour-choices to the template if needed:
+        # You can also pass your labour-choices to the template if needed:
         # 'labour_choices': MachineDowntimeEvent.LABOUR_CHOICES,
     }
-    return render(request, 'plant/maintenance_form.html', context)
 
+    return render(request, 'plant/maintenance_form.html', context)
 
 
 
@@ -511,11 +527,11 @@ def filter_out_operator_only_events(qs):
 
 @login_required(login_url='login')
 def list_all_downtime_entries(request):
-    # ── 1) Access control ─────────────────────────────────────────────────────
+    # ── 1) Access Control ───────────────────────────────────────────────
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
 
-    # ── 2) Build & annotate open‐events queryset ──────────────────────────────
+    # ── 2) Build & Annotate Open-Events Queryset ─────────────────────────
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
@@ -536,14 +552,13 @@ def list_all_downtime_entries(request):
     )
     qs = annotate_being_worked_on(base_qs)
 
-    # ── 2b) Strip out operator‑only events ────────────────────────────────────
+    # ── 2b) Strip Out Operator-Only Events ─────────────────────────────
     qs = filter_out_operator_only_events(qs)
 
-    # ── 3) Format first PAGE_SIZE entries for left table ──────────────────────
+    # ── 3) Format First PAGE_SIZE Entries for Left Table ────────────────
     entries = list(qs[:PAGE_SIZE])
     today   = timezone.localdate()
     tz      = get_default_timezone()
-
     for e in entries:
         dt = e.start_at
         if is_naive(dt):
@@ -558,7 +573,7 @@ def list_all_downtime_entries(request):
             user=request.user, leave_epoch__isnull=True
         ).exists()
 
-    # ── 4) Gather _all_ maintenance‐role users ─────────────────────────────────
+    # ── 4) Gather All Maintenance-Role Users ────────────────────────────
     User = get_user_model()
     maintenance_group_names = set(ROLE_TO_GROUP.values())
     users = (
@@ -568,7 +583,7 @@ def list_all_downtime_entries(request):
         .order_by('username')
     )
 
-    # ── 5) Partition into active vs inactive based on maintenance_active group ─
+    # ── 5) Partition into Active vs Inactive Based on maintenance_active Group ─
     active_grp, _   = Group.objects.get_or_create(name="maintenance_active")
     active_qs       = users.filter(groups=active_grp)
     inactive_qs     = users.exclude(groups=active_grp)
@@ -602,7 +617,7 @@ def list_all_downtime_entries(request):
     active_workers   = build_worker_list(active_qs)
     inactive_workers = build_worker_list(inactive_qs)
 
-    # ── 6) Determine manager flag & roles for current user ─────────────────────
+    # ── 6) Determine Manager Flag & Roles for Current User ───────────────
     user_groups   = set(request.user.groups.values_list("name", flat=True))
     is_manager    = "maintenance_managers" in user_groups
     is_supervisor = "maintenance_supervisors" in user_groups
@@ -611,19 +626,38 @@ def list_all_downtime_entries(request):
         if grp in user_groups
     ]
 
-    # ── 7) Render ─────────────────────────────────────────────────────────────
-    return render(request, "plant/maintenance_all_entries.html", {
-        "entries":           entries,
-        "page_size":         PAGE_SIZE,
-        "line_priorities":   LinePriority.objects.all(),
-        "is_manager":        is_manager,
-        "is_supervisor":     is_supervisor,
-        "labour_choices":    MachineDowntimeEvent.LABOUR_CHOICES,
-        "user_roles":        user_roles,
-        "active_workers":    active_workers,
-        "inactive_workers":  inactive_workers,
+    # ── 7) Fetch and Structure Downtime Codes from Database ──────────────
+    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
+    structured_codes = {}
+    for code_obj in downtime_codes:
+        # Extract the category code (assumes it's the prefix before the first '-')
+        cat_code = code_obj.code.split('-', 1)[0]  
+        if cat_code not in structured_codes:
+            structured_codes[cat_code] = {
+                'name': code_obj.category,
+                'code': cat_code,
+                'subcategories': []
+            }
+        structured_codes[cat_code]['subcategories'].append({
+            'name': code_obj.subcategory,
+            'code': code_obj.code
+        })
 
-        'downtime_codes_json': mark_safe(json.dumps(DOWNTIME_CODES)),
+    # Convert the structured dictionary to a list for JSON serialization
+    downtime_codes_list = list(structured_codes.values())
+
+    # ── 8) Render ─────────────────────────────────────────────────────────
+    return render(request, "plant/maintenance_all_entries.html", {
+        "entries":             entries,
+        "page_size":           PAGE_SIZE,
+        "line_priorities":     LinePriority.objects.all(),
+        "is_manager":          is_manager,
+        "is_supervisor":       is_supervisor,
+        "labour_choices":      MachineDowntimeEvent.LABOUR_CHOICES,
+        "user_roles":          user_roles,
+        "active_workers":      active_workers,
+        "inactive_workers":    inactive_workers,
+        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
         'lines_json':          mark_safe(json.dumps(prod_lines)),
     })
 
@@ -1012,35 +1046,55 @@ def maintenance_edit(request):
       - and the full lines_data for dependent dropdowns
     """
     try:
-        entry_id = json.loads(request.body)['entry_id']
+        payload = json.loads(request.body)
+        entry_id = payload['entry_id']
     except (ValueError, KeyError):
-        return HttpResponseBadRequest("Invalid JSON")
+        return HttpResponseBadRequest("Invalid JSON or missing 'entry_id'")
 
+    # Fetch the downtime event
     try:
         e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # human‐readable start
+    # Convert epoch to human-readable local datetime
     dt = datetime.fromtimestamp(e.start_epoch)
     if is_naive(dt):
         dt = make_aware(dt, get_default_timezone())
     local = localtime(dt)
 
-    # flat machine list (you can still keep this)
+    # Generate flat machine list
     machines = sorted({
         m['number']
         for line in prod_lines
-        for op   in line['operations']
-        for m    in op['machines']
+        for op in line['operations']
+        for m in op['machines']
     })
 
-    # categories & subcats
-    categories = [{'code': c['code'], 'name': c['name']} for c in DOWNTIME_CODES]
+    # Fetch all downtime codes from the database
+    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
+
+    # Structure categories and subcategories
+    categories_dict = {}
+    for code_obj in downtime_codes:
+        # Extract category code (assuming it's the prefix before the first '-')
+        cat_code = code_obj.code.split('-', 1)[0]
+        if cat_code not in categories_dict:
+            categories_dict[cat_code] = {
+                'code': cat_code,
+                'name': code_obj.category,
+            }
+    # Remove duplicates while preserving order
+    unique_categories = list(categories_dict.values())
+
+    # Structure subcategories with parent links
     subcategories = [
-        {'code': s['code'], 'name': s['name'], 'parent': c['code']}
-        for c in DOWNTIME_CODES
-        for s in c['subcategories']
+        {
+            'code': code_obj.code,
+            'name': code_obj.subcategory,
+            'parent': code_obj.code.split('-', 1)[0]  # Assuming parent is category code
+        }
+        for code_obj in downtime_codes
     ]
 
     return JsonResponse({
@@ -1048,20 +1102,16 @@ def maintenance_edit(request):
         'entry_id':         e.pk,
         'line':             e.line,
         'machine':          e.machine,
-        'category_code':    e.code.split('-',1)[0],
+        'category_code':    e.code.split('-', 1)[0],  # Assuming category code is prefix before '-'
         'subcategory_code': e.code,
         'start_date':       local.strftime('%Y-%m-%d'),
         'start_time':       local.strftime('%H:%M'),
         'comment':          e.comment,
-
-        'labour_types':    e.labour_types,       # ← added
-
+        'labour_types':     e.labour_types,  # ← added
         'lines':            [l['line'] for l in prod_lines],
         'machines':         machines,
-        'categories':       categories,
+        'categories':       unique_categories,
         'subcategories':    subcategories,
-
-        # ← add this:
         'lines_data':       prod_lines,
     })
 
@@ -1073,17 +1123,17 @@ def maintenance_update_event(request):
     Receive edited fields and update the downtime event in the DB.
     """
     try:
-        payload      = json.loads(request.body)
-        entry_id     = payload['entry_id']
-        line         = payload['line']
-        machine      = payload['machine']
-        category_code    = payload['category']     # e.g. "MECH"
+        payload = json.loads(request.body)
+        entry_id = payload['entry_id']
+        line = payload['line']
+        machine = payload['machine']
+        category_code = payload['category']      # e.g. "MECH"
         subcategory_code = payload['subcategory']  # e.g. "MECH-TOOL"
-        start_at_str = payload['start_at']         # "YYYY-MM-DD HH:MM"
-        comment      = payload['comment']
+        start_at_str = payload['start_at']        # "YYYY-MM-DD HH:MM"
+        comment = payload['comment']
         labour_list = payload.get('labour_types', [])
     except (ValueError, KeyError):
-        return HttpResponseBadRequest("Invalid JSON")
+        return HttpResponseBadRequest("Invalid JSON or missing fields")
 
     # 1) Lookup the event
     try:
@@ -1091,37 +1141,34 @@ def maintenance_update_event(request):
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # 2) Derive display names from your DOWNTIME_CODES
-    cat_obj = next((c for c in DOWNTIME_CODES if c['code'] == category_code), None)
-    category_name   = cat_obj['name'] if cat_obj else category_code
-
-    sub_obj = None
-    if cat_obj:
-        sub_obj = next((s for s in cat_obj['subcategories']
-                        if s['code'] == subcategory_code), None)
-    subcategory_name = sub_obj['name'] if sub_obj else subcategory_code
+    # 2) Derive display names from DowntimeCode model
+    try:
+        # Fetch the DowntimeCode instance for subcategory
+        sub_code_obj = DowntimeCode.objects.get(code=subcategory_code)
+        category_name = sub_code_obj.category
+        subcategory_name = sub_code_obj.subcategory
+    except DowntimeCode.DoesNotExist:
+        return HttpResponseBadRequest("Invalid category or subcategory code")
 
     # 3) Parse start_at into an epoch
-    from datetime import datetime
-    from django.utils.timezone import make_aware, get_default_timezone
-
     try:
-        # assume local date/time in America/Toronto
+        # Assume local date/time in the project's default timezone
         dt_naive = datetime.strptime(start_at_str, "%Y-%m-%d %H:%M")
     except ValueError:
         return HttpResponseBadRequest("Bad start_at format")
+
     local_tz = get_default_timezone()
-    dt_aware = make_aware(dt_naive, local_tz)
-    epoch_ts  = int(dt_aware.timestamp())
+    dt_aware = make_aware(dt_naive, local_tz) if is_naive(dt_naive) else dt_naive
+    epoch_ts = int(dt_aware.timestamp())
 
     # 4) Apply updates
-    event.line         = line
-    event.machine      = machine
-    event.category     = category_name
-    event.subcategory  = subcategory_name
-    event.code         = subcategory_code
-    event.start_epoch  = epoch_ts
-    event.comment      = comment
+    event.line = line
+    event.machine = machine
+    event.category = category_name
+    event.subcategory = subcategory_name
+    event.code = subcategory_code
+    event.start_epoch = epoch_ts
+    event.comment = comment
     event.labour_types = labour_list
     event.save(update_fields=[
         'line', 'machine', 'category', 'subcategory',
