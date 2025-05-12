@@ -72,6 +72,8 @@ urlpatterns = [
 
     path('maintenance/edit/', maintenance_edit, name='maintenance_edit'),
     path('maintenance/update/', maintenance_update_event, name='maintenance_update_event'),
+
+    
     path('temp-display/', temp_display, name='temp-display'),
     path("temp-display/emails/add/", add_temp_sensor_email,   name="add-temp-sensor-email"),
     path("temp-display/emails/delete/", delete_temp_sensor_email, name="delete-temp-sensor-email"),
