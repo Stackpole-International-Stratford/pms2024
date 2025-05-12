@@ -78,4 +78,8 @@ urlpatterns = [
     path("temp-display/emails/add/", add_temp_sensor_email,   name="add-temp-sensor-email"),
     path("temp-display/emails/delete/", delete_temp_sensor_email, name="delete-temp-sensor-email"),
 
+
+
+    path('downtime-codes/', downtime_codes_list, name='downtime_codes_list'),
+
 ]

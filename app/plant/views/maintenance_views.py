@@ -1049,3 +1049,56 @@ def maintenance_update_event(request):
 
     print(f"[DEBUG] Updated downtime {entry_id}")
     return JsonResponse({'status': 'ok'})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ====================================================================
+# ====================================================================
+# =================== Downtime Category Crud =========================
+# ====================================================================
+# ====================================================================
+
+
+
+
+def downtime_codes_list(request):
+    # Handle creation
+    if request.method == 'POST':
+        code       = request.POST.get('code')
+        category   = request.POST.get('category')
+        subcategory= request.POST.get('subcategory')
+        if code and category and subcategory:
+            DowntimeCode.objects.create(
+                code=code,
+                category=category,
+                subcategory=subcategory
+            )
+        return redirect('downtime_codes_list')
+
+    # For GET: list all codes and supply existing cats/subcats
+    codes = DowntimeCode.objects.all()
+    categories   = (DowntimeCode.objects
+                    .order_by('category')
+                    .values_list('category', flat=True)
+                    .distinct())
+    subcategories= (DowntimeCode.objects
+                    .order_by('subcategory')
+                    .values_list('subcategory', flat=True)
+                    .distinct())
+
+    return render(request, 'plant/downtime_codes_list.html', {
+        'codes': codes,
+        'categories': categories,
+        'subcategories': subcategories,
+    })
