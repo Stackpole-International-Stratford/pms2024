@@ -240,37 +240,48 @@ def closeout_downtime_entry(request):
 
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
+    """
+    Returns a page of open MachineDowntimeEvent entries plus:
+      - has_more: whether there are more to load
+      - is_guest: true if the user is anonymous (not logged in)
+    """
+    # paging params
     offset    = int(request.GET.get('offset', 0))
-    # page_size = 100
     page_size = 300
 
+    # only live, un‐closed events
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
     ).order_by('-start_epoch')
 
     total = qs.count()
-    batch = list(qs[offset: offset + page_size])
+    batch = qs[offset: offset + page_size]
 
     entries = [
         {
-            'id':              e.id,
-            'start_at'        : e.start_at.strftime('%Y-%m-%d %H:%M'),
-            'line'            : e.line,
-            'machine'         : e.machine,
-            'category'        : e.category,
-            'subcategory'     : e.subcategory,
-            'code'            : e.code,
-            'category_code'   : e.code.split('-')[0],
-            'subcategory_code': e.code,
-            'comment'         : e.comment,
-            'labour_type':     e.labour_type,
+            'id'               : e.id,
+            'start_at'         : e.start_at.strftime('%Y-%m-%d %H:%M'),
+            'line'             : e.line,
+            'machine'          : e.machine,
+            'category'         : e.category,
+            'subcategory'      : e.subcategory,
+            'code'             : e.code,
+            'category_code'    : e.code.split('-', 1)[0],
+            'subcategory_code' : e.code,
+            'comment'          : e.comment,
+            'labour_type'      : e.labour_type,
         }
         for e in batch
     ]
     has_more = (offset + page_size) < total
+    is_guest = request.user.is_anonymous
 
-    return JsonResponse({'entries': entries, 'has_more': has_more})
+    return JsonResponse({
+        'entries' : entries,
+        'has_more': has_more,
+        'is_guest': is_guest,
+    })
 
 
 

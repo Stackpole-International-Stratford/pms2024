@@ -12,6 +12,14 @@
     name="labour_types"
     value="[]"
   />
+
+
+  {% if user.is_anonymous %}
+  <div id="guest-notice" class="alert alert-info">
+    Welcome, guest!  
+  </div>
+{% endif %}
+
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
         <thead>
