@@ -14,11 +14,6 @@
   />
 
 
-  {% if user.is_anonymous %}
-  <div id="guest-notice" class="alert alert-info">
-    Welcome, guest!  
-  </div>
-{% endif %}
 
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
@@ -247,102 +242,126 @@
 
 
 
-  <!-- LABOUR-CHOICE MODAL -->
+<!-- LABOUR-CHOICE MODAL -->
 <div
-class="modal fade"
-id="labourModal"
-tabindex="-1"
-aria-labelledby="labourModalLabel"
-aria-hidden="true"
+  class="modal fade"
+  id="labourModal"
+  tabindex="-1"
+  aria-labelledby="labourModalLabel"
+  aria-hidden="true"
 >
-<div class="modal-dialog">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h5 class="modal-title" id="labourModalLabel">
-        Who do you need?
-      </h5>
-      <button
-        type="button"
-        class="btn-close"
-        data-bs-dismiss="modal"
-      ></button>
-    </div>
-    <div class="modal-body">
-      <!-- shown if they try to submit with none checked -->
-      <div
-        id="labour-error"
-        class="text-danger mb-2"
-        style="display: none;"
-      >
-        Please select at least one.
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="labourModalLabel">
+          Who do you need?
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
       </div>
 
-      <div class="form-check">
-        <input
-          class="form-check-input labour-checkbox"
-          type="checkbox"
-          id="labourOperator"
-          value="OPERATOR"
+      <div class="modal-body">
+        <!-- shown if they try to submit with none checked -->
+        <div
+          id="labour-error"
+          class="text-danger mb-2"
+          style="display: none;"
         >
-        <label
-          class="form-check-label"
-          for="labourOperator"
-        >Operator can fix</label>
+          Please select at least one.
+        </div>
+
+        {% if user.is_anonymous %}
+          <!-- Guests only get the "Need Tech" option -->
+          <div class="form-check">
+            <input
+              class="form-check-input labour-checkbox"
+              type="checkbox"
+              id="labourTech"
+              value="TECH"
+            >
+            <label
+              class="form-check-label"
+              for="labourTech"
+            >Need Tech</label>
+          </div>
+        {% else %}
+          <!-- Authenticated users see all options -->
+          <div class="form-check">
+            <input
+              class="form-check-input labour-checkbox"
+              type="checkbox"
+              id="labourOperator"
+              value="OPERATOR"
+            >
+            <label
+              class="form-check-label"
+              for="labourOperator"
+            >Operator can fix</label>
+          </div>
+
+          <div class="form-check">
+            <input
+              class="form-check-input labour-checkbox"
+              type="checkbox"
+              id="labourElectrician"
+              value="ELECTRICIAN"
+            >
+            <label
+              class="form-check-label"
+              for="labourElectrician"
+            >Need Electrician</label>
+          </div>
+
+          <div class="form-check">
+            <input
+              class="form-check-input labour-checkbox"
+              type="checkbox"
+              id="labourTech"
+              value="TECH"
+            >
+            <label
+              class="form-check-label"
+              for="labourTech"
+            >Need Tech</label>
+          </div>
+
+          <div class="form-check">
+            <input
+              class="form-check-input labour-checkbox"
+              type="checkbox"
+              id="labourMillwright"
+              value="MILLWRIGHT"
+            >
+            <label
+              class="form-check-label"
+              for="labourMillwright"
+            >Need Millwright</label>
+          </div>
+        {% endif %}
       </div>
 
-      <div class="form-check">
-        <input
-          class="form-check-input labour-checkbox"
-          type="checkbox"
-          id="labourElectrician"
-          value="ELECTRICIAN"
-        >
-        <label
-          class="form-check-label"
-          for="labourElectrician"
-        >Need Electrician</label>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-dark"
+          data-bs-dismiss="modal"
+        >Cancel</button>
+        <button
+          type="button"
+          class="btn btn-warning"
+          id="confirmLabourChoice"
+        >OK</button>
       </div>
-
-      <div class="form-check">
-        <input
-          class="form-check-input labour-checkbox"
-          type="checkbox"
-          id="labourTech"
-          value="TECH"
-        >
-        <label
-          class="form-check-label"
-          for="labourTech"
-        >Need Tech</label>
-      </div>
-
-      <div class="form-check">
-        <input
-          class="form-check-input labour-checkbox"
-          type="checkbox"
-          id="labourMillwright"
-          value="MILLWRIGHT"
-        >
-        <label
-          class="form-check-label"
-          for="labourMillwright"
-        >Need Millwright</label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button
-        type="button"
-        class="btn btn-dark"
-        data-bs-dismiss="modal"
-      >Cancel</button>
-      <button
-        type="button"
-        class="btn btn-warning"
-        id="confirmLabourChoice"
-      >OK</button>
     </div>
   </div>
 </div>
+
+
+
 </div>
 
 
