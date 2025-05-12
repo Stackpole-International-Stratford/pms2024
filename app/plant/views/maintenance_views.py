@@ -270,7 +270,9 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
             'category_code'    : e.code.split('-', 1)[0],
             'subcategory_code' : e.code,
             'comment'          : e.comment,
-            'labour_type'      : e.labour_type,
+            'labour_types'      : e.labour_types,
+            'employee_id'      : e.employee_id,         # ← optional, if you ever need it
+
         }
         for e in batch
     ]
@@ -311,6 +313,8 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         start_date  = request.POST.get('start_date', '') # "YYYY-MM-DD"
         start_time  = request.POST.get('start_time', '') # "HH:MM"
         description = request.POST.get('description', '').strip()
+        # pull the employee_id from the form
+        employee_id = request.POST.get('employee_id', '').strip()
 
         # ——— parse out the list of labour codes ———
         raw_labour = request.POST.get('labour_types', '[]')
@@ -353,6 +357,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             e.start_epoch    = epoch_ts
             e.comment        = description
             e.labour_types   = labour_list
+            e.employee_id   = employee_id     # ← set it here
             e.save(update_fields=[
                 'line', 'machine', 'category', 'subcategory',
                 'code', 'start_epoch', 'comment', 'labour_types'
@@ -368,6 +373,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
                 start_epoch   = epoch_ts,
                 comment       = description,
                 labour_types  = labour_list,
+                employee_id   = employee_id      # ← set it here
             )
 
         # stay on same page (preserve ?offset=…)

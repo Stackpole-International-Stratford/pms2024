@@ -12,6 +12,7 @@
     name="labour_types"
     value="[]"
   />
+  <input type="hidden" id="employeeIdInput" name="employee_id" value="" />
 
 
 
@@ -241,7 +242,6 @@
   </div>
 
 
-
 <!-- LABOUR-CHOICE MODAL -->
 <div
   class="modal fade"
@@ -265,6 +265,21 @@
       </div>
 
       <div class="modal-body">
+        <!-- Employee ID (required for everyone) -->
+        <div class="mb-3">
+          <label for="labourEmployeeId" class="form-label">Employee ID</label>
+          <input
+            type="text"
+            class="form-control"
+            id="labourEmployeeId"
+            placeholder="Enter your employee ID"
+            required
+          >
+          <div class="invalid-feedback">
+            Please enter your employee ID.
+          </div>
+        </div>
+
         <!-- shown if they try to submit with none checked -->
         <div
           id="labour-error"
@@ -362,6 +377,8 @@
 
 
 
+
+
 </div>
 
 
@@ -441,6 +458,9 @@
     const labourErrorEl    = document.getElementById('labour-error');
     const labourCheckboxes = Array.from(document.querySelectorAll('.labour-checkbox'));
     const labourConfirmBtn = document.getElementById('confirmLabourChoice');
+    const labourEmpIdField    = document.getElementById('labourEmployeeId');
+    const employeeIdInput = document.getElementById('employeeIdInput');
+
   
     // ─── CHOICES.JS SETUP ──────────────────────────────────────────────────
     function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'' }) {
@@ -540,17 +560,30 @@
     // ─── ADD → LABOUR-CHOICE → SUBMIT ─────────────────────────────────────
     add.submitBtn.addEventListener('click', ()=>{
       labourErrorEl.style.display = 'none';
-      labourCheckboxes.forEach(chk=>chk.checked=false);
+      labourCheckboxes.forEach(chk=>chk.checked = false);
+      // clear previous validation state
+      labourEmpIdField.classList.remove('is-invalid');
       new bootstrap.Modal(labourModalEl).show();
     });
+    
     labourConfirmBtn.addEventListener('click', ()=>{
+      const empId = labourEmpIdField.value.trim();
+      if (!empId) {
+        labourEmpIdField.classList.add('is-invalid');
+        return;
+      }
+    
       const picked = labourCheckboxes.filter(c=>c.checked).map(c=>c.value);
       if (!picked.length) {
-        return labourErrorEl.style.display = '';
+        labourErrorEl.style.display = '';
+        return;
       }
-      labourInput.value = JSON.stringify(picked);
+    
+      labourInput.value      = JSON.stringify(picked);
+      employeeIdInput.value  = empId;    // now defined
       form.submit();
     });
+    
   
     // ─── LOAD-MORE AJAX ─────────────────────────────────────────────────
     if (loadBtn) {
