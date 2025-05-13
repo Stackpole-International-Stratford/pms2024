@@ -4,6 +4,8 @@ from django.db import models
 from datetime import datetime as _datetime
 from django.utils import timezone
 from django.conf import settings
+from datetime import datetime
+
 
 
 
@@ -67,6 +69,16 @@ class MachineDowntimeEvent(models.Model):
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    @property
+    def closeout_at(self):
+        """
+        Returns a datetime if closeout_epoch is set,
+        else None.
+        """
+        if self.closeout_epoch:
+            return datetime.fromtimestamp(self.closeout_epoch)
+        return None
 
     def __str__(self):
         return f"{self.code} @ {self.start_epoch} on {self.line}/{self.machine}"
