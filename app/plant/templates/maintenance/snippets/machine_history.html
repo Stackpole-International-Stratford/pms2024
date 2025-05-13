@@ -1,0 +1,78 @@
+{# machine_history.html #}
+{% load tz %}
+
+{% if events %}
+<table class="table table-hover">
+  <thead class="table-light">
+    <tr>
+      <th>Start</th>
+      <th>End</th>
+      <th>Category</th>
+      <th>Subcategory</th>
+      <th># People</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ev in events %}
+    <tr>
+      <td>{{ ev.start_at|localtime|date:"SHORT_DATETIME_FORMAT" }}</td>
+      <td>
+        {% if ev.closeout_epoch %}
+          {{ ev.closeout_epoch|localtime|date:"SHORT_DATETIME_FORMAT" }}
+        {% else %}
+          <span class="text-warning">Open</span>
+        {% endif %}
+      </td>
+      <td>{{ ev.category }}</td>
+      <td>{{ ev.subcategory }}</td>
+      <td>{{ ev.participants.count }}</td>
+      <td>
+        <button
+          class="btn btn-sm btn-link"
+          data-bs-toggle="collapse"
+          data-bs-target="#detail{{ forloop.counter }}"
+          aria-expanded="false">
+          Details
+        </button>
+      </td>
+    </tr>
+    <tr id="detail{{ forloop.counter }}" class="collapse">
+      <td colspan="6" class="p-0">
+        <ul class="list-group list-group-flush">
+          {% for p in ev.participants.all %}
+          <li class="list-group-item">
+            <strong>{{ p.user.username }}</strong>
+            <small class="text-muted">
+              joined {{ p.join_epoch|date:"SHORT_DATETIME_FORMAT" }}
+            </small>
+            {% if p.join_comment %}
+              <br>“{{ p.join_comment }}”
+            {% endif %}
+            <br>
+            {% if p.leave_epoch %}
+              <small class="text-muted">
+                left {{ p.leave_epoch|date:"SHORT_DATETIME_FORMAT" }}
+              </small>
+              {% if p.leave_comment %}
+                <br>“{{ p.leave_comment }}”
+              {% endif %}
+              <span class="badge bg-secondary float-end">
+                {{ p.total_minutes }} min
+              </span>
+            {% else %}
+              <span class="badge bg-warning float-end">In progress</span>
+            {% endif %}
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No participants</li>
+          {% endfor %}
+        </ul>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">No downtime events found for this machine.</p>
+{% endif %}

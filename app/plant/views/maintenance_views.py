@@ -26,6 +26,8 @@ from django.db.models import Q
 # import your lines structure
 from prod_query.views import lines as prod_lines
 from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cookie / csrf_protect
+from django.template.loader import render_to_string
+
 
 
 
@@ -1193,17 +1195,25 @@ def downtime_codes_delete(request, pk):
 
 
 @require_POST
-@csrf_exempt  # remove this if you handle CSRF in the standard way
+@csrf_exempt
 def machine_history(request):
     """
-    Receives JSON { "machine": "1504" }
-    Prints it to console, returns a simple JSON OK.
+    AJAX endpoint: receives {"machine": "..."} and returns
+    a rendered HTML accordion of that machine’s last 5000 downtime events.
     """
     try:
         payload = json.loads(request.body.decode())
         machine = payload.get('machine')
-        print(f"[machine_history] received machine = {machine}")
-        return JsonResponse({'status': 'ok', 'machine': machine})
+        # fetch up to 5000 events, oldest first, excluding soft‐deleted
+        events = (MachineDowntimeEvent.objects
+                  .filter(machine=machine, is_deleted=False)
+                  .order_by('start_epoch')[:5000]
+                  .prefetch_related('participants__user'))
+        html = render_to_string(
+            'maintenance/snippets/machine_history.html',
+            {'events': events},
+            request=request
+        )
+        return JsonResponse({'status': 'ok', 'html': html})
     except Exception as e:
-        print(f"[machine_history] error: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

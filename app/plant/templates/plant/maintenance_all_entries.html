@@ -210,12 +210,13 @@ Add New or Update Employee
 
 
 
-
-
-      <!-- Machine History Modal (full‐size) -->
-      <div class="modal fade" id="machineHistoryModal" tabindex="-1"
-          aria-labelledby="machineHistoryModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+      <!-- Machine History Modal (wide + scrollable) -->
+      <div class="modal fade" id="machineHistoryModal"
+          tabindex="-1"
+          aria-labelledby="machineHistoryModalLabel"
+          aria-hidden="true">
+        <!-- modal-xl for extra width, modal-dialog-scrollable for a scrollable body -->
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
           <div class="modal-content">
             <form id="machineHistoryForm">
               <div class="modal-header">
@@ -226,12 +227,9 @@ Add New or Update Employee
                         data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                <!-- CSRF token if needed -->
                 {% csrf_token %}
                 <div class="mb-3">
-                  <label for="machine-input" class="form-label">
-                    Machine #
-                  </label>
+                  <label for="machine-input" class="form-label">Machine #</label>
                   <input
                     type="text"
                     id="machine-input"
@@ -256,6 +254,9 @@ Add New or Update Employee
           </div>
         </div>
       </div>
+
+
+
 
 
 
@@ -1168,52 +1169,67 @@ Add New or Update Employee
     
     
     <!-- 3) Self-contained script -->
-<script>
-(function(){
-  document.addEventListener('DOMContentLoaded', function(){
-    // 1) init the modal instance
-    const modalEl = document.getElementById('machineHistoryModal');
-    const machineHistoryModal = new bootstrap.Modal(modalEl);
-
-    // 2) open it when the header button is clicked
-    document
-      .getElementById('machine-history-btn')
-      .addEventListener('click', () => machineHistoryModal.show());
-
-    // 3) handle the form submission
-    document
-      .getElementById('machineHistoryForm')
-      .addEventListener('submit', function(e){
-        e.preventDefault();
-        const machine = document
-          .getElementById('machine-input')
-          .value
-          .trim();
-        if (!machine) return;
-
-        fetch("{% url 'machine_history' %}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document
-               .querySelector('[name=csrfmiddlewaretoken]')
-               .value
-          },
-          body: JSON.stringify({ machine })
-        })
-        .then(r => r.json())
-        .then(data => {
-          console.log('Response:', data);
-          machineHistoryModal.hide();
-          // optionally reset form: this.reset();
-        })
-        .catch(err => {
-          console.error('Error sending machine:', err);
+    <script>
+      (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+          const modalEl             = document.getElementById('machineHistoryModal');
+          const machineHistoryModal = new bootstrap.Modal(modalEl);
+          const form                = document.getElementById('machineHistoryForm');
+          const body                = modalEl.querySelector('.modal-body');
+      
+          const formHTML = `
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="machine-input" class="form-label">Machine #</label>
+              <input
+                type="text"
+                id="machine-input"
+                class="form-control"
+                placeholder="Enter machine number"
+                required
+              >
+            </div>`;
+      
+          document
+            .getElementById('machine-history-btn')
+            .addEventListener('click', () => {
+              body.innerHTML = formHTML;
+              machineHistoryModal.show();
+            });
+      
+          form.addEventListener('submit', function(e){
+            e.preventDefault();
+            const machine = body.querySelector('#machine-input').value.trim();
+            if (!machine) return;
+      
+            fetch("{% url 'machine_history' %}", {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+              },
+              body: JSON.stringify({ machine })
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (data.status === 'ok') {
+                // instead of accordion, inject the table snippet
+                body.innerHTML = data.html;
+                // optional: initialize DataTables here
+                // $('#machineHistoryModal table').DataTable();
+              } else {
+                body.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
+              }
+            })
+            .catch(err => {
+              body.innerHTML = `<div class="alert alert-danger">Request failed</div>`;
+              console.error(err);
+            });
+          });
         });
-      });
-  });
-})();
-</script>
+      })();
+      </script>
+      
   
 
 
