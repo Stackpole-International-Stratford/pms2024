@@ -40,7 +40,7 @@
         <td class="td-subcat">{{ code.subcategory }}</td>
         <td class="td-updated">{{ code.updated_at|date:"Y-m-d H:i" }}</td>
         <td>
-          <!-- Edit button as black icon, no background -->
+          <!-- Edit icon button -->
           <button
             type="button"
             class="btn btn-sm edit-btn p-0 border-0 text-dark me-2"
@@ -63,12 +63,24 @@
                        5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
             </svg>
           </button>
+          <!-- Delete icon button -->
           <button
             type="button"
-            class="btn btn-sm btn-danger delete-btn"
+            class="btn btn-sm delete-btn p-0 border-0 text-dark"
             data-id="{{ code.id }}"
+            aria-label="Delete {{ code.code }}"
           >
-            Delete
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                 fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+              <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2
+                       0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1
+                       1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0
+                       0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0
+                       1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5
+                       0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5
+                       0 0 1 8 5m3 .5v7a.5.5 0 0
+                       1-1 0v-7a.5.5 0 0 1 1 0"/>
+            </svg>
           </button>
         </td>
       </tr>
@@ -264,9 +276,21 @@
                          5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
               </svg>
             </button>
-            <button type="button" class="btn btn-sm btn-danger delete-btn"
+            <button type="button" class="btn btn-sm delete-btn p-0 border-0 text-dark"
               data-id="${json.id}"
-            >Delete</button>
+              aria-label="Delete ${json.code}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                   fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+                <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2
+                         0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1
+                         1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0
+                         0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0
+                         1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5
+                         0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5
+                         0 0 1 8 5m3 .5v7a.5.5 0 0
+                         1-1 0v-7a.5.5 0 0 1 1 0"/>
+              </svg>
+            </button>
           </td>`;
         tableBody.appendChild(tr);
         addModal.hide();
@@ -277,7 +301,7 @@
       });
     });
 
-    // 4) DELEGATE EDIT/DELETE BUTTONS
+    // 4) EDIT/DELETE DELEGATION
     tableBody.addEventListener('click', e => {
       const btn = e.target.closest('button');
       if (!btn) return;
