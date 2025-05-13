@@ -189,11 +189,41 @@ Add New or Update Employee
 <div class="col-md-8 mb-2">
   <div class="table-responsive mb-2">
     <table class="table table-striped table-hover table-bordered align-middle small mb-0">
+      <!-- 1) Table header with a warning‐style button -->
       <thead class="table-light">
         <tr>
-          <th class="py-1">Open Jobs</th>
+          <th class="py-1 d-flex align-items-center">
+            <span>Open Jobs</span>
+            <button
+              id="machine-history-btn"
+              type="button"
+              class="btn btn-warning btn-sm ms-2"
+              aria-label="Machine History">
+              Machine History
+            </button>
+          </th>
         </tr>
       </thead>
+
+      <!-- 2) The “Machine History” modal -->
+      <div class="modal fade" id="machineHistoryModal" tabindex="-1" aria-labelledby="machineHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="machineHistoryModalLabel">Machine History</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <!-- your history details here -->
+              <p>Here you can show the machine’s downtime history…</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <tbody>
         {% for e in entries %}
           <tr
@@ -1089,7 +1119,22 @@ Add New or Update Employee
     
     
     
-    
+    <!-- 3) Self-contained script -->
+    <script>
+      (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+          // init the modal instance
+          const modalEl = document.getElementById('machineHistoryModal');
+          const machineHistoryModal = new bootstrap.Modal(modalEl);
+      
+          // wire the button to open it
+          const btn = document.getElementById('machine-history-btn');
+          btn.addEventListener('click', function(){
+            machineHistoryModal.show();
+          });
+        });
+      })();
+      </script>
   
 
 
