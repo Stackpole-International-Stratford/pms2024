@@ -1226,10 +1226,15 @@ Add New or Update Employee
                   <div class="table-responsive">
                     ${data.html}
                   </div>`;
+            
+                // hide the submit button (and optionally keep the Cancel so they can close)
+                const submitBtn = modalEl.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.classList.add('d-none');
               } else {
                 body.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
               }
             })
+            
             .catch(err => {
               body.innerHTML = `<div class="alert alert-danger">Request failed</div>`;
               console.error(err);

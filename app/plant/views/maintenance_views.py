@@ -1204,10 +1204,10 @@ def machine_history(request):
     try:
         payload = json.loads(request.body.decode())
         machine = payload.get('machine')
-        # fetch up to 5000 events, oldest first, excluding soft‐deleted
+        # fetch up to 500 events, oldest first, excluding soft‐deleted
         events = (MachineDowntimeEvent.objects
                   .filter(machine=machine, is_deleted=False)
-                  .order_by('start_epoch')[:5000]
+                  .order_by('-start_epoch')[:500]
                   .prefetch_related('participants__user'))
         html = render_to_string(
             'maintenance/snippets/machine_history.html',
