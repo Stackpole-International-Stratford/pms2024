@@ -22,6 +22,16 @@
   tr.editable-row:hover {
     cursor: pointer;
   }
+
+
+
+  /* in your custom CSS */
+.table-responsive {
+  overflow-x: auto;
+  overflow-y: auto;           /* allow vertical scroll too */
+  -webkit-overflow-scrolling: touch;
+}
+
 </style>
 
   {% if is_manager %}
@@ -1208,9 +1218,11 @@ Add New or Update Employee
                 modalDialog.classList.add('modal-xl', 'modal-dialog-scrollable');
                 // inject the table inside a responsive wrapper
                 body.innerHTML = `
-                  <div class="table-responsive">
-                    ${data.html}
-                  </div>`;
+                   <div class="overflow-auto" style="max-height:75vh; display:block; -webkit-overflow-scrolling:touch;">
+                     <div class="table-responsive" style="overflow-y:visible;">
+                       ${data.html}
+                     </div>
+                   </div>`;
             
                 // hide the submit button (and optionally keep the Cancel so they can close)
                 const submitBtn = modalEl.querySelector('button[type="submit"]');
