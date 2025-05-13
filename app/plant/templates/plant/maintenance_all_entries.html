@@ -212,48 +212,48 @@ Add New or Update Employee
 
       <!-- Machine History Modal (wide + scrollable) -->
       <div class="modal fade" id="machineHistoryModal"
-          tabindex="-1"
-          aria-labelledby="machineHistoryModalLabel"
-          aria-hidden="true">
-        <!-- modal-xl for extra width, modal-dialog-scrollable for a scrollable body -->
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-          <div class="modal-content">
-            <form id="machineHistoryForm">
-              <div class="modal-header">
-                <h5 class="modal-title" id="machineHistoryModalLabel">
-                  Machine History
-                </h5>
-                <button type="button" class="btn-close"
-                        data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                {% csrf_token %}
-                <div class="mb-3">
-                  <label for="machine-input" class="form-label">Machine #</label>
-                  <input
-                    type="text"
-                    id="machine-input"
-                    class="form-control"
-                    placeholder="Enter machine number"
-                    required
-                  >
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
-                  Cancel
-                </button>
-                <button type="submit"
-                        class="btn btn-primary">
-                  Submit
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
+      tabindex="-1"
+      aria-labelledby="machineHistoryModalLabel"
+      aria-hidden="true">
+   <div class="modal-dialog modal-dialog-centered">
+     <div class="modal-content">
+       <form id="machineHistoryForm">
+         <div class="modal-header">
+           <h5 class="modal-title" id="machineHistoryModalLabel">
+             Machine History
+           </h5>
+           <button type="button" class="btn-close"
+                   data-bs-dismiss="modal"
+                   aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+           {% csrf_token %}
+           <div class="mb-3">
+             <label for="machine-input" class="form-label">Machine #</label>
+             <input
+               type="text"
+               id="machine-input"
+               class="form-control"
+               placeholder="Enter machine number"
+               required
+             >
+           </div>
+         </div>
+         <div class="modal-footer">
+           <button type="button"
+                   class="btn btn-secondary"
+                   data-bs-dismiss="modal">
+             Cancel
+           </button>
+           <button type="submit"
+                   class="btn btn-primary">
+             Submit
+           </button>
+         </div>
+       </form>
+     </div>
+   </div>
+ </div>
 
 
 
@@ -1173,6 +1173,7 @@ Add New or Update Employee
       (function(){
         document.addEventListener('DOMContentLoaded', function(){
           const modalEl             = document.getElementById('machineHistoryModal');
+          const modalDialog         = modalEl.querySelector('.modal-dialog');
           const machineHistoryModal = new bootstrap.Modal(modalEl);
           const form                = document.getElementById('machineHistoryForm');
           const body                = modalEl.querySelector('.modal-body');
@@ -1190,13 +1191,18 @@ Add New or Update Employee
               >
             </div>`;
       
+          // 1) Open narrow form
           document
             .getElementById('machine-history-btn')
             .addEventListener('click', () => {
+              // remove any wide classes
+              modalDialog.classList.remove('modal-xl', 'modal-dialog-scrollable');
+              // reset to form
               body.innerHTML = formHTML;
               machineHistoryModal.show();
             });
       
+          // 2) On submit, widen & inject table
           form.addEventListener('submit', function(e){
             e.preventDefault();
             const machine = body.querySelector('#machine-input').value.trim();
@@ -1213,10 +1219,13 @@ Add New or Update Employee
             .then(r => r.json())
             .then(data => {
               if (data.status === 'ok') {
-                // instead of accordion, inject the table snippet
-                body.innerHTML = data.html;
-                // optional: initialize DataTables here
-                // $('#machineHistoryModal table').DataTable();
+                // make the dialog wide & scrollable
+                modalDialog.classList.add('modal-xl', 'modal-dialog-scrollable');
+                // inject the table inside a responsive wrapper
+                body.innerHTML = `
+                  <div class="table-responsive">
+                    ${data.html}
+                  </div>`;
               } else {
                 body.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
               }
