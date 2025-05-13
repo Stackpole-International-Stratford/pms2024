@@ -25,6 +25,7 @@ from django.db.models import Exists, OuterRef
 from django.db.models import Q
 # import your lines structure
 from prod_query.views import lines as prod_lines
+from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cookie / csrf_protect
 
 
 
@@ -1169,3 +1170,40 @@ def downtime_codes_delete(request, pk):
     obj = get_object_or_404(DowntimeCode, pk=pk)
     obj.delete()
     return JsonResponse({'success': True})
+
+
+
+
+
+
+
+
+
+
+
+
+# ====================================================================
+# ====================================================================
+# ====================== Downtime History ============================
+# ====================================================================
+# ====================================================================
+
+
+
+
+
+@require_POST
+@csrf_exempt  # remove this if you handle CSRF in the standard way
+def machine_history(request):
+    """
+    Receives JSON { "machine": "1504" }
+    Prints it to console, returns a simple JSON OK.
+    """
+    try:
+        payload = json.loads(request.body.decode())
+        machine = payload.get('machine')
+        print(f"[machine_history] received machine = {machine}")
+        return JsonResponse({'status': 'ok', 'machine': machine})
+    except Exception as e:
+        print(f"[machine_history] error: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

@@ -88,4 +88,8 @@ urlpatterns = [
     path('downtime-codes/<int:pk>/edit/',  downtime_codes_edit,   name='downtime_codes_edit'),
     path('downtime-codes/<int:pk>/delete/',downtime_codes_delete, name='downtime_codes_delete'),
 
+
+
+    path('maintenance/machine-history/', machine_history, name='machine_history'),
+
 ]
