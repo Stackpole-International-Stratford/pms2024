@@ -1102,3 +1102,70 @@ def downtime_codes_list(request):
         'categories': categories,
         'subcategories': subcategories,
     })
+
+
+
+
+
+@require_POST
+def downtime_codes_create(request):
+    """AJAX: create a new code"""
+    code       = request.POST.get('code', '').strip()
+    category   = request.POST.get('category', '').strip()
+    subcat     = request.POST.get('subcategory', '').strip()
+
+    if not all([code, category, subcat]):
+        return JsonResponse({'error': 'All fields are required.'}, status=400)
+
+    if DowntimeCode.objects.filter(code=code).exists():
+        return JsonResponse({'error': f'Code "{code}" already exists.'}, status=400)
+
+    obj = DowntimeCode.objects.create(
+        code=code, category=category, subcategory=subcat
+    )
+    data = {
+        'id': obj.id,
+        'code': obj.code,
+        'category': obj.category,
+        'subcategory': obj.subcategory,
+        'updated_at': obj.updated_at.strftime('%Y-%m-%d %H:%M'),
+    }
+    return JsonResponse(data, status=201)
+
+
+@require_POST
+def downtime_codes_edit(request, pk):
+    """AJAX: update an existing code"""
+    obj = get_object_or_404(DowntimeCode, pk=pk)
+    code     = request.POST.get('code', '').strip()
+    category = request.POST.get('category', '').strip()
+    subcat   = request.POST.get('subcategory', '').strip()
+
+    if not all([code, category, subcat]):
+        return JsonResponse({'error': 'All fields are required.'}, status=400)
+
+    # if they changed the code, ensure uniqueness
+    if obj.code != code and DowntimeCode.objects.filter(code=code).exists():
+        return JsonResponse({'error': f'Code "{code}" already exists.'}, status=400)
+
+    obj.code = code
+    obj.category = category
+    obj.subcategory = subcat
+    obj.save()
+
+    data = {
+        'id': obj.id,
+        'code': obj.code,
+        'category': obj.category,
+        'subcategory': obj.subcategory,
+        'updated_at': obj.updated_at.strftime('%Y-%m-%d %H:%M'),
+    }
+    return JsonResponse(data)
+
+
+@require_POST
+def downtime_codes_delete(request, pk):
+    """AJAX: delete a code"""
+    obj = get_object_or_404(DowntimeCode, pk=pk)
+    obj.delete()
+    return JsonResponse({'success': True})

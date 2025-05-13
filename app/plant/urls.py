@@ -82,4 +82,10 @@ urlpatterns = [
 
     path('downtime-codes/', downtime_codes_list, name='downtime_codes_list'),
 
+
+    # AJAX CRUD
+    path('downtime-codes/create/', downtime_codes_create, name='downtime_codes_create'),
+    path('downtime-codes/<int:pk>/edit/',  downtime_codes_edit,   name='downtime_codes_edit'),
+    path('downtime-codes/<int:pk>/delete/',downtime_codes_delete, name='downtime_codes_delete'),
+
 ]
