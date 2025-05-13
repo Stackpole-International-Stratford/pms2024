@@ -43,6 +43,13 @@
           </tr>
           <tr id="detail{{ forloop.counter }}" class="collapse">
             <td colspan="6" class="p-0">
+            {# first show the original downtime comment #}
+            <div class="p-3 border-bottom bg-light">
+                <strong>Original Comment:</strong>
+                <div>{{ ev.comment }}</div>
+            </div>
+
+
               <ul class="list-group list-group-flush">
                 {% for p in ev.participants.all %}
                   <li class="list-group-item">
