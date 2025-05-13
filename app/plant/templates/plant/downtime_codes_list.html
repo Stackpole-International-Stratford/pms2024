@@ -4,9 +4,14 @@
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>Downtime Codes</h1>
-    <button id="add-new-btn" type="button" class="btn btn-sm btn-primary">
-      + Add New
-    </button>
+    <div class="d-flex">
+      <input
+        id="filter-input"
+        type="text"
+        class="form-control form-control-sm me-2"
+        placeholder="Filter codes…"
+      >
+    </div>
   </div>
 
   <table class="table table-striped table-bordered">
@@ -16,7 +21,13 @@
         <th>Category</th>
         <th>Subcategory</th>
         <th>Last Updated</th>
-        <th>Actions</th>
+        <th>  <button
+            id="add-new-btn"
+            type="button"
+            class="btn btn-sm btn-primary"
+          >
+            + Add New
+          </button></th>
       </tr>
     </thead>
     <tbody id="codes-table-body">
@@ -148,55 +159,68 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    const csrftoken      = getCookie('csrftoken');
-    const tableBody      = document.getElementById('codes-table-body');
-    const addModal       = new bootstrap.Modal(document.getElementById('addModal'));
-    const editModal      = new bootstrap.Modal(document.getElementById('editModal'));
-    const deleteModal    = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const csrftoken    = getCookie('csrftoken');
+    const tableBody    = document.getElementById('codes-table-body');
+    const filterInput  = document.getElementById('filter-input');
+    const addModal     = new bootstrap.Modal(document.getElementById('addModal'));
+    const editModal    = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal  = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-    const addForm        = document.getElementById('add-form');
-    const editForm       = document.getElementById('edit-form');
-    const addError       = document.getElementById('add-error');
-    const editError      = document.getElementById('edit-error');
-    const deleteName     = document.getElementById('delete-code-name');
+    const addForm      = document.getElementById('add-form');
+    const editForm     = document.getElementById('edit-form');
+    const addError     = document.getElementById('add-error');
+    const editError    = document.getElementById('edit-error');
+    const deleteName   = document.getElementById('delete-code-name');
 
-    const addCodeInput   = document.getElementById('add-code');
-    const addCatInput    = document.getElementById('add-cat');
-    const addSubInput    = document.getElementById('add-subcat');
+    const addCodeInput = document.getElementById('add-code');
+    const addCatInput  = document.getElementById('add-cat');
+    const addSubInput  = document.getElementById('add-subcat');
 
-    const editIdInput    = document.getElementById('edit-id');
-    const editCodeInput  = document.getElementById('edit-code');
-    const editCatInput   = document.getElementById('edit-cat');
-    const editSubInput   = document.getElementById('edit-subcat');
+    const editIdInput  = document.getElementById('edit-id');
+    const editCodeInput= document.getElementById('edit-code');
+    const editCatInput = document.getElementById('edit-cat');
+    const editSubInput = document.getElementById('edit-subcat');
 
     let deleteId = null;
 
-    // Show add form
+    // 1) LIVE FILTER
+    filterInput.addEventListener('input', function() {
+      const q = this.value.trim().toLowerCase();
+      tableBody.querySelectorAll('tr').forEach(row => {
+        const codeText = row.querySelector('.td-code').textContent.toLowerCase();
+        const catText  = row.querySelector('.td-category').textContent.toLowerCase();
+        const subText  = row.querySelector('.td-subcat').textContent.toLowerCase();
+        row.style.display = (
+          codeText.includes(q) ||
+          catText.includes(q) ||
+          subText.includes(q)
+        ) ? '' : 'none';
+      });
+    });
+
+    // 2) SHOW ADD MODAL
     document.getElementById('add-new-btn').addEventListener('click', () => {
       addError.classList.add('d-none');
       addForm.reset();
       addModal.show();
     });
 
-    // CREATE
+    // 3) CREATE
     addForm.addEventListener('submit', e => {
       e.preventDefault();
       addError.classList.add('d-none');
-      const data = {
+      const data = new URLSearchParams({
         code: addCodeInput.value.trim(),
         category: addCatInput.value.trim(),
         subcategory: addSubInput.value.trim()
-      };
+      });
       fetch("{% url 'downtime_codes_create' %}", {
         method: 'POST',
         headers: { 'X-CSRFToken': csrftoken },
-        body: new URLSearchParams(data),
+        body: data,
         credentials: 'same-origin'
       })
-      .then(r => r.ok
-        ? r.json()
-        : r.json().then(err => Promise.reject(err))
-      )
+      .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
       .then(json => {
         const tr = document.createElement('tr');
         tr.dataset.id = json.id;
@@ -210,13 +234,11 @@
               data-id="${json.id}"
               data-code="${json.code}"
               data-category="${json.category}"
-              data-subcategory="${json.subcategory}">
-              Edit
-            </button>
+              data-subcategory="${json.subcategory}"
+            >Edit</button>
             <button type="button" class="btn btn-sm btn-danger delete-btn"
-              data-id="${json.id}">
-              Delete
-            </button>
+              data-id="${json.id}"
+            >Delete</button>
           </td>`;
         tableBody.appendChild(tr);
         addModal.hide();
@@ -227,46 +249,41 @@
       });
     });
 
-    // DELEGATE Edit / Delete buttons
+    // 4) DELEGATE EDIT/DELETE BUTTONS
     tableBody.addEventListener('click', e => {
       const btn = e.target;
-      // EDIT
       if (btn.matches('.edit-btn')) {
         editError.classList.add('d-none');
-        editIdInput.value       = btn.dataset.id;
-        editCodeInput.value     = btn.dataset.code;
-        editCatInput.value      = btn.dataset.category;
-        editSubInput.value      = btn.dataset.subcategory;
+        editIdInput.value      = btn.dataset.id;
+        editCodeInput.value    = btn.dataset.code;
+        editCatInput.value     = btn.dataset.category;
+        editSubInput.value     = btn.dataset.subcategory;
         editModal.show();
       }
-      // DELETE
       if (btn.matches('.delete-btn')) {
-        deleteId    = btn.dataset.id;
+        deleteId = btn.dataset.id;
         deleteName.textContent = btn.closest('tr').querySelector('.td-code').textContent;
         deleteModal.show();
       }
     });
 
-    // UPDATE
+    // 5) UPDATE
     editForm.addEventListener('submit', e => {
       e.preventDefault();
       editError.classList.add('d-none');
-      const id   = editIdInput.value;
-      const data = {
+      const id = editIdInput.value;
+      const data = new URLSearchParams({
         code: editCodeInput.value.trim(),
         category: editCatInput.value.trim(),
         subcategory: editSubInput.value.trim()
-      };
+      });
       fetch(`/plant/downtime-codes/${id}/edit/`, {
         method: 'POST',
         headers: { 'X-CSRFToken': csrftoken },
-        body: new URLSearchParams(data),
+        body: data,
         credentials: 'same-origin'
       })
-      .then(r => r.ok
-        ? r.json()
-        : r.json().then(err => Promise.reject(err))
-      )
+      .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
       .then(json => {
         const row = tableBody.querySelector(`tr[data-id="${id}"]`);
         row.querySelector('.td-code').textContent     = json.code;
@@ -285,7 +302,7 @@
       });
     });
 
-    // DELETE
+    // 6) DELETE
     document.getElementById('confirm-delete-btn')
       .addEventListener('click', () => {
         fetch(`/plant/downtime-codes/${deleteId}/delete/`, {
@@ -293,9 +310,9 @@
           headers: { 'X-CSRFToken': csrftoken },
           credentials: 'same-origin'
         })
-        .then(r => {
-          if (!r.ok) throw new Error('Failed');
-          return r.json();
+        .then(res => {
+          if (!res.ok) throw new Error('Failed');
+          return res.json();
         })
         .then(() => {
           const row = tableBody.querySelector(`tr[data-id="${deleteId}"]`);
