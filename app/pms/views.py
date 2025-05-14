@@ -7,18 +7,30 @@ from django.http import HttpRequest, HttpResponse
 
 def login_view(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
+        # Grab exactly what the user typed
+        original_username = request.POST.get('username', '')
+        password = request.POST.get('password', '')
+
+        # Debug: print before lowercasing
+        # print(f"Login attempt username before lowercase: '{original_username}'")
+
+        # Force lowercase so auto-caps on mobile won't matter
+        username = original_username.lower()
+
+        # Debug: print after lowercasing
+        # print(f"Login attempt username after lowercase:  '{username}'")
+
+        # Now authenticate with the lowercased username
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            # Redirect to 'next' parameter or default
+            # Redirect to 'next' param or fallback to home
             next_url = request.GET.get('next', '/')
             return redirect(next_url)
         else:
-            # Add an error message to be displayed on the template
             messages.error(request, "Invalid login credentials. Please try again.")
-            return redirect('login')  # Redirect back to the login page
+            return redirect('login')
+
     return render(request, 'login.html')
 
 
