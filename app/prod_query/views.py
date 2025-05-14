@@ -6730,11 +6730,12 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
         print(f"ERROR: end_ts ({end_ts}) ≤ start_ts ({start_ts}) → returning 0")
         return 0
 
+    # first, see if this machine has parts configured
     parts = get_parts_for_machine(lines, line_name, machine_id)
     if parts:
         return fetch_part_timeline(cursor, machine_id, line_name, start_ts, end_ts, parts)
 
-    # no parts defined → do machine-level target weighting
+    # no parts → fall back to machine-level targets
     TOTAL_SECONDS = 7200 * 60
     window_secs   = end_ts - start_ts
 
@@ -6748,12 +6749,15 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
         )
         .order_by('effective_date_unix')
     )
-    if not recs:
-            print(f"[DEBUG] fetch_machine_target: no stored machine‐level target for "
-                f"machine_id={machine_id!r} on line={line_name!r}, parts={parts!r} → returning None")
-            return None
 
-    # build breakpoints at each target-change time plus window edges
+    if not recs:
+        print(
+            f"[DEBUG] fetch_machine_target: no stored machine-level target for "
+            f"machine_id={machine_id!r}, line={line_name!r}, parts={parts!r} → returning 0"
+        )
+        return 0   # ← was None before
+
+    # build time‐breakpoints and weight each interval by rec.target
     times = [start_ts] + [
         r.effective_date_unix
         for r in recs
@@ -6762,26 +6766,20 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
     times = sorted(set(times))
 
     total_expected = 0.0
-    for i in range(len(times) - 1):
-        t0, t1 = times[i], times[i+1]
-        secs = t1 - t0
-
-        # pick the record effective at t0
+    for t0, t1 in zip(times, times[1:]):
         rec = next(
             (r for r in reversed(recs) if r.effective_date_unix <= t0),
             None
         )
         if not rec:
-            print(f"DEBUG: no machine-level target at {t0} → skipping")
+            print(f"[DEBUG] no machine-level target at ts={t0} → skipping")
             continue
+        total_expected += (t1 - t0) * (rec.target / TOTAL_SECONDS)
 
-        total_expected += secs * (rec.target / TOTAL_SECONDS)
-
-    normalized = int(round(
-        total_expected * (TOTAL_SECONDS / window_secs)
-    )) if window_secs else 0
-
+    # normalize back to a 2-hour (7,200-min) window
+    normalized = int(round(total_expected * (TOTAL_SECONDS / window_secs))) if window_secs else 0
     return normalized
+
 
 
 
