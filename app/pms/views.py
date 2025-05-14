@@ -7,20 +7,25 @@ from django.http import HttpRequest, HttpResponse
 
 def login_view(request):
     if request.method == 'POST':
-        # Grab exactly what the user typed
+        # 1) Grab exactly what the user typed
         original_username = request.POST.get('username', '')
         password = request.POST.get('password', '')
 
-        # Debug: print before lowercasing
+        # 2) Debug: print before lowercasing
         # print(f"Login attempt username before lowercase: '{original_username}'")
 
-        # Force lowercase so auto-caps on mobile won't matter
+        # 3) Force lowercase so auto-caps on mobile won't matter
         username = original_username.lower()
 
-        # Debug: print after lowercasing
+        # 4) Debug: print after lowercasing
         # print(f"Login attempt username after lowercase:  '{username}'")
 
-        # Now authenticate with the lowercased username
+        # 5) Quick format validation: must contain at least one dot
+        if '.' not in username and username != 'tcareless':
+            messages.error(request, "Invalid login credentials. Please try again.")
+            return redirect('login')
+
+        # 6) Now authenticate with the lowercased, validated username
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
