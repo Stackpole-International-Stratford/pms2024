@@ -6749,8 +6749,9 @@ def fetch_machine_target(cursor, machine_id, line_name, start_ts, end_ts):
         .order_by('effective_date_unix')
     )
     if not recs:
-        print(f"DEBUG: no stored (non-deleted) machine target → returning None")
-        return None
+            print(f"[DEBUG] fetch_machine_target: no stored machine‐level target for "
+                f"machine_id={machine_id!r} on line={line_name!r}, parts={parts!r} → returning None")
+            return None
 
     # build breakpoints at each target-change time plus window edges
     times = [start_ts] + [
@@ -7744,6 +7745,9 @@ def fetch_combined_oee_production_data(request):
     cursor.close()
     conn.close()
     return JsonResponse(response_data)
+
+
+
 
 # ===========================================================================
 # ===========================================================================
