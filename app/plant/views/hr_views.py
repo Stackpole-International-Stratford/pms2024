@@ -1,6 +1,8 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 
 def absentee_forms(request):
-    # Temporary stub: log to console
-    print("⚠️  Absentee forms view hit!")  
-    return HttpResponse("Absentee Forms page — under construction")
+    # log to console
+    print("⚠️ Absentee forms view hit!")
+    # render the template
+    return render(request, 'plant/absentee.html')
+
