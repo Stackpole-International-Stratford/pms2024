@@ -7,6 +7,7 @@ from .views.password_views import (auth_page, password_list, password_create, pa
 from .views.prodmon_views import *
 from .views.cycle_crud_views import *
 from .views.temp_sensor_views import *
+from .views.hr_views import *
 
 urlpatterns = [
     path('', index, name='index'),  # New index page URL
@@ -52,5 +53,7 @@ urlpatterns = [
     path("temp-display/emails/add/", add_temp_sensor_email,   name="add-temp-sensor-email"),
     path("temp-display/emails/delete/", delete_temp_sensor_email, name="delete-temp-sensor-email"),
 
+
+    path('absentee/', absentee_forms, name='absentee_forms'),
 
 ]
