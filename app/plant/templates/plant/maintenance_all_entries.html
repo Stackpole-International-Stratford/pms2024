@@ -1244,7 +1244,42 @@ Add New or Update Employee
       </script>
       
   
-
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          let inactivityTimeout;
+          let inactiveLogger;
+        
+          function startInactiveLogging() {
+            // immediately reload once…
+            location.reload();
+            // …then schedule a reload every 1 minute
+            inactiveLogger = setInterval(() => location.reload(), 60000);
+          }
+          
+        
+          function resetTimers() {
+            // log each click
+            // console.log('Click');
+            // clear any pending “become inactive” timeout
+            clearTimeout(inactivityTimeout);
+            // stop ongoing “Inactive” logs
+            if (inactiveLogger) {
+              clearInterval(inactiveLogger);
+              inactiveLogger = null;
+            }
+            // schedule first “Inactive” after 30s of no clicks
+            inactivityTimeout = setTimeout(startInactiveLogging, 30000);
+          }
+        
+          // any click resets and logs
+          document.addEventListener('click', resetTimers);
+        
+          // start the cycle
+          resetTimers();
+        });
+        </script>
+        
+        
 
 
 
