@@ -307,17 +307,34 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
     qs = MachineDowntimeEvent.objects.filter(
-        is_deleted=False,
-        closeout_epoch__isnull=True
-    ).annotate(
-        # True if there's at least one participation with no leave_epoch
-        assigned_to_someone=Exists(
-            DowntimeParticipation.objects.filter(
-                event=OuterRef('pk'),
-                leave_epoch__isnull=True
+            is_deleted=False,
+            closeout_epoch__isnull=True
+        ).annotate(
+            # True if any open participant is in the electrician group
+            has_electrician=Exists(
+                DowntimeParticipation.objects.filter(
+                    event=OuterRef('pk'),
+                    leave_epoch__isnull=True,
+                    user__groups__name='maintenance_electrician'
+                )
+            ),
+            # True if any open participant is in the millwright group
+            has_millwright=Exists(
+                DowntimeParticipation.objects.filter(
+                    event=OuterRef('pk'),
+                    leave_epoch__isnull=True,
+                    user__groups__name='maintenance_millwright'
+                )
+            ),
+            # True if any open participant is in the tech group
+            has_tech=Exists(
+                DowntimeParticipation.objects.filter(
+                    event=OuterRef('pk'),
+                    leave_epoch__isnull=True,
+                    user__groups__name='maintenance_tech'
+                )
             )
-        )
-    ).order_by('-start_epoch')
+        ).order_by('-start_epoch')
 
     total     = qs.count()
     page_objs = list(qs[offset: offset + page_size])
