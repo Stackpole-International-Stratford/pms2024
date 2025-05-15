@@ -1070,6 +1070,7 @@ def maintenance_edit(request):
         'start_time':       local.strftime('%H:%M'),
         'comment':          e.comment,
         'labour_types':     e.labour_types,  # ← added
+        'employee_id':      e.employee_id, 
         'lines':            [l['line'] for l in prod_lines],
         'machines':         machines,
         'categories':       unique_categories,
