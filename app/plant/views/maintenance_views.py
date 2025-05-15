@@ -271,7 +271,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             e.code           = sub_code
             e.start_epoch    = epoch_ts
             e.comment        = description
-            e.labour_types   = labour_list
+            e.labour_types_json = json.dumps(e.labour_types)
             e.employee_id    = employee_id     # Set employee_id
             e.save(update_fields=[
                 'line', 'machine', 'category', 'subcategory',
