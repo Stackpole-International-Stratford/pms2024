@@ -27,6 +27,8 @@ from django.db.models import Q
 from prod_query.views import lines as prod_lines_initial, lines_untracked as prod_lines_untracked
 from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cookie / csrf_protect
 from django.template.loader import render_to_string
+from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
+
 
 
 # ============================================================================
@@ -307,34 +309,38 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
     qs = MachineDowntimeEvent.objects.filter(
-            is_deleted=False,
-            closeout_epoch__isnull=True
-        ).annotate(
-            # True if any open participant is in the electrician group
-            has_electrician=Exists(
-                DowntimeParticipation.objects.filter(
-                    event=OuterRef('pk'),
-                    leave_epoch__isnull=True,
-                    user__groups__name='maintenance_electrician'
-                )
-            ),
-            # True if any open participant is in the millwright group
-            has_millwright=Exists(
-                DowntimeParticipation.objects.filter(
-                    event=OuterRef('pk'),
-                    leave_epoch__isnull=True,
-                    user__groups__name='maintenance_millwright'
-                )
-            ),
-            # True if any open participant is in the tech group
-            has_tech=Exists(
-                DowntimeParticipation.objects.filter(
-                    event=OuterRef('pk'),
-                    leave_epoch__isnull=True,
-                    user__groups__name='maintenance_tech'
-                )
+        is_deleted=False,
+        closeout_epoch__isnull=True
+    ).annotate(
+        has_electrician=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_electrician'
             )
-        ).order_by('-start_epoch')
+        ),
+        has_millwright=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_millwright'
+            )
+        ),
+        has_tech=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_tech'
+            )
+        ),
+
+        # True if the JSONField `labour_types` contains the string "OPERATOR"
+        has_operator=Case(
+            When(labour_types__contains=['OPERATOR'], then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        )
+    ).order_by('-start_epoch')
 
     total     = qs.count()
     page_objs = list(qs[offset: offset + page_size])
