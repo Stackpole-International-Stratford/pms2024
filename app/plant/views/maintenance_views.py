@@ -322,6 +322,7 @@ MAINT_GROUPS = {
     "maintenance_electrician",
     "maintenance_millwright",
     "maintenance_tech",
+    "maintenance_supervisors",
 }
 
 def user_has_maintenance_access(user) -> bool:
@@ -398,6 +399,8 @@ def filter_out_operator_only_events(qs):
         print(f"Excluding operator‑only event IDs: {operator_only_ids}")
     # Return qs without those IDs
     return qs.exclude(id__in=operator_only_ids)
+
+
 
 
 @login_required(login_url='login')
