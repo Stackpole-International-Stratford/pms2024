@@ -24,11 +24,46 @@ from django.utils.timezone import is_naive, make_aware, get_default_timezone, ut
 from django.db.models import Exists, OuterRef
 from django.db.models import Q
 # import your lines structure
-from prod_query.views import lines as prod_lines
+from prod_query.views import lines as prod_lines_initial, lines_untracked as prod_lines_untracked
 from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cookie / csrf_protect
 from django.template.loader import render_to_string
 
 
+# ============================================================================
+# ============================================================================
+# ============================================================================
+# ============================================================================
+'''
+You may wonder what this is. I did this to silently merge the untracked lines object into the lines object so it doesn't affect any OEE calculations 
+but reflects the needs of the maintenance app that still has machines that go down even machines that are not being tracked
+'''
+# build a map by line name
+_by_name = { L['line']: L.copy() for L in prod_lines_initial }
+
+for un in prod_lines_untracked:
+    name = un['line']
+    if name in _by_name:
+        # for each op in the untracked block, try to find the same op code
+        for un_op in un['operations']:
+            # look for a matching op in the tracked block
+            match = next((op for op in _by_name[name]['operations']
+                          if op['op'] == un_op['op']), None)
+            if match:
+                match['machines'].extend(un_op['machines'])
+            else:
+                # if it’s a brand-new op, just append it
+                _by_name[name]['operations'].append(un_op)
+    else:
+        # brand-new line entirely
+        _by_name[name] = un
+
+# finally, your merged list:
+prod_lines = list(_by_name.values())
+
+# ============================================================================
+# ============================================================================
+# ============================================================================
+# ============================================================================
 
 
 @require_POST
