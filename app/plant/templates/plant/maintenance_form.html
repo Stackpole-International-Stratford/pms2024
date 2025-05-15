@@ -76,7 +76,8 @@
         <tbody id="entries-body">
           {% for e in entries %}
             <tr data-entry-id="{{ e.id }}"
-              data-employee-id="{{ e.employee_id }}">
+              data-employee-id="{{ e.employee_id }}"
+              data-labour-types='{{ e.labour_types|escapejs }}'>
             <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
             <td>{{ e.line }}</td>
             <td>{{ e.machine }}</td>
@@ -517,6 +518,9 @@
       saveBtn:       document.getElementById('save-button'),
       deleteBtn:     document.getElementById('delete-button'),
     };
+    const opChk   = document.getElementById('edit-labour-op');
+    const techChk = document.getElementById('edit-labour-tech');
+
   
     // Close-out modal elements
     const closeoutOpenBtn  = document.getElementById('closeout-open-button');
@@ -827,18 +831,37 @@
       // 1) When you click on a row, populate the labour checkboxes...
       document.querySelectorAll('tr[data-entry-id]').forEach(tr => {
         tr.addEventListener('click', () => {
-          const jsonId = 'labour-types-' + tr.dataset.entryId;
+          const entryId = tr.dataset.entryId;
+          console.log('▶️ Row clicked, entryId =', entryId);
+      
+          const jsonId = 'labour-types-' + entryId;
+          console.log('🔍 Looking for element with id:', jsonId);
+      
+          const jsonEl = document.getElementById(jsonId);
+          if (!jsonEl) {
+            console.error(`❌ No element found with id="${jsonId}"`);
+            return;
+          }
+          console.log('✅ Found element:', jsonEl);
+      
+          const txt = jsonEl.textContent.trim();
+          console.log('📝 textContent =', JSON.stringify(txt));
+      
           let labourList = [];
           try {
-            labourList = JSON.parse(document.getElementById(jsonId).textContent);
+            labourList = JSON.parse(txt);
+            console.log('✅ Parsed labourList =', labourList);
           } catch (err) {
-            labourList = [];
+            console.error('❌ JSON.parse error:', err);
           }
-    
+      
           opChk.checked   = labourList.includes('OPERATOR');
           techChk.checked = labourList.includes('TECH');
+          console.log('☑️ OPERATOR checked =', opChk.checked,
+                      '☑️ TECH checked =', techChk.checked);
         });
       });
+      
     
       // 2) Before the form actually submits, write the JSON array back
       editForm.addEventListener('submit', function(e) {
