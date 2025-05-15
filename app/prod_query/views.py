@@ -1905,21 +1905,7 @@ def get_sc_production_data_v2(request):
 # ========================================================
 # ========================================================
 
-lines_untracked = [
-     {
-        "line": "Furnaces",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "furnace",
-                "machines": [
-                    {"number": "1760", "target": 27496,},
-                ],
-            },
-        ],
-    },
 
-]
 
 
 

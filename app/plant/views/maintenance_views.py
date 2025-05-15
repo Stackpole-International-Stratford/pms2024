@@ -24,12 +24,28 @@ from django.utils.timezone import is_naive, make_aware, get_default_timezone, ut
 from django.db.models import Exists, OuterRef
 from django.db.models import Q
 # import your lines structure
-from prod_query.views import lines as prod_lines_initial, lines_untracked as prod_lines_untracked
+from prod_query.views import lines as prod_lines_initial
 from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cookie / csrf_protect
 from django.template.loader import render_to_string
 from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
+import copy
 
 
+lines_untracked = [
+     {
+        "line": "Furnaces",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "furnace",
+                "machines": [
+                    {"number": "1760", "target": 27496,},
+                ],
+            },
+        ],
+    },
+
+]
 
 # ============================================================================
 # ============================================================================
@@ -40,9 +56,9 @@ You may wonder what this is. I did this to silently merge the untracked lines ob
 but reflects the needs of the maintenance app that still has machines that go down even machines that are not being tracked
 '''
 # build a map by line name
-_by_name = { L['line']: L.copy() for L in prod_lines_initial }
+_by_name = { L['line']: copy.deepcopy(L) for L in prod_lines_initial }
 
-for un in prod_lines_untracked:
+for un in lines_untracked:
     name = un['line']
     if name in _by_name:
         # for each op in the untracked block, try to find the same op code
