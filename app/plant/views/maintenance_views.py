@@ -309,7 +309,16 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
+    ).annotate(
+        # True if there's at least one participation with no leave_epoch
+        assigned_to_someone=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True
+            )
+        )
     ).order_by('-start_epoch')
+
     total     = qs.count()
     page_objs = list(qs[offset: offset + page_size])
     has_more  = (offset + page_size) < total

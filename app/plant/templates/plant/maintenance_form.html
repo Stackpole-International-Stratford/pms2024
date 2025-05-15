@@ -64,10 +64,15 @@
               data-entry-id="{{ e.id }}"
               data-employee-id="{{ e.employee_id }}"
               data-labour-types='{{ e.labour_types_json|escapejs }}'
+              data-assigned-to-someone="{{ e.assigned_to_someone|yesno:'yes,no' }}"
             >
               <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
               <td>{{ e.line }}</td>
-              <td>{{ e.machine }}</td>
+              <td>{{ e.machine }}  
+              {% if e.assigned_to_someone %}
+                <span class="badge bg-dark">Assigned</span>
+              {% endif %}
+            </td>
               <td data-category-code="{{ e.code|cut:'-' }}">{{ e.category }}</td>
               <td data-subcategory-code="{{ e.code }}">{{ e.subcategory }}</td>
               <td>{{ e.code }}</td>
