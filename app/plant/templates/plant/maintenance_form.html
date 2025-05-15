@@ -513,7 +513,8 @@
 
     // — Populate the Choices.js selects —
     const lineVal  = cells[1].textContent.trim();
-    const machVal  = cells[2].textContent.trim();
+    // only grab the first text node (the machine code), ignore the badge spans
+    const machVal = cells[2].firstChild.nodeValue.trim();
     const fullCode = cells[5].textContent.trim();
     const catCode  = fullCode.split('-')[0];
     const subCode  = fullCode;
