@@ -218,7 +218,7 @@ Add New or Update Employee
       <tbody>
         {% for e in entries %}
           <tr
-            class="editable-row {% if not e.closeout_epoch %}table-warning{% endif %}"
+            class="editable-row {% if not e.closeout_epoch %}table-light{% endif %}"
             data-entry-id="{{ e.id }}"
           >
             <td class="py-1">
