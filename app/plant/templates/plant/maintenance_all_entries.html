@@ -380,6 +380,7 @@ Add New or Update Employee
               <th>Roles</th>
               <th>Machine</th>
               <th>Subcategory</th>
+              <th>Priority</th>
             </tr>
           </thead>
           <tbody>
@@ -393,6 +394,7 @@ Add New or Update Employee
                     {% endif %}
                     <td>{{ job.machine }}</td>
                     <td>{{ job.subcategory }}</td>
+                    <td>{{ job.priority }}</td>
                   </tr>
                 {% endfor %}
               {% else %}

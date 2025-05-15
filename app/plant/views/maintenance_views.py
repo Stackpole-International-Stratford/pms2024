@@ -501,31 +501,54 @@ def list_all_downtime_entries(request):
     active_qs       = users.filter(groups=active_grp)
     inactive_qs     = users.exclude(groups=active_grp)
 
+   # then, in your view:
+    machine_priority_map = get_machine_priority_map()
+
     def build_worker_list(qs):
+        """
+        Turn a queryset of User into a list of dicts:
+        { username, name, roles, jobs:[{machine, subcategory, priority}, …] }
+        """
         lst = []
         for u in qs:
+            # display name
             name = u.get_full_name() or u.username
+
+            # pull their maintenance roles
             user_groups = set(u.groups.values_list("name", flat=True))
             roles = [
                 role for role, grp in ROLE_TO_GROUP.items()
                 if grp in user_groups
             ]
+
+            # fetch all still‐open participations
             parts = DowntimeParticipation.objects.filter(
                 user=u,
                 leave_epoch__isnull=True,
                 event__closeout_epoch__isnull=True
             ).select_related('event')
-            jobs = [
-                {"machine": p.event.machine, "subcategory": p.event.subcategory}
-                for p in parts
-            ]
+
+            # build their job list, injecting priority
+            jobs = []
+            for p in parts:
+                mn = p.event.machine
+                jobs.append({
+                    "machine":     mn,
+                    "subcategory": p.event.subcategory,
+                    "priority":    machine_priority_map.get(mn, "—"),
+                })
+
             lst.append({
                 "username": u.username,
                 "name":     name,
                 "roles":    roles,
                 "jobs":     jobs,
             })
+
+        # sort alphabetically by display name
         return sorted(lst, key=lambda w: w["name"])
+
+
 
     active_workers   = build_worker_list(active_qs)
     inactive_workers = build_worker_list(inactive_qs)
@@ -786,6 +809,25 @@ def leave_downtime_event(request):
     })
 
 
+def get_machine_priority_map():
+    """
+    Returns a dict: { machine_number (str) → priority (int) } by
+    walking prod_lines and the LinePriority table.
+    """
+    # grab all line→priority pairs in one query
+    line_prios = {
+        lp.line: lp.priority
+        for lp in LinePriority.objects.all()
+    }
+
+    mp = {}
+    # for each line in our merged prod_lines, pull its machines
+    for line_block in prod_lines:
+        prio = line_prios.get(line_block['line'], None)
+        for op in line_block['operations']:
+            for m in op['machines']:
+                mp[m['number']] = prio
+    return mp
 
 
 
