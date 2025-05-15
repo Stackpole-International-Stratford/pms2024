@@ -601,7 +601,7 @@
       bootstrap.Modal.getInstance(editModalEl).hide();
       tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
     })
-    .catch(()=>alert('Error closing out.'));
+    .catch(()=>alert('Somebody has assigned themselves to this job. They will close it out'));
   });
 
   // ─── INACTIVITY-BASED RELOAD ───────────────────────────────────────

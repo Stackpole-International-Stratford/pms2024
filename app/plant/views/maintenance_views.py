@@ -122,12 +122,21 @@ def closeout_downtime_entry(request):
     )
 
     # ── 4) enforce “everyone must leave” for non-supervisors ─────────────────
-    if open_parts_qs.exists() and not request.user.groups.filter(
-        name="maintenance_supervisors"
-    ).exists():
-        return HttpResponseForbidden(
-            "Cannot close out until all participants have left."
-        )
+    if open_parts_qs.exists():
+        # 4a) anonymous users can never close out if people are still joined
+        if not request.user.is_authenticated:
+            return HttpResponseForbidden(
+                "Authentication required to close out until all participants have left."
+            )
+
+        # 4b) only maintenance_supervisors OR maintenance_managers may override
+        allowed = request.user.groups.filter(
+            name__in=["maintenance_supervisors", "maintenance_managers"]
+        ).exists()
+        if not allowed:
+            return HttpResponseForbidden(
+                "Cannot close out until all participants have left."
+            )
 
     # ── 5) compute epoch ───────────────────────────────────────────────────────
     epoch_ts = int(close_dt.timestamp())
