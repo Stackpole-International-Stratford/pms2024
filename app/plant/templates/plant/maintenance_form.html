@@ -4,17 +4,9 @@
   <!-- ADD FORM & TABLE -->
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
-      <!-- store the labour choice -->
-  <!-- ← new hidden field for the JSON list of labour types -->
-  <input
-    type="hidden"
-    id="labour_types_input"
-    name="labour_types"
-    value="[]"
-  />
-  <input type="hidden" id="employeeIdInput" name="employee_id" value="" />
-
-
+    <!-- store the labour choice -->
+    <input type="hidden" id="labour_types_input" name="labour_types" value="[]" />
+    <input type="hidden" id="employeeIdInput"   name="employee_id" value="" />
 
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
       <table id="downtime-table" class="table table-sm table-striped">
@@ -22,36 +14,30 @@
           <tr>
             <th style="min-width:140px">
               Started at<br>
-              <input type="hidden" id="start-date" name="start_date"
-                     class="form-control form-control-sm" required>
-              <input type="time" id="start-time" name="start_time"
-                     class="form-control form-control-sm mt-1" required>
+              <input type="hidden" id="start-date" name="start_date" class="form-control form-control-sm" required>
+              <input type="time"   id="start-time" name="start_time" class="form-control form-control-sm mt-1" required>
             </th>
             <th style="min-width:100px">
               Line<br>
-              <select id="line-select" name="line"
-                      class="form-select form-select-sm" required>
+              <select id="line-select" name="line" class="form-select form-select-sm" required>
                 <option value="">Select Line</option>
               </select>
             </th>
             <th style="min-width:100px">
               Machine<br>
-              <select id="machine-select" name="machine"
-                      class="form-select form-select-sm" required disabled>
+              <select id="machine-select" name="machine" class="form-select form-select-sm" required disabled>
                 <option value="">Select Machine</option>
               </select>
             </th>
             <th style="min-width:160px">
               Category<br>
-              <select id="category-select" name="category"
-                      class="form-select form-select-sm" required disabled>
+              <select id="category-select" name="category" class="form-select form-select-sm" required disabled>
                 <option value="">Select Category</option>
               </select>
             </th>
             <th style="min-width:180px">
               Sub-category<br>
-              <select id="subcategory-select" name="subcategory"
-                      class="form-select form-select-sm" required disabled>
+              <select id="subcategory-select" name="subcategory" class="form-select form-select-sm" required disabled>
                 <option value="">Select Subcategory</option>
               </select>
             </th>
@@ -63,194 +49,130 @@
                         rows="1" maxlength="5000" required></textarea>
             </th>
             <th style="width:1%;">
-              <!-- this button now opens the modal; it stays disabled until your fields are valid -->
               <button type="button"
                       id="add-button"
                       class="btn btn-dark btn-sm mt-4"
                       disabled>
                 Add
               </button>
-            </th>            
+            </th>
           </tr>
         </thead>
         <tbody id="entries-body">
           {% for e in entries %}
-            <tr data-entry-id="{{ e.id }}"
+            <tr
+              data-entry-id="{{ e.id }}"
               data-employee-id="{{ e.employee_id }}"
-              data-labour-types='{{ e.labour_types|escapejs }}'>
-            <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
-            <td>{{ e.line }}</td>
-            <td>{{ e.machine }}</td>
-            <td data-category-code="{{ e.code|cut:'-' }}">{{ e.category }}</td>
-            <td data-subcategory-code="{{ e.code }}">{{ e.subcategory }}</td>       
-            <td>{{ e.code }}</td>
-            <td>{{ e.comment|truncatechars:50 }}</td>
-            <td></td>
-          </tr>
+              data-labour-types='{{ e.labour_types_json|escapejs }}'
+            >
+              <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ e.line }}</td>
+              <td>{{ e.machine }}</td>
+              <td data-category-code="{{ e.code|cut:'-' }}">{{ e.category }}</td>
+              <td data-subcategory-code="{{ e.code }}">{{ e.subcategory }}</td>
+              <td>{{ e.code }}</td>
+              <td>{{ e.comment|truncatechars:50 }}</td>
+              <td></td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
     {% if has_more %}
-    <div class="text-center mt-3">
-      <button id="load-more" class="btn btn-outline-dark btn-sm">Load more</button>
-    </div>
+      <div class="text-center mt-3">
+        <button id="load-more" class="btn btn-outline-dark btn-sm">Load more</button>
+      </div>
     {% endif %}
   </form>
 
-
-    <!-- EDIT ENTRY MODAL -->
-    <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="editEntryModalLabel">Edit Downtime Entry</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-
-          <form id="edit-entry-form" method="POST">
-            {% csrf_token %}
-            <div class="modal-body">
-              <!-- Hidden fields -->
-              <input type="hidden" id="edit-entry-id"    name="entry_id"    value="">
-              <input type="hidden" id="edit-employee-id" name="employee_id" value="">
-
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label for="edit-start-date" class="form-label">Date</label>
-                  <input type="date"
-                        id="edit-start-date"
-                        name="start_date"
-                        class="form-control form-control-sm"
-                        required>
-                </div>
-                <div class="col-md-6">
-                  <label for="edit-start-time" class="form-label">Time</label>
-                  <input type="time"
-                        id="edit-start-time"
-                        name="start_time"
-                        class="form-control form-control-sm"
-                        required>
-                </div>
-                <div class="col-md-4">
-                  <label for="edit-line-select" class="form-label">Line</label>
-                  <select id="edit-line-select"
-                          name="line"
-                          class="form-select form-select-sm"
-                          required>
-                    <option value="">Select Line</option>
-                    <!-- JS populates options -->
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label for="edit-machine-select" class="form-label">Machine</label>
-                  <select id="edit-machine-select"
-                          name="machine"
-                          class="form-select form-select-sm"
-                          required
-                          disabled>
-                    <option value="">Select Machine</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label for="edit-category-select" class="form-label">Category</label>
-                  <select id="edit-category-select"
-                          name="category"
-                          class="form-select form-select-sm"
-                          required
-                          disabled>
-                    <option value="">Select Category</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label for="edit-subcategory-select" class="form-label">Sub-category</label>
-                  <select id="edit-subcategory-select"
-                          name="subcategory"
-                          class="form-select form-select-sm"
-                          required
-                          disabled>
-                    <option value="">Select Subcategory</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label for="edit-description" class="form-label">Comment</label>
-                  <textarea id="edit-description"
-                            name="description"
-                            class="form-control form-control-sm"
-                            rows="2"
-                            maxlength="5000"
-                            required></textarea>
-                </div>
-              </div>
-
-              <!-- Labour Types -->
-              <div class="row mt-4">
-                <div class="col-md-6">
-                  <p class="mb-1 fw-semibold">Labour Types</p>
-                  <div class="form-check">
-                    <input class="form-check-input"
-                          type="checkbox"
-                          id="edit-labour-op"
-                          value="OPERATOR">
-                    <label class="form-check-label" for="edit-labour-op">
-                      Operator Can Fix
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input"
-                          type="checkbox"
-                          id="edit-labour-tech"
-                          value="TECH">
-                    <label class="form-check-label" for="edit-labour-tech">
-                      Need Tech
-                    </label>
-                  </div>
-                  <!-- JSON holder -->
-                  <input type="hidden"
-                        id="edit-labour-types-input"
-                        name="labour_types"
-                        value="[]">
-                </div>
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <!-- Delete -->
-              <button type="button"
-                      id="delete-button"
-                      class="btn btn-danger">
-                Delete
-              </button>
-              <!-- Close-out -->
-              <button type="button"
-                      id="closeout-open-button"
-                      class="btn btn-info mx-3">
-                Close Out
-              </button>
-              <!-- Cancel & Save -->
-              <div class="ms-auto">
-                <button type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
-                  Cancel
-                </button>
-                <button type="submit"
-                        id="save-button"
-                        class="btn btn-warning ms-2">
-                  Save changes
-                </button>
-              </div>
-            </div>
-          </form>
-
+  <!-- EDIT ENTRY MODAL -->
+  <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editEntryModalLabel">Edit Downtime Entry</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+        <form id="edit-entry-form" method="POST">
+          {% csrf_token %}
+          <div class="modal-body">
+            <!-- Hidden fields -->
+            <input type="hidden" id="edit-entry-id"    name="entry_id"      value="">
+            <input type="hidden" id="edit-employee-id" name="employee_id"   value="">
+            <input type="hidden" id="edit-labour-types-input" name="labour_types" value="[]">
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="edit-start-date" class="form-label">Date</label>
+                <input type="date" id="edit-start-date" name="start_date" class="form-control form-control-sm" required>
+              </div>
+              <div class="col-md-6">
+                <label for="edit-start-time" class="form-label">Time</label>
+                <input type="time" id="edit-start-time" name="start_time" class="form-control form-control-sm" required>
+              </div>
+              <div class="col-md-4">
+                <label for="edit-line-select" class="form-label">Line</label>
+                <select id="edit-line-select" name="line" class="form-select form-select-sm" required>
+                  <option value="">Select Line</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="edit-machine-select" class="form-label">Machine</label>
+                <select id="edit-machine-select" name="machine" class="form-select form-select-sm" required disabled>
+                  <option value="">Select Machine</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="edit-category-select" class="form-label">Category</label>
+                <select id="edit-category-select" name="category" class="form-select form-select-sm" required disabled>
+                  <option value="">Select Category</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="edit-subcategory-select" class="form-label">Sub-category</label>
+                <select id="edit-subcategory-select" name="subcategory" class="form-select form-select-sm" required disabled>
+                  <option value="">Select Subcategory</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="edit-description" class="form-label">Comment</label>
+                <textarea id="edit-description" name="description"
+                          class="form-control form-control-sm"
+                          rows="2" maxlength="5000" required></textarea>
+              </div>
+            </div>
+
+            <!-- Labour Types -->
+            <div class="row mt-4">
+              <div class="col-md-6">
+                <p class="mb-1 fw-semibold">Labour Types</p>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="edit-labour-op"   value="OPERATOR">
+                  <label class="form-check-label" for="edit-labour-op">Operator Can Fix</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="edit-labour-tech" value="TECH">
+                  <label class="form-check-label" for="edit-labour-tech">Need Tech</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
+            <button type="button" id="closeout-open-button" class="btn btn-info mx-3">Close Out</button>
+            <div class="ms-auto">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" id="save-button" class="btn btn-warning ms-2">Save changes</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
+  </div>
 
-
-   <!-- CLOSE-OUT MODAL -->
-   <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
+  <!-- CLOSE-OUT MODAL -->
+  <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm">
       <div class="modal-content">
         <div class="modal-header">
@@ -269,612 +191,433 @@
               <label for="closeout-time" class="form-label">Time</label>
               <input type="time" id="closeout-time" class="form-control" required>
             </div>
-            <!-- NEW: closeout comment -->
             <div class="mb-3">
               <label for="closeout-comment" class="form-label">What was done?</label>
-              <textarea id="closeout-comment"
-                        name="closeout_comment"
-                        class="form-control"
-                        rows="3"
-                        maxlength="2000"
-                        required></textarea>
+              <textarea id="closeout-comment" name="closeout_comment"
+                        class="form-control" rows="3" maxlength="2000" required></textarea>
             </div>
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button"
-                  id="closeout-cancel"
-                  class="btn btn-secondary"
-                  data-bs-dismiss="modal">
-            Cancel
-          </button>
-          <button type="button"
-                  id="closeout-confirm"
-                  class="btn btn-info">
-            Confirm
-          </button>
+          <button type="button" id="closeout-cancel" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="closeout-confirm" class="btn btn-info">Confirm</button>
         </div>
       </div>
     </div>
   </div>
 
-
-<!-- LABOUR-CHOICE MODAL -->
-<div
-  class="modal fade"
-  id="labourModal"
-  tabindex="-1"
-  aria-labelledby="labourModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="labourModalLabel">
-          Who do you need?
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
-
-      <div class="modal-body">
-        <!-- Employee ID (required for everyone) -->
-        <div class="mb-3">
-          <label for="labourEmployeeId" class="form-label">Employee ID</label>
-          <input
-          type="text"
-          class="form-control"
-          id="labourEmployeeId"
-          name="employee_id"                       <
-          placeholder="Enter your employee ID"
-          required
-          {% if not user.is_anonymous %}
-            value="{{ request.user.username }}"   
-            readonly                            
+  <!-- LABOUR-CHOICE MODAL -->
+  <div class="modal fade" id="labourModal" tabindex="-1" aria-labelledby="labourModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="labourModalLabel">Who do you need?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="labourEmployeeId" class="form-label">Employee ID</label>
+            <input type="text" class="form-control" id="labourEmployeeId" name="employee_id"
+                   placeholder="Enter your employee ID" required
+                   {% if not user.is_anonymous %} value="{{ request.user.username }}" readonly {% endif %}>
+            <div class="invalid-feedback">Please enter your employee ID.</div>
+          </div>
+          <div id="labour-error" class="text-danger mb-2" style="display:none;">Please select at least one.</div>
+          {% if user.is_anonymous %}
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourOperator" value="OPERATOR">
+              <label class="form-check-label" for="labourOperator">Operator can fix</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourTech" value="TECH">
+              <label class="form-check-label" for="labourTech">Need Tech</label>
+            </div>
+          {% else %}
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourOperator"    value="OPERATOR">
+              <label class="form-check-label" for="labourOperator">Operator can fix</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourElectrician" value="ELECTRICIAN">
+              <label class="form-check-label" for="labourElectrician">Need Electrician</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourTech"        value="TECH">
+              <label class="form-check-label" for="labourTech">Need Tech</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourMillwright"  value="MILLWRIGHT">
+              <label class="form-check-label" for="labourMillwright">Need Millwright</label>
+            </div>
           {% endif %}
-        >
-        
-          <div class="invalid-feedback">
-            Please enter your employee ID.
-          </div>
         </div>
-
-        <!-- shown if they try to submit with none checked -->
-        <div
-          id="labour-error"
-          class="text-danger mb-2"
-          style="display: none;"
-        >
-          Please select at least one.
+        <div class="modal-footer">
+          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="confirmLabourChoice" class="btn btn-warning">OK</button>
         </div>
-
-        {% if user.is_anonymous %}
-          <!-- Guests only get the "Need Tech" option -->
-          <div class="form-check">
-            <input
-              class="form-check-input labour-checkbox"
-              type="checkbox"
-              id="labourOperator"
-              value="OPERATOR"
-            >
-            <label
-              class="form-check-label"
-              for="labourOperator"
-            >Operator can fix</label>
-          </div>
-          <div class="form-check">
-            <input
-              class="form-check-input labour-checkbox"
-              type="checkbox"
-              id="labourTech"
-              value="TECH"
-            >
-            <label
-              class="form-check-label"
-              for="labourTech"
-            >Need Tech</label>
-          </div>
-        {% else %}
-          <!-- Authenticated users see all options -->
-          <div class="form-check">
-            <input
-              class="form-check-input labour-checkbox"
-              type="checkbox"
-              id="labourOperator"
-              value="OPERATOR"
-            >
-            <label
-              class="form-check-label"
-              for="labourOperator"
-            >Operator can fix</label>
-          </div>
-
-          <div class="form-check">
-            <input
-              class="form-check-input labour-checkbox"
-              type="checkbox"
-              id="labourElectrician"
-              value="ELECTRICIAN"
-            >
-            <label
-              class="form-check-label"
-              for="labourElectrician"
-            >Need Electrician</label>
-          </div>
-
-          <div class="form-check">
-            <input
-              class="form-check-input labour-checkbox"
-              type="checkbox"
-              id="labourTech"
-              value="TECH"
-            >
-            <label
-              class="form-check-label"
-              for="labourTech"
-            >Need Tech</label>
-          </div>
-
-          <div class="form-check">
-            <input
-              class="form-check-input labour-checkbox"
-              type="checkbox"
-              id="labourMillwright"
-              value="MILLWRIGHT"
-            >
-            <label
-              class="form-check-label"
-              for="labourMillwright"
-            >Need Millwright</label>
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-dark"
-          data-bs-dismiss="modal"
-        >Cancel</button>
-        <button
-          type="button"
-          class="btn btn-warning"
-          id="confirmLabourChoice"
-        >OK</button>
       </div>
     </div>
   </div>
-</div>
-
-
-
-
-
-</div>
-
-
 </div>
 
 <style>
-
-  #downtime-table tbody tr:hover {
-    cursor: pointer;
-  }
-  
+  #downtime-table tbody tr:hover { cursor: pointer; }
   .table-responsive { overflow-x: auto; }
   #downtime-table thead th {
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 2;
+    position: sticky; top: 0; background: white; z-index: 2;
   }
   #downtime-table-wrapper { min-height: 800px; }
 </style>
 
-
-
 <script>
-  ;(function(){
-    // ─── CONFIG & JSON ─────────────────────────────────────────────────────
-    const entriesUrl       = "{% url 'maintenance_entries' %}";
-    let   offset           = {{ entries|length }};
-    const prodLines        = JSON.parse('{{ lines_json|escapejs }}');
-    const downtimeCodes    = JSON.parse('{{ downtime_codes_json|escapejs }}');
-  
-    // ─── DOM ELEMENTS ─────────────────────────────────────────────────────
-    const form             = document.getElementById('maintenance-form');
-    const labourInput      = document.getElementById('labour_types_input');
-    const tbody            = document.getElementById('entries-body');
-    const loadBtn          = document.getElementById('load-more');
-  
-    // Add-form fields
-    const add = {
-      dateInput:     document.getElementById('start-date'),
-      timeInput:     document.getElementById('start-time'),
-      lineSelect:    document.getElementById('line-select'),
-      machineSelect: document.getElementById('machine-select'),
-      catSelect:     document.getElementById('category-select'),
-      subSelect:     document.getElementById('subcategory-select'),
-      descInput:     document.getElementById('description'),
-      submitBtn:     document.getElementById('add-button')
-    };
-  
-    // Edit modal elements
-    const edit = {
-      modal:         document.getElementById('editEntryModal'),
-      form:          document.getElementById('edit-entry-form'),
-      idInput:       document.getElementById('edit-entry-id'),
-      dateInput:     document.getElementById('edit-start-date'),
-      timeInput:     document.getElementById('edit-start-time'),
-      lineSelect:    document.getElementById('edit-line-select'),
-      machineSelect: document.getElementById('edit-machine-select'),
-      catSelect:     document.getElementById('edit-category-select'),
-      subSelect:     document.getElementById('edit-subcategory-select'),
-      descInput:     document.getElementById('edit-description'),
-      saveBtn:       document.getElementById('save-button'),
-      deleteBtn:     document.getElementById('delete-button'),
-    };
-    const opChk   = document.getElementById('edit-labour-op');
-    const techChk = document.getElementById('edit-labour-tech');
+;(function(){
+  // ─── CONFIG & JSON ─────────────────────────────────────────────────────
+  const entriesUrl    = "{% url 'maintenance_entries' %}";
+  let   offset        = {{ entries|length }};
+  const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
+  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
 
-  
-    // Close-out modal elements
-    const closeoutOpenBtn  = document.getElementById('closeout-open-button');
-    const closeoutModalEl  = document.getElementById('closeoutModal');
-    const closeoutEntryId  = document.getElementById('closeout-entry-id');
-    const closeoutDate     = document.getElementById('closeout-date');
-    const closeoutTime     = document.getElementById('closeout-time');
-    const closeoutComment  = document.getElementById('closeout-comment');
-    const closeoutConfirm  = document.getElementById('closeout-confirm');
-  
-    // Labour-choice modal elements
-    const labourModalEl    = document.getElementById('labourModal');
-    const labourErrorEl    = document.getElementById('labour-error');
-    const labourCheckboxes = Array.from(document.querySelectorAll('.labour-checkbox'));
-    const labourConfirmBtn = document.getElementById('confirmLabourChoice');
-    const labourEmpIdField    = document.getElementById('labourEmployeeId');
-    const employeeIdInput = document.getElementById('employeeIdInput');
+  // ─── DOM ELEMENTS ─────────────────────────────────────────────────────
+  const form          = document.getElementById('maintenance-form');
+  const labourInput   = document.getElementById('labour_types_input');
+  const employeeInput = document.getElementById('employeeIdInput');
+  const tbody         = document.getElementById('entries-body');
+  const loadBtn       = document.getElementById('load-more');
 
-  
-    // ─── CHOICES.JS SETUP ──────────────────────────────────────────────────
-    function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'' }) {
-      return new Choices(el, opts);
-    }
-    const choices = {
-      addLine:     makeChoices(add.lineSelect),
-      addMachine:  makeChoices(add.machineSelect),
-      addCat:      makeChoices(add.catSelect),
-      addSub:      makeChoices(add.subSelect),
-      editLine:    makeChoices(edit.lineSelect),
-      editMachine: makeChoices(edit.machineSelect),
-      editCat:     makeChoices(edit.catSelect),
-      editSub:     makeChoices(edit.subSelect)
-    };
-    // disable downstream in both forms until parent picks
-    [ choices.addMachine, choices.addCat, choices.addSub,
-      choices.editMachine, choices.editCat, choices.editSub ]
-      .forEach(c=>c.disable());
-  
-    // ─── CASCADE HELPERS ──────────────────────────────────────────────────
-    function getMachines(lineVal) {
-      const ops = prodLines.find(l=>l.line===lineVal)?.operations || [];
-      return ops.map(op=>({
-        label:   `Op ${op.op}`,
-        choices: op.machines.map(m=>({ value:m.number, label:m.number }))
-      }));
-    }
-    function getCats() {
-      return downtimeCodes.map(c=>({ value:c.code, label:c.name }));
-    }
-    function getSubs(catCode) {
-      const cat = downtimeCodes.find(c=>c.code===catCode);
-      return (cat?.subcategories||[]).map(s=>({ value:s.code, label:s.name }));
-    }
-    function chain(parentEl, childChoice, getOpts, showDD=false) {
-      parentEl.addEventListener('change', ()=>{
-        const v = parentEl.value;
-        childChoice.clearChoices().disable();
-        if (!v) return;
-        childChoice.setChoices(getOpts(v), 'value','label',true);
-        childChoice.enable();
-        if (showDD) childChoice.showDropdown();
-        filterRows();
-      });
-    }
-  
-    // wire up cascades for both add & edit
-    chain(add.lineSelect,     choices.addMachine,  getMachines, true);
-    chain(add.machineSelect,  choices.addCat,      getCats,     true);
-    chain(add.catSelect,      choices.addSub,      getSubs,     true);
-    chain(edit.lineSelect,    choices.editMachine, getMachines);
-    chain(edit.machineSelect, choices.editCat,     getCats);
-    chain(edit.catSelect,     choices.editSub,     getSubs);
-  
-    // populate line dropdowns
-    const lineOpts = prodLines.map(l=>({ value:l.line, label:l.line }));
-    choices.addLine.setChoices(lineOpts,'value','label',true);
-    choices.editLine.setChoices(lineOpts,'value','label',true);
-  
-    // ─── ADD-FORM DEFAULTS & VALIDATION ──────────────────────────────────
-    ;(() => {
-      const now = new Date();
-      add.dateInput .value = now.toISOString().slice(0,10);
-      add.timeInput .value = now.toTimeString().slice(0,5);
-    })();
-    function validateAdd(){
-      add.submitBtn.disabled = !(
-        add.lineSelect.value &&
-        add.machineSelect.value &&
-        add.catSelect.value &&
-        add.subSelect.value &&
-        add.descInput.value.trim()
-      );
-    }
-    [ add.lineSelect, add.machineSelect, add.catSelect, add.subSelect ]
-      .forEach(el=>el.addEventListener('change', validateAdd));
-    add.descInput.addEventListener('input', validateAdd);
-  
-    // ─── ROW FILTERING ───────────────────────────────────────────────────
-    function filterRows(){
-      const fL=add.lineSelect.value,
-            fM=add.machineSelect.value,
-            fC=add.catSelect.value,
-            fS=add.subSelect.value;
-      Array.from(tbody.rows).forEach(tr=>{
-        const [ , lineCell, machCell, , , codeCell ] = tr.cells;
-        let show = true;
-        if (fL && lineCell.textContent.trim()!==fL) show = false;
-        if (fM && machCell.textContent.trim()!==fM) show = false;
-        if (fC && !codeCell.textContent.trim().startsWith(fC+'-')) show = false;
-        if (fS && codeCell.textContent.trim()!==fS) show = false;
-        tr.style.display = show ? '' : 'none';
-      });
-    }
-  
-    // ─── ADD → LABOUR-CHOICE → SUBMIT ─────────────────────────────────────
-    add.submitBtn.addEventListener('click', ()=>{
-      labourErrorEl.style.display = 'none';
-      labourCheckboxes.forEach(chk=>chk.checked = false);
-      // clear previous validation state
-      labourEmpIdField.classList.remove('is-invalid');
-      new bootstrap.Modal(labourModalEl).show();
-    });
-    
-    labourConfirmBtn.addEventListener('click', ()=>{
-      const empId = labourEmpIdField.value.trim();
-      if (!empId) {
-        labourEmpIdField.classList.add('is-invalid');
-        return;
-      }
-    
-      const picked = labourCheckboxes.filter(c=>c.checked).map(c=>c.value);
-      if (!picked.length) {
-        labourErrorEl.style.display = '';
-        return;
-      }
-    
-      labourInput.value      = JSON.stringify(picked);
-      employeeIdInput.value  = empId;    // now defined
-      form.submit();
-    });
-    
-  
-    // ─── LOAD-MORE AJAX ─────────────────────────────────────────────────
-    if (loadBtn) {
-      loadBtn.addEventListener('click', ()=>{
-        loadBtn.disabled = true;
-        fetch(`${entriesUrl}?offset=${offset}`)
-          .then(r=>r.json())
-          .then(({entries, has_more})=>{
-            entries.forEach(e=>{
-              const tr = document.createElement('tr');
-              tr.dataset.entryId = e.id;
-              tr.innerHTML = `
-                <td>${e.start_at}</td>
-                <td>${e.line}</td>
-                <td>${e.machine}</td>
-                <td data-category-code="${e.category_code}">${e.category}</td>
-                <td data-subcategory-code="${e.subcategory_code}">${e.subcategory}</td>
-                <td>${e.code}</td>
-                <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
-                <td></td>`;
-              tbody.appendChild(tr);
-            });
-            offset += entries.length;
-            if (!has_more) loadBtn.style.display = 'none';
-            else            loadBtn.disabled = false;
-            filterRows();
-          })
-          .catch(err=>{
-            console.error(err);
-            loadBtn.disabled = false;
-          });
-      });
-    }
-  
-    // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
-    tbody.addEventListener('click', ev=>{
-      const tr = ev.target.closest('tr[data-entry-id]');
-      if (!tr) return;
-      const cells    = tr.cells;
-      const datetime = cells[0].textContent.trim();
-      const lineVal  = cells[1].textContent.trim();
-      const machVal  = cells[2].textContent.trim();
-      const fullCode = cells[5].textContent.trim();
-      const catCode  = fullCode.split('-')[0];
-      const subCode  = fullCode;
-  
-      // populate form
-      edit.idInput.value   = tr.dataset.entryId;
-      edit.dateInput.value = datetime.slice(0,10);
-      edit.timeInput.value = datetime.slice(11);
-      edit.descInput.value = cells[6].textContent.trim();
+  // Add-form fields
+  const add = {
+    dateInput:     document.getElementById('start-date'),
+    timeInput:     document.getElementById('start-time'),
+    lineSelect:    document.getElementById('line-select'),
+    machineSelect: document.getElementById('machine-select'),
+    catSelect:     document.getElementById('category-select'),
+    subSelect:     document.getElementById('subcategory-select'),
+    descInput:     document.getElementById('description'),
+    submitBtn:     document.getElementById('add-button')
+  };
 
-      document.getElementById('edit-employee-id').value = tr.dataset.employeeId;
-  
-      choices.editLine.setChoiceByValue(lineVal);
-      edit.lineSelect.value = lineVal;
-  
-      choices.editMachine.clearChoices()
-        .setChoices(getMachines(lineVal),'value','label',true)
-        .enable()
-        .setChoiceByValue(machVal);
-      edit.machineSelect.value = machVal;
-  
-      choices.editCat.clearChoices()
-        .setChoices(getCats(),'value','label',true)
-        .enable()
-        .setChoiceByValue(catCode);
-      edit.catSelect.value = catCode;
-  
-      choices.editSub.clearChoices()
-        .setChoices(getSubs(catCode),'value','label',true)
-        .enable()
-        .setChoiceByValue(subCode);
-      edit.subSelect.value = subCode;
-  
-      new bootstrap.Modal(edit.modal).show();
+  // Edit-modal elements
+  const editModalEl   = document.getElementById('editEntryModal');
+  const editForm      = document.getElementById('edit-entry-form');
+  const edit          = {
+    idInput:    document.getElementById('edit-entry-id'),
+    employeeIdInput: document.getElementById('edit-employee-id'),
+    dateInput:  document.getElementById('edit-start-date'),
+    timeInput:  document.getElementById('edit-start-time'),
+    lineSelect:    document.getElementById('edit-line-select'),
+    machineSelect: document.getElementById('edit-machine-select'),
+    catSelect:     document.getElementById('edit-category-select'),
+    subSelect:     document.getElementById('edit-subcategory-select'),
+    descInput:     document.getElementById('edit-description')
+  };
+  const opChk            = document.getElementById('edit-labour-op');
+  const techChk          = document.getElementById('edit-labour-tech');
+  const editLabourHidden = document.getElementById('edit-labour-types-input');
+
+  // Close-out modal
+  const closeoutOpenBtn = document.getElementById('closeout-open-button');
+  const closeoutModalEl = document.getElementById('closeoutModal');
+  const closeoutEntryId = document.getElementById('closeout-entry-id');
+  const closeoutDate    = document.getElementById('closeout-date');
+  const closeoutTime    = document.getElementById('closeout-time');
+  const closeoutComment = document.getElementById('closeout-comment');
+  const closeoutConfirm = document.getElementById('closeout-confirm');
+
+  // Labour-choice modal
+  const labourModalEl    = document.getElementById('labourModal');
+  const labourErrorEl    = document.getElementById('labour-error');
+  const labourCheckboxes = Array.from(document.querySelectorAll('.labour-checkbox'));
+  const labourConfirmBtn = document.getElementById('confirmLabourChoice');
+  const labourEmpIdField = document.getElementById('labourEmployeeId');
+
+  // ─── CHOICES.JS SETUP ──────────────────────────────────────────────────
+  function makeChoices(el, opts={ searchEnabled:false, itemSelectText:'' }) {
+    return new Choices(el, opts);
+  }
+  const choices = {
+    addLine:     makeChoices(add.lineSelect),
+    addMachine:  makeChoices(add.machineSelect),
+    addCat:      makeChoices(add.catSelect),
+    addSub:      makeChoices(add.subSelect),
+    editLine:    makeChoices(edit.lineSelect),
+    editMachine: makeChoices(edit.machineSelect),
+    editCat:     makeChoices(edit.catSelect),
+    editSub:     makeChoices(edit.subSelect)
+  };
+  [ choices.addMachine, choices.addCat, choices.addSub,
+    choices.editMachine, choices.editCat, choices.editSub
+  ].forEach(c => c.disable());
+
+  function getMachines(lineVal) {
+    const ops = prodLines.find(l=>l.line===lineVal)?.operations || [];
+    return ops.map(op=>({
+      label:   `Op ${op.op}`,
+      choices: op.machines.map(m=>({ value:m.number, label:m.number }))
+    }));
+  }
+  function getCats() {
+    return downtimeCodes.map(c=>({ value:c.code, label:c.name }));
+  }
+  function getSubs(catCode) {
+    const cat = downtimeCodes.find(c=>c.code===catCode);
+    return (cat?.subcategories||[]).map(s=>({ value:s.code, label:s.name }));
+  }
+  function chain(parent, child, getOpts, showDD=false) {
+    parent.addEventListener('change', ()=>{
+      const v = parent.value;
+      child.clearChoices().disable();
+      if (!v) return;
+      child.setChoices(getOpts(v), 'value','label', true);
+      child.enable();
+      if (showDD) child.showDropdown();
+      filterRows();
     });
-  
-    // ─── DELETE ENTRY ───────────────────────────────────────────────────
-    edit.deleteBtn.addEventListener('click', ()=>{
-      if (!confirm('Delete this downtime entry?')) return;
-      const id = edit.idInput.value;
-      fetch("{% url 'delete_downtime_entry' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json',
-          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({ entry_id: id })
-      })
-      .then(r=>r.ok ? r.json() : Promise.reject())
-      .then(()=>{
-        bootstrap.Modal.getInstance(edit.modal).hide();
-        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
-      })
-      .catch(()=>alert('Error deleting entry.'));
-    });
-  
-    // ─── OPEN CLOSE-OUT MODAL ───────────────────────────────────────────
-    closeoutOpenBtn.addEventListener('click', ()=>{
-      closeoutEntryId.value = edit.idInput.value;
-      const now = new Date();
-      closeoutDate.value = now.toISOString().slice(0,10);
-      closeoutTime.value = now.toTimeString().slice(0,5);
-      closeoutComment.value = '';
-      new bootstrap.Modal(closeoutModalEl).show();
-    });
-  
-    // ─── CONFIRM CLOSE-OUT ─────────────────────────────────────────────
-    closeoutConfirm.addEventListener('click', ()=>{
-      const id   = closeoutEntryId.value,
-            d    = closeoutDate.value,
-            t    = closeoutTime.value,
-            com  = closeoutComment.value.trim();
-      if (!d||!t)   return alert('Pick date & time.');
-      if (!com)    return alert('Please describe what you did.');
-  
-      fetch("{% url 'closeout_downtime_entry' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json',
-          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify({
-          entry_id:         id,
-          closeout:         `${d} ${t}`,
-          closeout_comment: com
-        })
-      })
-      .then(r=>r.ok ? r.json() : Promise.reject())
-      .then(()=>{
-        bootstrap.Modal.getInstance(closeoutModalEl).hide();
-        bootstrap.Modal.getInstance(edit.modal).hide();
-        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
-      })
-      .catch(()=>alert('Error closing out.'));
-    });
-  
-    // ─── INACTIVITY-BASED RELOAD ───────────────────────────────────────
-    let inactivityTimer;
-    function resetInactivityTimer(){
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(()=>{
-        console.log('Reloading after 5 m inactivity');
-        location.reload();
-      },5*60*1000);
-    }
-    document.addEventListener('click', resetInactivityTimer);
-    resetInactivityTimer();
-  
-    // ─── INITIAL ROW FILTER ─────────────────────────────────────────────
-    filterRows();
-  
+  }
+
+  chain(add.lineSelect,     choices.addMachine,  getMachines, true);
+  chain(add.machineSelect,  choices.addCat,      getCats,     true);
+  chain(add.catSelect,      choices.addSub,      getSubs,     true);
+  chain(edit.lineSelect,    choices.editMachine, getMachines);
+  chain(edit.machineSelect, choices.editCat,     getCats);
+  chain(edit.catSelect,     choices.editSub,     getSubs);
+
+  const lineOpts = prodLines.map(l=>({ value:l.line, label:l.line }));
+  choices.addLine.setChoices(lineOpts,'value','label',true);
+  choices.editLine.setChoices(lineOpts,'value','label',true);
+
+  // ─── ADD-FORM DEFAULTS & VALIDATION ──────────────────────────────────
+  ;(() => {
+    const now = new Date();
+    add.dateInput.value = now.toISOString().slice(0,10);
+    add.timeInput.value = now.toTimeString().slice(0,5);
   })();
-  </script>
-  
-  
-  
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const editForm     = document.getElementById('edit-entry-form');
-      const opChk        = document.getElementById('edit-labour-op');
-      const techChk      = document.getElementById('edit-labour-tech');
-      const hiddenInput  = document.getElementById('edit-labour-types-input');
-      const modalEl      = document.getElementById('editEntryModal');
-    
-      // 1) When you click on a row, populate the labour checkboxes...
-      document.querySelectorAll('tr[data-entry-id]').forEach(tr => {
-        tr.addEventListener('click', () => {
-          const entryId = tr.dataset.entryId;
-          console.log('▶️ Row clicked, entryId =', entryId);
-      
-          const jsonId = 'labour-types-' + entryId;
-          console.log('🔍 Looking for element with id:', jsonId);
-      
-          const jsonEl = document.getElementById(jsonId);
-          if (!jsonEl) {
-            console.error(`❌ No element found with id="${jsonId}"`);
-            return;
-          }
-          console.log('✅ Found element:', jsonEl);
-      
-          const txt = jsonEl.textContent.trim();
-          console.log('📝 textContent =', JSON.stringify(txt));
-      
-          let labourList = [];
-          try {
-            labourList = JSON.parse(txt);
-            console.log('✅ Parsed labourList =', labourList);
-          } catch (err) {
-            console.error('❌ JSON.parse error:', err);
-          }
-      
-          opChk.checked   = labourList.includes('OPERATOR');
-          techChk.checked = labourList.includes('TECH');
-          console.log('☑️ OPERATOR checked =', opChk.checked,
-                      '☑️ TECH checked =', techChk.checked);
-        });
-      });
-      
-    
-      // 2) Before the form actually submits, write the JSON array back
-      editForm.addEventListener('submit', function(e) {
-        const outList = [];
-        if (opChk.checked)   outList.push('OPERATOR');
-        if (techChk.checked) outList.push('TECH');
-        hiddenInput.value = JSON.stringify(outList);
-        // then let the browser do the normal POST
-      });
-    });
-    </script>
-    
-  
+  function validateAdd(){
+    add.submitBtn.disabled = !(
+      add.lineSelect.value &&
+      add.machineSelect.value &&
+      add.catSelect.value &&
+      add.subSelect.value &&
+      add.descInput.value.trim()
+    );
+  }
+  [ add.lineSelect, add.machineSelect, add.catSelect, add.subSelect ]
+    .forEach(el=>el.addEventListener('change', validateAdd));
+  add.descInput.addEventListener('input', validateAdd);
 
-  
+  // ─── ROW FILTERING ───────────────────────────────────────────────────
+  function filterRows(){
+    const fL = add.lineSelect.value,
+          fM = add.machineSelect.value,
+          fC = add.catSelect.value,
+          fS = add.subSelect.value;
+    Array.from(tbody.rows).forEach(tr=>{
+      const codeCell = tr.cells[5];
+      let show = true;
+      if (fL && tr.cells[1].textContent.trim() !== fL) show = false;
+      if (fM && tr.cells[2].textContent.trim() !== fM) show = false;
+      if (fC && !codeCell.textContent.trim().startsWith(fC+'-')) show = false;
+      if (fS && codeCell.textContent.trim() !== fS) show = false;
+      tr.style.display = show ? '' : 'none';
+    });
+  }
+
+  // ─── ADD → LABOUR-CHOICE → SUBMIT ─────────────────────────────────────
+  add.submitBtn.addEventListener('click', ()=>{
+    labourErrorEl.style.display = 'none';
+    labourCheckboxes.forEach(c=>c.checked = false);
+    labourEmpIdField.classList.remove('is-invalid');
+    new bootstrap.Modal(labourModalEl).show();
+  });
+  labourConfirmBtn.addEventListener('click', ()=>{
+    const emp = labourEmpIdField.value.trim();
+    if (!emp) {
+      labourEmpIdField.classList.add('is-invalid');
+      return;
+    }
+    const picked = labourCheckboxes.filter(c=>c.checked).map(c=>c.value);
+    if (!picked.length) {
+      labourErrorEl.style.display = '';
+      return;
+    }
+    labourInput.value     = JSON.stringify(picked);
+    employeeInput.value   = emp;
+    form.submit();
+  });
+
+  // ─── LOAD-MORE AJAX ─────────────────────────────────────────────────
+  if (loadBtn) {
+    loadBtn.addEventListener('click', ()=>{
+      loadBtn.disabled = true;
+      fetch(`${entriesUrl}?offset=${offset}`)
+        .then(r=>r.json())
+        .then(({entries, has_more})=>{
+          entries.forEach(e=>{
+            const tr = document.createElement('tr');
+            tr.dataset.entryId     = e.id;
+            tr.dataset.employeeId  = e.employee_id;
+            tr.dataset.labourTypes = JSON.stringify(e.labour_types);
+            tr.innerHTML = `
+              <td>${e.start_at}</td>
+              <td>${e.line}</td>
+              <td>${e.machine}</td>
+              <td data-category-code="${e.category_code}">${e.category}</td>
+              <td data-subcategory-code="${e.subcategory_code}">${e.subcategory}</td>
+              <td>${e.code}</td>
+              <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
+              <td></td>`;
+            tbody.appendChild(tr);
+          });
+          offset += entries.length;
+          if (!has_more) loadBtn.style.display = 'none';
+          else          loadBtn.disabled      = false;
+          filterRows();
+        })
+        .catch(err=>{
+          console.error(err);
+          loadBtn.disabled = false;
+        });
+    });
+  }
+
+  // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
+  tbody.addEventListener('click', ev=>{
+    const tr = ev.target.closest('tr[data-entry-id]');
+    if (!tr) return;
+
+    // — Populate the edit form fields —
+    const cells  = tr.cells;
+    const datetime = cells[0].textContent.trim();
+    edit.idInput.value         = tr.dataset.entryId;
+    edit.employeeIdInput.value = tr.dataset.employeeId;
+    edit.dateInput.value       = datetime.slice(0,10);
+    edit.timeInput.value       = datetime.slice(11);
+    edit.descInput.value       = cells[6].textContent.trim();
+
+    // — Populate the Choices.js selects —
+    const lineVal  = cells[1].textContent.trim();
+    const machVal  = cells[2].textContent.trim();
+    const fullCode = cells[5].textContent.trim();
+    const catCode  = fullCode.split('-')[0];
+    const subCode  = fullCode;
+
+    choices.editLine.setChoiceByValue(lineVal);
+    edit.lineSelect.value = lineVal;
+
+    choices.editMachine.clearChoices()
+      .setChoices(getMachines(lineVal),'value','label',true)
+      .enable()
+      .setChoiceByValue(machVal);
+    edit.machineSelect.value = machVal;
+
+    choices.editCat.clearChoices()
+      .setChoices(getCats(),'value','label',true)
+      .enable()
+      .setChoiceByValue(catCode);
+    edit.catSelect.value = catCode;
+
+    choices.editSub.clearChoices()
+      .setChoices(getSubs(catCode),'value','label',true)
+      .enable()
+      .setChoiceByValue(subCode);
+    edit.subSelect.value = subCode;
+
+    // — Populate the labour checkboxes from data attribute —
+    let labourList = [];
+    try {
+      labourList = JSON.parse(tr.dataset.labourTypes || '[]');
+    } catch(err) {
+      console.error('Failed to parse labour-types JSON:', tr.dataset.labourTypes, err);
+    }
+    opChk.checked   = labourList.includes('OPERATOR');
+    techChk.checked = labourList.includes('TECH');
+
+    // — Show the modal —
+    new bootstrap.Modal(editModalEl).show();
+  });
+
+  // ─── BEFORE EDIT FORM SUBMIT: write back the JSON list —
+  editForm.addEventListener('submit', function(e){
+    const out = [];
+    if (opChk.checked)   out.push('OPERATOR');
+    if (techChk.checked) out.push('TECH');
+    editLabourHidden.value = JSON.stringify(out);
+    // then normal POST
+  });
+
+  // ─── DELETE ENTRY ───────────────────────────────────────────────────
+  document.getElementById('delete-button').addEventListener('click', ()=>{
+    if (!confirm('Delete this downtime entry?')) return;
+    const id = edit.idInput.value;
+    fetch("{% url 'delete_downtime_entry' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({ entry_id: id })
+    })
+    .then(r=>r.ok ? r.json() : Promise.reject())
+    .then(()=>{
+      bootstrap.Modal.getInstance(editModalEl).hide();
+      tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
+    })
+    .catch(()=>alert('Error deleting entry.'));
+  });
+
+  // ─── OPEN CLOSE-OUT MODAL ───────────────────────────────────────────
+  closeoutOpenBtn.addEventListener('click', ()=>{
+    closeoutEntryId.value = edit.idInput.value;
+    const now = new Date();
+    closeoutDate.value = now.toISOString().slice(0,10);
+    closeoutTime.value = now.toTimeString().slice(0,5);
+    closeoutComment.value = '';
+    new bootstrap.Modal(closeoutModalEl).show();
+  });
+
+  // ─── CONFIRM CLOSE-OUT ─────────────────────────────────────────────
+  closeoutConfirm.addEventListener('click', ()=>{
+    const id  = closeoutEntryId.value;
+    const d   = closeoutDate.value;
+    const t   = closeoutTime.value;
+    const com = closeoutComment.value.trim();
+    if (!d || !t) return alert('Pick date & time.');
+    if (!com)     return alert('Please describe what you did.');
+
+    fetch("{% url 'closeout_downtime_entry' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        entry_id:         id,
+        closeout:         `${d} ${t}`,
+        closeout_comment: com
+      })
+    })
+    .then(r=>r.ok ? r.json() : Promise.reject())
+    .then(()=>{
+      bootstrap.Modal.getInstance(closeoutModalEl).hide();
+      bootstrap.Modal.getInstance(editModalEl).hide();
+      tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
+    })
+    .catch(()=>alert('Error closing out.'));
+  });
+
+  // ─── INACTIVITY-BASED RELOAD ───────────────────────────────────────
+  let inactivityTimer;
+  function resetInactivityTimer(){
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(()=>{
+      console.log('Reloading after 5 m inactivity');
+      location.reload();
+    }, 5*60*1000);
+  }
+  document.addEventListener('click', resetInactivityTimer);
+  resetInactivityTimer();
+
+  // ─── INITIAL ROW FILTER ─────────────────────────────────────────────
+  filterRows();
+})();
+</script>
 {% endblock %}
