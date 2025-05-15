@@ -115,31 +115,38 @@ def closeout_downtime_entry(request):
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # ── 3) compute epoch ───────────────────────────────────────────────────────
+    # ── 3) gather any still-open participations ───────────────────────────────
+    open_parts_qs = DowntimeParticipation.objects.filter(
+        event=event,
+        leave_epoch__isnull=True
+    )
+
+    # ── 4) enforce “everyone must leave” for non-supervisors ─────────────────
+    if open_parts_qs.exists() and not request.user.groups.filter(
+        name="maintenance_supervisors"
+    ).exists():
+        return HttpResponseForbidden(
+            "Cannot close out until all participants have left."
+        )
+
+    # ── 5) compute epoch ───────────────────────────────────────────────────────
     epoch_ts = int(close_dt.timestamp())
 
-    # ── 4) perform updates atomically ─────────────────────────────────────────
+    # ── 6) perform updates atomically ─────────────────────────────────────────
     with transaction.atomic():
-        # 4a) close out the event itself
+        # 6a) close out the event itself
         event.closeout_epoch   = epoch_ts
         event.closeout_comment = closeout_comment
         event.save(update_fields=['closeout_epoch', 'closeout_comment'])
 
-        # 4b) find all still-joined participations
-        open_parts = DowntimeParticipation.objects.filter(
-            event=event,
-            leave_epoch__isnull=True
-        )
-
-        # 4c) mark each one as left at the same epoch
-        for part in open_parts:
+        # 6b) mark each still‐joined participation as left now
+        for part in open_parts_qs:
             part.leave_epoch   = epoch_ts
             part.leave_comment = f"Job is finished: {closeout_comment}"
-            # round up to whole minutes
             part.total_minutes = math.ceil((epoch_ts - part.join_epoch) / 60)
             part.save(update_fields=['leave_epoch', 'leave_comment', 'total_minutes'])
 
-    # ── 5) respond to caller ───────────────────────────────────────────────────
+    # ── 7) respond to caller ───────────────────────────────────────────────────
     return JsonResponse({
         'status':          'ok',
         'closed_at_epoch': epoch_ts,

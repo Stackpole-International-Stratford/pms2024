@@ -860,8 +860,10 @@ Add New or Update Employee
         const date = closeDate.value;
         const time = closeTime.value;
         const note = closeComm.value.trim();
-        if (!date || !time || !note) return alert('All fields are required.');
-    
+        if (!date || !time || !note) {
+          return alert('All fields are required.');
+        }
+
         fetch(closeoutUrl, {
           method: 'POST',
           headers: {
@@ -874,9 +876,28 @@ Add New or Update Employee
             closeout_comment: note
           })
         })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => location.reload())
-        .catch(() => alert('Error closing out entry.'));
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          // if it’s a 403, we know it’s “not everyone left”
+          if (response.status === 403) {
+            throw new Error('not_all_left');
+          }
+          // other errors
+          throw new Error('other_error');
+        })
+        .then(() => {
+          // success!
+          location.reload();
+        })
+        .catch(err => {
+          if (err.message === 'not_all_left') {
+            alert('Cannot close out job until all participants have left');
+          } else {
+            alert('Error closing out entry.');
+          }
+        });
       });
     });
     </script>
@@ -1244,40 +1265,6 @@ Add New or Update Employee
       </script>
       
   
-      <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          let inactivityTimeout;
-          let inactiveLogger;
-        
-          function startInactiveLogging() {
-            // immediately reload once…
-            location.reload();
-            // …then schedule a reload every 1 minute
-            inactiveLogger = setInterval(() => location.reload(), 60000);
-          }
-          
-        
-          function resetTimers() {
-            // log each click
-            // console.log('Click');
-            // clear any pending “become inactive” timeout
-            clearTimeout(inactivityTimeout);
-            // stop ongoing “Inactive” logs
-            if (inactiveLogger) {
-              clearInterval(inactiveLogger);
-              inactiveLogger = null;
-            }
-            // schedule first “Inactive” after 30s of no clicks
-            inactivityTimeout = setTimeout(startInactiveLogging, 30000);
-          }
-        
-          // any click resets and logs
-          document.addEventListener('click', resetTimers);
-        
-          // start the cycle
-          resetTimers();
-        });
-        </script>
         
         
 
