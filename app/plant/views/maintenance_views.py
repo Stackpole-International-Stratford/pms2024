@@ -508,8 +508,8 @@ def filter_out_operator_only_events(qs):
         .filter(labour_types=["OPERATOR"])   # If your JSONField supports direct list lookups
         .values_list("id", flat=True)
     )
-    if operator_only_ids:
-        print(f"Excluding operator‑only event IDs: {operator_only_ids}")
+    # if operator_only_ids:
+    #     print(f"Excluding operator‑only event IDs: {operator_only_ids}")
     # Return qs without those IDs
     return qs.exclude(id__in=operator_only_ids)
 
