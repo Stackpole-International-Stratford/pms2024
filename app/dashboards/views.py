@@ -1387,7 +1387,7 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     # ——— EDIT THIS: list machine IDs here that need part_list targets ———
     machines_requiring_part_list = [
         # e.g. '1723', '1504', ...
-        '1723', '1724',
+        '1723', '1724', '581', '788',
     ]
     # ————————————————————————————————————————————————————————————————
 
@@ -1405,17 +1405,27 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
         # decide whether to pass part_list into the target lookup
         if part_list and machine in machines_requiring_part_list:
             raw_target = get_machine_target(machine, shift_start, part_list) or 0
+            
         else:
             raw_target = get_machine_target(machine, shift_start) or 0
 
-        # adjust for shift duration
-        adjusted_target = raw_target * (minutes_elapsed / 7200.0)
 
-        # compute pct only if we had a real target; otherwise N/A
-        if adjusted_target > 0:
-            pct = int(count / adjusted_target * 100)
+        if part_list and machine in machines_requiring_part_list:
+            # compute pct only if we had a real target; otherwise N/A
+            if raw_target > 0:
+                pct = int(count / raw_target * 100)
+            else:
+                pct = "N/A"
         else:
-            pct = "N/A"
+            # adjust for shift duration
+            adjusted_target = raw_target * (minutes_elapsed / 7200.0)
+
+            # compute pct only if we had a real target; otherwise N/A
+            if raw_target > 0:
+                pct = int(count / adjusted_target * 100)
+            else:
+                pct = "N/A"
+
 
         # swap out the count for the pct or "N/A"
         swapped_counts.append((machine, pct))
