@@ -46,14 +46,177 @@ lines_untracked = [
             },
         ],
     },
+     {
+        "line": "Presses",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "compact",
+                "machines": [
+                    {"number": "271", "target": 27496,},
+                ],
+            },
+        ],
+    },
     {
         "line": "Furnaces",
         "scrap_line": "NA",
         "operations": [
             {
-                "op": "furnace",
+                "op": "furnaces",
+                "machines": [
+                    {"number": "341", "target": 27496,},
+                    {"number": "342", "target": 27496,},
+                    {"number": "343", "target": 27496,},
+                    {"number": "346", "target": 27496,},
+                    {"number": "441", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
+        "line": "10R140",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "autogauge",
                 "machines": [
                     {"number": "1760", "target": 27496,},
+                ],
+            },
+            {
+                "op": "op10",
+                "machines": [
+                    {"number": "654", "target": 27496,},
+                    {"number": "686", "target": 27496,},
+                    {"number": "655", "target": 27496,},
+                ],
+            },
+             {
+                "op": "op20",
+                "machines": [
+                    {"number": "611", "target": 27496,},
+                ],
+            },
+        ],
+    },
+     {
+        "line": "GF6",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "10",
+                "machines": [
+                    {"number": "583", "target": 27496,},
+                    {"number": "582", "target": 27496,},
+                    {"number": "627", "target": 27496,},
+                    {"number": "574", "target": 27496,},
+                ],
+            },
+             {
+                "op": "20",
+                "machines": [
+                    {"number": "731", "target": 27496,},
+                    {"number": "628", "target": 27496,},
+                    {"number": "635", "target": 27496,},
+                    {"number": "564", "target": 27496,},
+                    {"number": "620", "target": 27496,},
+                ],
+            },
+            {
+                "op": "30",
+                "machines": [
+                    {"number": "692", "target": 27496,},
+                    {"number": "749", "target": 27496,},
+                    {"number": "750", "target": 27496,},
+                ],
+            },
+            {
+                "op": "40",
+                "machines": [
+                    {"number": "672", "target": 27496,},
+                    {"number": "673", "target": 27496,},
+                    {"number": "676", "target": 27496,},
+                ],
+            },
+            {
+                "op": "50",
+                "machines": [
+                    {"number": "667", "target": 27496,},
+                    {"number": "745", "target": 27496,},
+                ],
+            },
+            {
+                "op": "slurry",
+                "machines": [
+                    {"number": "596", "target": 27496,},
+                    {"number": "577", "target": 27496,},
+                ],
+            },
+            {
+                "op": "hpwash",
+                "machines": [
+                    {"number": "782", "target": 27496,},
+                    {"number": "783", "target": 27496,},
+                ],
+            },
+                        {
+                "op": "Wash/Dryer",
+                "machines": [
+                    {"number": "696", "target": 27496,},
+                    {"number": "781", "target": 27496,},
+                ],
+            },
+                                    {
+                "op": "Media Detection",
+                "machines": [
+                    {"number": "883", "target": 27496,},
+                    {"number": "882", "target": 27496,},
+                ],
+            },
+        ],
+    },
+     {
+        "line": "9HP/ZF",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "Machining",
+                "machines": [
+                    {"number": "786", "target": 27496,},
+                    {"number": "787", "target": 27496,},
+                    {"number": "789", "target": 27496,},
+                    {"number": "791", "target": 27496,},
+                    {"number": "792", "target": 27496,},
+                    {"number": "793", "target": 27496,},
+                    {"number": "794", "target": 27496,},
+                ],
+            },
+             {
+                "op": "Balancers",
+                "machines": [
+                    {"number": "798", "target": 27496,},
+                    {"number": "746", "target": 27496,},
+                    {"number": "953", "target": 27496,},
+                ],
+            },
+             {
+                "op": "Slurries",
+                "machines": [
+                    {"number": "630", "target": 27496,},
+                    {"number": "634", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Washer/Dryer",
+                "machines": [
+                    {"number": "612", "target": 27496,},
+                ],
+            },
+                        {
+                "op": "Autogauge",
+                "machines": [
+                    {"number": "797", "target": 27496,},
                 ],
             },
         ],
