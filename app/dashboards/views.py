@@ -1437,9 +1437,8 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
     optionally filtered by part_list, at or before the shift start.
     Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
     """
+    cursor = connections['prodrpt-md'].cursor()
 
-    if machine_id == "581":
-        print(f"{machine_id} hello")
 
     def query_target(mid):
         qs = (
@@ -1454,16 +1453,70 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             qs = qs.filter(part__in=part_list)
         return qs.order_by('-effective_date_unix').first()
 
+    def _print_run_minutes(mid):
+        # only for machine “581”
+        if mid != "581" or not part_list:
+            return
+
+        start_ts = shift_start_unix
+        end_ts   = time.time()
+
+        # fetch all event rows for this machine & those parts
+        placeholder = ", ".join(["%s"] * len(part_list))
+        sql = f"""
+            SELECT TimeStamp, Part
+              FROM GFxPRoduction
+             WHERE Machine   = %s
+               AND TimeStamp >= %s
+               AND TimeStamp <  %s
+               AND Part IN ({placeholder})
+             ORDER BY TimeStamp ASC
+        """
+        params = [mid, start_ts, end_ts] + part_list
+
+    
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+
+        # initialize totals
+        totals = {p: 0.0 for p in part_list}
+
+        if rows:
+            current_part = rows[0][1]
+            run_start    = rows[0][0]
+
+            for ts, part in rows[1:]:
+                if part != current_part:
+                    # segment ended
+                    duration = ts - run_start
+                    totals[current_part] += duration
+                    # start new segment
+                    current_part = part
+                    run_start    = ts
+
+            # last segment runs until now
+            duration = end_ts - run_start
+            totals[current_part] += duration
+
+        # print aggregated minutes
+        for part, sec in totals.items():
+            mins = int(sec // 60)
+            print(f"Machine {mid} ran part {part} for {mins} minutes since shift start")
+
+    # ——— your original target logic, unchanged ——— #
+
     # Case 1: use machine_id directly
     result = query_target(machine_id)
     if result:
+        _print_run_minutes(machine_id)
         return result.target
 
     # Case 2: if ends in a letter and no match, try stripping it
     if machine_id and machine_id[-1].isalpha():
-        fallback_id = machine_id[:-1]
+        fallback_id     = machine_id[:-1]
         fallback_result = query_target(fallback_id)
         if fallback_result:
+            _print_run_minutes(fallback_id)
             return fallback_result.target
 
     # Case 3: piggyback logic (sum of other machine targets)
@@ -1473,10 +1526,14 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             aliased_result = query_target(aliased_id)
             if aliased_result:
                 total += aliased_result.target
+
+        # for each alias we still only print when the alias is “581”
+        for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
+            _print_run_minutes(aliased_id)
+
         return total if total > 0 else None
 
     return None
-
 
 
 def compute_op_actual_and_oee(line_spec,
