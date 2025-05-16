@@ -1428,7 +1428,7 @@ MACHINE_TARGET_ALIASES = {
     '733': ['1701L', '1701R'],
     '1746': ['1746R'],
     '1705': ['1746R']
-    # Add more as needed
+    # Add more as needed  cursor = connections['prodrpt-md'].cursor()
 }
 
 def get_machine_target(machine_id, shift_start_unix, part_list=None):
@@ -1453,15 +1453,15 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             qs = qs.filter(part__in=part_list)
         return qs.order_by('-effective_date_unix').first()
 
-    def _print_run_minutes(mid):
-        # only for machine “581”
+    def _print_run_minutes_and_scaled_target(mid):
+        # only for machine “581” when a part_list is provided
         if mid != "581" or not part_list:
             return
 
         start_ts = shift_start_unix
         end_ts   = time.time()
 
-        # fetch all event rows for this machine & those parts
+        # pull every event for these parts, in order
         placeholder = ", ".join(["%s"] * len(part_list))
         sql = f"""
             SELECT TimeStamp, Part
@@ -1474,41 +1474,58 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
         """
         params = [mid, start_ts, end_ts] + part_list
 
-    
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
-        # initialize totals
+        # accumulate durations (in seconds) per part
         totals = {p: 0.0 for p in part_list}
-
         if rows:
             current_part = rows[0][1]
             run_start    = rows[0][0]
-
             for ts, part in rows[1:]:
                 if part != current_part:
-                    # segment ended
-                    duration = ts - run_start
-                    totals[current_part] += duration
-                    # start new segment
+                    totals[current_part] += (ts - run_start)
                     current_part = part
                     run_start    = ts
-
             # last segment runs until now
-            duration = end_ts - run_start
-            totals[current_part] += duration
+            totals[current_part] += (end_ts - run_start)
 
-        # print aggregated minutes
+        # print each part’s minutes + scaled target (7200 min/week basis)
         for part, sec in totals.items():
             mins = int(sec // 60)
-            print(f"Machine {mid} ran part {part} for {mins} minutes since shift start")
 
-    # ——— your original target logic, unchanged ——— #
+            part_obj = (
+                OAMachineTargets.objects
+                .filter(
+                    machine_id=mid,
+                    part=part,
+                    isDeleted=False,
+                    effective_date_unix__lte=shift_start_unix
+                )
+                .order_by('-effective_date_unix')
+                .first()
+            )
+
+            if part_obj and part_obj.target is not None:
+                # target is pieces per 7,200 min; convert to pieces per min
+                per_min = part_obj.target / 7200.0
+                scaled  = per_min * mins
+                print(
+                    f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
+                    f"target for that period is {scaled:.2f}"
+                )
+            else:
+                print(
+                    f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
+                    f"no target found for this part"
+                )
+
+    # —— your original lookup logic (unchanged) —— #
 
     # Case 1: use machine_id directly
     result = query_target(machine_id)
     if result:
-        _print_run_minutes(machine_id)
+        _print_run_minutes_and_scaled_target(machine_id)
         return result.target
 
     # Case 2: if ends in a letter and no match, try stripping it
@@ -1516,7 +1533,7 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
         fallback_id     = machine_id[:-1]
         fallback_result = query_target(fallback_id)
         if fallback_result:
-            _print_run_minutes(fallback_id)
+            _print_run_minutes_and_scaled_target(fallback_id)
             return fallback_result.target
 
     # Case 3: piggyback logic (sum of other machine targets)
@@ -1527,14 +1544,13 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             if aliased_result:
                 total += aliased_result.target
 
-        # for each alias we still only print when the alias is “581”
+        # still only prints for alias “581”
         for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
-            _print_run_minutes(aliased_id)
+            _print_run_minutes_and_scaled_target(aliased_id)
 
         return total if total > 0 else None
 
     return None
-
 
 def compute_op_actual_and_oee(line_spec,
                               machine_production,
