@@ -1490,7 +1490,8 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             # last segment runs until now
             totals[current_part] += (end_ts - run_start)
 
-        # print each part’s minutes + scaled target (7200 min/week basis)
+        # now print each part’s minutes + scaled target, and sum them
+        total_smart_target = 0.0
         for part, sec in totals.items():
             mins = int(sec // 60)
 
@@ -1510,6 +1511,7 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                 # target is pieces per 7,200 min; convert to pieces per min
                 per_min = part_obj.target / 7200.0
                 scaled  = per_min * mins
+                total_smart_target += scaled
                 print(
                     f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
                     f"target for that period is {scaled:.2f}"
@@ -1519,6 +1521,15 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                     f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
                     f"no target found for this part"
                 )
+
+        # finally, print the total across all parts
+        print(
+            f"So since shift start the total target across the part list for this machine is "
+            f"{total_smart_target:.2f}"
+        )
+
+
+
 
     # —— your original lookup logic (unchanged) —— #
 
@@ -1551,6 +1562,9 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
         return total if total > 0 else None
 
     return None
+
+
+
 
 def compute_op_actual_and_oee(line_spec,
                               machine_production,
