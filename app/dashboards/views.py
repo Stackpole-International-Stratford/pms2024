@@ -1455,7 +1455,7 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
 
     def _print_run_minutes_and_scaled_target(mid):
         # only for machine “581” when a part_list is provided
-        if mid != "581" or not part_list:
+        if not part_list:
             return
 
         start_ts = shift_start_unix
