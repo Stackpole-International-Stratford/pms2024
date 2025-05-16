@@ -1378,18 +1378,18 @@ def rejects_dashboard_finder(request):
 # ===================================================================
 # ===================================================================
 
-
+# ——— EDIT THIS: list machine IDs here that need part_list targets ———
+machines_requiring_part_list = [
+        # e.g. '1723', '1504', ...
+        '1723', '1724', '581', '788',
+    ]
 
 def log_shift_times(shift_start, shift_time, actual_counts, part_list):
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
 
-    # ——— EDIT THIS: list machine IDs here that need part_list targets ———
-    machines_requiring_part_list = [
-        # e.g. '1723', '1504', ...
-        '1723', '1724', '581', '788',
-    ]
-    
+
+
     # ————————————————————————————————————————————————————————————————
 
     est = ZoneInfo("America/New_York")
@@ -1580,6 +1580,8 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
 
 
 
+from collections import defaultdict
+
 def compute_op_actual_and_oee(line_spec,
                               machine_production,
                               shift_start,
@@ -1588,68 +1590,53 @@ def compute_op_actual_and_oee(line_spec,
     """
     Returns two lists:
       op_actual_list[i] = total actual for OP i
-      op_oee_list[i]    = int OEE% for OP i
-    Prints debug info.
+      op_oee_list[i]    = int OEE% (or "N/A") for OP i
+
+    Only for machines in machines_requiring_part_list will we call
+      get_machine_target(asset, shift_start, part_list)
+    and treat its return as the period target.
+    All others get the weekly target scaled by shift_time/7200.
     """
-    # print(f"compute_op_actual_and_oee: shift_start={shift_start}, shift_time={shift_time}")
     minutes_elapsed = shift_time / 60.0
     factor          = minutes_elapsed / 7200.0
-    # print(f"  minutes_elapsed={minutes_elapsed:.1f}, factor={factor:.5f}")
 
     # map asset → OP
-    asset2op = {asset: op for asset, *_ , op in line_spec}
-    # print(f"  asset2op mapping: {asset2op}")
+    asset2op = {asset: op for asset, *_, op in line_spec}
 
-    # temporary dicts to accumulate
+    # accumulators
     op_actual   = defaultdict(int)
     op_adjusted = defaultdict(float)
 
-    # print("  per-machine production:")
-    for asset, actual_count, *_, in machine_production:
+    for asset, actual_count, *_ in machine_production:
         op = asset2op.get(asset)
         if op is None:
-            # print(f"    - skipping {asset!r}: no OP mapping")
             continue
 
-        # raw target lookup
-        raw = None
-        if part_list:
-            raw = get_machine_target(asset, shift_start, part_list)
-            # print(f"    - {asset}: get_machine_target(part_list) → {raw}")
-        if raw is None:
-            raw = get_machine_target(asset, shift_start)
-            # print(f"    - {asset}: fallback get_machine_target → {raw}")
-        raw = raw or 0
+        # choose per-machine target logic
+        if part_list and asset in machines_requiring_part_list:
+            # smart‐total for this exact period & parts
+            period_target = get_machine_target(asset, shift_start, part_list) or 0
+        else:
+            # fall back to weekly target → scale for this shift
+            weekly_target = get_machine_target(asset, shift_start) or 0
+            period_target = weekly_target * factor
 
-        adj = raw * factor
-        pct = int(actual_count / adj * 100) if adj else 0
-
-        # print(f"    - {asset}: actual={actual_count}, raw={raw}, adjusted={adj:.2f}, pct={pct}%")
-
+        # accumulate
         op_actual[op]   += actual_count
-        op_adjusted[op] += adj
+        op_adjusted[op] += period_target
 
-    # print("  per-OP accumulation:")
-    for op in sorted(op_actual):
-        # print(f"    OP{op}: sum_actual={op_actual[op]}, sum_adjusted={op_adjusted[op]:.2f}")
+    # build output lists
+    max_op = max(op_actual.keys() | op_adjusted.keys(), default=-1)
+    op_actual_list = [0] * (max_op + 1)
+    op_oee_list    = [None] * (max_op + 1)
 
-   
-    # figure out how big our list needs to be
-        max_op = max(op_actual.keys() | op_adjusted.keys(), default=0)
-        op_actual_list = [0] * (max_op + 1)
-        op_oee_list    = [0] * (max_op + 1)
+    for op, actual in op_actual.items():
+        op_actual_list[op] = actual
 
-        # fill actuals
-        for op, actual in op_actual.items():
-            op_actual_list[op] = actual
-
-        # fill OEE: N/A if no adjusted target, otherwise integer pct (can be 0)
-        for op, adjusted in op_adjusted.items():
-            if adjusted > 0:
-                pct = int(op_actual[op] / adjusted * 100)
-            else:
-                pct = "N/A"
-            op_oee_list[op] = pct
-            # print(f"    OP{op}: computed OEE={pct}%")
+    for op, adjusted in op_adjusted.items():
+        if adjusted > 0:
+            op_oee_list[op] = int(op_actual[op] / adjusted * 100)
+        else:
+            op_oee_list[op] = "N/A"
 
     return op_actual_list, op_oee_list
