@@ -1438,6 +1438,9 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
     Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
     """
 
+    if machine_id == "581":
+        print(f"{machine_id} hello")
+
     def query_target(mid):
         qs = (
             OAMachineTargets.objects
