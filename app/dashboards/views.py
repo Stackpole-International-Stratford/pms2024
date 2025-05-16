@@ -1535,8 +1535,6 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
         #     f"{int(total_smart)}"
         # )
 
-        if machine_id == "581":
-            print("hello")
         return int(total_smart)
 
 
