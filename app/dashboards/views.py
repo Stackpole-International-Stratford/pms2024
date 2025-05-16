@@ -6,7 +6,7 @@ from importlib import import_module
 import json
 from datetime import datetime, timedelta
 from django.http import Http404
-from collections import namedtuple
+
 from django.shortcuts import render, redirect
 import MySQLdb
 from prod_query.models import OAMachineTargets
@@ -1431,84 +1431,52 @@ MACHINE_TARGET_ALIASES = {
     # Add more as needed
 }
 
-
-
-
-Segment = namedtuple('Segment', ['part', 'start_ts', 'end_ts'])
-
-def get_dynamic_machine_target(machine_id, shift_start_unix,
-                               shift_end_unix=None,
-                               shift_length_minutes=480):
-    import time
+def get_machine_target(machine_id, shift_start_unix, part_list=None):
     """
-    For a given machine and shift window [shift_start_unix, shift_end_unix),
-    look up GFxProduction to see which part was running when, split into
-    contiguous segments, fetch each part's raw target, prorate by time, and
-    return the total expected target for that window.
-
-    If no GFxProduction rows are found in the window, falls back to
-    get_machine_target(machine_id, shift_start_unix).
+    Returns the most recent non-deleted target for a given machine (or its alias group),
+    optionally filtered by part_list, at or before the shift start.
+    Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
     """
-    # default shift end = now
-    if shift_end_unix is None:
-        shift_end_unix = int(time.time())
 
-    # 1) grab the timeline of part changes
-    conn = get_db_connection()
-    with conn.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT TimeStamp, Part
-              FROM GFxProduction
-             WHERE Machine = %s
-               AND TimeStamp >= %s
-               AND TimeStamp <  %s
-             ORDER BY TimeStamp ASC
-            """,
-            [machine_id, shift_start_unix, shift_end_unix]
+    if machine_id == "581":
+        print(f"{machine_id} hello")
+
+    def query_target(mid):
+        qs = (
+            OAMachineTargets.objects
+            .filter(
+                machine_id=mid,
+                isDeleted=False,
+                effective_date_unix__lte=shift_start_unix
+            )
         )
-        rows = cursor.fetchall()  # list of (timestamp, part)
+        if part_list:
+            qs = qs.filter(part__in=part_list)
+        return qs.order_by('-effective_date_unix').first()
 
-    if not rows:
-        # no segment info → just fall back to the "dumb" single-target
-        return get_machine_target(machine_id, shift_start_unix)
+    # Case 1: use machine_id directly
+    result = query_target(machine_id)
+    if result:
+        return result.target
 
-    # 2) build contiguous segments (from shift start → first row, and between changes)
-    segments = []
-    last_ts   = shift_start_unix
-    last_part = rows[0][1]
+    # Case 2: if ends in a letter and no match, try stripping it
+    if machine_id and machine_id[-1].isalpha():
+        fallback_id = machine_id[:-1]
+        fallback_result = query_target(fallback_id)
+        if fallback_result:
+            return fallback_result.target
 
-    for ts, part in rows:
-        if part != last_part:
-            segments.append(Segment(part=last_part,
-                                    start_ts=last_ts,
-                                    end_ts=ts))
-            last_part = part
-            last_ts   = ts
-    # tail end
-    if last_ts < shift_end_unix:
-        segments.append(Segment(part=last_part,
-                                start_ts=last_ts,
-                                end_ts=shift_end_unix))
+    # Case 3: piggyback logic (sum of other machine targets)
+    if machine_id in MACHINE_TARGET_ALIASES:
+        total = 0
+        for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
+            aliased_result = query_target(aliased_id)
+            if aliased_result:
+                total += aliased_result.target
+        return total if total > 0 else None
 
-    # 3) for each segment, fetch that part's raw target and prorate
-    total_expected = 0.0
-    for seg in segments:
-        duration_sec = seg.end_ts - seg.start_ts
-        duration_min = duration_sec / 60.0
+    return None
 
-        # fetch the target for this part as of seg.start_ts
-        raw_target = get_machine_target(
-            machine_id,
-            shift_start_unix=seg.start_ts,
-            part_list=[seg.part]
-        ) or 0
-
-        # prorate: raw_target is per full shift_length_minutes
-        expected = raw_target * (duration_min / shift_length_minutes)
-        total_expected += expected
-
-    return total_expected
 
 
 def compute_op_actual_and_oee(line_spec,
@@ -1584,4 +1552,3 @@ def compute_op_actual_and_oee(line_spec,
             # print(f"    OP{op}: computed OEE={pct}%")
 
     return op_actual_list, op_oee_list
-
