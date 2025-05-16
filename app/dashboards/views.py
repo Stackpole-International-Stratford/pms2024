@@ -1519,10 +1519,10 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                 # target is pieces per 7,200 min; rate per min = target/7200
                 scaled = (part_obj.target / 7200.0) * mins
                 total_smart += scaled
-                print(
-                    f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
-                    f"target for that period is {scaled:.2f}"
-                )
+                # print(
+                #     f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
+                #     f"target for that period is {scaled:.2f}"
+                # )
             else:
                 print(
                     f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
@@ -1530,10 +1530,10 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                 )
 
         # summary line
-        print(
-            f"So since shift start the total target across the part list for this machine is "
-            f"{int(total_smart)}"
-        )
+        # print(
+        #     f"So since shift start the total target across the part list for this machine is "
+        #     f"{int(total_smart)}"
+        # )
 
         if machine_id == "581":
             print("hello")
