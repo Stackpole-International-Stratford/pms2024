@@ -33,6 +33,20 @@ import copy
 
 lines_untracked = [
      {
+        "line": "10R80",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "30",
+                "machines": [
+                    {"number": "1826", "target": 27496,},
+                    {"number": "1555", "target": 27496,},
+                    {"number": "1557", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
         "line": "Furnaces",
         "scrap_line": "NA",
         "operations": [
