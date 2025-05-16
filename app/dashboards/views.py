@@ -1436,9 +1436,11 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
     Returns the most recent non-deleted target for a given machine (or its alias group),
     optionally filtered by part_list, at or before the shift start.
     Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
+
+    If part_list is provided, prints run‐minutes + scaled targets per part and a summary,
+    then returns the truncated int “smart total” instead of the normal target.
     """
     cursor = connections['prodrpt-md'].cursor()
-
 
     def query_target(mid):
         qs = (
@@ -1453,15 +1455,12 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             qs = qs.filter(part__in=part_list)
         return qs.order_by('-effective_date_unix').first()
 
-    def _print_run_minutes_and_scaled_target(mid):
-        # only for machine “581” when a part_list is provided
-        if not part_list:
-            return
-
+    def _compute_and_print_smart_total(mid):
+        # only runs when part_list is provided
         start_ts = shift_start_unix
         end_ts   = time.time()
 
-        # pull every event for these parts, in order
+        # fetch ordered events for this machine & those parts
         placeholder = ", ".join(["%s"] * len(part_list))
         sql = f"""
             SELECT TimeStamp, Part
@@ -1473,11 +1472,10 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
              ORDER BY TimeStamp ASC
         """
         params = [mid, start_ts, end_ts] + part_list
-
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
-        # accumulate durations (in seconds) per part
+        # accumulate run‐seconds per part
         totals = {p: 0.0 for p in part_list}
         if rows:
             current_part = rows[0][1]
@@ -1487,11 +1485,10 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                     totals[current_part] += (ts - run_start)
                     current_part = part
                     run_start    = ts
-            # last segment runs until now
             totals[current_part] += (end_ts - run_start)
 
-        # now print each part’s minutes + scaled target, and sum them
-        total_smart_target = 0.0
+        # compute & print per‐part plus sum up the smart total
+        total_smart = 0.0
         for part, sec in totals.items():
             mins = int(sec // 60)
 
@@ -1508,10 +1505,9 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             )
 
             if part_obj and part_obj.target is not None:
-                # target is pieces per 7,200 min; convert to pieces per min
-                per_min = part_obj.target / 7200.0
-                scaled  = per_min * mins
-                total_smart_target += scaled
+                # target is pieces per 7,200 min; rate per min = target/7200
+                scaled = (part_obj.target / 7200.0) * mins
+                total_smart += scaled
                 print(
                     f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
                     f"target for that period is {scaled:.2f}"
@@ -1522,43 +1518,50 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                     f"no target found for this part"
                 )
 
-        # finally, print the total across all parts
+        # summary line
         print(
             f"So since shift start the total target across the part list for this machine is "
-            f"{total_smart_target:.2f}"
+            f"{int(total_smart)}"
         )
 
+        if machine_id == "581":
+            print("hello")
+        return int(total_smart)
 
 
-
-    # —— your original lookup logic (unchanged) —— #
+    # —— original lookup logic follows —— #
 
     # Case 1: use machine_id directly
     result = query_target(machine_id)
     if result:
-        _print_run_minutes_and_scaled_target(machine_id)
+        if part_list:
+            return _compute_and_print_smart_total(machine_id)
         return result.target
 
-    # Case 2: if ends in a letter and no match, try stripping it
+    # Case 2: strip trailing letter if needed
     if machine_id and machine_id[-1].isalpha():
         fallback_id     = machine_id[:-1]
         fallback_result = query_target(fallback_id)
         if fallback_result:
-            _print_run_minutes_and_scaled_target(fallback_id)
+            if part_list:
+                return _compute_and_print_smart_total(fallback_id)
             return fallback_result.target
 
-    # Case 3: piggyback logic (sum of other machine targets)
+    # Case 3: sum aliases
     if machine_id in MACHINE_TARGET_ALIASES:
+        # if parts → sum each alias’s smart total
+        if part_list:
+            group_total = 0
+            for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
+                group_total += _compute_and_print_smart_total(aliased_id)
+            return group_total
+
+        # otherwise original target‐sum logic
         total = 0
         for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
             aliased_result = query_target(aliased_id)
             if aliased_result:
                 total += aliased_result.target
-
-        # still only prints for alias “581”
-        for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
-            _print_run_minutes_and_scaled_target(aliased_id)
-
         return total if total > 0 else None
 
     return None
