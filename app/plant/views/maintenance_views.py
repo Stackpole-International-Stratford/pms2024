@@ -1563,6 +1563,7 @@ def machine_history(request):
 
 
 def auto_downtime_api(request):
+    machine_id = '1501'   # filter for Machine = 1501
     try:
         with connections['prodrpt-md'].cursor() as cursor:
             cursor.execute("""
@@ -1574,18 +1575,15 @@ def auto_downtime_api(request):
                     TimeStamp,
                     `Count`
                   FROM GFxPRoduction
+                 WHERE Machine = %s
                  ORDER BY TimeStamp DESC
                  LIMIT 5
-            """)
+            """, [machine_id])
             cols = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
 
-        # map rows into dicts for JSON
         data = [dict(zip(cols, row)) for row in rows]
-
-        # log to console
-        print("Last 5 GFxProduction rows:", data)
-
+        print(f"Last 5 GFxProduction rows for Machine {machine_id}:", data)
         return JsonResponse(data, safe=False)
 
     except DatabaseError as e:
