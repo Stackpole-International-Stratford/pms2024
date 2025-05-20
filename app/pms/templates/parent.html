@@ -158,57 +158,8 @@
       <div class="collapse navbar-collapse" id="mainNavbar">
         <!-- LEFT SIDE LINKS -->
         <ul class="navbar-nav me-auto">
-          <!-- prod-query -->
-          <li class="nav-item dropdown me-3">
-            <a class="nav-link" href="/prod-query/index">prod-query</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'prod_query:prod-query' %}">Production Query</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:rejects' %}">Rejects</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:cycle-times' %}">Cycle Time</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:weekly-prod' %}">Weekly Production</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:strokes-per-minute' %}">Strokes Per Minute</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:shift-totals' %}">Shift Totals</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:get_sc_production_data' %}">SCProduction Data</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:oa_by_day' %}">Plant OEE</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:targets_list' %}">OEE Ideal Cycle Times (admins only)</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:press_runtime3' %}">Press Runtime</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:oa-byline' %}">OEE By Week</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:oa_byline2' %}">OEE By Month</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:oa_drilldown' %}">Production & Availability Drilldown</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:downtime_frequency' %}">Downtime Frequency</a></li>
-            </ul>
-          </li>
-  
-          <!-- barcode -->
-          <li class="nav-item dropdown me-3">
-            <a class="nav-link" href="/barcode/index">barcode</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'barcode:duplicate-scan' %}">Duplicate Scan</a></li>
-              <li><a class="dropdown-item" href="{% url 'barcode:duplicate-scan-check' %}">Duplicate Scan Check</a></li>
-              <li><a class="dropdown-item" href="{% url 'barcode:duplicate_scan_batch' %}">Duplicate Scan Batch</a></li>
-              <li><a class="dropdown-item" href="{% url 'barcode:barcode-scan' %}">Barcode Inquiry</a></li>
-              <li><a class="dropdown-item" href="{% url 'barcode:grades_dashboard_finder' %}">Grades Dashboard</a></li>
-            </ul>
-          </li>
-  
-          <!-- dashboard -->
-          <li class="nav-item dropdown me-3">
-            <a class="nav-link" href="/dashboard/index">dashboard</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'dashboards:ab1v' %}">8670</a></li>
-              <li><a class="dropdown-item" href="{% url 'dashboards:trilobe' %}">Trilobe</a></li>
-              <li class="dropdown-item">
-                9341
-                <ul class="nested-dropdown">
-                  <li><a class="dropdown-item" href="{% url 'dashboards:9341' %}">Desk</a></li>
-                  <li><a class="dropdown-item" href="{% url 'dashboards:track9341_TV' %}">TV</a></li>
-                  <li><a class="dropdown-item" href="{% url 'dashboards:track9341_mobile' %}">Mobile</a></li>
-                </ul>
-              </li>
-              <li><a class="dropdown-item" href="{% url 'dashboards:list_and_update_shift_points' %}">Shift Points Management</a></li>
-              <li><a class="dropdown-item" href="{% url 'dashboards:rejects_dashboard' %}">Reject Dashboards</a></li>
-            </ul>
-          </li>
+         
+
         </ul>
   
         <!-- CENTER LOGO (hidden on <lg) -->
@@ -218,31 +169,7 @@
   
         <!-- RIGHT SIDE LINKS -->
         <ul class="navbar-nav ms-auto me-3">
-          <!-- plant -->
-          <li class="nav-item dropdown me-3">
-            <a class="nav-link" href="/plant">plant</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'maintenance_form' %}">Downtime Entry</a></li>
-              <li><a class="dropdown-item" href="{% url 'maintenance_all' %}">Maintenance App</a></li>
-              <li><a class="dropdown-item" href="{% url 'display_setups' %}">Changeovers</a></li>
-              <li><a class="dropdown-item" href="{% url 'display_assets' %}">Assets</a></li>
-              <li><a class="dropdown-item" href="{% url 'display_parts' %}">Parts</a></li>
-              <li><a class="dropdown-item" href="{% url 'auth_page' %}">Asset Authentication Management</a></li>
-              <li><a class="dropdown-item" href="{% url 'prodmon_ping' %}">Prodmon Ping</a></li>
-              <li><a class="dropdown-item" href="{% url 'temp-display' %}">Temp Sensors</a></li>
-            </ul>
-          </li>
-  
-          <!-- quality -->
-          <li class="nav-item dropdown me-3">
-            <a class="nav-link" href="/quality">quality</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'forms_page' %}">Forms</a></li>
-              <li><a class="dropdown-item" href="{% url 'pdf_list' %}">PDF Management</a></li>
-              <li><a class="dropdown-item" href="{% url 'manage_red_rabbit_types' %}">Red Rabbit & Gauge Verification</a></li>
-              <li><a class="dropdown-item" href="{% url 'epv_table_view' %}">EPV Interface (Admins Only)</a></li>
-            </ul>
-          </li>
+
   
           <!-- forms -->
           <li class="nav-item dropdown me-3">

@@ -23,17 +23,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('dashboard/',include('dashboards.urls')),
-    path('barcode/',include('barcode.urls')),
-    path('prod-query/',include('prod_query.urls')),
-    path('query-time/',include('query_tracking.urls')),
     path('admin/', admin.site.urls),
     path('__debug__/', include('debug_toolbar.urls')),
     path('variables/', include('site_variables.urls')),
     path('index/', pms_index_view, name='pms_index'),
     path('', pms_index_view, name='pms_index'),
-    path('quality/', include('quality.urls')),
-    path('plant/', include('plant.urls')),
     path('forms/', include('forms.urls')),
 
     # Custom login URL

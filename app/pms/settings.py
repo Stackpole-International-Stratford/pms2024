@@ -59,13 +59,7 @@ INSTALLED_APPS = [
     'django_bootstrap5',
     'widget_tweaks',
     'corsheaders',
-    'prod_query',
-    'barcode',
-    'dashboards',
     'site_variables',
-    'query_tracking',
-    'plant',
-    'quality',
     'forms',
 ]
 
