@@ -31,6 +31,8 @@ from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
 from django.http import JsonResponse, HttpResponseServerError
 from django.db import connections, DatabaseError
 import copy
+from django.utils.dateformat import format as df_format
+
 
 
 lines_untracked = [
@@ -1562,30 +1564,108 @@ def machine_history(request):
 # ======================================================================================
 
 
+def get_downtime_events(machine_id,
+                        conn_alias='prodrpt-md',
+                        window_seconds=3600,
+                        downtime_threshold_seconds=300):
+    """
+    Scan GFxProduction for entries of `machine_id`, look back over the last `window_seconds`
+    (defaults to 1h), and return any gaps > downtime_threshold_seconds (defaults to 5m).
+    We pull one row just before the window and one just after so that boundary gaps
+    are detected correctly.
+    """
+
+    now = timezone.now()
+    now_ts = now.timestamp()
+    start_ts = now_ts - window_seconds
+
+    with connections[conn_alias].cursor() as cursor:
+        # 1) one row just before the window
+        cursor.execute("""
+            SELECT Id, Machine, Part, PerpetualCount, TimeStamp, `Count`
+              FROM GFxPRoduction
+             WHERE Machine = %s
+               AND TimeStamp      < %s
+             ORDER BY TimeStamp DESC
+             LIMIT 1
+        """, [machine_id, start_ts])
+        before = cursor.fetchone()
+
+        # 2) all rows inside the window
+        cursor.execute("""
+            SELECT Id, Machine, Part, PerpetualCount, TimeStamp, `Count`
+              FROM GFxPRoduction
+             WHERE Machine = %s
+               AND TimeStamp BETWEEN %s AND %s
+             ORDER BY TimeStamp ASC
+        """, [machine_id, start_ts, now_ts])
+        middle = cursor.fetchall()
+
+        # 3) one row just after the window
+        cursor.execute("""
+            SELECT Id, Machine, Part, PerpetualCount, TimeStamp, `Count`
+              FROM GFxPRoduction
+             WHERE Machine = %s
+               AND TimeStamp      > %s
+             ORDER BY TimeStamp ASC
+             LIMIT 1
+        """, [machine_id, now_ts])
+        after = cursor.fetchone()
+
+    # stitch them together
+    rows = []
+    if before: rows.append(before)
+    rows.extend(middle)
+    if after: rows.append(after)
+
+    # column index for TimeStamp is 4 (0-based)
+    ts_idx = 4
+
+    events = []
+    for prev_row, next_row in zip(rows, rows[1:]):
+        prev_ts = prev_row[ts_idx]
+        next_ts = next_row[ts_idx]
+        gap = next_ts - prev_ts
+        if gap > downtime_threshold_seconds:
+            # clamp to the window boundaries
+            event_start_ts = max(prev_ts, start_ts)
+            event_end_ts   = min(next_ts, now_ts)
+            duration       = event_end_ts - event_start_ts
+
+            events.append({
+                'start':    datetime.fromtimestamp(event_start_ts),
+                'end':      datetime.fromtimestamp(event_end_ts),
+                'duration_seconds': duration,
+            })
+
+    # log to console
+    if events:
+        print(f"Detected {len(events)} downtime event(s) for machine {machine_id}:")
+        for e in events:
+            print(f" • {e['start']} → {e['end']} ({e['duration_seconds']}s)")
+    else:
+        print(f"No downtimes > {downtime_threshold_seconds}s in the last {window_seconds}s for machine {machine_id}")
+
+    return events
+
+
+
 def auto_downtime_api(request):
-    machine_id = '1501'   # filter for Machine = 1501
+    machine_id = '1532'
     try:
-        with connections['prodrpt-md'].cursor() as cursor:
-            cursor.execute("""
-                SELECT
-                    Id,
-                    Machine,
-                    Part,
-                    PerpetualCount,
-                    TimeStamp,
-                    `Count`
-                  FROM GFxPRoduction
-                 WHERE Machine = %s
-                 ORDER BY TimeStamp DESC
-                 LIMIT 5
-            """, [machine_id])
-            cols = [col[0] for col in cursor.description]
-            rows = cursor.fetchall()
+        events = get_downtime_events(machine_id)
 
-        data = [dict(zip(cols, row)) for row in rows]
-        print(f"Last 5 GFxProduction rows for Machine {machine_id}:", data)
-        return JsonResponse(data, safe=False)
+        # convert datetimes to ISO strings for JSON
+        json_events = [
+            {
+                'start':   e['start'].isoformat(),
+                'end':     e['end'].isoformat(),
+                'duration_seconds': e['duration_seconds'],
+            }
+            for e in events
+        ]
+        return JsonResponse({'downtime_events': json_events}, safe=False)
 
-    except DatabaseError as e:
-        print("DB error in auto_downtime_api:", e)
+    except DatabaseError as exc:
+        print("DB error in auto_downtime_api:", exc)
         return HttpResponseServerError("Database error")
