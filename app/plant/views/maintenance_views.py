@@ -506,8 +506,7 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
     qs = MachineDowntimeEvent.objects.filter(
-        is_deleted=False,
-        closeout_epoch__isnull=True
+    Q(closeout_epoch__isnull=True) | Q(code="UNDF")
     ).annotate(
         has_electrician=Exists(
             DowntimeParticipation.objects.filter(
@@ -1564,107 +1563,142 @@ def machine_history(request):
 # ======================================================================================
 
 
+def find_line_for_machine(machine_id):
+    """
+    Look up the line name for this machine in your prod_lines data.
+    """
+    for line_block in prod_lines:
+        if any(m['number'] == machine_id
+               for op in line_block['operations']
+               for m in op['machines']):
+            return line_block['line']
+    return "UNKNOWN"
+
 def get_downtime_events(machine_id,
                         conn_alias='prodrpt-md',
                         window_seconds=3600,
                         downtime_threshold_seconds=300):
     """
-    Scan GFxProduction for entries of `machine_id`, look back over the last `window_seconds`
-    (defaults to 1h), and return any gaps > downtime_threshold_seconds (defaults to 5m).
-    We pull one row just before the window and one just after so that boundary gaps
-    are detected correctly.
+    (Your existing logic, unchanged)…
+    Returns a list of dicts with 'start' and 'end' as datetimes
+    for any gaps > downtime_threshold_seconds in the last window_seconds.
     """
-
     now = timezone.now()
     now_ts = now.timestamp()
     start_ts = now_ts - window_seconds
 
     with connections[conn_alias].cursor() as cursor:
-        # 1) one row just before the window
+        # 1) one row before
         cursor.execute("""
-            SELECT Id, Machine, Part, PerpetualCount, TimeStamp, `Count`
-              FROM GFxPRoduction
-             WHERE Machine = %s
-               AND TimeStamp      < %s
-             ORDER BY TimeStamp DESC
-             LIMIT 1
+            SELECT TimeStamp FROM GFxPRoduction
+             WHERE Machine = %s AND TimeStamp < %s
+             ORDER BY TimeStamp DESC LIMIT 1
         """, [machine_id, start_ts])
         before = cursor.fetchone()
 
-        # 2) all rows inside the window
+        # 2) rows inside window
         cursor.execute("""
-            SELECT Id, Machine, Part, PerpetualCount, TimeStamp, `Count`
-              FROM GFxPRoduction
-             WHERE Machine = %s
-               AND TimeStamp BETWEEN %s AND %s
+            SELECT TimeStamp FROM GFxPRoduction
+             WHERE Machine = %s AND TimeStamp BETWEEN %s AND %s
              ORDER BY TimeStamp ASC
         """, [machine_id, start_ts, now_ts])
         middle = cursor.fetchall()
 
-        # 3) one row just after the window
+        # 3) one row after
         cursor.execute("""
-            SELECT Id, Machine, Part, PerpetualCount, TimeStamp, `Count`
-              FROM GFxPRoduction
-             WHERE Machine = %s
-               AND TimeStamp      > %s
-             ORDER BY TimeStamp ASC
-             LIMIT 1
+            SELECT TimeStamp FROM GFxPRoduction
+             WHERE Machine = %s AND TimeStamp > %s
+             ORDER BY TimeStamp ASC LIMIT 1
         """, [machine_id, now_ts])
         after = cursor.fetchone()
 
-    # stitch them together
-    rows = []
-    if before: rows.append(before)
-    rows.extend(middle)
-    if after: rows.append(after)
-
-    # column index for TimeStamp is 4 (0-based)
-    ts_idx = 4
+    stamps = []
+    if before: stamps.append(before[0])
+    stamps += [r[0] for r in middle]
+    if after:  stamps.append(after[0])
 
     events = []
-    for prev_row, next_row in zip(rows, rows[1:]):
-        prev_ts = prev_row[ts_idx]
-        next_ts = next_row[ts_idx]
+    for prev_ts, next_ts in zip(stamps, stamps[1:]):
         gap = next_ts - prev_ts
         if gap > downtime_threshold_seconds:
-            # clamp to the window boundaries
-            event_start_ts = max(prev_ts, start_ts)
-            event_end_ts   = min(next_ts, now_ts)
-            duration       = event_end_ts - event_start_ts
-
+            # clamp into window
+            start = max(prev_ts, start_ts)
+            end   = min(next_ts, now_ts)
             events.append({
-                'start':    datetime.fromtimestamp(event_start_ts),
-                'end':      datetime.fromtimestamp(event_end_ts),
-                'duration_seconds': duration,
+                'start': datetime.fromtimestamp(start),
+                'end':   datetime.fromtimestamp(end),
             })
-
-    # log to console
-    if events:
-        print(f"Detected {len(events)} downtime event(s) for machine {machine_id}:")
-        for e in events:
-            print(f" • {e['start']} → {e['end']} ({e['duration_seconds']}s)")
-    else:
-        print(f"No downtimes > {downtime_threshold_seconds}s in the last {window_seconds}s for machine {machine_id}")
 
     return events
 
+def autopopulate_downtime_events(machine_id,
+                                 conn_alias='prodrpt-md',
+                                 window_seconds=3600,
+                                 downtime_threshold_seconds=300):
+    """
+    1) detect gaps
+    2) skip ones overlapping existing MachineDowntimeEvent
+    3) create a new event for each unaccounted gap
+    """
+    now_ts = int(time.time())
+    new_events = []
+    gaps = get_downtime_events(machine_id,
+                               conn_alias,
+                               window_seconds,
+                               downtime_threshold_seconds)
+
+    for gap in gaps:
+        start_epoch = int(gap['start'].timestamp())
+        end_epoch   = int(gap['end'].timestamp())
+
+        # skip if any existing event overlaps [start_epoch, end_epoch]
+        overlap_q = Q(start_epoch__lt=end_epoch) & (
+                        Q(closeout_epoch__isnull=True) |
+                        Q(closeout_epoch__gt=start_epoch)
+                    )
+        if MachineDowntimeEvent.objects.filter(
+                machine=machine_id,
+                is_deleted=False
+            ).filter(overlap_q).exists():
+            continue
+
+        line_name = find_line_for_machine(machine_id)
+        ev = MachineDowntimeEvent.objects.create(
+            line           = line_name,
+            machine        = machine_id,
+            category       = "UNDEFINED",
+            subcategory    = "UNDEFINED",
+            code           = "UNDF",
+            start_epoch    = start_epoch,
+            closeout_epoch = end_epoch,
+            comment        = "Why was machine down?",
+            labour_types   = ["OPERATOR"],
+            employee_id    = "Undefined",
+        )
+        new_events.append(ev)
+
+    if new_events:
+        print(f"Auto‐populated {len(new_events)} event(s) for {machine_id}")
+    else:
+        print(f"No new downtime to populate for {machine_id}")
+
+    return new_events
 
 
 def auto_downtime_api(request):
     machine_id = '1532'
     try:
-        events = get_downtime_events(machine_id)
-
-        # convert datetimes to ISO strings for JSON
-        json_events = [
+        created = autopopulate_downtime_events(machine_id)
+        # return a summary of what got created
+        result = [
             {
-                'start':   e['start'].isoformat(),
-                'end':     e['end'].isoformat(),
-                'duration_seconds': e['duration_seconds'],
+                'id':             e.id,
+                'start_epoch':    e.start_epoch,
+                'closeout_epoch': e.closeout_epoch,
             }
-            for e in events
+            for e in created
         ]
-        return JsonResponse({'downtime_events': json_events}, safe=False)
+        return JsonResponse({'created_events': result}, safe=False)
 
     except DatabaseError as exc:
         print("DB error in auto_downtime_api:", exc)
