@@ -76,9 +76,6 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     # 'pms.middleware.timezone.TimezoneMiddleware',
     'pms.middleware.site_variables.SiteVariableMiddleware',
-
-
-
 ]
 if DEBUG:
     MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
@@ -116,14 +113,6 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PMS_PASSWORD', 'wsj.231.kql'),
         'HOST': os.environ.get('DB_PMS_HOST', '10.4.1.245'),
         'PORT': os.environ.get('DB_PMS_PORT', 6601),
-    },
-    'prodrpt-md': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_PRDRPT_NAME', 'prodrptdb'),
-        'USER': os.environ.get('DB_PRDRPT_USER', 'stuser'),
-        'PASSWORD': os.environ.get('DB_PRDRPT_PASSWORD', 'stp383'),
-        'HOST': os.environ.get('DB_PRDRPT_HOST', '10.4.1.245'),
-        'PORT': os.environ.get('DB_PRDRPT_PORT', 3306),
     },
 }
 
@@ -299,76 +288,6 @@ EMAIL_PORT = 25  # Default SMTP port
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = 'noreply@johnsonelectric.com'
-
-
-# Email groups
-EMAIL_GROUPS = {
-    'Factory_Focus_Leaders': [
-        'dave.milne@johnsonelectric.com',
-        'joel.langford@johnsonelectric.com',
-        'dave.clark@johnsonelectric.com',
-    ],
-    'Supervisor_Leads': [
-        'ken.frey@johnsonelectric.com',
-        'brian.joiner@johnsonelectric.com',
-        'gary.harvey@johnsonelectric.com'
-    ],
-    'Supervisors': [
-        'andrew.smith@johnsonelectric.com',
-        'saurabh.bhardwaj@johnsonelectric.com',
-        'paul.currie@johnsonelectric.com',
-        'andrew.terpstra@johnsonelectric.com',
-        'evan.george@johnsonelectric.com',
-        'david.mclaren@johnsonelectric.com',
-        'robert.tupy@johnsonelectric.com',
-        'scott.brownlee@johnsonelectric.com',
-        'shivam.bhatt@johnsonelectric.com',
-        'jamie.pearce@johnsonelectric.com'
-    ],
-    'Backup_Supervisors': [
-        'mark.morse@johnsonelectric.com'
-    ],
-    'Team_Leads': [
-        'nathan.klein-geitink@johnsonelectric.com',
-        'lisa.baker@johnsonelectric.com',
-        'geoff.goldsack@johnsonelectric.com'
-    ],
-    'Quality': [
-        'geoff.perrier@johnsonelectric.com'
-    ],
-    'Testing_group': [
-        'tyler.careless@johnsonelectric.com',
-        # 'chris.strutton@johnsonelectric.com',
-    ],
-    #     'Testing_group': [
-    #     'tyler.careless@johnsonelectric.com',
-    #     'chris.strutton@johnsonelectric.com',
-    # ]
-}
-
-import MySQLdb
-def get_db_connection():
-    return MySQLdb.connect(
-        host="10.4.1.224",
-        user="stuser",
-        passwd="stp383",
-        db="prodrptdb"
-    )
-
-
-def get_db_connection_new():
-    return MySQLdb.connect(
-        host="10.4.1.245",
-        user="stuser",
-        passwd="stp383",
-        db="prodrptdb"
-    )
-
-DAVE_HOST = "10.4.1.224"
-NEW_HOST = "10.4.1.245"
-DAVE_USER = "stuser"
-DAVE_PASSWORD = "stp383"
-DAVE_DB = "prodrptdb"
 
 
 
