@@ -28,6 +28,8 @@ from prod_query.views import lines as prod_lines_initial
 from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cookie / csrf_protect
 from django.template.loader import render_to_string
 from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
+from django.http import JsonResponse, HttpResponseServerError
+from django.db import connections, DatabaseError
 import copy
 
 
@@ -1539,3 +1541,53 @@ def machine_history(request):
         return JsonResponse({'status': 'ok', 'html': html})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+# ======================================================================================
+# ======================================================================================
+# =========================== Downtime Phase 2 =========================================
+# ====================== Autogenerating Downtime Events API ============================
+# ======================================================================================
+# ======================================================================================
+
+
+def auto_downtime_api(request):
+    try:
+        with connections['prodrpt-md'].cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    Id,
+                    Machine,
+                    Part,
+                    PerpetualCount,
+                    TimeStamp,
+                    `Count`
+                  FROM GFxPRoduction
+                 ORDER BY TimeStamp DESC
+                 LIMIT 5
+            """)
+            cols = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+
+        # map rows into dicts for JSON
+        data = [dict(zip(cols, row)) for row in rows]
+
+        # log to console
+        print("Last 5 GFxProduction rows:", data)
+
+        return JsonResponse(data, safe=False)
+
+    except DatabaseError as e:
+        print("DB error in auto_downtime_api:", e)
+        return HttpResponseServerError("Database error")

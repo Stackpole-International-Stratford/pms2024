@@ -92,4 +92,7 @@ urlpatterns = [
 
     path('maintenance/machine-history/', machine_history, name='machine_history'),
 
+    path('auto-downtime-api/', auto_downtime_api, name='auto-downtime-api'),
+
+
 ]
