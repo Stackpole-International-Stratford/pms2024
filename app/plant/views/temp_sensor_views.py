@@ -25,6 +25,13 @@ from django.db.models import Max
 # =========================================================================
 # =========================================================================
 
+
+# zones located by furnaces need a +1 humidex adjustment
+FURNACE_ZONES = [1, 2, 5, 6, 18, 19, 20, 21, 24]  
+
+
+
+
 def humanize_delta(delta):
     total_secs = int(delta.total_seconds())
     mins = total_secs // 60
@@ -232,7 +239,12 @@ def temp_display(request):
     for temp_raw, hum_raw, hex_raw, zone, ts_raw in raw_rows:
         temp     = temp_raw   / 10.0
         humidity = hum_raw    / 10.0
-        humidex  = hex_raw    / 10.0
+        # base humidex
+        humidex = hex_raw / 10.0
+
+        # adjust for furnace zones
+        if zone in FURNACE_ZONES:
+            humidex += 1.0
 
         if ts_raw is None:
             updated = "n/a"
