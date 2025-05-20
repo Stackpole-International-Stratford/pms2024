@@ -1635,11 +1635,6 @@ def autopopulate_downtime_events(machine_id,
                                  conn_alias='prodrpt-md',
                                  window_seconds=3600,
                                  downtime_threshold_seconds=300):
-    """
-    1) detect gaps
-    2) skip ones overlapping existing MachineDowntimeEvent
-    3) create a new event for each unaccounted gap
-    """
     now_ts = int(time.time())
     new_events = []
     gaps = get_downtime_events(machine_id,
@@ -1648,10 +1643,11 @@ def autopopulate_downtime_events(machine_id,
                                downtime_threshold_seconds)
 
     for gap in gaps:
+        # raw epochs
         start_epoch = int(gap['start'].timestamp())
         end_epoch   = int(gap['end'].timestamp())
 
-        # skip if any existing event overlaps [start_epoch, end_epoch]
+        # skip existing overlaps
         overlap_q = Q(start_epoch__lt=end_epoch) & (
                         Q(closeout_epoch__isnull=True) |
                         Q(closeout_epoch__gt=start_epoch)
@@ -1662,7 +1658,13 @@ def autopopulate_downtime_events(machine_id,
             ).filter(overlap_q).exists():
             continue
 
+        # find line name
         line_name = find_line_for_machine(machine_id)
+
+        # format the end timestamp as human-readable
+        # you can adjust the format string as you like
+        human_end = gap['end'].strftime("%m-%d %H:%M")
+
         ev = MachineDowntimeEvent.objects.create(
             line           = line_name,
             machine        = machine_id,
@@ -1671,7 +1673,7 @@ def autopopulate_downtime_events(machine_id,
             code           = "UNDF",
             start_epoch    = start_epoch,
             closeout_epoch = end_epoch,
-            comment        = "Why was machine down?",
+            comment        = f"Why was the machine down until {human_end}?",
             labour_types   = ["OPERATOR"],
             employee_id    = "Undefined",
         )
@@ -1683,7 +1685,6 @@ def autopopulate_downtime_events(machine_id,
         print(f"No new downtime to populate for {machine_id}")
 
     return new_events
-
 
 def auto_downtime_api(request):
     machine_id = '1532'
