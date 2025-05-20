@@ -300,8 +300,11 @@ AUTH_LDAP_DEBUG = True
 # First LDAP Server (Primary LDAP server for django-auth-ldap)
 AUTH_LDAP_SERVER_URI = "ldap://10.4.131.200"
 AUTH_LDAP_USER_DN_TEMPLATE = "{user}@johnsonelectric.com"
+
+
+
 AUTH_LDAP_USER_SEARCH = LDAPSearch(
-    "ou=Stackpole,DC=JEHLI,DC=INTERNAL",
+    "DC=JEHLI,DC=INTERNAL",
     ldap.SCOPE_SUBTREE,
     "(sAMAccountName={user})"
 )
@@ -314,11 +317,6 @@ LDAP_SERVERS = [
         "URI": "ldap://10.4.131.200",
         "USER_DN_TEMPLATE": "{user}@johnsonelectric.com",
         "BASE_DN": "ou=Stackpole,DC=JEHLI,DC=INTERNAL",
-    },
-    {
-        "URI": "ldap://10.4.1.200",
-        "USER_DN_TEMPLATE": "{user}@stackpole.ca",
-        "BASE_DN": "dc=stackpole,dc=ca",
     },
 ]
 
