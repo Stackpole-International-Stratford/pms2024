@@ -7,6 +7,20 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from .forms import FORM_TYPE_FORMS, QUESTION_FORM_CLASSES
+from django.contrib.auth.models import Group
+from django.utils.timezone import now
+from .models import Form, FormQuestion, FormAnswer
+from .forms import OISAnswerForm, LPAAnswerForm
+import datetime
+import json
+from collections import defaultdict
+import pprint
+from datetime import timedelta
+from django.urls import reverse
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from .forms import LPAQuestionForm
 
 
 
@@ -48,10 +62,7 @@ class FormTypeDeleteView(DeleteView):
 
 
 # View to create form and its questions
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import FORM_TYPE_FORMS, QUESTION_FORM_CLASSES
-from .models import FormType, Form, FormQuestion
-from django.forms import modelformset_factory
+
 
 def form_create_view(request, form_id=None):
     form_instance = None
@@ -140,11 +151,6 @@ def form_create_view(request, form_id=None):
 # =============================================================================
 
 
-from django.shortcuts import render, get_object_or_404
-from .models import Form, FormType
-from django.contrib.auth.models import Group
-from django.utils.timezone import now
-import datetime
 
 def find_and_tag_expired_questions():
     """
@@ -272,135 +278,13 @@ def find_forms_view(request):
 
 
 
-
-
-
-
-
-# ==============================================================================
-# ==============================================================================
-# ======================== Bulk insert tool ====================================
-# ==============================================================================
-# ==============================================================================
-
-
-from django.shortcuts import render, redirect
-from .models import Form, FormQuestion, FormType
-import json
-
-def bulk_form_and_question_create_view(request):
-    if request.method == 'POST':
-        data_json = request.POST.get('data_json')
-        delete_existing = request.POST.get('delete_existing') == 'on'
-
-        try:
-            data = json.loads(data_json)
-        except json.JSONDecodeError as e:
-            return render(request, 'forms/bulk_question_create.html', {
-                'error': f'Invalid JSON data: {e}',
-                'data_json': data_json,
-            })
-
-        form_data = data.get('form')
-        questions_data = data.get('questions', [])
-
-        # Create the new OIS Form
-        form_instance = Form(
-            name=form_data.get('name'),
-            form_type=FormType.objects.get(name="OIS"),
-            metadata={
-                'part_number': form_data.get('part_number'),
-                'operation': form_data.get('operation'),
-                'part_name': form_data.get('part_name'),
-                'year': form_data.get('year'),
-                'mod_level': form_data.get('mod_level'),
-                'machine': form_data.get('machine'),
-                'mod_date': form_data.get('mod_date')
-            }
-        )
-        form_instance.save()
-
-        # Optionally delete existing questions if specified
-        if delete_existing:
-            form_instance.questions.all().delete()
-
-        # Create questions associated with this form
-        for index, question_data in enumerate(questions_data, start=1):
-            question_data['order'] = question_data.get('order', index)
-            FormQuestion.objects.create(
-                form=form_instance,
-                question=question_data
-            )
-
-        return redirect('form_edit', form_id=form_instance.id)
-
-    else:
-        return render(request, 'forms/bulk_question_create.html')
-
-
-
-
-
-# {
-#     "form": {
-#         "name": "Sample OIS Form",
-#         "part_number": "PN123",
-#         "operation": "Op456",
-#         "part_name": "Sample Part",
-#         "year": "2023",
-#         "mod_level": "A1",
-#         "machine": "Machine XYZ",
-#         "mod_date": "2023-11-11"
-#     },
-#     "questions": [
-#         {
-#             "feature": "67",
-#             "special_characteristic": "Bu",
-#             "characteristic": "Hub OD (Air Gauge)",
-#             "specifications": "Ø30.187 - Ø30.213 mm",
-#             "sample_frequency": "100%",
-#             "sample_size": "100%",
-#             "done_by": "OP/QA",
-#             "checkmark": true
-#         },
-#         {
-#             "feature": "HP",
-#             "special_characteristic": "D",
-#             "characteristic": "Hole(s) Presence (Visual/Gauge)",
-#             "specifications": "Present YES / NO",
-#             "sample_frequency": "100%",
-#             "sample_size": "100%",
-#             "done_by": "OP / QA",
-#             "checkmark": false
-#         }
-#         // Add more questions as needed...
-#     ]
-# }
-
-
-
-
-
-
-
-
-        
-
-
-
-
 # ==================================================================
 # ==================================================================
 # ================= Operator Form Template OIS =====================
 # ==================================================================
 # ==================================================================
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.forms import modelformset_factory
-from .models import Form, FormQuestion, FormAnswer
-from .forms import OISAnswerForm, LPAAnswerForm
-import datetime
-import json
+
 
 def form_questions_view(request, form_id):
     # Get the form instance and its form type
@@ -527,11 +411,7 @@ def form_questions_view(request, form_id):
 
 
 
-from django.shortcuts import render, get_object_or_404
-from .models import Form
-from collections import defaultdict
-import pprint
-from datetime import timedelta
+
 
 def view_records(request, form_id):
     # Fetch the form instance and its questions
@@ -695,9 +575,6 @@ def form_by_metadata_view(request):
 
 
 
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
-from .models import Form
 
 def smart_form_redirect_view(request, form_id):
     form_instance = get_object_or_404(Form, id=form_id)
@@ -835,9 +712,7 @@ def closed_lpas_view(request):
 
 
 
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from .models import Form, FormQuestion
+
 
 def create_form_copy_view(request, form_id):
     """
@@ -904,11 +779,6 @@ def create_form_copy_view(request, form_id):
 
 
 
-from django.http import JsonResponse
-from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
-from .models import Form, FormQuestion
-from .forms import LPAQuestionForm
 
 
 @csrf_exempt
@@ -997,9 +867,7 @@ def process_selected_forms(request):
 
 
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Form
+
 
 @csrf_exempt
 def process_form_deletion(request):
