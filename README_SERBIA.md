@@ -13,12 +13,6 @@ This document covers project structure, prerequisites, configuration, and both l
 5. [Database Setup](#database-setup)  
 6. [LDAP Configuration](#ldap-configuration)  
 7. [Docker Setup](#docker-setup)  
-8. [Running the App](#running-the-app)  
-9. [Admin & Debug Tools](#admin--debug-tools)  
-10. [Static & Media Files](#static--media-files)  
-11. [Testing](#testing)  
-12. [Contributing](#contributing)  
-13. [License](#license)  
 
 ---
 
