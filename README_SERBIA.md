@@ -76,33 +76,39 @@ Copy .env.example to .env and fill in your values (see Environment Variables).
 python manage.py runserver 0.0.0.0:8000
 
 
-Environment Variables
-Name	Description	Default
-SECRET_KEY	Django secret key	changeme
-DB_PMS_NAME	MySQL database name	django_pms
-DB_PMS_USER	MySQL user	muser
-DB_PMS_PASSWORD	MySQL password	wsj.231.kql
-DB_PMS_HOST	MySQL host IP	10.4.1.245
-DB_PMS_PORT	MySQL port	6601
-ALLOWED_HOSTS	Comma-separated allowed hosts	pmdsdata12, ...
-AUTH_LDAP_SERVER_URI	LDAP server URI	ldap://10.4.131.200
-AUTH_LDAP_BIND_DN	(Optional) LDAP bind DN	(empty)
-AUTH_LDAP_BIND_PASSWORD	(Optional) LDAP bind password	(empty)
+## Environment Variables
 
-Tip: the settings file also reads ALLOWED_HOSTS_ENV to extend ALLOWED_HOSTS at runtime.
+| Name                      | Description                           | Default                |
+|---------------------------|---------------------------------------|------------------------|
+| `SECRET_KEY`              | Django secret key                     | `changeme`             |
+| `DB_PMS_NAME`             | MySQL database name                   | `django_pms`           |
+| `DB_PMS_USER`             | MySQL user                            | `muser`                |
+| `DB_PMS_PASSWORD`         | MySQL password                        | `wsj.231.kql`          |
+| `DB_PMS_HOST`             | MySQL host IP                         | `10.4.1.245`           |
+| `DB_PMS_PORT`             | MySQL port                            | `6601`                 |
+| `ALLOWED_HOSTS`           | Comma-separated allowed hosts         | `pmdsdata12, ...`      |
+| `AUTH_LDAP_SERVER_URI`    | LDAP server URI                       | `ldap://10.4.131.200`  |
+| `AUTH_LDAP_BIND_DN`       | *(Optional)* LDAP bind DN             | *(empty)*              |
+| `AUTH_LDAP_BIND_PASSWORD` | *(Optional)* LDAP bind password       | *(empty)*              |
 
-Database Setup
+> **Tip:** the settings file also reads `ALLOWED_HOSTS_ENV` to extend `ALLOWED_HOSTS` at runtime.
+
+---
+
+## Database Setup
+
 Ensure your MariaDB server is running and accessible.
 
 Create the database and grant privileges:
 
-sql
-Copy
-Edit
+```sql
 CREATE DATABASE django_pms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'muser'@'%' IDENTIFIED BY 'wsj.231.kql';
 GRANT ALL PRIVILEGES ON django_pms.* TO 'muser'@'%';
 FLUSH PRIVILEGES;
+
+
+
 LDAP Configuration
 Primary server URI: ldap://10.4.131.200
 
