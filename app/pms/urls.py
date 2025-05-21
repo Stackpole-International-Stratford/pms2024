@@ -25,7 +25,6 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('__debug__/', include('debug_toolbar.urls')),
-    path('variables/', include('site_variables.urls')),
     path('index/', pms_index_view, name='pms_index'),
     path('', pms_index_view, name='pms_index'),
     path('forms/', include('forms.urls')),

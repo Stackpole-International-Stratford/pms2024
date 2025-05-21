@@ -59,7 +59,6 @@ INSTALLED_APPS = [
     'django_bootstrap5',
     'widget_tweaks',
     'corsheaders',
-    'site_variables',
     'forms',
 ]
 
@@ -75,7 +74,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     # 'pms.middleware.timezone.TimezoneMiddleware',
-    'pms.middleware.site_variables.SiteVariableMiddleware',
 ]
 if DEBUG:
     MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
