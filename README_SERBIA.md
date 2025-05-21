@@ -47,7 +47,7 @@ Built with Django 4.1.2, Python 3.9-Alpine (via Docker), MariaDB, and LDAP for a
 
 1. **Clone the repo**  
    ```bash
-   git clone https://your.git.host/johnsonelectric/pms.git
+   git clone https://github.com/Stackpole-International-Stratford/pms2024.git
    cd pms
 
 
@@ -82,12 +82,12 @@ python manage.py runserver 0.0.0.0:8000
 |---------------------------|---------------------------------------|------------------------|
 | `SECRET_KEY`              | Django secret key                     | `changeme`             |
 | `DB_PMS_NAME`             | MySQL database name                   | `django_pms`           |
-| `DB_PMS_USER`             | MySQL user                            | `muser`                |
-| `DB_PMS_PASSWORD`         | MySQL password                        | `wsj.231.kql`          |
-| `DB_PMS_HOST`             | MySQL host IP                         | `10.4.1.245`           |
+| `DB_PMS_USER`             | MySQL user                            | `user`                 |
+| `DB_PMS_PASSWORD`         | MySQL password                        | `pwd`                  |
+| `DB_PMS_HOST`             | MySQL host IP                         | `ex: 10.4.1.245`       |
 | `DB_PMS_PORT`             | MySQL port                            | `6601`                 |
 | `ALLOWED_HOSTS`           | Comma-separated allowed hosts         | `pmdsdata12, ...`      |
-| `AUTH_LDAP_SERVER_URI`    | LDAP server URI                       | `ldap://10.4.131.200`  |
+| `AUTH_LDAP_SERVER_URI`    | LDAP server URI                       |`ex: ldap://10.4.131.200`|
 | `AUTH_LDAP_BIND_DN`       | *(Optional)* LDAP bind DN             | *(empty)*              |
 | `AUTH_LDAP_BIND_PASSWORD` | *(Optional)* LDAP bind password       | *(empty)*              |
 
@@ -100,12 +100,12 @@ Ensure your DB server is running and accessible.
 
 Create the database and grant privileges:
 
-<!-- 
-```sql
+
+sql
     CREATE DATABASE django_pms;
     CREATE USER 'username'@'%' IDENTIFIED BY 'pwd';
     GRANT ALL PRIVILEGES ON django_pms.* TO 'muser'@'%';
-    FLUSH PRIVILEGES; -->
+    FLUSH PRIVILEGES;
 
 
 
