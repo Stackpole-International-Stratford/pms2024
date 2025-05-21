@@ -91,40 +91,44 @@ python manage.py runserver 0.0.0.0:8000
 | `AUTH_LDAP_BIND_DN`       | *(Optional)* LDAP bind DN             | *(empty)*              |
 | `AUTH_LDAP_BIND_PASSWORD` | *(Optional)* LDAP bind password       | *(empty)*              |
 
-> **Tip:** the settings file also reads `ALLOWED_HOSTS_ENV` to extend `ALLOWED_HOSTS` at runtime.
+**Tip:** the settings file also reads `ALLOWED_HOSTS_ENV` to extend `ALLOWED_HOSTS` at runtime.
 
----
 
 ## Database Setup
 
-Ensure your MariaDB server is running and accessible.
+Ensure your DB server is running and accessible.
 
 Create the database and grant privileges:
 
+<!-- 
 ```sql
-CREATE DATABASE django_pms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'muser'@'%' IDENTIFIED BY 'wsj.231.kql';
-GRANT ALL PRIVILEGES ON django_pms.* TO 'muser'@'%';
-FLUSH PRIVILEGES;
+    CREATE DATABASE django_pms;
+    CREATE USER 'username'@'%' IDENTIFIED BY 'pwd';
+    GRANT ALL PRIVILEGES ON django_pms.* TO 'muser'@'%';
+    FLUSH PRIVILEGES; -->
 
 
 
-LDAP Configuration
-Primary server URI: ldap://10.4.131.200
 
-User DN template: {user}@johnsonelectric.com
+## LDAP Configuration
 
-Base DN: DC=JEHLI,DC=INTERNAL
+- **Primary server URI:** `ldap://10.4.131.200`  
+- **User DN template:** `{user}@johnsonelectric.com`  
+- **Base DN:** `DC=JEHLI,DC=INTERNAL`  
 
-If your AD is locked down, set AUTH_LDAP_BIND_DN and AUTH_LDAP_BIND_PASSWORD.
+> If your AD is locked down, set `AUTH_LDAP_BIND_DN` and `AUTH_LDAP_BIND_PASSWORD`.
 
-Docker Setup
-Build the image
 
-bash
-Copy
-Edit
+
+## Docker Setup
+
+### Build the image
+
+```bash
 docker build -t pms-app .
+
+
+
 Run a container
 
 bash
