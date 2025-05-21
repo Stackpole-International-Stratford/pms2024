@@ -37,9 +37,8 @@ Built with Django 4.1.2, Python 3.9-Alpine (via Docker), MariaDB, and LDAP for a
 ## Prerequisites
 
 - **Python 3.9+** (if running locally)  
-- **MariaDB** server (10.x+)  
 - **OpenLDAP** (for corporate SSO)  
-- **Docker** & **docker-compose** (optional but recommended)  
+- **Docker** & **docker-compose**
 - `git` (to clone / update the repo)
 
 ---
@@ -50,3 +49,144 @@ Built with Django 4.1.2, Python 3.9-Alpine (via Docker), MariaDB, and LDAP for a
    ```bash
    git clone https://your.git.host/johnsonelectric/pms.git
    cd pms
+
+
+2. **Create & activate virtual environment**  
+   ```bash
+    python3.9 -m venv venv
+    source venv/bin/activate
+
+
+Create & activate virtual environment
+
+bash
+Copy
+Edit
+python3.9 -m venv venv
+source venv/bin/activate
+Install Python dependencies
+
+bash
+Copy
+Edit
+pip install --upgrade pip
+pip install -r requirements.txt
+Configure environment
+Copy .env.example to .env and fill in your values (see Environment Variables).
+
+Run migrations & collect static
+
+bash
+Copy
+Edit
+python manage.py migrate
+python manage.py collectstatic --no-input
+Start development server
+
+bash
+Copy
+Edit
+python manage.py runserver 0.0.0.0:8000
+Environment Variables
+Name	Description	Default
+SECRET_KEY	Django secret key	changeme
+DB_PMS_NAME	MySQL database name	django_pms
+DB_PMS_USER	MySQL user	muser
+DB_PMS_PASSWORD	MySQL password	wsj.231.kql
+DB_PMS_HOST	MySQL host IP	10.4.1.245
+DB_PMS_PORT	MySQL port	6601
+ALLOWED_HOSTS	Comma-separated allowed hosts	pmdsdata12, ...
+AUTH_LDAP_SERVER_URI	LDAP server URI	ldap://10.4.131.200
+AUTH_LDAP_BIND_DN	(Optional) LDAP bind DN	(empty)
+AUTH_LDAP_BIND_PASSWORD	(Optional) LDAP bind password	(empty)
+
+Tip: the settings file also reads ALLOWED_HOSTS_ENV to extend ALLOWED_HOSTS at runtime.
+
+Database Setup
+Ensure your MariaDB server is running and accessible.
+
+Create the database and grant privileges:
+
+sql
+Copy
+Edit
+CREATE DATABASE django_pms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'muser'@'%' IDENTIFIED BY 'wsj.231.kql';
+GRANT ALL PRIVILEGES ON django_pms.* TO 'muser'@'%';
+FLUSH PRIVILEGES;
+LDAP Configuration
+Primary server URI: ldap://10.4.131.200
+
+User DN template: {user}@johnsonelectric.com
+
+Base DN: DC=JEHLI,DC=INTERNAL
+
+If your AD is locked down, set AUTH_LDAP_BIND_DN and AUTH_LDAP_BIND_PASSWORD.
+
+Docker Setup
+Build the image
+
+bash
+Copy
+Edit
+docker build -t pms-app .
+Run a container
+
+bash
+Copy
+Edit
+docker run -d \
+  --name pms \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -e SECRET_KEY="your-secret" \
+  -e DB_PMS_HOST="db.host" \
+  … (other ENV vars) … \
+  pms-app
+Custom CA
+We add trusted-certs.pem into the image so internal sites and corporate proxies work.
+
+Running the App
+Locally:
+
+bash
+Copy
+Edit
+python manage.py runserver
+Docker: Exposes port 8000 by default.
+
+WSGI (production):
+
+bash
+Copy
+Edit
+gunicorn pms.wsgi:application --bind 0.0.0.0:8000
+Admin & Debug Tools
+Django admin: /admin/
+
+Debug Toolbar: active when DEBUG=True
+
+Internal IPs: set in INTERNAL_IPS for toolbar access
+
+Static & Media Files
+STATIC_ROOT: BASE_DIR/static_files
+
+STATICFILES_STORAGE: whitenoise
+
+MEDIA_ROOT: BASE_DIR/media_files
+
+URLs served at /static/static/ and /media/
+
+Testing
+Coming soon
+Add Django TestCase tests, then run with pytest or manage.py test.
+
+Contributing
+Fork the repo
+
+Create a feature branch
+
+Commit & open a PR against main
+
+Ensure linting & tests pass
+
