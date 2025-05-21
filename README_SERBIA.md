@@ -112,7 +112,7 @@ sql
 
 ## LDAP Configuration
 
-- **Primary server URI:** `ldap://10.4.131.200`  
+- **Primary server URI:** `ldap://yourLDAPuri`  
 - **User DN template:** `{user}@johnsonelectric.com`  
 - **Base DN:** `DC=JEHLI,DC=INTERNAL`  
 
