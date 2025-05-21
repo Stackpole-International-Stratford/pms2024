@@ -25,6 +25,7 @@ from django_auth_ldap.config import LDAPSearch
 # =================================== Section 1 ===================================================
 # =================================================================================================
 # =================================================================================================
+
 '''All of these variables in the settings.py are standard variables that can be found in the official django documentation. 
     Make sure to edit the allowed hosts, internal ips, database connections, timezones and ldap connections for users. 
     https://docs.djangoproject.com/en/5.2/
@@ -76,8 +77,10 @@ DEFAULT_FROM_EMAIL = 'noreply@johnsonelectric.com'
 # Enable LDAP logging for debugging
 AUTH_LDAP_DEBUG = True
 
-# First LDAP Server (Primary LDAP server for django-auth-ldap)
+# Change this to your ldap server uri, contact IT for this
 AUTH_LDAP_SERVER_URI = "ldap://10.4.131.200"
+
+# keep this line the same
 AUTH_LDAP_USER_DN_TEMPLATE = "{user}@johnsonelectric.com"
 
 
@@ -87,24 +90,36 @@ AUTH_LDAP_USER_SEARCH = LDAPSearch(
     ldap.SCOPE_SUBTREE,
     "(sAMAccountName={user})"
 )
+
+# You won't neeed this unless your active directory is setup with more locked down permissions
 AUTH_LDAP_BIND_DN = ""
 AUTH_LDAP_BIND_PASSWORD = ""
 
+
 # Custom LDAP configuration for the second server (used by the CustomLDAPBackend)
+# Make sure to change the URI
 LDAP_SERVERS = [
     {
         "URI": "ldap://10.4.131.200",
         "USER_DN_TEMPLATE": "{user}@johnsonelectric.com",
-        "BASE_DN": "ou=Stackpole,DC=JEHLI,DC=INTERNAL",
+        "BASE_DN": "DC=JEHLI,DC=INTERNAL",
     },
 ]
 
+
+# These backends are helpful for doing things like preloading users with permissions before they've signed in.
 # Authentication Backends
 AUTHENTICATION_BACKENDS = [
     'django_auth_ldap.backend.LDAPBackend',  # Primary LDAP Backend
     'pms.backends.CustomLDAPBackend',  # Secondary Custom LDAP Backend
     'django.contrib.auth.backends.ModelBackend',  # Default database authentication
 ]
+
+
+
+
+
+
 
 
 # =================================================================================================
@@ -205,7 +220,8 @@ USE_TZ = True
 
 
 
-# Boostrap5 settings
+# Boostrap5 css settings
+# Again you don't have to worry about this because the js and cs .min files are in the common_static already and get collected during docker deployment
 BOOTSTRAP5 = {
 
     # The complete URL to the Bootstrap CSS file.
@@ -267,7 +283,7 @@ BOOTSTRAP5 = {
     },
 }
 
-
+# These paths are required but minimally used for this application and don't need any immediate edits. 
 STATIC_URL = '/static/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media_files')
