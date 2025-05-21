@@ -56,37 +56,26 @@ Built with Django 4.1.2, Python 3.9-Alpine (via Docker), MariaDB, and LDAP for a
     python3.9 -m venv venv
     source venv/bin/activate
 
+3. **Install Python dependencies**
+    '''bash
+    pip install --upgrade pip
+    pip install -r requirements.txt
 
-Create & activate virtual environment
 
-bash
-Copy
-Edit
-python3.9 -m venv venv
-source venv/bin/activate
-Install Python dependencies
 
-bash
-Copy
-Edit
-pip install --upgrade pip
-pip install -r requirements.txt
-Configure environment
+4. **Configure environment**
 Copy .env.example to .env and fill in your values (see Environment Variables).
 
-Run migrations & collect static
+5. **Run migrations & collect static**
+    '''bash
+    python manage.py migrate
+    python manage.py collectstatic --no-input
 
-bash
-Copy
-Edit
-python manage.py migrate
-python manage.py collectstatic --no-input
-Start development server
 
-bash
-Copy
-Edit
+6. **Start development server**
 python manage.py runserver 0.0.0.0:8000
+
+
 Environment Variables
 Name	Description	Default
 SECRET_KEY	Django secret key	changeme
