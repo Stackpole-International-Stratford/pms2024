@@ -25,7 +25,7 @@ This document covers project structure, prerequisites, configuration, and both l
 ## Project Overview
 
 **pms** is a Django-based Process Management System that lets operators:
-- Define **Form Types** (OIS, TPM, LPA, …).
+- Define **Form Types** (OIS, TPM, LPA, …), although for our purposes this app for now is just for LPAs.
 - Dynamically create and edit **Forms** and their **Questions** (stored as JSON).
 - Capture operator **Answers** (with metadata like operator number, timestamps, machine, close-out info, etc.).
 - Bulk-import questions, tag expired items, “soft” delete forms via metadata, and view historical records.
