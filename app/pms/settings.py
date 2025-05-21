@@ -9,44 +9,118 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-
 import os
 from pathlib import Path
 import ldap
 from django_auth_ldap.config import LDAPSearch
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'changeme')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = bool(int(os.environ.get('DEBUG', 0)))
-DEBUG = True
+# =================================================================================================
+# =================================================================================================
+# ================= At the top of the page will be a list of variables ============================
+# ============= that you can and should configure to your own needs and addresses =================
+# =================================================================================================
+# =================================== Section 1 ===================================================
+# =================================================================================================
+# =================================================================================================
+'''All of these variables in the settings.py are standard variables that can be found in the official django documentation. 
+    Make sure to edit the allowed hosts, internal ips, database connections, timezones and ldap connections for users. 
+    https://docs.djangoproject.com/en/5.2/
+'''
 
-ALLOWED_HOSTS = ['10.5.1.131','pmdsdata12', '10.4.1.234', '127.0.0.1',
-                 'localhost', '10.4.1.234', '10.4.1.232', 'pmdsdata9', 
-                 'pmdsdata12.stackpole.ca', 'pmdsdata12.jehl.internal', '0.0.0.0']
+
+ALLOWED_HOSTS = ['pmdsdata12', '10.4.1.234',
+                '10.4.1.232', 'pmdsdata9', '0.0.0.0']
 ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS')
 if ALLOWED_HOSTS_ENV:
     ALLOWED_HOSTS.extend(ALLOWED_HOSTS_ENV.split(','))
 
-# Application definition
 
-# def show_toolbar(request):
-#     return True
-# SHOW_TOOLBAR_CALLBACK = show_toolbar
-# DEBUG_TOOLBAR_CONFIG = {'INSERT_BEFORE':'</head>'}
 INTERNAL_IPS = ['pmdsdata12', '10.4.1.234', '127.0.0.1',
                  'localhost', '10.4.1.232']
-# DEBUG_TOOLBAR_CONFIG = {
-#     'SHOW_TOOLBAR_CALLBACK': lambda _request: DEBUG
-# }
 
+
+
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_PMS_NAME', 'django_pms'),
+        'USER': os.environ.get('DB_PMS_USER', 'muser'),
+        'PASSWORD': os.environ.get('DB_PMS_PASSWORD', 'wsj.231.kql'),
+        'HOST': os.environ.get('DB_PMS_HOST', '10.4.1.245'),
+        'PORT': os.environ.get('DB_PMS_PORT', 6601),
+    },
+}
+
+
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'America/Toronto'
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp01.stackpole.ca'
+EMAIL_PORT = 25  # Default SMTP port
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = 'noreply@johnsonelectric.com'
+
+
+
+# Enable LDAP logging for debugging
+AUTH_LDAP_DEBUG = True
+
+# First LDAP Server (Primary LDAP server for django-auth-ldap)
+AUTH_LDAP_SERVER_URI = "ldap://10.4.131.200"
+AUTH_LDAP_USER_DN_TEMPLATE = "{user}@johnsonelectric.com"
+
+
+
+AUTH_LDAP_USER_SEARCH = LDAPSearch(
+    "DC=JEHLI,DC=INTERNAL",
+    ldap.SCOPE_SUBTREE,
+    "(sAMAccountName={user})"
+)
+AUTH_LDAP_BIND_DN = ""
+AUTH_LDAP_BIND_PASSWORD = ""
+
+# Custom LDAP configuration for the second server (used by the CustomLDAPBackend)
+LDAP_SERVERS = [
+    {
+        "URI": "ldap://10.4.131.200",
+        "USER_DN_TEMPLATE": "{user}@johnsonelectric.com",
+        "BASE_DN": "ou=Stackpole,DC=JEHLI,DC=INTERNAL",
+    },
+]
+
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'django_auth_ldap.backend.LDAPBackend',  # Primary LDAP Backend
+    'pms.backends.CustomLDAPBackend',  # Secondary Custom LDAP Backend
+    'django.contrib.auth.backends.ModelBackend',  # Default database authentication
+]
+
+
+# =================================================================================================
+# =================================================================================================
+# ================= Here there are variables that don't need to be changed ========================
+# =================================== Section 2 ===================================================
+# =================================================================================================
+# =================================================================================================
+
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+SECRET_KEY = os.environ.get('SECRET_KEY', 'changeme')
+DEBUG = True
+
+# You won't need to touch this list unless you plan on expanding the codebase with new apps of your own
 INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.admin',
@@ -62,6 +136,8 @@ INSTALLED_APPS = [
     'forms',
 ]
 
+
+# You don't need to worry about this middleware list either unless you want to add middleware of your own in the future
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -100,32 +176,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pms.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_PMS_NAME', 'django_pms'),
-        'USER': os.environ.get('DB_PMS_USER', 'muser'),
-        'PASSWORD': os.environ.get('DB_PMS_PASSWORD', 'wsj.231.kql'),
-        'HOST': os.environ.get('DB_PMS_HOST', '10.4.1.245'),
-        'PORT': os.environ.get('DB_PMS_PORT', 6601),
-    },
-}
 
 
 
-
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
-#         "LOCATION": "/var/tmp/django_cache",
-#     }
-# }
-
-# Password validation
-# https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -143,12 +196,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'America/Toronto'
 
 USE_I18N = True
 
@@ -220,9 +268,6 @@ BOOTSTRAP5 = {
 }
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.1/howto/static-files/
-
 STATIC_URL = '/static/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media_files')
@@ -234,9 +279,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'common_static'),
 ]
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -263,10 +305,6 @@ LOGGING = {
         },
     },
     'loggers': {
-        # 'django.db.backends': {
-        #     'level': 'DEBUG',
-        #     'handlers': ['console'],
-        # },
         'django.request': {
             'level': 'INFO',
             'handlers': ['console',]
@@ -279,48 +317,3 @@ LOGGING = {
     }
 }
 
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp01.stackpole.ca'
-EMAIL_PORT = 25  # Default SMTP port
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = False
-DEFAULT_FROM_EMAIL = 'noreply@johnsonelectric.com'
-
-
-
-
-
-
-# Enable LDAP logging for debugging
-AUTH_LDAP_DEBUG = True
-
-# First LDAP Server (Primary LDAP server for django-auth-ldap)
-AUTH_LDAP_SERVER_URI = "ldap://10.4.131.200"
-AUTH_LDAP_USER_DN_TEMPLATE = "{user}@johnsonelectric.com"
-
-
-
-AUTH_LDAP_USER_SEARCH = LDAPSearch(
-    "DC=JEHLI,DC=INTERNAL",
-    ldap.SCOPE_SUBTREE,
-    "(sAMAccountName={user})"
-)
-AUTH_LDAP_BIND_DN = ""
-AUTH_LDAP_BIND_PASSWORD = ""
-
-# Custom LDAP configuration for the second server (used by the CustomLDAPBackend)
-LDAP_SERVERS = [
-    {
-        "URI": "ldap://10.4.131.200",
-        "USER_DN_TEMPLATE": "{user}@johnsonelectric.com",
-        "BASE_DN": "ou=Stackpole,DC=JEHLI,DC=INTERNAL",
-    },
-]
-
-# Authentication Backends
-AUTHENTICATION_BACKENDS = [
-    'django_auth_ldap.backend.LDAPBackend',  # Primary LDAP Backend
-    'pms.backends.CustomLDAPBackend',  # Secondary Custom LDAP Backend
-    'django.contrib.auth.backends.ModelBackend',  # Default database authentication
-]
