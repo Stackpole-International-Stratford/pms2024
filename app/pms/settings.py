@@ -15,6 +15,11 @@ import ldap
 from django_auth_ldap.config import LDAPSearch
 
 
+'''
+To make a django superuser run: python manage.py createsuperuser
+Then you can access rooturl/admin and you can create the LPA Managers and start assigning people as need be, or making other users
+superusers through the admin panel
+'''
 
 
 # =================================================================================================
