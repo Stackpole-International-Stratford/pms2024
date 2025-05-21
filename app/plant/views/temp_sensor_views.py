@@ -57,7 +57,7 @@ def send_alert_email(zones):
     """
     Send a multipart email (plain text + HTML) listing every zone
     whose humidex ≥ 43, with clear heat-break recommendations.
-    Throttles to once every 29 minutes by checking/updating email_sent.
+    Throttles to once every 29 minutes by checking and pre-logging email_sent.
     """
     # 1) Collect only zones needing alerts
     alerts = []
@@ -76,9 +76,9 @@ def send_alert_email(zones):
             rec = "<strong style='color:#c00;'>HAZARDOUS to continue physical activity!</strong>"
 
         alerts.append({
-            "zone":      entry["zone"],
-            "humidex":   f"{hx:.1f}",
-            "rec":       rec,
+            "zone":    entry["zone"],
+            "humidex": f"{hx:.1f}",
+            "rec":     rec,
         })
 
     if not alerts:
@@ -86,7 +86,6 @@ def send_alert_email(zones):
 
     # 2) Throttle: only once every 29 minutes
     now_ts = int(time.time())
-    # get the most‐recent send timestamp across all recipients
     last_sent = (
         TempSensorEmailList.objects
         .aggregate(latest=Max("email_sent"))["latest"]
@@ -95,7 +94,16 @@ def send_alert_email(zones):
     if now_ts - last_sent < 29 * 60:
         return
 
-    # 3) Build subject + plain-text body
+    # 3) Gather recipient list (and bail if empty)
+    recipient_qs   = TempSensorEmailList.objects.all()
+    recipient_list = list(recipient_qs.values_list("email", flat=True))
+    if not recipient_list:
+        return
+
+    # 4) Pre-log the send so concurrent calls see the update immediately
+    recipient_qs.update(email_sent=now_ts)
+
+    # 5) Build subject + plain-text body
     subject = "🔴 Heat Alert Notification: Humidex Safety Advisory"
 
     text_lines = [
@@ -103,12 +111,11 @@ def send_alert_email(zones):
         ""
     ]
     for a in alerts:
-        # strip our <strong> tags for plain text
         rec_text = a["rec"].replace("<strong>", "").replace("</strong>", "")
         text_lines.append(f"- Zone {a['zone']}: humidex = {a['humidex']} → {rec_text}")
     text_body = "\n".join(text_lines)
 
-    # 4) Build HTML body
+    # 6) Build HTML body
     html_rows = "".join([
         format_html(
             "<tr>"
@@ -146,12 +153,7 @@ def send_alert_email(zones):
         rows=format_html(html_rows)
     )
 
-    # 5) Gather recipients and send
-    recipient_qs = TempSensorEmailList.objects.all()
-    recipient_list = list(recipient_qs.values_list("email", flat=True))
-    if not recipient_list:
-        return
-
+    # 7) Assemble and send the email
     msg = EmailMultiAlternatives(
         subject=subject,
         body=text_body,
@@ -160,9 +162,6 @@ def send_alert_email(zones):
     )
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
-
-    # 6) Stamp everyone’s email_sent to now_ts
-    recipient_qs.update(email_sent=now_ts)
 
 
 
