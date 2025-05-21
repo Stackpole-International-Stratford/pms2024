@@ -122,70 +122,19 @@ Create the database and grant privileges:
 
 ## Docker Setup
 
-### Build the image
+### Build the Image
 
 ```bash
 docker build -t pms-app .
 
 
 
-Run a container
-
-bash
-Copy
-Edit
+Run a Container
 docker run -d \
   --name pms \
   --restart unless-stopped \
   -p 8000:8000 \
   -e SECRET_KEY="your-secret" \
   -e DB_PMS_HOST="db.host" \
-  … (other ENV vars) … \
+  # Add other environment variables as needed
   pms-app
-Custom CA
-We add trusted-certs.pem into the image so internal sites and corporate proxies work.
-
-Running the App
-Locally:
-
-bash
-Copy
-Edit
-python manage.py runserver
-Docker: Exposes port 8000 by default.
-
-WSGI (production):
-
-bash
-Copy
-Edit
-gunicorn pms.wsgi:application --bind 0.0.0.0:8000
-Admin & Debug Tools
-Django admin: /admin/
-
-Debug Toolbar: active when DEBUG=True
-
-Internal IPs: set in INTERNAL_IPS for toolbar access
-
-Static & Media Files
-STATIC_ROOT: BASE_DIR/static_files
-
-STATICFILES_STORAGE: whitenoise
-
-MEDIA_ROOT: BASE_DIR/media_files
-
-URLs served at /static/static/ and /media/
-
-Testing
-Coming soon
-Add Django TestCase tests, then run with pytest or manage.py test.
-
-Contributing
-Fork the repo
-
-Create a feature branch
-
-Commit & open a PR against main
-
-Ensure linting & tests pass
-
