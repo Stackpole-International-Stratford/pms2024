@@ -124,7 +124,12 @@ lines_untracked = [
         "line": "AB1V Input",
         "scrap_line": "NA",
         "operations": [
-
+            {
+                "op": "20",
+                "machines": [
+                    {"number": "662", "target": 27496,},
+                ],
+            },
             {
                 "op": "Final",
                 "machines": [
