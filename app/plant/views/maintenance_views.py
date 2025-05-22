@@ -41,7 +41,6 @@ lines_untracked = [
                 "machines": [
                     {"number": "1826", "target": 27496,},
                     {"number": "1555", "target": 27496,},
-                    {"number": "1557", "target": 27496,},
                     {"number": "1546", "target": 27496,},
                 ],
             },
