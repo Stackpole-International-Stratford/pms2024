@@ -254,12 +254,10 @@ def prod_query_index_view(request):
 def strokes_per_min_graph(request):
     default_numGraphPoints = 300
     context = {}
-
     if request.method == 'GET':
         form = CycleQueryForm()
         context['form'] = form
         context['numGraphPoints'] = default_numGraphPoints
-
     elif request.method == 'POST':
         form = CycleQueryForm(request.POST)
         if form.is_valid():
