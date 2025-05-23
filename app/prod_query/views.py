@@ -261,11 +261,11 @@ def strokes_per_min_graph(request):
     elif request.method == 'POST':
         form = CycleQueryForm(request.POST)
         if form.is_valid():
-            machine     = form.cleaned_data['machine']
-            start_date  = form.cleaned_data['start_date']
-            start_time  = form.cleaned_data['start_time']
-            end_date    = form.cleaned_data['end_date']
-            end_time    = form.cleaned_data['end_time']
+            machine = form.cleaned_data['machine']
+            start_date = form.cleaned_data['start_date']
+            start_time = form.cleaned_data['start_time']
+            end_date = form.cleaned_data['end_date']
+            end_time = form.cleaned_data['end_time']
             numGraphPoints = int(request.POST.get('numGraphPoints', default_numGraphPoints))
 
             # clamp into [50,1000]
