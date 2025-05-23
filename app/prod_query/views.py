@@ -289,6 +289,18 @@ def strokes_per_min_graph(request):
             interval = max(int(total_minutes / numGraphPoints), 1)
 
             labels, counts = fetch_chart_data(machine, start_timestamp, end_timestamp, interval=interval, group_by_shift=False)
+
+
+             # print out what you got back from the DB
+            print(f"DEBUG: interval = {interval}")
+            print(f"DEBUG: labels  = {labels!r}")
+            print(f"DEBUG: counts  = {counts!r}")
+
+            # if you want SPM as floats:
+            spm = [c / interval for c in counts]
+            print(f"DEBUG: spm     = {spm!r}")
+
+            
             context['chartdata'] = {
                 'labels': labels,
                 'dataset': {
