@@ -1,0 +1,380 @@
+{% extends 'parent.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Downtime Codes</h1>
+    <div class="d-flex">
+      <input
+        id="filter-input"
+        type="text"
+        class="form-control form-control-sm me-2"
+        placeholder="Filter codes…"
+      >
+    </div>
+  </div>
+
+  <table class="table table-striped table-bordered">
+    <thead class="thead-light">
+      <tr>
+        <th>Code</th>
+        <th>Category</th>
+        <th>Subcategory</th>
+        <th>Last Updated</th>
+        <th>
+          <button
+            id="add-new-btn"
+            type="button"
+            class="btn btn-sm btn-warning"
+          >
+            + Add New
+          </button>
+        </th>
+      </tr>
+    </thead>
+    <tbody id="codes-table-body">
+      {% for code in codes %}
+      <tr data-id="{{ code.id }}">
+        <td class="td-code">{{ code.code }}</td>
+        <td class="td-category">{{ code.category }}</td>
+        <td class="td-subcat">{{ code.subcategory }}</td>
+        <td class="td-updated">{{ code.updated_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <!-- Edit icon button -->
+          <button
+            type="button"
+            class="btn btn-sm edit-btn p-0 border-0 text-dark me-2"
+            data-id="{{ code.id }}"
+            data-code="{{ code.code }}"
+            data-category="{{ code.category }}"
+            data-subcategory="{{ code.subcategory }}"
+            aria-label="Edit {{ code.code }}"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                 fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+              <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793
+                       14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646
+                       6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5
+                       0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5
+                       0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468
+                       7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5
+                       0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5
+                       0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2
+                       5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+            </svg>
+          </button>
+          <!-- Delete icon button -->
+          <button
+            type="button"
+            class="btn btn-sm delete-btn p-0 border-0 text-dark"
+            data-id="{{ code.id }}"
+            aria-label="Delete {{ code.code }}"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                 fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+              <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2
+                       0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1
+                       1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0
+                       0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0
+                       1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5
+                       0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5
+                       0 0 1 8 5m3 .5v7a.5.5 0 0
+                       1-1 0v-7a.5.5 0 0 1 1 0"/>
+            </svg>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="add-form" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Downtime Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="add-error" class="alert alert-danger d-none"></div>
+        <div class="mb-3">
+          <label for="add-code" class="form-label">Code</label>
+          <input type="text" id="add-code" name="code" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="add-cat" class="form-label">Category</label>
+          <input type="text" id="add-cat" name="category" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="add-subcat" class="form-label">Subcategory</label>
+          <input type="text" id="add-subcat" name="subcategory" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-warning">Create</button>
+        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="edit-form" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Downtime Code</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="edit-error" class="alert alert-danger d-none"></div>
+        <input type="hidden" id="edit-id">
+        <div class="mb-3">
+          <label for="edit-code" class="form-label">Code</label>
+          <input type="text" id="edit-code" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="edit-cat" class="form-label">Category</label>
+          <input type="text" id="edit-cat" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label for="edit-subcat" class="form-label">Subcategory</label>
+          <input type="text" id="edit-subcat" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-warning">Save changes</button>
+        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Downtime Code?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete
+        <strong id="delete-code-name"></strong>?
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-delete-btn" class="btn btn-danger">Yes, Delete</button>
+        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // CSRF helper
+  function getCookie(name) {
+    let v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const csrftoken    = getCookie('csrftoken');
+    const tableBody    = document.getElementById('codes-table-body');
+    const filterInput  = document.getElementById('filter-input');
+    const addModal     = new bootstrap.Modal(document.getElementById('addModal'));
+    const editModal    = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal  = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    const addForm      = document.getElementById('add-form');
+    const editForm     = document.getElementById('edit-form');
+    const addError     = document.getElementById('add-error');
+    const editError    = document.getElementById('edit-error');
+    const deleteName   = document.getElementById('delete-code-name');
+
+    const addCodeInput = document.getElementById('add-code');
+    const addCatInput  = document.getElementById('add-cat');
+    const addSubInput  = document.getElementById('add-subcat');
+
+    const editIdInput  = document.getElementById('edit-id');
+    const editCodeInput= document.getElementById('edit-code');
+    const editCatInput = document.getElementById('edit-cat');
+    const editSubInput = document.getElementById('edit-subcat');
+
+    let deleteId = null;
+
+    // 1) LIVE FILTER
+    filterInput.addEventListener('input', function() {
+      const q = this.value.trim().toLowerCase();
+      tableBody.querySelectorAll('tr').forEach(row => {
+        const codeText = row.querySelector('.td-code').textContent.toLowerCase();
+        const catText  = row.querySelector('.td-category').textContent.toLowerCase();
+        const subText  = row.querySelector('.td-subcat').textContent.toLowerCase();
+        row.style.display = (
+          codeText.includes(q) ||
+          catText.includes(q) ||
+          subText.includes(q)
+        ) ? '' : 'none';
+      });
+    });
+
+    // 2) SHOW ADD MODAL
+    document.getElementById('add-new-btn').addEventListener('click', () => {
+      addError.classList.add('d-none');
+      addForm.reset();
+      addModal.show();
+    });
+
+    // 3) CREATE
+    addForm.addEventListener('submit', e => {
+      e.preventDefault();
+      addError.classList.add('d-none');
+      const data = new URLSearchParams({
+        code: addCodeInput.value.trim(),
+        category: addCatInput.value.trim(),
+        subcategory: addSubInput.value.trim()
+      });
+      fetch("{% url 'downtime_codes_create' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: data,
+        credentials: 'same-origin'
+      })
+      .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
+      .then(json => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = json.id;
+        tr.innerHTML = `
+          <td class="td-code">${json.code}</td>
+          <td class="td-category">${json.category}</td>
+          <td class="td-subcat">${json.subcategory}</td>
+          <td class="td-updated">${json.updated_at}</td>
+          <td>
+            <button type="button" class="btn btn-sm edit-btn p-0 border-0 text-dark me-2"
+              data-id="${json.id}"
+              data-code="${json.code}"
+              data-category="${json.category}"
+              data-subcategory="${json.subcategory}"
+              aria-label="Edit ${json.code}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                   fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793
+                         14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646
+                         6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5
+                         0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5
+                         0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468
+                         7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5
+                         0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5
+                         0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2
+                         5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+              </svg>
+            </button>
+            <button type="button" class="btn btn-sm delete-btn p-0 border-0 text-dark"
+              data-id="${json.id}"
+              aria-label="Delete ${json.code}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                   fill="currentColor" class="bi bi-trash-fill" viewBox="0 0 16 16">
+                <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2
+                         0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1
+                         1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0
+                         0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0
+                         1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5
+                         0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5
+                         0 0 1 8 5m3 .5v7a.5.5 0 0
+                         1-1 0v-7a.5.5 0 0 1 1 0"/>
+              </svg>
+            </button>
+          </td>`;
+        tableBody.appendChild(tr);
+        addModal.hide();
+      })
+      .catch(err => {
+        addError.textContent = err.error || 'Error creating.';
+        addError.classList.remove('d-none');
+      });
+    });
+
+    // 4) EDIT/DELETE DELEGATION
+    tableBody.addEventListener('click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+
+      if (btn.matches('.edit-btn')) {
+        editError.classList.add('d-none');
+        editIdInput.value      = btn.dataset.id;
+        editCodeInput.value    = btn.dataset.code;
+        editCatInput.value     = btn.dataset.category;
+        editSubInput.value     = btn.dataset.subcategory;
+        editModal.show();
+      }
+      if (btn.matches('.delete-btn')) {
+        deleteId = btn.dataset.id;
+        deleteName.textContent = btn.closest('tr').querySelector('.td-code').textContent;
+        deleteModal.show();
+      }
+    });
+
+    // 5) UPDATE
+    editForm.addEventListener('submit', e => {
+      e.preventDefault();
+      editError.classList.add('d-none');
+      const id = editIdInput.value;
+      const data = new URLSearchParams({
+        code: editCodeInput.value.trim(),
+        category: editCatInput.value.trim(),
+        subcategory: editSubInput.value.trim()
+      });
+      fetch(`/plant/downtime-codes/${id}/edit/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body: data,
+        credentials: 'same-origin'
+      })
+      .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
+      .then(json => {
+        const row = tableBody.querySelector(`tr[data-id="${id}"]`);
+        row.querySelector('.td-code').textContent     = json.code;
+        row.querySelector('.td-category').textContent = json.category;
+        row.querySelector('.td-subcat').textContent   = json.subcategory;
+        row.querySelector('.td-updated').textContent  = json.updated_at;
+        const eb = row.querySelector('.edit-btn');
+        eb.dataset.code       = json.code;
+        eb.dataset.category   = json.category;
+        eb.dataset.subcategory= json.subcategory;
+        editModal.hide();
+      })
+      .catch(err => {
+        editError.textContent = err.error || 'Error saving.';
+        editError.classList.remove('d-none');
+      });
+    });
+
+    // 6) DELETE
+    document.getElementById('confirm-delete-btn')
+      .addEventListener('click', () => {
+        fetch(`/plant/downtime-codes/${deleteId}/delete/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken },
+          credentials: 'same-origin'
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Failed');
+          return res.json();
+        })
+        .then(() => {
+          const row = tableBody.querySelector(`tr[data-id="${deleteId}"]`);
+          row && row.remove();
+          deleteModal.hide();
+        })
+        .catch(() => alert('Error deleting.'));
+      });
+  });
+</script>
+{% endblock %}
