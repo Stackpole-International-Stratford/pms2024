@@ -317,7 +317,7 @@ lines_untracked = [
             },
         ],
     },
-     {
+    {
         "line": "Furnaces",
         "scrap_line": "NA",
         "operations": [
