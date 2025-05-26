@@ -2381,6 +2381,7 @@ lines = [
                 "machines": [
                     {"number": "345", "target": 27496,},
                     {"number": "344", "target": 27496,},
+                    {"number": "349", "target": 27496,},
                     {"number": "332", "target": 27496,},
                     {"number": "333", "target": 27496,},
                 ],
