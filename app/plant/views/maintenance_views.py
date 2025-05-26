@@ -1777,3 +1777,42 @@ def machine_history(request):
         return JsonResponse({'status': 'ok', 'html': html})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+
+@login_required
+def employee_login_status(request):
+    # only managers/supervisors/etc.
+    if not user_has_maintenance_access(request.user):
+        return HttpResponseForbidden("Not authorized; please ask a manager.")
+
+    User = get_user_model()
+    # all maintenance roles
+    group_names = set(ROLE_TO_GROUP.values())
+
+    qs = (
+        User.objects
+        .filter(groups__name__in=group_names)
+        .distinct()
+        .order_by('last_name', 'first_name')
+    )
+
+    users_status = []
+    for u in qs:
+        # which role(s) they have
+        roles = [
+            role.capitalize()
+            for role, grp in ROLE_TO_GROUP.items()
+            if u.groups.filter(name=grp).exists()
+        ]
+        users_status.append({
+            'name':       u.get_full_name() or u.username,
+            'username':   u.username,
+            'roles':      roles,
+            'account':    'Preload' if u.username.endswith('@preload') else 'Real',
+            'last_login': u.last_login,   # None if never
+        })
+
+    return render(request, 'plant/employee_login_status.html', {
+        'users': users_status,
+    })
