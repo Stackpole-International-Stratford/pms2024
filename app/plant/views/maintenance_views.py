@@ -168,6 +168,22 @@ lines_untracked = [
                     {"number": "271", "target": 27496,},
                 ],
             },
+              {
+                "op": "pellet / wafers",
+                "machines": [
+                    {"number": "227", "target": 27496,},
+                    {"number": "238", "target": 27496,},
+                    {"number": "218", "target": 27496,},
+                    {"number": "215", "target": 27496,},
+                    {"number": "274", "target": 27496,},
+                    {"number": "244", "target": 27496,},
+                    {"number": "216", "target": 27496,},
+                    {"number": "275", "target": 27496,},
+                    {"number": "204", "target": 27496,},
+                    {"number": "265", "target": 27496,},
+                    {"number": "205", "target": 27496,},
+                ],
+            },
         ],
     },
     {
