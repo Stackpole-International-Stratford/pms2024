@@ -67,4 +67,8 @@ urlpatterns = [
     path('targets/<int:pk>/delete/', views.target_delete_ajax, name='target_delete_ajax'),
 
 
+
+    path('oee/machines/', views.machine_oee, name='machine_oee'),
+
+
 ]

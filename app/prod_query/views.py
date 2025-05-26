@@ -39,6 +39,7 @@ from .forms import ShiftTotalsForm
 import time
 import numpy as np
 from collections import Counter
+from django.http import HttpRequest
 
 
 DAVE_HOST = settings.DAVE_HOST
@@ -7915,3 +7916,74 @@ def target_delete_ajax(request, pk):
         return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+
+
+
+# ===========================================================================
+# ===========================================================================
+# ======================= Single Machine OEE ================================
+# ===========================================================================
+# ===========================================================================
+
+
+def machine_oee(request: HttpRequest):
+    import datetime
+    """
+    A simplified OEE page: accepts GET params
+      - start_date (Y-m-d H:i)
+      - end_date   (Y-m-d H:i)
+      - machines   (comma-separated list, e.g. "1703R,12L")
+    Calls your existing `fetch_combined_oee_production_data` to build all data,
+    then filters out only the requested machines and passes them to a simple template.
+    """
+    # — parse machine list —
+    machines_param = request.GET.get('machines', '')
+    machine_list = [m.strip() for m in machines_param.split(',') if m.strip()]
+
+    # — default dates: yesterday@7am → today@7am —
+    now = datetime.datetime.now()
+    default_end = now.replace(hour=7, minute=0, second=0, microsecond=0)
+    if now < default_end:
+        default_end -= datetime.timedelta(days=1)
+    default_start = default_end - datetime.timedelta(days=1)
+
+    start_date = request.GET.get('start_date', default_start.strftime('%Y-%m-%d %H:%M'))
+    end_date   = request.GET.get('end_date',   default_end.strftime('%Y-%m-%d %H:%M'))
+
+    # — call your JSON-producing view to get all the data —
+    #    we just need the Python dict it builds:
+    fake_req = HttpRequest()
+    fake_req.method = 'GET'
+    fake_req.GET = request.GET.copy()
+    json_resp = fetch_combined_oee_production_data(fake_req)
+    all_data = json.loads(json_resp.content.decode())
+
+    # — filter production_data for only the machines we care about —
+    prod = all_data.get('production_data', {})
+    results = []
+    for line_name, machines in prod.items():
+        for mnum, mdata in machines.items():
+            if not machine_list or mnum in machine_list:
+                # find its operation under global `lines`
+                op_name = None
+                for ln in lines:
+                    if ln['line'] == line_name:
+                        for op in ln.get('operations', []):
+                            if any(m['number'] == mnum for m in op.get('machines', [])):
+                                op_name = op['op']
+                                break
+                results.append({
+                    'machine': mnum,
+                    'operation': op_name,
+                    # bring in all your precomputed metrics:
+                    **mdata
+                })
+
+    return render(request, 'prod_query/machine_oee.html', {
+        'start_date':       start_date,
+        'end_date':         end_date,
+        'machines_param':   machines_param,
+        'machine_data_list': results,
+    })
