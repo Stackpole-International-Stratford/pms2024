@@ -29,6 +29,8 @@ from django.views.decorators.csrf import csrf_exempt  # or use @ensure_csrf_cook
 from django.template.loader import render_to_string
 from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
 import copy
+import csv
+from django.utils.encoding import smart_str
 
 
 lines_untracked = [
@@ -1780,39 +1782,99 @@ def machine_history(request):
 
 
 
+
 @login_required
 def employee_login_status(request):
-    # only managers/supervisors/etc.
+    # ── access control ──
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
 
     User = get_user_model()
-    # all maintenance roles
     group_names = set(ROLE_TO_GROUP.values())
-
     qs = (
         User.objects
-        .filter(groups__name__in=group_names)
-        .distinct()
-        .order_by('last_name', 'first_name')
+            .filter(groups__name__in=group_names)
+            .distinct()
+            .order_by('last_name', 'first_name')
     )
+
+    # initialize summary counters
+    summary = { role: {'real': 0, 'preload': 0}
+                for role in ROLE_TO_GROUP.keys() }
 
     users_status = []
     for u in qs:
-        # which role(s) they have
-        roles = [
-            role.capitalize()
+        # raw roles & display string
+        roles_raw = [
+            role
             for role, grp in ROLE_TO_GROUP.items()
             if u.groups.filter(name=grp).exists()
         ]
+        roles_display = ", ".join(r.capitalize() for r in roles_raw)
+
+        # account type
+        is_preload = u.username.endswith('@preload')
+        account_type = 'Preload' if is_preload else 'Real'
+
+        # last_login formatted
+        if u.last_login:
+            last_login_str = u.last_login.strftime('%Y-%m-%d %H:%M')
+            logged_in = 'Yes'
+        else:
+            last_login_str = ''
+            logged_in = 'No'
+
+        # increment summary for each role they occupy
+        for r in roles_raw:
+            key = 'preload' if is_preload else 'real'
+            summary[r][key] += 1
+
         users_status.append({
             'name':       u.get_full_name() or u.username,
             'username':   u.username,
-            'roles':      roles,
-            'account':    'Preload' if u.username.endswith('@preload') else 'Real',
-            'last_login': u.last_login,   # None if never
+            'roles':      roles_display,
+            'roles_raw':  roles_raw,
+            'account':    account_type,
+            'last_login': last_login_str,
+            'logged_in':  logged_in,
         })
 
+    # build a simple list for the template
+    summary_list = [
+        {
+            'role': role.capitalize(),
+            'real': summary[role]['real'],
+            'preload': summary[role]['preload'],
+        }
+        for role in ROLE_TO_GROUP.keys()
+    ]
+
+    # ── CSV export? ──
+    if request.GET.get('format') == 'csv':
+        resp = HttpResponse(content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename="maintenance_login_status.csv"'
+        writer = csv.writer(resp)
+        writer.writerow([
+            smart_str("Name"),
+            smart_str("Username"),
+            smart_str("Role(s)"),
+            smart_str("Account Type"),
+            smart_str("Last Login"),
+            smart_str("Logged In?"),
+        ])
+        for u in users_status:
+            writer.writerow([
+                smart_str(u['name']),
+                smart_str(u['username']),
+                smart_str(u['roles']),
+                smart_str(u['account']),
+                smart_str(u['last_login']),
+                smart_str(u['logged_in']),
+            ])
+        return resp
+
+    # ── otherwise render HTML ──
     return render(request, 'plant/employee_login_status.html', {
-        'users': users_status,
+        'users':   users_status,
+        'summary': summary_list,
     })
