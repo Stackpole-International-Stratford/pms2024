@@ -171,24 +171,6 @@ lines_untracked = [
         ],
     },
     {
-        "line": "Furnaces",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "furnaces",
-                "machines": [
-                    {"number": "1516", "target": 27496,},
-                    {"number": "859", "target": 27496,},
-                    {"number": "341", "target": 27496,},
-                    {"number": "342", "target": 27496,},
-                    {"number": "343", "target": 27496,},
-                    {"number": "346", "target": 27496,},
-                    {"number": "441", "target": 27496,},
-                ],
-            },
-        ],
-    },
-    {
         "line": "10R140",
         "scrap_line": "NA",
         "operations": [
@@ -336,9 +318,22 @@ lines_untracked = [
         ],
     },
      {
-        "line": "Sinter",
+        "line": "Furnaces",
         "scrap_line": "NA",
         "operations": [
+            {
+                "op": "furnaces",
+                "machines": [
+                    {"number": "1516", "target": 27496,},
+                    {"number": "859", "target": 27496,},
+                    {"number": "341", "target": 27496,},
+                    {"number": "342", "target": 27496,},
+                    {"number": "343", "target": 27496,},
+                    {"number": "346", "target": 27496,},
+                    {"number": "441", "target": 27496,},
+                ],
+            },
+
             {
                 "op": "Compact",
                 "machines": [
