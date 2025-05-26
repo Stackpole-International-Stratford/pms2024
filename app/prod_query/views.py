@@ -7963,23 +7963,34 @@ def machine_oee(request: HttpRequest):
     # — filter production_data for only the machines we care about —
     prod = all_data.get('production_data', {})
     results = []
+
     for line_name, machines in prod.items():
         for mnum, mdata in machines.items():
+            # only include machines the user asked for (or all if none specified)
             if not machine_list or mnum in machine_list:
-                # find its operation under global `lines`
+                # 1) figure out which operation this machine belongs to
                 op_name = None
                 for ln in lines:
                     if ln['line'] == line_name:
                         for op in ln.get('operations', []):
-                            if any(m['number'] == mnum for m in op.get('machines', [])):
+                            if any(str(m['number']) == str(mnum) for m in op.get('machines', [])):
                                 op_name = op['op']
                                 break
+                        if op_name:
+                            break
+
+                # 2) scale your precomputed fractions to actual percentages
+                mdata['P']  = mdata.get('P', 0)  * 100
+                mdata['A']  = mdata.get('A', 0)  * 100
+                mdata['PA'] = mdata.get('PA', 0) * 100
+
+                # 3) collect into your final list
                 results.append({
-                    'machine': mnum,
+                    'machine':   mnum,
                     'operation': op_name,
-                    # bring in all your precomputed metrics:
                     **mdata
                 })
+
 
     return render(request, 'prod_query/machine_oee.html', {
         'start_date':       start_date,
