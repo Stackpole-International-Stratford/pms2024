@@ -80,6 +80,12 @@
                 </a>
             </li>
             <li class="list-group-item card-hover">
+                <a href="{% url 'prod_query:machine_oee' %}" class="text-decoration-none text-dark">
+                    <h5 class="mb-1">Individual Machine(s) OEE</h5>
+                    <p class="mb-1">View granular or windowed timeframes of a specific machine(s) overall equipment effectiveness</p>
+                </a>
+            </li>
+            <li class="list-group-item card-hover">
                 <a href="{% url 'prod_query:targets_list' %}" class="text-decoration-none text-dark">
                     <h5 class="mb-1">OEE Ideal Cycle Times (Admins Only)</h5>
                     <p class="mb-1">View and Edit ideal cycle times for all machines, driving targets for OEE calculations</p>
@@ -89,18 +95,6 @@
                 <a href="{% url 'prod_query:press_runtime3' %}" class="text-decoration-none text-dark">
                     <h5 class="mb-1">Press Runtime</h5>
                     <p class="mb-1">View Press Runtime Data</p>
-                </a>
-            </li>
-            <li class="list-group-item card-hover">
-                <a href="{% url 'prod_query:oa-byline' %}" class="text-decoration-none text-dark">
-                    <h5 class="mb-1">OEE By Week</h5>
-                    <p class="mb-1">Calculate and View Operational Availability by Week</p>
-                </a>
-            </li>
-            <li class="list-group-item card-hover">
-                <a href="{% url 'prod_query:oa_byline2' %}" class="text-decoration-none text-dark">
-                    <h5 class="mb-1">OEE By Month</h5>
-                    <p class="mb-1">Calculate and View Operational Availability by Month</p>
                 </a>
             </li>
             <li class="list-group-item card-hover">
