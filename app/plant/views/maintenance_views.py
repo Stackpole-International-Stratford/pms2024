@@ -106,6 +106,19 @@ lines_untracked = [
         "line": "AB1V Reaction",
         "scrap_line": "NA",
         "operations": [
+             {
+                "op": "10",
+                "machines": [
+                    {"number": "1703", "target": 1925},
+                    {"number": "1704", "target": 1925},
+                ]
+            },
+                        {
+                "op": "70",
+                "machines": [
+                    {"number": "1716", "target": 7000},
+                ],
+            },
             {
                 "op": "120",
                 "machines": [
@@ -126,10 +139,28 @@ lines_untracked = [
         "line": "AB1V Input",
         "scrap_line": "NA",
         "operations": [
+                        {
+                "op": "10",
+                "machines": [
+                    {"number": "1740", "target": 3500},
+                ],
+            },
             {
                 "op": "20",
                 "machines": [
                     {"number": "662", "target": 27496,},
+                ],
+            },
+                        {
+                "op": "40",
+                "machines": [
+                    {"number": "1701", "target": 3500},
+                ],
+            },
+                        {
+                "op": "90",
+                "machines": [
+                    {"number": "1717", "target": 7000},
                 ],
             },
             {
@@ -144,6 +175,19 @@ lines_untracked = [
         "line": "AB1V Overdrive",
         "scrap_line": "NA",
         "operations": [
+                        {
+                "op": "20",
+                "machines": [
+                    {"number": "1705", "target": 3500},
+                    {"number": "1746", "target": 3500},
+                ],
+            },
+                        {
+                "op": "70",
+                "machines": [
+                    {"number": "1716", "target": 7000},
+                ],
+            },
             {
                 "op": "100",
                 "machines": [
@@ -199,17 +243,24 @@ lines_untracked = [
                 ],
             },
             {
-                "op": "op10",
+                "op": "10",
                 "machines": [
+                    {"number": "1708", "target": 3600},
                     {"number": "654", "target": 27496,},
                     {"number": "686", "target": 27496,},
                     {"number": "655", "target": 27496,},
                 ],
             },
              {
-                "op": "op20",
+                "op": "20",
                 "machines": [
                     {"number": "611", "target": 27496,},
+                ],
+            },
+                        {
+                "op": "60",
+                "machines": [
+                    {"number": "1717", "target": 7200},
                 ],
             },
         ],
