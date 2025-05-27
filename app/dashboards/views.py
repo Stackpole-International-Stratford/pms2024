@@ -1494,8 +1494,9 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
             for ts, part in rows[1:]:
                 if part != current_part:
                     totals[current_part] += (ts - run_start)
-                    current_part = part
-                    run_start    = ts
+                    current_part, run_start = part, ts
+            # ── NEW: if the machine hasn’t logged a new part event, 
+            # treat it as still running the last part right up to now
             totals[current_part] += (end_ts - run_start)
 
         # compute & print per‐part plus sum up the smart total
