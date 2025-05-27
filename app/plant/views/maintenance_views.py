@@ -1379,6 +1379,7 @@ ROLE_TO_GROUP = {
     "electrician": "maintenance_electrician",
     "millwright":  "maintenance_millwright",
     "tech":        "maintenance_tech",
+    "supervisor":  "maintenance_supervisors",
 }
 
 @require_POST
