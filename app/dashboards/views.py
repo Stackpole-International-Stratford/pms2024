@@ -1413,7 +1413,7 @@ def log_shift_times(shift_start, shift_time, actual_counts, part_list):
 
     swapped_counts = []
     for machine, count in actual_counts:
-        is_debug = machine in ('788', '581')
+        is_debug = machine in ('1533')
         if is_debug:
             print(f"\n[DEBUG][Machine {machine}] Actual count = {count}")
 
@@ -1457,7 +1457,7 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
     optionally filtered by part_list, with debug prints for 788 & 581.
     """
     cursor = connections['prodrpt-md'].cursor()
-    debug = machine_id in ('788', '581')
+    debug = machine_id in ('1533')
     if debug:
         print(f"\n[DEBUG][get_machine_target] machine_id={machine_id}, "
               f"shift_start={shift_start_unix}, part_list={part_list}")
@@ -1595,7 +1595,7 @@ def compute_op_actual_and_oee(line_spec,
         if op is None:
             continue
 
-        is_debug = asset in ('788', '581')
+        is_debug = asset in ('1533')
         if is_debug:
             print(f"\n[DEBUG][compute_op] Machine {asset}: actual = {actual_count}, OP = {op}")
 
