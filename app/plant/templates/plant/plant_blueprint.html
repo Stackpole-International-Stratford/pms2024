@@ -5,26 +5,11 @@
     <meta charset="UTF-8">
     <title>Plant Blueprint</title>
     <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1em;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 0.5em;
-            text-align: left;
-        }
-        thead {
-            background-color: #f9f9f9;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-        .no-records {
-            text-align: center;
-            font-style: italic;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid #ccc; padding: 0.5em; text-align: left; }
+        thead { background-color: #f9f9f9; }
+        tbody tr:nth-child(even) { background-color: #f2f2f2; }
+        .no-records { text-align: center; font-style: italic; }
     </style>
 </head>
 <body>
@@ -39,22 +24,23 @@
                 <th>Machine Name</th>
                 <th>Part Number</th>
                 <th>Cycle Time</th>
-                <th>Effective Date (epoch)</th>
+                <th>Effective Date (EST/EDT)</th>
                 <th>Created At</th>
             </tr>
         </thead>
         <tbody>
             {% if records %}
-                {% for record in records %}
+                {% for rec in records %}
                 <tr>
-                    <td>{{ record.id }}</td>
-                    <td>{{ record.line_name }}</td>
-                    <td>{{ record.operation }}</td>
-                    <td>{{ record.machine_name }}</td>
-                    <td>{{ record.part_number }}</td>
-                    <td>{{ record.cycle_time }}</td>
-                    <td>{{ record.cycle_time_effective_date }}</td>
-                    <td>{{ record.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ rec.id }}</td>
+                    <td>{{ rec.line_name }}</td>
+                    <td>{{ rec.operation }}</td>
+                    <td>{{ rec.machine_name }}</td>
+                    <td>{{ rec.part_number }}</td>
+                    <td>{{ rec.cycle_time }}</td>
+                    {# use the new datetime and Django’s date filter #}
+                    <td>{{ rec.effective_dt|date:"Y-m-d H:i:s T" }}</td>
+                    <td>{{ rec.created_at|date:"Y-m-d H:i:s" }}</td>
                 </tr>
                 {% endfor %}
             {% else %}
