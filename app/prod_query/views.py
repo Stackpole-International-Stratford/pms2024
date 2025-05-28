@@ -7644,6 +7644,14 @@ def fetch_combined_oee_production_data(request):
             for machine in operation.get("machines", []):
                 mnum = machine["number"]
                 data = production_data[line_name][mnum]
+                # ── skip any machine that spent 100% of its window down,
+                #     and that entire downtime was classified as “planned”
+                if (
+                    data.get("downtime_percentage", 0) == 100
+                    and data.get("planned_downtime_minutes", 0)
+                        == data.get("downtime_minutes", 0)
+                ):
+                    continue
                 op_totals["total_parts"]              += data.get("produced_parts", 0)
                 op_totals["total_target"]             += data.get("target", 0)
                 op_totals["total_downtime"]           += data.get("downtime_minutes", 0)
