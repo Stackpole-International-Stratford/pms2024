@@ -8,6 +8,7 @@ from .views.prodmon_views import *
 from .views.maintenance_views import *
 from .views.cycle_crud_views import *
 from .views.temp_sensor_views import *
+from .views.plant_spine_views import *
 
 urlpatterns = [
     path('', index, name='index'),  # New index page URL
@@ -94,4 +95,8 @@ urlpatterns = [
 
 
     path('maintenance/employee-login-status/', employee_login_status, name='employee_login_status'),
+
+    path('blueprint/', plant_blueprint, name='plant_blueprint'),
+
+
 ]

@@ -1,0 +1,41 @@
+{% extends 'parent.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-3">Plant Blueprint</h1>
+  <table class="table table-bordered table-striped">
+    <thead class="thead-light">
+      <tr>
+        <th scope="col">Line</th>
+        <th scope="col">Operation</th>
+        <th scope="col">Machine</th>
+        <th scope="col">Part</th>
+        <th scope="col">Cycle Time (s)</th>
+        <th scope="col">Effective Date</th>
+        <th scope="col">Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rec in records %}
+      <tr>
+        <td>{{ rec.line_name }}</td>
+        <td>{{ rec.operation }}</td>
+        <td>{{ rec.machine_name }}</td>
+        <td>{{ rec.part_number }}</td>
+        <td>{{ rec.cycle_time }}</td>
+        <td>
+          {# if your effective date is epoch seconds: #}
+          {{ rec.cycle_time_effective_date|date:"Y-m-d" }}
+          {# otherwise it will just print the integer #}
+        </td>
+        <td>{{ rec.created_at|date:"Y-m-d H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center">No cycle-time records found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
