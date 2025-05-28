@@ -1,15 +1,14 @@
 {# plant/plant_blueprint.html #}
 {% extends "parent.html" %}
 
-{# If your parent.html defines a block for setting the page title: #}
 {% block title %}Plant Blueprint{% endblock %}
 
 {% block content %}
 <div class="container my-4">
   <h1 class="mb-4">Plant Blueprint</h1>
 
-  <table class="table table-bordered table-striped table-hover">
-    <thead class="thead-light">
+  <table id="plant-table" class="table table-bordered table-striped table-hover">
+    <thead>
       <tr>
         <th>Line Name</th>
         <th>Operation</th>
@@ -18,6 +17,16 @@
         <th>Cycle Time</th>
         <th>Effective Date (EST/EDT)</th>
         <th>Created At</th>
+      </tr>
+      <tr>
+        <!-- one input per visible column, data-col-index matches its zero-based column -->
+        <th><input type="text" class="form-control column-search" placeholder="Search line"       data-col-index="0"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search operation"  data-col-index="1"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search machine"    data-col-index="2"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search part #"      data-col-index="3"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search cycle time" data-col-index="4"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search effective"  data-col-index="5"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search created at" data-col-index="6"></th>
       </tr>
     </thead>
     <tbody>
@@ -29,13 +38,13 @@
           <td>{{ rec.machine_name }}</td>
           <td>{{ rec.part_number }}</td>
           <td>{{ rec.cycle_time }}</td>
-          <td>{{ rec.effective_dt|date:"Y-m-d H:i:s T" }}</td>
-          <td>{{ rec.created_at|date:"Y-m-d H:i:s" }}</td>
+          <td>{{ rec.effective_dt|date:"Y-m-d H:i" }}</td>
+          <td>{{ rec.created_at|date:"Y-m-d H:i" }}</td>
         </tr>
         {% endfor %}
       {% else %}
         <tr>
-          <td colspan="8" class="text-center font-italic">
+          <td colspan="7" class="text-center font-italic">
             No PlantSpine records found.
           </td>
         </tr>
@@ -43,4 +52,25 @@
     </tbody>
   </table>
 </div>
+
+<script>
+// Live, per-column filtering (layered)
+document.addEventListener('DOMContentLoaded', function() {
+  const table = document.getElementById('plant-table');
+  const inputs = Array.from(table.querySelectorAll('.column-search'));
+
+  function applyFilters() {
+    const filters = inputs.map(i => i.value.trim().toLowerCase());
+    table.querySelectorAll('tbody tr').forEach(row => {
+      const cells = Array.from(row.cells);
+      const isVisible = filters.every((f, idx) => {
+        return !f || cells[idx].textContent.toLowerCase().includes(f);
+      });
+      row.style.display = isVisible ? '' : 'none';
+    });
+  }
+
+  inputs.forEach(i => i.addEventListener('input', applyFilters));
+});
+</script>
 {% endblock %}
