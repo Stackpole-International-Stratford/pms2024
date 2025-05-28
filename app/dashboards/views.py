@@ -1380,78 +1380,87 @@ def rejects_dashboard_finder(request):
 
 # ——— EDIT THIS: list machine IDs here that need part_list targets ———
 machines_requiring_part_list = [
-        # e.g. '1723', '1504', ...
-        '1723', '1724', '581', '788',
-    ]
+    # e.g. '1723', '1504', ...
+    '1723', '1724', '581', '788',
+]
+
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+import time
+from collections import defaultdict
+
+# Aliases for group‐sum logic
+MACHINE_TARGET_ALIASES = {
+    '733': ['1701L', '1701R'],
+    '1746': ['1746R'],
+    '1705': ['1746R'],
+    # Add more as needed
+}
 
 def log_shift_times(shift_start, shift_time, actual_counts, part_list):
-    from datetime import datetime, timedelta
-    from zoneinfo import ZoneInfo
-
-
-
-    # ————————————————————————————————————————————————————————————————
-
+    """
+    Returns a list of (machine, pct_or_NA), while printing debug info
+    for machines 788 and 581.
+    """
     est = ZoneInfo("America/New_York")
     start_dt = datetime.fromtimestamp(shift_start, tz=est)
     elapsed = timedelta(seconds=shift_time)
-
     total_actual = sum(count for _, count in actual_counts)
     minutes_elapsed = shift_time / 60.0
 
-    # Prepare new list to hold (machine, pct_or_NA)
-    swapped_counts = []
+    print(f"Shift start: {start_dt.isoformat()}, elapsed: {elapsed}, "
+          f"total actual pieces: {total_actual}")
 
+    swapped_counts = []
     for machine, count in actual_counts:
-        # decide whether to pass part_list into the target lookup
+        is_debug = machine in ('788', '581')
+        if is_debug:
+            print(f"\n[DEBUG][Machine {machine}] Actual count = {count}")
+
+        # choose raw target lookup
         if part_list and machine in machines_requiring_part_list:
             raw_target = get_machine_target(machine, shift_start, part_list) or 0
-            
+            if is_debug:
+                print(f"[DEBUG][Machine {machine}] Raw smart‐total target = {raw_target}")
         else:
             raw_target = get_machine_target(machine, shift_start) or 0
-
-
+            if is_debug:
+                print(f"[DEBUG][Machine {machine}] Weekly raw target = {raw_target}")
+        
+        # compute pct
         if part_list and machine in machines_requiring_part_list:
-            # compute pct only if we had a real target; otherwise N/A
             if raw_target > 0:
                 pct = int(count / raw_target * 100)
             else:
                 pct = "N/A"
         else:
-            # adjust for shift duration
             adjusted_target = raw_target * (minutes_elapsed / 7200.0)
-
-            # compute pct only if we had a real target; otherwise N/A
+            if is_debug:
+                print(f"[DEBUG][Machine {machine}] Adjusted for shift: "
+                      f"{adjusted_target:.2f} pieces")
             if raw_target > 0:
                 pct = int(count / adjusted_target * 100)
             else:
                 pct = "N/A"
+        
+        if is_debug:
+            print(f"[DEBUG][Machine {machine}] Final % = {pct}")
 
-
-        # swap out the count for the pct or "N/A"
         swapped_counts.append((machine, pct))
 
     return swapped_counts
 
 
-
-MACHINE_TARGET_ALIASES = {
-    '733': ['1701L', '1701R'],
-    '1746': ['1746R'],
-    '1705': ['1746R']
-    # Add more as needed  cursor = connections['prodrpt-md'].cursor()
-}
-
 def get_machine_target(machine_id, shift_start_unix, part_list=None):
     """
     Returns the most recent non-deleted target for a given machine (or its alias group),
-    optionally filtered by part_list, at or before the shift start.
-    Tries the machine_id directly, or strips trailing letter, or sums targets from aliases.
-
-    If part_list is provided, prints run‐minutes + scaled targets per part and a summary,
-    then returns the truncated int “smart total” instead of the normal target.
+    optionally filtered by part_list, with debug prints for 788 & 581.
     """
     cursor = connections['prodrpt-md'].cursor()
+    debug = machine_id in ('788', '581')
+    if debug:
+        print(f"\n[DEBUG][get_machine_target] machine_id={machine_id}, "
+              f"shift_start={shift_start_unix}, part_list={part_list}")
 
     def query_target(mid):
         qs = (
@@ -1464,14 +1473,21 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
         )
         if part_list:
             qs = qs.filter(part__in=part_list)
-        return qs.order_by('-effective_date_unix').first()
+        result = qs.order_by('-effective_date_unix').first()
+        if debug:
+            rec = result.target if result else None
+            print(f"[DEBUG]   query_target('{mid}') -> {rec}")
+        return result
 
     def _compute_and_print_smart_total(mid):
         # only runs when part_list is provided
         start_ts = shift_start_unix
-        end_ts   = time.time()
+        end_ts = time.time()
+        if debug:
+            print(f"[DEBUG]   Computing smart total for {mid} "
+                  f"from {start_ts} to {end_ts}")
 
-        # fetch ordered events for this machine & those parts
+        # fetch events
         placeholder = ", ".join(["%s"] * len(part_list))
         sql = f"""
             SELECT TimeStamp, Part
@@ -1490,20 +1506,16 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
         totals = {p: 0.0 for p in part_list}
         if rows:
             current_part = rows[0][1]
-            run_start    = rows[0][0]
+            run_start = rows[0][0]
             for ts, part in rows[1:]:
                 if part != current_part:
                     totals[current_part] += (ts - run_start)
                     current_part, run_start = part, ts
-            # ── NEW: if the machine hasn’t logged a new part event, 
-            # treat it as still running the last part right up to now
             totals[current_part] += (end_ts - run_start)
 
-        # compute & print per‐part plus sum up the smart total
         total_smart = 0.0
         for part, sec in totals.items():
             mins = int(sec // 60)
-
             part_obj = (
                 OAMachineTargets.objects
                 .filter(
@@ -1515,71 +1527,50 @@ def get_machine_target(machine_id, shift_start_unix, part_list=None):
                 .order_by('-effective_date_unix')
                 .first()
             )
-
             if part_obj and part_obj.target is not None:
-                # target is pieces per 7,200 min; rate per min = target/7200
                 scaled = (part_obj.target / 7200.0) * mins
                 total_smart += scaled
-                # print(
-                #     f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
-                #     f"target for that period is {scaled:.2f}"
-                # )
+                if debug:
+                    print(f"[DEBUG]     Part {part}: ran {mins} min -> "
+                          f"scaled target {scaled:.2f}")
             else:
-                print(
-                    f"Machine {mid} ran part {part} for {mins} minutes since shift start; "
-                    f"no target found for this part"
-                )
+                print(f"[DEBUG]     Part {part}: ran {mins} min; no target found")
 
-        # summary line
-        # print(
-        #     f"So since shift start the total target across the part list for this machine is "
-        #     f"{int(total_smart)}"
-        # )
-
+        if debug:
+            print(f"[DEBUG]   Smart total (int) = {int(total_smart)}")
         return int(total_smart)
 
-
     # —— original lookup logic follows —— #
-
-    # Case 1: use machine_id directly
+    # Case 1: direct
     result = query_target(machine_id)
     if result:
-        if part_list:
-            return _compute_and_print_smart_total(machine_id)
-        return result.target
+        return _compute_and_print_smart_total(machine_id) if part_list else result.target
 
-    # Case 2: strip trailing letter if needed
+    # Case 2: strip trailing letter
     if machine_id and machine_id[-1].isalpha():
-        fallback_id     = machine_id[:-1]
-        fallback_result = query_target(fallback_id)
-        if fallback_result:
-            if part_list:
-                return _compute_and_print_smart_total(fallback_id)
-            return fallback_result.target
+        fallback_id = machine_id[:-1]
+        fb_res = query_target(fallback_id)
+        if fb_res:
+            return _compute_and_print_smart_total(fallback_id) if part_list else fb_res.target
 
-    # Case 3: sum aliases
+    # Case 3: alias sum
     if machine_id in MACHINE_TARGET_ALIASES:
-        # if parts → sum each alias’s smart total
         if part_list:
             group_total = 0
-            for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
-                group_total += _compute_and_print_smart_total(aliased_id)
+            for aid in MACHINE_TARGET_ALIASES[machine_id]:
+                group_total += _compute_and_print_smart_total(aid)
+            if debug:
+                print(f"[DEBUG]   Alias group total = {group_total}")
             return group_total
-
-        # otherwise original target‐sum logic
         total = 0
-        for aliased_id in MACHINE_TARGET_ALIASES[machine_id]:
-            aliased_result = query_target(aliased_id)
-            if aliased_result:
-                total += aliased_result.target
+        for aid in MACHINE_TARGET_ALIASES[machine_id]:
+            ar = query_target(aid)
+            if ar:
+                total += ar.target
         return total if total > 0 else None
 
     return None
 
-
-
-
-from collections import defaultdict
 
 def compute_op_actual_and_oee(line_spec,
                               machine_production,
@@ -1587,23 +1578,16 @@ def compute_op_actual_and_oee(line_spec,
                               shift_time,
                               part_list=None):
     """
-    Returns two lists:
-      op_actual_list[i] = total actual for OP i
-      op_oee_list[i]    = int OEE% (or "N/A") for OP i
-
-    Only for machines in machines_requiring_part_list will we call
-      get_machine_target(asset, shift_start, part_list)
-    and treat its return as the period target.
-    All others get the weekly target scaled by shift_time/7200.
+    Returns (op_actual_list, op_oee_list), with debug prints
+    for machines 788 and 581.
     """
     minutes_elapsed = shift_time / 60.0
-    factor          = minutes_elapsed / 7200.0
+    factor = minutes_elapsed / 7200.0
 
-    # map asset → OP
+    # build mapping asset → OP
     asset2op = {asset: op for asset, *_, op in line_spec}
 
-    # accumulators
-    op_actual   = defaultdict(int)
+    op_actual = defaultdict(int)
     op_adjusted = defaultdict(float)
 
     for asset, actual_count, *_ in machine_production:
@@ -1611,23 +1595,32 @@ def compute_op_actual_and_oee(line_spec,
         if op is None:
             continue
 
-        # choose per-machine target logic
+        is_debug = asset in ('788', '581')
+        if is_debug:
+            print(f"\n[DEBUG][compute_op] Machine {asset}: actual = {actual_count}, OP = {op}")
+
+        # decide target
         if part_list and asset in machines_requiring_part_list:
-            # smart‐total for this exact period & parts
             period_target = get_machine_target(asset, shift_start, part_list) or 0
+            if is_debug:
+                print(f"[DEBUG]   Using smart‐total target = {period_target}")
         else:
-            # fall back to weekly target → scale for this shift
             weekly_target = get_machine_target(asset, shift_start) or 0
             period_target = weekly_target * factor
+            if is_debug:
+                print(f"[DEBUG]   Weekly target = {weekly_target}, "
+                      f"period_target (scaled) = {period_target:.2f}")
 
-        # accumulate
-        op_actual[op]   += actual_count
+        op_actual[op] += actual_count
         op_adjusted[op] += period_target
 
-    # build output lists
+        if is_debug:
+            print(f"[DEBUG]   Cumulative OP {op}: actual_sum = {op_actual[op]}, "
+                  f"adjusted_sum = {op_adjusted[op]:.2f}")
+
     max_op = max(op_actual.keys() | op_adjusted.keys(), default=-1)
     op_actual_list = [0] * (max_op + 1)
-    op_oee_list    = [None] * (max_op + 1)
+    op_oee_list = [None] * (max_op + 1)
 
     for op, actual in op_actual.items():
         op_actual_list[op] = actual
