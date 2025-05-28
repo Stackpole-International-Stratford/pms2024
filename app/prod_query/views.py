@@ -1944,6 +1944,12 @@ lines = [
                     {"number": "617", "target": 1050},
                 ],
             },
+             {
+                "op": "40",
+                "machines": [
+                    {"number": "1727", "target": 4200},
+                ],
+            },
             {
                 "op": "50",
                 "machines": [
