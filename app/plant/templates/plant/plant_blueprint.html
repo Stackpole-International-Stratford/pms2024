@@ -1,6 +1,4 @@
-{# plant/plant_blueprint.html #}
 {% extends "parent.html" %}
-
 {% block title %}Plant Blueprint{% endblock %}
 
 {% block content %}
@@ -19,20 +17,19 @@
         <th>Created At</th>
       </tr>
       <tr>
-        <!-- one input per visible column, data-col-index matches its zero-based column -->
-        <th><input type="text" class="form-control column-search" placeholder="Search line"       data-col-index="0"></th>
-        <th><input type="text" class="form-control column-search" placeholder="Search operation"  data-col-index="1"></th>
-        <th><input type="text" class="form-control column-search" placeholder="Search machine"    data-col-index="2"></th>
-        <th><input type="text" class="form-control column-search" placeholder="Search part #"      data-col-index="3"></th>
-        <th><input type="text" class="form-control column-search" placeholder="Search cycle time" data-col-index="4"></th>
-        <th><input type="text" class="form-control column-search" placeholder="Search effective"  data-col-index="5"></th>
-        <th><input type="text" class="form-control column-search" placeholder="Search created at" data-col-index="6"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search line"      data-col-index="0"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search operation" data-col-index="1"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search machine"   data-col-index="2"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search part #"     data-col-index="3"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search cycle time"data-col-index="4"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search effective" data-col-index="5"></th>
+        <th><input type="text" class="form-control column-search" placeholder="Search created at"data-col-index="6"></th>
       </tr>
     </thead>
     <tbody>
       {% if records %}
         {% for rec in records %}
-        <tr>
+        <tr data-entry-id="{{ rec.id }}">
           <td>{{ rec.line_name }}</td>
           <td>{{ rec.operation }}</td>
           <td>{{ rec.machine_name }}</td>
@@ -44,33 +41,83 @@
         {% endfor %}
       {% else %}
         <tr>
-          <td colspan="7" class="text-center font-italic">
-            No PlantSpine records found.
-          </td>
+          <td colspan="7" class="text-center font-italic">No PlantSpine records found.</td>
         </tr>
       {% endif %}
     </tbody>
   </table>
 </div>
 
+<!-- Bootstrap 5 Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editModalLabel">Edit Entry</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Entry ID: <strong id="modal-entry-id"></strong></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="modal-submit" type="button" class="btn btn-primary">Submit Edit</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-// Live, per-column filtering (layered)
-document.addEventListener('DOMContentLoaded', function() {
-  const table = document.getElementById('plant-table');
-  const inputs = Array.from(table.querySelectorAll('.column-search'));
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("plant_blueprint.js loaded");
+  const table     = document.getElementById('plant-table');
+  const inputs    = Array.from(table.querySelectorAll('.column-search'));
+  const tbody     = table.querySelector('tbody');
+  const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+  let   currentId = null;
 
-  function applyFilters() {
+  // 1) Layered column filtering
+  const applyFilters = () => {
     const filters = inputs.map(i => i.value.trim().toLowerCase());
-    table.querySelectorAll('tbody tr').forEach(row => {
+    tbody.querySelectorAll('tr').forEach(row => {
       const cells = Array.from(row.cells);
-      const isVisible = filters.every((f, idx) => {
-        return !f || cells[idx].textContent.toLowerCase().includes(f);
-      });
-      row.style.display = isVisible ? '' : 'none';
+      const match = filters.every((f, idx) =>
+        !f || cells[idx].textContent.toLowerCase().includes(f)
+      );
+      row.style.display = match ? '' : 'none';
     });
-  }
-
+  };
   inputs.forEach(i => i.addEventListener('input', applyFilters));
+
+  // 2) Delegated row‐click → show modal
+  tbody.addEventListener('click', e => {
+    const row = e.target.closest('tr[data-entry-id]');
+    if (!row) return;
+    currentId = row.getAttribute('data-entry-id');
+    console.log("Row clicked, id =", currentId);
+    document.getElementById('modal-entry-id').textContent = currentId;
+    editModal.show();
+  });
+
+  // 3) Submit button → AJAX POST
+  document.getElementById('modal-submit').addEventListener('click', () => {
+    fetch("{% url 'plant_blueprint_edit' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.cookie.match('(^|;)\\s*csrftoken=([^;]+)')?.pop()
+      },
+      body: JSON.stringify({ id: currentId }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      console.log('Server replied:', data);
+      editModal.hide();
+    })
+    .catch(err => console.error('AJAX error:', err));
+  });
 });
 </script>
 {% endblock %}

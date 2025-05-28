@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo     # Python 3.9+ built-in; for older Pythons use `import pytz`
 from django.shortcuts import render
 from plant.models.plantSpine_models import PlantSpine
+import json
+from django.http import JsonResponse, HttpResponseNotAllowed
 
 def plant_blueprint(request):
     """
@@ -27,3 +29,17 @@ def plant_blueprint(request):
     return render(request, 'plant/plant_blueprint.html', {
         'records': records,
     })
+
+
+
+
+def blueprint_edit(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    try:
+        payload = json.loads(request.body)
+        entry_id = payload.get('id')
+        print(f"Received edit for entry id: {entry_id}")   # server-side console
+        return JsonResponse({'status': 'ok'})
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)

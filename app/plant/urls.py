@@ -97,6 +97,6 @@ urlpatterns = [
     path('maintenance/employee-login-status/', employee_login_status, name='employee_login_status'),
 
     path('blueprint/', plant_blueprint, name='plant_blueprint'),
-
+    path('blueprint/edit/', blueprint_edit, name='plant_blueprint_edit'),
 
 ]
