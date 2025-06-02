@@ -1,161 +1,163 @@
 import ldap
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.hashers import check_password
+from django.conf import settings
 import logging
 
-# Set up logger
 logger = logging.getLogger(__name__)
 
 class CustomLDAPBackend(BaseBackend):
     """
-    Custom authentication backend for authenticating users against multiple LDAP servers.
-    Falls back to the default database authentication if LDAP authentication fails.
+    Custom authentication backend that:
+      1) Allows any <firstname.lastname>@preload user to sign in with password "12345",
+         regardless of the preload account's stored password.  On first preload login:
+           • Create a real user "<firstname.lastname>"
+           • Copy groups from "<firstname.lastname>@preload"
+           • Delete the "<firstname.lastname>@preload" user
+           • Set the new user's password to "12345"
+      2) Otherwise, tries each LDAP server in settings.LDAP_SERVERS.  On successful bind:
+           • If a local user exists with password="12345", replace it with an AD‐backed user
+             (copy groups from the old one, delete the old one, create new one with the AD password).
+           • If a local user exists with any other password, just return it unchanged.
+           • If no local user exists, create one, copy groups from leftover preload (if present),
+             delete preload, set password=AD password, and return it.
     """
+    PRELOAD_PASSWORD = "12345"
+
     def authenticate(self, request, username=None, password=None):
-        """
-        Authenticate the user against the configured LDAP servers.
-
-        Args:
-            request: The HTTP request object (may be None for non-HTTP auth flows).
-            username (str): The username provided by the user.
-            password (str): The password provided by the user.
-
-        Returns:
-            User object if authentication is successful, or None if it fails.
-        """
-        # Check if username and password are provided
-        if not username or not password:
-            logger.warning("No username or password provided.")
-            # print("No username or password provided.")
+        if not username or password is None:
             return None
 
-        # Retrieve the list of LDAP servers from settings
-        from django.conf import settings
-        ldap_servers = settings.LDAP_SERVERS
+        username = username.lower().strip()
+        # If you still want the “must contain a dot” rule, keep this:
+        if '.' not in username:
+            return None
 
-        # Iterate over each configured LDAP server to attempt authentication
-        for server_config in ldap_servers:
-            logger.info(f"Attempting to authenticate {username} on {server_config['URI']}")
-            # print(f"Attempting to authenticate {username} on {server_config['URI']}")
-
-            # Call the helper function to perform LDAP authentication
-            user = self._authenticate_with_ldap(
-                server_config['URI'],  # LDAP server URI
-                server_config['USER_DN_TEMPLATE'].format(user=username),  # User's distinguished name (DN)
-                password  # User's password
-            )
-            if user:
-                # If authentication succeeds, return the authenticated user
-                logger.info(f"Successfully authenticated {username} on {server_config['URI']}")
-                # print(f"Successfully authenticated {username} on {server_config['URI']}")
-                return user
-            else:
-                # Log failure for this LDAP server
-                logger.warning(f"Authentication failed for {username} on {server_config['URI']}")
-                print(f"Authentication failed for {username} on {server_config['URI']}")
-
-        # If all LDAP attempts fail, log the failure and return None
-        logger.error(f"All LDAP authentication attempts failed for {username}.")
-        # print(f"All LDAP authentication attempts failed for {username}.")
-        return None
-
-    def _authenticate_with_ldap(self, server_uri, user_dn, password):
-        """
-        Helper function to authenticate a user against a single LDAP server.
-
-        Args:
-            server_uri (str): The URI of the LDAP server (e.g., "ldap://10.4.131.200").
-            user_dn (str): The distinguished name (DN) of the user (e.g., "user@domain.com").
-            password (str): The user's password.
-
-        Returns:
-            User object if authentication is successful, or None if it fails.
-        """
-        try:
-            logger.info(f"Connecting to LDAP server {server_uri} with user {user_dn}")
-            # print(f"Connecting to LDAP server {server_uri} with user {user_dn}")
-
-            # Initialize the LDAP connection
-            conn = ldap.initialize(server_uri)
-            conn.set_option(ldap.OPT_REFERRALS, 0)  # Disable referrals
-            conn.set_option(ldap.OPT_PROTOCOL_VERSION, 3)  # Use LDAPv3 protocol
-
-            # Attempt to bind with the provided user DN and password
-            conn.simple_bind_s(user_dn, password)
-            logger.info(f"Connection established and user authenticated: {user_dn}")
-            # print(f"Connection established and user authenticated: {user_dn}")
-
-            # If successful, fetch or create the corresponding Django user
-            return self._get_or_create_user(user_dn.split("@")[0])  # Extract username from email-style DN
-        except ldap.INVALID_CREDENTIALS:
-            # Handle case where the user's credentials are invalid
-            logger.warning(f"Invalid credentials for user {user_dn} on {server_uri}")
-            print(f"Invalid credentials for user {user_dn} on {server_uri}")
-        except ldap.SERVER_DOWN:
-            # Handle case where the LDAP server is unreachable
-            logger.error(f"LDAP server {server_uri} is unavailable.")
-            print(f"LDAP server {server_uri} is unavailable.")
-        except Exception as e:
-            # Handle any other unexpected errors
-            logger.error(f"Unexpected error during LDAP authentication for {user_dn} on {server_uri}: {str(e)}")
-            print(f"Unexpected error during LDAP authentication for {user_dn} on {server_uri}: {str(e)}")
-        finally:
-            # Always unbind the connection to clean up resources
-            try:
-                conn.unbind_s()
-            except:
-                pass
-
-        return None
-
-    def _get_or_create_user(self, username):
         User = get_user_model()
-        username = username.lower()
-        created = False
+
+        # --------------------------------------------------------------------
+        # 1) PRELOAD‐FALLBACK: if the user typed password == "12345", ignore whatever the preload's own hash is.
+        # --------------------------------------------------------------------
+        if password == self.PRELOAD_PASSWORD:
+            preload_username = f"{username}@preload"
+            try:
+                preload_user = User.objects.get(username=preload_username)
+            except User.DoesNotExist:
+                # No such preload user → cannot log in with "12345"
+                return None
+            else:
+                # We no longer check preload_user.check_password("12345").
+                # We simply see that "<username>@preload" exists and accept "12345".
+                # Next, check if a real "<username>" already exists:
+                try:
+                    real_user = User.objects.get(username=username)
+                except User.DoesNotExist:
+                    # Create a brand‐new "<username>" with password="12345"
+                    real_user = User.objects.create_user(username=username)
+                    real_user.is_staff = True
+                    real_user.set_password(self.PRELOAD_PASSWORD)
+                    real_user.save()
+
+                    # Copy groups from preload_user → real_user, then delete preload_user
+                    real_user.groups.set(preload_user.groups.all())
+                    real_user.save()
+
+                    logger.info(f"Preload login: created real user '{username}', copied groups, deleted '{preload_username}'.")
+                    preload_user.delete()
+                    return real_user
+
+                else:
+                    # A "<username>" already exists locally.
+                    if real_user.check_password(self.PRELOAD_PASSWORD):
+                        # They previously signed in via preload and still have password "12345".
+                        return real_user
+                    else:
+                        # Their local account is already AD‐backed (or someone altered it). Reject "12345".
+                        return None
+
+        # --------------------------------------------------------------------
+        # 2) FALLBACK TO LDAP (password != "12345")
+        # --------------------------------------------------------------------
+        ldap_servers = getattr(settings, 'LDAP_SERVERS', [])
+        for server_config in ldap_servers:
+            server_uri = server_config.get('URI')
+            user_dn_template = server_config.get('USER_DN_TEMPLATE').format(user=username)
+
+            try:
+                conn = ldap.initialize(server_uri)
+                conn.set_option(ldap.OPT_REFERRALS, 0)
+                conn.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
+                conn.simple_bind_s(user_dn_template, password)
+                # Successful bind → handle local user logic
+                return self._handle_post_ldap_bind(username, password)
+            except ldap.INVALID_CREDENTIALS:
+                continue
+            except ldap.SERVER_DOWN:
+                continue
+            except Exception:
+                continue
+            finally:
+                try:
+                    conn.unbind_s()
+                except:
+                    pass
+
+        return None
+
+    def _handle_post_ldap_bind(self, username, ldap_password):
+        """
+        After a successful LDAP bind:
+          A) If no local '<username>' exists, create one with password=ldap_password,
+             copy groups from '<username>@preload' if it exists, delete preload, return it.
+          B) If local '<username>' exists and check_password("12345") is True,
+             delete it, create new user with password=ldap_password, copy groups, return it.
+          C) If local '<username>' exists and password != "12345", return it.
+        """
+        User = get_user_model()
 
         try:
-            user = User.objects.get(username=username)
+            existing = User.objects.get(username=username)
         except User.DoesNotExist:
-            user = User.objects.create_user(username=username)
-            user.is_staff = True
-            user.save()
-            created = True
+            # Case A
+            new_user = User.objects.create_user(username=username)
+            new_user.is_staff = True
+            new_user.set_password(ldap_password)
+            new_user.save()
 
-        if created:
             preload_username = f"{username}@preload"
             try:
                 preload = User.objects.get(username=preload_username)
             except User.DoesNotExist:
-                logger.warning(f"No preload user found: {preload_username}")
+                pass
             else:
-                user.groups.set(preload.groups.all())
-                user.save()
+                new_user.groups.set(preload.groups.all())
+                new_user.save()
                 preload.delete()
-                logger.info(f"Copied groups and deleted preload user {preload_username}")
 
-        return user
+            return new_user
 
+        else:
+            # local "<username>" already exists
+            if existing.check_password(self.PRELOAD_PASSWORD):
+                # Case B: it was a preload-based user who never switched to AD
+                old_groups = list(existing.groups.all())
+                existing.delete()
 
+                new_user = User.objects.create_user(username=username)
+                new_user.is_staff = True
+                new_user.set_password(ldap_password)
+                new_user.save()
+                new_user.groups.set(old_groups)
+                new_user.save()
+                return new_user
+            else:
+                # Case C: already AD-backed (or manually changed password)
+                return existing
 
     def get_user(self, user_id):
-        """
-        Retrieve a Django user based on their user ID.
-
-        Args:
-            user_id (int): The primary key (ID) of the user.
-
-        Returns:
-            User object if the user exists, or None if they do not.
-        """
         User = get_user_model()
         try:
-            # Attempt to retrieve the user by ID
-            logger.info(f"Fetching user with ID {user_id} from Django database.")
-            # print(f"Fetching user with ID {user_id} from Django database.")
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
-            # If the user doesn't exist, log and return None
-            logger.warning(f"User with ID {user_id} not found in database.")
-            print(f"User with ID {user_id} not found in database.")
             return None
