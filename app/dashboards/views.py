@@ -21,7 +21,7 @@ from typing import Dict, List, Set, Tuple, Optional, DefaultDict
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connections
 import copy
-
+import math
 
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
 from django import forms
@@ -2597,26 +2597,18 @@ def compute_part_durations_for_machine(
 
 
 def dashboard_current_shift(request, page: str):
-    """
-    Current-shift dashboard.
-    • Piece-counts come from GFxPRoduction (per Machine+Part).
-    • Each machine-cell gets:
-          cell['count']       – int
-          cell['cycle_time']  – float | None  (for templates)
-          cell['cycle_by_part'] (dict) if the machine has multiple parts
-    """
-    # 1) validate page ---------------------------------------------------
+    # 1 ── validate page -------------------------------------------------
     if page not in PAGES:
         return HttpResponseBadRequest(
             {"error": f"Unknown page '{page}'. Valid pages: {list(PAGES.keys())}"},
             content_type="application/json",
         )
 
-    # 2) deep-copy config so we can annotate ----------------------------
+    # 2 ── deep-copy config so we can annotate --------------------------
     programs = copy.deepcopy(PAGES[page]["programs"])
 
     machine_set: Set[str] = set()
-    # key = (machine, parts_key)  parts_key is frozenset or None
+    # key = (machine, parts_key)  where parts_key is frozenset or None
     machine_occ: Dict[Tuple[str, Optional[frozenset]], List[Dict]] = {}
 
     for prog in programs:
@@ -2628,7 +2620,7 @@ def dashboard_current_shift(request, page: str):
                     key = (mid, frozenset(m["parts"]) if "parts" in m else None)
                     machine_occ.setdefault(key, []).append(m)
 
-    # 3) shift boundaries (EST) -----------------------------------------
+    # 3 ── establish shift start in EST ---------------------------------
     tz_est  = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(tz_est)
     base_hr = 7 if page == "8670" else 6
@@ -2640,13 +2632,16 @@ def dashboard_current_shift(request, page: str):
     day_start, aft_start = base_est, base_est + timedelta(hours=8)
     nite_start           = base_est + timedelta(hours=16)
 
-    if   day_start <= now_est < aft_start: current_shift, shift_start_est = "day",       day_start
-    elif aft_start <= now_est < nite_start: current_shift, shift_start_est = "afternoon", aft_start
-    else:                                   current_shift, shift_start_est = "night",     nite_start
+    if   day_start <= now_est < aft_start:
+        current_shift, shift_start_est = "day", day_start
+    elif aft_start <= now_est < nite_start:
+        current_shift, shift_start_est = "afternoon", aft_start
+    else:
+        current_shift, shift_start_est = "night", nite_start
 
     shift_start_epoch = int(shift_start_est.astimezone(pytz.UTC).timestamp())
 
-    # 4) one SQL grab: pieces per Machine+Part since shift start ---------
+    # 4 ── piece-counts since shift start -------------------------------
     placeholders = ",".join(["%s"] * len(machine_set))
     params       = list(machine_set) + [shift_start_epoch]
 
@@ -2667,30 +2662,73 @@ def dashboard_current_shift(request, page: str):
     for (m, _p), c in counts_by_mp.items():
         totals_by_machine[m] += c
 
-    # 5) annotate each machine-cell with count + cycle-time -------------
+    # 5 ── part-runs for smart-target math ------------------------------
+    shift_end_epoch = int(timezone.now().timestamp())
+    part_runs: Dict[str, List[Dict]] = {}
+    for mid in machine_set:
+        runs = compute_part_durations_for_machine(mid, shift_start_epoch, shift_end_epoch)
+        part_runs[mid] = runs
+
+    # 6 ── annotate every machine-cell ----------------------------------
     for (mid, parts_key), cells in machine_occ.items():
-        # ----- piece-count -----
-        if parts_key is None:
-            pieces = totals_by_machine.get(mid, 0)
-        else:
-            pieces = sum(counts_by_mp.get((mid, p), 0) for p in parts_key)
 
-        # ----- cycle-time(s) -----
+        # ── 6-a   PIECES MADE (already produced) ──────────────────────────
         if parts_key is None:
-            ct = get_cycle_time_seconds(mid)
-            for cell in cells:
-                cell["count"] = pieces
-                cell["cycle_time"] = ct
+            pieces_made = totals_by_machine.get(mid, 0)
         else:
-            ct_by_part = {p: get_cycle_time_seconds(mid, p) for p in parts_key}
-            # choose the first (arbitrary) ct to show in grid
-            rep_ct = next(iter(ct_by_part.values())) if ct_by_part else None
-            for cell in cells:
-                cell["count"] = pieces
-                cell["cycle_time"] = rep_ct
-                cell["cycle_by_part"] = ct_by_part  # template can iterate
+            pieces_made = sum(
+                counts_by_mp.get((mid, p), 0) for p in parts_key
+            )
 
-    # 6) layout padding --------------------------------------------------
+        # ── 6-b   CYCLE-TIMES (sec / piece) ───────────────────────────────
+        if parts_key is None:
+            ct_single = get_cycle_time_seconds(mid)          # None ⇒ NA
+            cycle_by_part = (
+                {r["part"]: ct_single for r in part_runs[mid]}  # same ct for all
+                if ct_single is not None else {}
+            )
+            rep_ct = ct_single
+        else:
+            cycle_by_part = {p: get_cycle_time_seconds(mid, p) for p in parts_key}
+            # representative ct for grid display (first non-None, or None)
+            rep_ct = next((v for v in cycle_by_part.values() if v is not None), None)
+
+        # ── 6-c   SMART TARGET  Σ( run_duration / cycle_time ) ────────────
+        smart_pcs = 0.0
+        for run in part_runs[mid]:
+            part = run["part"]
+            if parts_key is not None and part not in parts_key:
+                continue                      # not relevant for this cell
+            ct = cycle_by_part.get(part)
+            if ct:                            # skip NA
+                smart_pcs += run["duration"] / ct
+
+        smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
+
+        # ── 6-d   Console proof line  ─────────────────────────────────────
+        tag = f"{mid}" if parts_key is None else f"{mid} /{','.join(sorted(parts_key))}"
+        ct_disp = (
+            f"{rep_ct:.1f}s" if rep_ct is not None else "NA"
+            if parts_key is None
+            else "; ".join(
+                f"{p}:{cycle_by_part[p]:.1f}s" if cycle_by_part[p] is not None else f"{p}:NA"
+                for p in sorted(cycle_by_part)
+            )
+        )
+        print(
+            f"ST: {tag}  smart_target={smart_target if smart_target is not None else 'NA'}  "
+            f"pieces_made={pieces_made}  ct={ct_disp}"
+        )
+
+        # ── 6-e   Write values back into every duplicate “cell” ───────────
+        for cell in cells:
+            cell["count"]        = pieces_made
+            cell["cycle_time"]   = rep_ct
+            if parts_key is not None:
+                cell["cycle_by_part"] = cycle_by_part
+            cell["smart_target"] = smart_target
+
+    # 7 ── layout padding ------------------------------------------------
     for prog in programs:
         for line in prog["lines"]:
             max_m = max((len(op["machines"]) for op in line["operations"]), default=1)
@@ -2698,12 +2736,9 @@ def dashboard_current_shift(request, page: str):
             for op in line["operations"]:
                 op["pad"] = [None] * (max_m - len(op["machines"]))
 
-    # 7) per-machine run table ------------------------------------------
-    shift_end_epoch = int(timezone.now().timestamp())
-    part_runs: Dict[str, List[Dict]] = {}
-    for mid in machine_set:
-        runs = compute_part_durations_for_machine(mid, shift_start_epoch, shift_end_epoch)
-        # filter runs if any occurrence has a parts filter
+    # 8 ── filter part_runs for template (only declare parts in config) --
+    filtered_part_runs: Dict[str, List[Dict]] = {}
+    for mid, runs in part_runs.items():
         declared_parts = {
             p for (m, pk) in machine_occ
             if m == mid and pk is not None
@@ -2711,15 +2746,15 @@ def dashboard_current_shift(request, page: str):
         }
         if declared_parts:
             runs = [r for r in runs if r["part"] in declared_parts]
-        part_runs[mid] = runs
+        filtered_part_runs[mid] = runs
 
-    # 8) render ----------------------------------------------------------
+    # 9 ── render --------------------------------------------------------
     context = {
         "page":            page,
         "dayshift_start":  PAGES[page]["dayshift_start"],
         "current_shift":   current_shift,
         "shift_start_est": shift_start_est,
         "programs":        programs,
-        "part_runs":       part_runs,
+        "part_runs":       filtered_part_runs,
     }
     return render(request, "dashboards/dashboard_renewed.html", context)
