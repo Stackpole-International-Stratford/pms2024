@@ -36,16 +36,6 @@
 </head>
 <body>
   <div class="container-fluid mt-2">
-    <h2 class="mb-3">
-      Dashboard for Page “{{ page }}” —
-      {% if current_shift %}
-        {{ current_shift|capfirst }} Shift 
-        (started {{ shift_start_est|date:"Y-m-d H:i" }} EST)
-      {% else %}
-        <span class="text-muted">No Active Shift (No Machines)</span>
-      {% endif %}
-    </h2>
-
     <div class="row no-gutters">
       {# Loop over each program #}
       {% for prog in programs %}
@@ -62,16 +52,9 @@
               <div class="bg-light text-center font-weight-bold py-1">
                 {{ line.line }}
               </div>
-
               {# Operation→Machine table #}
               <div class="table-responsive">
                 <table class="table table-bordered table-sm mb-1">
-                  <thead class="thead-light">
-                    <tr>
-                      <th class="op-cell" scope="col">OP</th>
-                      {# No explicit <th> for machines; we show machines in <tbody> #}
-                    </tr>
-                  </thead>
                   <tbody>
                     {% for op in line.operations %}
                       <tr>
