@@ -12,7 +12,8 @@ import MySQLdb
 from prod_query.models import OAMachineTargets
 from collections import defaultdict
 
-
+import pytz
+from django.utils import timezone
 
 import json
 
@@ -1667,13 +1668,17 @@ def compute_op_actual_and_oee(line_spec,
 # =================================================================
 
 
+import pytz
+from datetime import datetime, timedelta
+from django.shortcuts import render
+from django.http import HttpResponseBadRequest
+from django.db import connections
+from django.utils import timezone
+import copy
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1) Paste (or import) the JSON‐structure we built earlier under the name "PAGES".
-#    For readability, I’ve trimmed out comments. You can copy/paste the entire
-#    dict from the earlier answer; make sure it is valid Python syntax.
+# Assume PAGES is defined exactly as you provided earlier.
 # ─────────────────────────────────────────────────────────────────────────────
-
 PAGES = {
     "9341": {
         "dayshift_start": "06:00",
@@ -2425,57 +2430,122 @@ PAGES = {
 }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2) The view: dashboard_last_hour(request, page)
-# ─────────────────────────────────────────────────────────────────────────────
-
-def dashboard_last_hour(request, page: str):
+def dashboard_current_shift(request, page: str):
     """
-    Given a URL of the form /dashboard/dashboard/<page>/,
-    extract all machines for that page from PAGES,
-    then query GFxPRoduction for the last hour’s total `Count` per machine.
-    Return a JSON mapping { machine_number: total_in_last_hour }.
+    Given a URL like /dashboard/dashboard/<page>/,
+    1. Verify `page` is valid.
+    2. Load all machines for that page.
+    3. Determine current shift (day/afternoon/night) in EST.
+    4. Compute epoch of shift start → query GFxPRoduction SUM(Count)
+       for each machine from shift_start → now.
+    5. Annotate each machine dict with m['count'] = per_machine[mnum].
+    6. Render into 'dashboard_renewed.html' (Bootstrap).
     """
-
-    # 2a) Check that the requested page is one of our three keys:
+    # 1) Validate page
     if page not in PAGES:
         return HttpResponseBadRequest(
-            json.dumps({"error": f"Unknown page '{page}'. Valid pages are: {list(PAGES.keys())}"}),
+            {
+                "error": (
+                    f"Unknown page '{page}'. "
+                    f"Valid pages are: {list(PAGES.keys())}"
+                )
+            },
             content_type="application/json",
         )
 
-    # 2b) Flatten out all "machine" numbers under this page
+    # 2) Gather all machine numbers for that page
     machine_set = set()
-    for prog in PAGES[page]["programs"]:
+    # We’ll also make a deepcopy of PAGES[page]["programs"] so we can annotate counts
+    programs = copy.deepcopy(PAGES[page]["programs"])
+
+    for prog in programs:
         for line in prog["lines"]:
             for op in line["operations"]:
                 for m in op["machines"]:
-                    # Each machine is like { "number": "XXXX" }
-                    # We store just the string "XXXX"
                     machine_set.add(m["number"])
 
-    # If there are no machines at all, return an empty result immediately
+    # If no machines, short-circuit to an empty dashboard
     if not machine_set:
-        return JsonResponse(
-            {
-                "page": page,
-                "dayshift_start": PAGES[page]["dayshift_start"],
-                "per_machine": {},
-            }
+        context = {
+            "page": page,
+            "dayshift_start": PAGES[page]["dayshift_start"],
+            "current_shift": None,
+            "shift_start_est": None,
+            "per_machine": {},
+            "programs": programs,
+        }
+        return render(request, "dashboards/dashboard_renewed.html", context)
+
+    # 3) Determine "now" in EST
+    now_utc = timezone.now()  # aware UTC
+    eastern = pytz.timezone("America/New_York")
+    now_est = now_utc.astimezone(eastern)
+
+    # 4) Decide shift boundaries based on page
+    #    For "8670": dayshift starts at 06:00 EST; for others, 07:00 EST
+    if page == "8670":
+        shift_base_hour = 7
+    else:
+        shift_base_hour = 6
+
+    # Build today's (EST) base at the shift_base_hour
+    today_est_date = now_est.date()
+    today_base_est = eastern.localize(
+        datetime(
+            year=today_est_date.year,
+            month=today_est_date.month,
+            day=today_est_date.day,
+            hour=shift_base_hour,
+            minute=0,
+            second=0,
         )
+    )
 
-    # 2c) Prepare to query the GFxPRoduction table for all those machines in one shot.
-    # We want: SUM(`Count`) for each Machine where TimeStamp >= (current_epoch − 3600).
-    one_hour_ago = time.time() - 3600.0  # float of "now minus one hour", in seconds since epoch
+    # If now_est is before today's base, roll base back one day
+    if now_est < today_base_est:
+        base_est = today_base_est - timedelta(days=1)
+    else:
+        base_est = today_base_est
 
-    # Build a parameter list of machine names for the SQL IN(…)
+    # Define three 8-hour shifts from base_est
+    day_start_est = base_est
+    afternoon_start_est = base_est + timedelta(hours=8)
+    night_start_est = base_est + timedelta(hours=16)
+
+    # 5) Determine the current shift
+    if day_start_est <= now_est < afternoon_start_est:
+        current_shift = "day"
+        shift_start_est = day_start_est
+    elif afternoon_start_est <= now_est < night_start_est:
+        current_shift = "afternoon"
+        shift_start_est = afternoon_start_est
+    else:
+        current_shift = "night"
+        if now_est >= night_start_est:
+            shift_start_est = night_start_est
+        else:
+            # after midnight but before day_start → 
+            # that “night” began yesterday at (base_est + 16h)
+            shift_start_est = night_start_est
+
+    # ── DEBUG: shift_start_est in EST ──
+    print(f"[DEBUG] shift_start_est (EST): {shift_start_est.isoformat()}")
+
+    # 6) Convert shift_start_est → UTC‐epoch for SQL
+    shift_start_utc = shift_start_est.astimezone(pytz.UTC)
+    shift_start_epoch = int(shift_start_utc.timestamp())
+
+    # ── DEBUG: epoch ──
+    print(f"[DEBUG] shift_start_epoch (UTC timestamp): {shift_start_epoch}")
+
+    # 7) Query GFxPRoduction for SUM(Count) per machine since shift_start_epoch
     placeholders = ",".join(["%s"] * len(machine_set))
     machine_list = list(machine_set)
 
     raw_sql = f"""
         SELECT
             Machine,
-            SUM(`Count`) AS total_in_last_hour
+            SUM(`Count`) AS total_since_shift_start
         FROM
             GFxPRoduction
         WHERE
@@ -2484,32 +2554,33 @@ def dashboard_last_hour(request, page: str):
         GROUP BY
             Machine
     """
+    params = machine_list + [shift_start_epoch]
 
-    params = machine_list + [one_hour_ago]
-
-    # 2d) Execute the raw query using Django’s low‐level cursor
     cursor = connections["prodrpt-md"].cursor()
     cursor.execute(raw_sql, params)
     rows = cursor.fetchall()
-    # rows will be a list of tuples: [ (machine_number, total_in_last_hour), … ]
+    # rows: [(machine_number, total_since_shift_start), ...]
 
-    # 2e) Turn that result into a dict:
-    #     { "1504":  128, "1506": 0, … }
-    per_machine_counts = {m: 0 for m in machine_set}
-    for machine_name, total_count in rows:
-        # Ensure we convert total_count to int (in case MySQL or driver returns Decimal)
-        per_machine_counts[str(machine_name)] = int(total_count)
+    # 8) Build a dictionary with zero defaults
+    per_machine = {m: 0 for m in machine_set}
+    for machine_num, total in rows:
+        per_machine[str(machine_num)] = int(total)
 
-    # 2f) Return JSON
-    response_data = {
+    # 9) Annotate each machine dict in `programs` with its count
+    for prog in programs:
+        for line in prog["lines"]:
+            for op in line["operations"]:
+                for m in op["machines"]:
+                    mnum = m["number"]
+                    m["count"] = per_machine.get(mnum, 0)
+
+    # 10) Prepare context and render
+    context = {
         "page": page,
         "dayshift_start": PAGES[page]["dayshift_start"],
-        "per_machine": per_machine_counts,
+        "current_shift": current_shift,
+        "shift_start_est": shift_start_est,
+        "per_machine": per_machine,  # (in case you still want it)
+        "programs": programs,        # each machine now has m['count']
     }
-
-    return JsonResponse(response_data)
-
-
-
-
-
+    return render(request, "dashboards/dashboard_renewed.html", context)

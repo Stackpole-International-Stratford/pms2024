@@ -45,5 +45,5 @@ urlpatterns = [
 
 
 
-    path("dashboard/<str:page>/", views.dashboard_last_hour, name="dashboard_last_hour"),
+    path("dashboard/<str:page>/", views.dashboard_current_shift, name="dashboard_last_hour"),
 ]
