@@ -2430,16 +2430,29 @@ PAGES = {
 }
 
 
+import copy
+import pytz
+from datetime import datetime, timedelta
+
+from django.shortcuts import render
+from django.http import HttpResponseBadRequest
+from django.db import connections
+from django.utils import timezone
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Assume PAGES is defined elsewhere in this module exactly as you provided.
+# ─────────────────────────────────────────────────────────────────────────────
+
 def dashboard_current_shift(request, page: str):
     """
     Given a URL like /dashboard/dashboard/<page>/,
     1. Verify `page` is valid.
-    2. Load all machines for that page.
+    2. Deep-copy that page's programs so we can annotate.
     3. Determine current shift (day/afternoon/night) in EST.
-    4. Compute epoch of shift start → query GFxPRoduction SUM(Count)
-       for each machine from shift_start → now.
-    5. Annotate each machine dict with m['count'] = per_machine[mnum].
-    6. Render into 'dashboard_renewed.html' (Bootstrap).
+    4. Compute epoch of shift start → query GFxPRoduction SUM(Count).
+    5. Annotate each machine dict with m['count'].
+    6. Compute line["max_machines"] and op["pad"] for templating.
+    7. Render into 'dashboards/dashboard_renewed.html' (Bootstrap).
     """
     # 1) Validate page
     if page not in PAGES:
@@ -2453,18 +2466,18 @@ def dashboard_current_shift(request, page: str):
             content_type="application/json",
         )
 
-    # 2) Gather all machine numbers for that page
-    machine_set = set()
-    # We’ll also make a deepcopy of PAGES[page]["programs"] so we can annotate counts
+    # 2) Deep-copy programs for this page so we can annotate counts & padding
     programs = copy.deepcopy(PAGES[page]["programs"])
 
+    # Build a set of all machine numbers under this page
+    machine_set = set()
     for prog in programs:
         for line in prog["lines"]:
             for op in line["operations"]:
                 for m in op["machines"]:
                     machine_set.add(m["number"])
 
-    # If no machines, short-circuit to an empty dashboard
+    # If no machines at all, short-circuit to an empty dashboard
     if not machine_set:
         context = {
             "page": page,
@@ -2477,18 +2490,19 @@ def dashboard_current_shift(request, page: str):
         return render(request, "dashboards/dashboard_renewed.html", context)
 
     # 3) Determine "now" in EST
-    now_utc = timezone.now()  # aware UTC
+    now_utc = timezone.now()  # Aware UTC
     eastern = pytz.timezone("America/New_York")
     now_est = now_utc.astimezone(eastern)
 
-    # 4) Decide shift boundaries based on page
-    #    For "8670": dayshift starts at 06:00 EST; for others, 07:00 EST
+    # 4) Decide shift boundaries based on page:
+    #    - "8670" starts at 06:00 EST
+    #    - other pages start at 07:00 EST
     if page == "8670":
-        shift_base_hour = 7
-    else:
         shift_base_hour = 6
+    else:
+        shift_base_hour = 7
 
-    # Build today's (EST) base at the shift_base_hour
+    # Build today's (EST) "base" at shift_base_hour:00
     today_est_date = now_est.date()
     today_base_est = eastern.localize(
         datetime(
@@ -2501,18 +2515,21 @@ def dashboard_current_shift(request, page: str):
         )
     )
 
-    # If now_est is before today's base, roll base back one day
+    # If now_est is before today's base, roll the base back one day
     if now_est < today_base_est:
         base_est = today_base_est - timedelta(days=1)
     else:
         base_est = today_base_est
 
-    # Define three 8-hour shifts from base_est
+    # Define the three 8-hour shifts from base_est:
+    # Day       = [ base_est,              base_est + 8h )
+    # Afternoon = [ base_est + 8h,         base_est + 16h )
+    # Night     = [ base_est + 16h, next-day base_est )
     day_start_est = base_est
     afternoon_start_est = base_est + timedelta(hours=8)
     night_start_est = base_est + timedelta(hours=16)
 
-    # 5) Determine the current shift
+    # 5) Determine which shift we're currently in (in EST)
     if day_start_est <= now_est < afternoon_start_est:
         current_shift = "day"
         shift_start_est = day_start_est
@@ -2521,26 +2538,27 @@ def dashboard_current_shift(request, page: str):
         shift_start_est = afternoon_start_est
     else:
         current_shift = "night"
+        # Two cases for night:
+        #  - If now_est >= night_start_est, then 'night' began at night_start_est today
+        #  - Otherwise (now_est < day_start_est), 'night' began yesterday at (base_est + 16h)
         if now_est >= night_start_est:
             shift_start_est = night_start_est
         else:
-            # after midnight but before day_start → 
-            # that “night” began yesterday at (base_est + 16h)
-            shift_start_est = night_start_est
+            shift_start_est = night_start_est  # because base_est was already rolled back
 
-    # ── DEBUG: shift_start_est in EST ──
+    # ── DEBUG: print shift_start_est (EST) ──
     print(f"[DEBUG] shift_start_est (EST): {shift_start_est.isoformat()}")
 
-    # 6) Convert shift_start_est → UTC‐epoch for SQL
+    # 6) Convert shift_start_est → UTC epoch for SQL
     shift_start_utc = shift_start_est.astimezone(pytz.UTC)
     shift_start_epoch = int(shift_start_utc.timestamp())
 
-    # ── DEBUG: epoch ──
+    # ── DEBUG: print shift_start_epoch ──
     print(f"[DEBUG] shift_start_epoch (UTC timestamp): {shift_start_epoch}")
 
     # 7) Query GFxPRoduction for SUM(Count) per machine since shift_start_epoch
     placeholders = ",".join(["%s"] * len(machine_set))
-    machine_list = list(machine_set)
+    params = list(machine_set) + [shift_start_epoch]
 
     raw_sql = f"""
         SELECT
@@ -2554,19 +2572,17 @@ def dashboard_current_shift(request, page: str):
         GROUP BY
             Machine
     """
-    params = machine_list + [shift_start_epoch]
 
     cursor = connections["prodrpt-md"].cursor()
     cursor.execute(raw_sql, params)
-    rows = cursor.fetchall()
-    # rows: [(machine_number, total_since_shift_start), ...]
+    rows = cursor.fetchall()  # [(machine_number, total_since_shift_start), ...]
 
-    # 8) Build a dictionary with zero defaults
+    # 8) Build a per_machine dict with zero defaults, then override with actual totals
     per_machine = {m: 0 for m in machine_set}
     for machine_num, total in rows:
         per_machine[str(machine_num)] = int(total)
 
-    # 9) Annotate each machine dict in `programs` with its count
+    # 9) Annotate each machine dict (in our deep-copied `programs`) with its count
     for prog in programs:
         for line in prog["lines"]:
             for op in line["operations"]:
@@ -2574,13 +2590,36 @@ def dashboard_current_shift(request, page: str):
                     mnum = m["number"]
                     m["count"] = per_machine.get(mnum, 0)
 
-    # 10) Prepare context and render
+    # 10) For each line, compute max_machines = max(len(op["machines"])) across that line
+    #     Then for each op, compute op["pad"] = [None] * (max_machines − len(op["machines"]))
+    for prog in programs:
+        for line in prog["lines"]:
+            # Find the largest number of machines in any operation
+            max_machines = 0
+            for op in line["operations"]:
+                count_m = len(op["machines"])
+                if count_m > max_machines:
+                    max_machines = count_m
+            # If a line has no operation with any machines, force at least 1 column
+            if max_machines == 0:
+                max_machines = 1
+            line["max_machines"] = max_machines
+
+            # Now annotate each op with a pad list of length (max_machines - len(op["machines"]))
+            for op in line["operations"]:
+                pad_count = max_machines - len(op["machines"])
+                if pad_count < 0:
+                    pad_count = 0
+                # op["pad"] is simply a list of None, length = pad_count
+                op["pad"] = [None] * pad_count
+
+    # 11) Build context and render template
     context = {
         "page": page,
         "dayshift_start": PAGES[page]["dayshift_start"],
         "current_shift": current_shift,
         "shift_start_est": shift_start_est,
-        "per_machine": per_machine,  # (in case you still want it)
-        "programs": programs,        # each machine now has m['count']
+        "per_machine": per_machine,  # (optional, in case you need it in JS)
+        "programs": programs,        # Deep-copied & annotated for the template
     }
     return render(request, "dashboards/dashboard_renewed.html", context)

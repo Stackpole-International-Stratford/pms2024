@@ -31,48 +31,67 @@
         font-weight: 600;
         text-align: center;
         vertical-align: middle;
+        white-space: nowrap;
+      }
+      /* Center a single-machine cell */
+      .single-machine {
+        text-align: center;
+        vertical-align: middle;
+      }
+      /* Style for “no machines” placeholder */
+      .no-mach {
+        text-align: center;
+        vertical-align: middle;
+        color: #6c757d; /* Bootstrap’s text-muted color */
       }
     </style>
 </head>
 <body>
   <div class="container-fluid mt-2">
     <div class="row no-gutters">
-      {# Loop over each program #}
       {% for prog in programs %}
         <div class="col-sm-6 col-md-4 col-lg-3 px-1 mb-2 program-col d-flex flex-column">
-          {# Program Header #}
           <div class="bg-secondary text-white text-center py-1 program-header">
             {{ prog.program }}
           </div>
 
-          {# Loop over lines within this program #}
           {% for line in prog.lines %}
             <div class="w-100 mt-1">
-              {# Line Name #}
               <div class="bg-light text-center font-weight-bold py-1">
                 {{ line.line }}
               </div>
-              {# Operation→Machine table #}
+
               <div class="table-responsive">
                 <table class="table table-bordered table-sm mb-1">
                   <tbody>
                     {% for op in line.operations %}
                       <tr>
                         <td class="op-cell">{{ op.op }}</td>
-                        {% if op.machines %}
+
+                        {% if op.machines|length == 0 %}
+                          <td class="no-mach" colspan="{{ line.max_machines }}">
+                            &mdash;
+                          </td>
+
+                        {% elif op.machines|length == 1 %}
+                          {% with single=op.machines.0 %}
+                            <td class="single-machine" colspan="{{ line.max_machines }}">
+                              <div>{{ single.number }}</div>
+                              <div class="small text-muted">{{ single.count }}</div>
+                            </td>
+                          {% endwith %}
+
+                        {% else %}
                           {% for m in op.machines %}
                             <td class="text-center align-middle">
                               <div>{{ m.number }}</div>
-                              <div class="small text-muted">
-                                {{ m.count }}
-                              </div>
+                              <div class="small text-muted">{{ m.count }}</div>
                             </td>
                           {% endfor %}
-                        {% else %}
-                          {# If no machines for this OP → one empty cell #}
-                          <td class="text-center align-middle text-muted">
-                            —
-                          </td>
+
+                          {% for _ in op.pad %}
+                            <td></td>
+                          {% endfor %}
                         {% endif %}
                       </tr>
                     {% endfor %}
@@ -82,7 +101,6 @@
             </div>
           {% endfor %}
 
-          {# Push any remaining space to bottom #}
           <div class="mt-auto"></div>
         </div>
       {% endfor %}
