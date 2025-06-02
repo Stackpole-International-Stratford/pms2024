@@ -2428,10 +2428,16 @@ PAGES = {
                                 ],
                             },
                             {
-                                "op": "OP100",
-                                "machines": [
-                                    {"number": "1723"},
-                                ],
+                            "op": "OP100",
+                            "machines": [
+                                {
+                                "number": "1723",
+                                "parts": [
+                                    "50-5214",
+                                    "50-3214"
+                                ]
+                                }
+                            ]
                             },
                             {
                                 "op": "Laser",
@@ -2446,7 +2452,6 @@ PAGES = {
         ],
     },
 }
-
 
 import copy
 import pytz
