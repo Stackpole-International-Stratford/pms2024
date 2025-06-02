@@ -40,4 +40,10 @@ urlpatterns = [
     # Main dashboard: with or without a machine param
     path("rejects-dashboard/", views.rejects_dashboard, name="rejects_dashboard"),
     path("rejects-dashboard/<str:line>/", views.rejects_dashboard, name="rejects_dashboard_by_line"),
+
+
+
+
+
+    path("dashboard/<str:page>/", views.dashboard_last_hour, name="dashboard_last_hour"),
 ]
