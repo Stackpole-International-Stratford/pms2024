@@ -2497,11 +2497,10 @@ def compute_part_durations_for_machine(machine_number: str,
     row_before = cursor.fetchone()
     if row_before:
         initial_part, initial_ts = row_before
-        print(f"[DEBUG][{machine_number}] Last record BEFORE shift_start: "
-              f"Part={initial_part!r}, TimeStamp={initial_ts}")
+
     else:
         initial_part, initial_ts = (None, None)
-        print(f"[DEBUG][{machine_number}] No record found before shift_start ({shift_start_epoch}).")
+
 
     # 3) Fetch all records during the shift window, ordered by timestamp ascending
     sql_during = """
@@ -2514,8 +2513,7 @@ def compute_part_durations_for_machine(machine_number: str,
     """
     cursor.execute(sql_during, [machine_number, shift_start_epoch, shift_end_epoch])
     rows_during = cursor.fetchall()
-    print(f"[DEBUG][{machine_number}] Found {len(rows_during)} records BETWEEN "
-          f"{shift_start_epoch} and {shift_end_epoch}.")
+
 
     # 4) Initialize variables for tracking “current run segment”
     runs = []
@@ -2526,25 +2524,18 @@ def compute_part_durations_for_machine(machine_number: str,
     if initial_part is not None:
         current_part = initial_part
         current_start = shift_start_epoch
-        print(f"[DEBUG][{machine_number}] Starting run: part={current_part!r} "
-              f"from shift_start={current_start}")
+
 
     # 4b) Iterate through every (part, timestamp) record during the shift
     for part, ts in rows_during:
-        print(f"[DEBUG][{machine_number}] Next record: part={part!r}, ts={ts}")
 
         # If we don’t have an active “current_part” yet, start one here.
         if current_part is None:
             current_part = part
             # If the first record’s timestamp is earlier than shift_start, clamp to shift_start
             current_start = max(shift_start_epoch, ts)
-            print(f"  → Initiating run: part={current_part!r} starting at {current_start}")
             continue
 
-        # If the same part continues, just keep going
-        if part == current_part:
-            print(f"  → Still running {current_part!r} at ts={ts}.")
-            continue
 
         # Otherwise, part has changed at this timestamp → close out the previous run
         run_end = ts
@@ -2555,13 +2546,11 @@ def compute_part_durations_for_machine(machine_number: str,
             "end_ts": run_end,
             "duration": run_duration,
         })
-        print(f"  → Closed run: part={current_part!r}, start={current_start}, "
-              f"end={run_end}, duration={run_duration}s")
+
 
         # Start a new run for the new part
         current_part = part
         current_start = ts
-        print(f"  → New run: part={current_part!r} starting at {current_start}")
 
     # 5) After processing all “during” records, close out whichever part is still running at shift_end
     if current_part is not None and current_start is not None:
@@ -2573,8 +2562,6 @@ def compute_part_durations_for_machine(machine_number: str,
             "end_ts": final_end,
             "duration": final_duration,
         })
-        print(f"[DEBUG][{machine_number}] Final run closed: part={current_part!r}, "
-              f"start={current_start}, end={final_end}, duration={final_duration}s")
     else:
         print(f"[DEBUG][{machine_number}] No active run to close at end of shift.")
 
@@ -2679,12 +2666,10 @@ def dashboard_current_shift(request, page: str):
         else:
             shift_start_est = night_start_est  # because base_est was already rolled back
 
-    print(f"[DEBUG] shift_start_est (EST): {shift_start_est.isoformat()}")
 
     # 6) Convert shift_start_est → UTC epoch for SQL
     shift_start_utc = shift_start_est.astimezone(pytz.UTC)
     shift_start_epoch = int(shift_start_utc.timestamp())
-    print(f"[DEBUG] shift_start_epoch (UTC timestamp): {shift_start_epoch}")
 
     # 7) Query GFxPRoduction for SUM(Count) per machine since shift_start_epoch
     placeholders = ",".join(["%s"] * len(machine_set))
@@ -2746,14 +2731,11 @@ def dashboard_current_shift(request, page: str):
         part_runs[mnum] = runs
 
     # ── DEBUG: Summarize part_runs in console ──
-    print("=== Part durations for this shift ===")
     for mnum, runs in part_runs.items():
-        print(f"Machine {mnum}:")
         for r in runs:
             # Convert epoch to EST datetime strings
             start_dt = datetime.fromtimestamp(r["start_ts"], tz=pytz.UTC).astimezone(eastern)
             end_dt   = datetime.fromtimestamp(r["end_ts"],   tz=pytz.UTC).astimezone(eastern)
-            print(f"  • Part '{r['part']}' | {start_dt:%H:%M:%S} → {end_dt:%H:%M:%S} | {r['duration']}s")
 
     # 12) Build context and render template
     context = {
