@@ -19,6 +19,8 @@ import json
 
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import connections
+import copy
+
 
 
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
@@ -1668,13 +1670,6 @@ def compute_op_actual_and_oee(line_spec,
 # =================================================================
 
 
-import pytz
-from datetime import datetime, timedelta
-from django.shortcuts import render
-from django.http import HttpResponseBadRequest
-from django.db import connections
-from django.utils import timezone
-import copy
 
 
 
@@ -2456,14 +2451,7 @@ PAGES = {
 
 
 
-import copy
-import pytz
-from datetime import datetime, timedelta
 
-from django.shortcuts import render
-from django.http import HttpResponseBadRequest
-from django.db import connections
-from django.utils import timezone
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Assume PAGES is defined elsewhere in this module exactly as you provided.
