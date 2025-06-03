@@ -90,7 +90,7 @@
                             colspan="{{ line.max_machines }}"
                             style="background-color: {{ single.color }};"
                           >
-                            <div>{{ single.number }}</div>
+                            <div><strong>{{ single.number }}</strong></div>
                             <div class="small text-dark">
                               {{ single.count }}
                               {% if single.efficiency is not None %}
@@ -116,7 +116,7 @@
                             colspan="{{ colspan_value }}"
                             style="background-color: {{ m.color }};"
                           >
-                            <div>{{ m.number }}</div>
+                            <div><strong>{{ m.number }}</strong></div>
                             <div class="small text-dark">
                               {{ m.count }}
                               {% if m.efficiency is not None %}
