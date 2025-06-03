@@ -2617,18 +2617,18 @@ PAGES = {
             },
         ],
     },
-    "plant3": {
+    "Area2": {
         "dayshift_start": "07:00",
         "programs": [
             {
-                "program": "Furnaces",
+                "program": "Area 2 Furnaces",
                 "lines": [
                     {
-                        "line": "Furnaces",
+                        "line": "Area 2 Furnaces",
                         "scrap_line": "Furances",
                         "operations": [
                             {
-                            "op": "sinter",
+                            "op": "assemble",
                             "machines": [
                                 {
                                 "number": "344",
@@ -2661,10 +2661,10 @@ PAGES = {
                 ],
             },
             {
-                "program": "Presses",
+                "program": "Area 2 Presses",
                 "lines": [
                     {
-                        "line": "Presses",
+                        "line": "Area 2 Presses",
                         "scrap_line": "Presses",
                         "operations": [
                             {
@@ -2691,6 +2691,45 @@ PAGES = {
                                 { "number": "278" }
                                 ]
                             },
+                        ],
+                    }
+                ],
+            },
+        ],
+    },
+    "Area1": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+                "program": "Area 1 Furnaces",
+                "lines": [
+                    {
+                        "line": "Area 1 Furnaces",
+                        "scrap_line": "Furances",
+                        "operations": [
+                            {
+                            "op": "assemble",
+                            "machines": [
+                                {
+                                "number": "333",
+
+                                },
+                                {
+                                "number": "332",
+                                }
+                            ]
+                            }
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "Area 1 Presses",
+                "lines": [
+                    {
+                        "line": "Area 1 Presses",
+                        "scrap_line": "Presses",
+                        "operations": [
                             {
                                 "op": "compact",
                                 "machines": [
@@ -2721,7 +2760,6 @@ PAGES = {
                                 { "number": "245" }
                                 ]
                             },
-
                         ],
                     }
                 ],
@@ -3007,7 +3045,7 @@ def dashboard_current_shift(request, pages: str):
 
     # A tiny helper so we don’t repeat the "7 if in this set, else 6" logic
     def get_base_hour_for(program: str) -> int:
-        return 7 if program in ("8670", "plant3", "trilobe") else 6
+        return 7 if program in ("8670", "plant3", "trilobe", "Area2") else 6
 
     # Compute “now” once, in EST
     tz_est  = pytz.timezone("America/New_York")
