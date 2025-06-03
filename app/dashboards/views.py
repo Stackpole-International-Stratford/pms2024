@@ -1690,7 +1690,6 @@ PAGES = {
                                 {"number": "1506"},
                                 {"number": "1519"},
                                 {"number": "1520"},
-                                {"number": "1518"},
                             ],
                         },
                         {
@@ -1764,6 +1763,7 @@ PAGES = {
                         {
                             "op": "OP10",
                             "machines": [
+                                {"number": "1518"},
                                 {"number": "1521"},
                                 {"number": "1522"},
                                 {"number": "1523"},
@@ -3088,21 +3088,25 @@ def dashboard_current_shift(request, page: str):
                 else:
                     cell["efficiency"] = None  # no CT → “N/A”
 
-            # ── 6‐g   NEW: LAST 5 MINUTES SMART TARGET & EFFICIENCY (for colouring)
-            if pieces5_made == 0:
-                eff_5min = 0
-            else:
-                if smart_target_5min is not None and smart_target_5min > 0:
-                    eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                # ── 6-g   LAST 5 MINUTES SMART TARGET & EFFICIENCY (for colouring)
+                if pieces5_made == 0:
+                    eff_5min = 0
                 else:
-                    eff_5min = None  # no CT or target → “N/A”
+                    if smart_target_5min is not None and smart_target_5min > 0:
+                        eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                    else:
+                        eff_5min = None  # no CT or target → “N/A”
 
-            # use last 5 min efficiency to shade the cell
-            cell["color"] = (
-                efficiency_color(eff_5min)
-                if eff_5min is not None
-                else "#cccccc"
-            )
+                # (1) set color based on last-5min efficiency
+                cell["color"] = (
+                    efficiency_color(eff_5min)
+                    if eff_5min is not None
+                    else "#cccccc"
+                )
+
+                # (2) override: if the machine has made 0 parts all shift, force gray
+                if pieces_made == 0:
+                    cell["color"] = "#cccccc"
 
             if parts_key is not None:
                 cell["cycle_by_part"] = cycle_by_part
