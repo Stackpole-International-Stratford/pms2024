@@ -1,25 +1,36 @@
-<!-- absentee.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Upload Excel</title>
-</head>
-<body>
-    <h1>Upload an Excel File</h1>
+{# plant/templates/absentee.html #}
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Upload an Excel File</h1>
 
     {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
-    {% if success %}
-        <p style="color: green;">{{ success }}</p>
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data">
+    {% if success %}
+        <div class="alert alert-success" role="alert">
+            {{ success }}
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="row g-3">
         {% csrf_token %}
-        <label for="excel_file">Choose Excel file (.xls or .xlsx):</label>
-        <input type="file" id="excel_file" name="excel_file" accept=".xls,.xlsx" required>
-        <button type="submit">Upload</button>
+        <div class="col-md-8">
+            <label for="excel_file" class="form-label">Choose Excel file (.xls or .xlsx):</label>
+            <input type="file"
+                   id="excel_file"
+                   name="excel_file"
+                   accept=".xls,.xlsx"
+                   required
+                   class="form-control"/>
+        </div>
+        <div class="col-md-4 align-self-end">
+            <button type="submit" class="btn btn-warning w-100">Upload</button>
+        </div>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}
