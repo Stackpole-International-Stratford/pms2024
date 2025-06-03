@@ -2595,6 +2595,8 @@ def compute_part_durations_for_machine(
 
     return runs
 
+
+
 def efficiency_color(eff: int) -> str:
     """
     Given an efficiency percentage (0–100), return a hex color:

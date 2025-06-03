@@ -93,9 +93,16 @@
                           {% endwith %}
 
                         {% else %}
+                          {% comment %}
+                            Compute colspan = floor(line.max_machines / op.machines|length)
+                            using the widthratio tag (widthratio a b 1 → floor(a/b)).
+                          {% endcomment %}
+                          {% widthratio line.max_machines op.machines|length 1 as colspan_value %}
+
                           {% for m in op.machines %}
                             <td
                               class="text-center align-middle"
+                              colspan="{{ colspan_value }}"
                               style="background-color: {{ m.color }};"
                             >
                               <div>{{ m.number }}</div>
@@ -108,10 +115,6 @@
                                 {% endif %}
                               </div>
                             </td>
-                          {% endfor %}
-
-                          {% for _ in op.pad %}
-                            <td></td>
                           {% endfor %}
                         {% endif %}
                       </tr>
