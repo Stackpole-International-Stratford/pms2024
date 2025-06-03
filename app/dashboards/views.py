@@ -1804,7 +1804,9 @@ PAGES = {
                             },
                             {
                                 "op": "OP90",
-                                "machines": [],
+                                "machines": [
+                                    {"number": "1552"},
+                                ],
                             },
                             {
                                 "op": "OP100",
