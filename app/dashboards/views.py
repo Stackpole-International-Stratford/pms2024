@@ -1677,217 +1677,228 @@ PAGES = {
         "dayshift_start": "06:00",
         "programs": [
             {
-                "program": "10R80",
-                "lines": [
-                    {
-                        "line": "Mainline",
-                        "scrap_line": "Mainline",
-                        "operations": [
-                            {
-                                "op": "OP10",
-                                "machines": [
-                                    {"number": "1504"},
-                                    {"number": "1506"},
-                                    {"number": "1519"},
-                                    {"number": "1520"},
-                                    {"number": "1518"},
-                                ],
-                            },
-                            {
-                                "op": "OP30",
-                                "machines": [
-                                    {"number": "1502"},
-                                    {"number": "1507"},
-                                ],
-                            },
-                            {
-                                "op": "OP40",
-                                "machines": [
-                                    {"number": "1501"},
-                                    {"number": "1515"},
-                                ],
-                            },
-                            {
-                                "op": "OP50",
-                                "machines": [
-                                    {"number": "1508"},
-                                    {"number": "1532"},
-                                ],
-                            },
-                            {
-                                "op": "OP60",
-                                "machines": [
-                                    {"number": "1509"},
-                                ],
-                            },
-                            {
-                                "op": "OP70",
-                                "machines": [
-                                    {"number": "1514"},
-                                ],
-                            },
-                            {
-                                "op": "OP80",
-                                "machines": [
-                                    {"number": "1510"},
-                                ],
-                            },
-                            {
-                                "op": "OP90",
-                                "machines": [
-                                    {"number": "1513"},
-                                ],
-                            },
-                            {
-                                "op": "OP100",
-                                "machines": [
-                                    {"number": "1503"},
-                                ],
-                            },
-                            {
-                                "op": "OP110",
-                                "machines": [
-                                    {"number": "1511"},
-                                ],
-                            },
-                        ],
-                    },
-                    {
-                        "line": "OffLine",
-                        "scrap_line": "OffLine",
-                        "operations": [
-                            {
-                                "op": "OP10",
-                                "machines": [
-                                    {"number": "1521"},
-                                    {"number": "1522"},
-                                    {"number": "1523"},
-                                ],
-                            },
-                            {
-                                "op": "OP30",
-                                "machines": [
-                                    {"number": "1539"},
-                                    {"number": "1540"},
-                                ],
-                            },
-                            {
-                                "op": "OP40",
-                                "machines": [
-                                    {"number": "1524"},
-                                    {"number": "1525"},
-                                ],
-                            },
-                            {
-                                "op": "OP50",
-                                "machines": [
-                                    {"number": "1538"},
-                                ],
-                            },
-                            {
-                                "op": "OP60",
-                                "machines": [
-                                    {"number": "1541"},
-                                ],
-                            },
-                            {
-                                "op": "OP70",
-                                "machines": [
-                                    {"number": "1531"},
-                                ],
-                            },
-                            {
-                                "op": "OP80",
-                                "machines": [
-                                    {"number": "1527"},
-                                ],
-                            },
-                            {
-                                "op": "OP90",
-                                "machines": [
-                                    {"number": "1552"},
-                                ],
-                            },
-                            {
-                                "op": "OP100",
-                                "machines": [
-                                    {"number": "1530"},
-                                ],
-                            },
-                            {
-                                "op": "OP110",
-                                "machines": [
-                                    {"number": "1528"},
-                                ],
-                            },
-                        ],
-                    },
-                    {
-                        "line": "Uplift",
-                        "scrap_line": "Uplift",
-                        "operations": [
-                            {
-                                "op": "OP10",
-                                "machines": [],
-                            },
-                            {
-                                "op": "OP30",
-                                "machines": [
-                                    {"number": "1546"},
-                                ],
-                            },
-                            {
-                                "op": "OP40",
-                                "machines": [
-                                    {"number": "1547"},
-                                ],
-                            },
-                            {
-                                "op": "OP50",
-                                "machines": [
-                                    {"number": "1548"},
-                                ],
-                            },
-                            {
-                                "op": "OP60",
-                                "machines": [
-                                    {"number": "1549"},
-                                ],
-                            },
-                            {
-                                "op": "OP70",
-                                "machines": [
-                                    {"number": "594"},
-                                ],
-                            },
-                            {
-                                "op": "OP80",
-                                "machines": [
-                                    {"number": "1551"},
-                                ],
-                            },
-                            {
-                                "op": "OP90",
-                                "machines": [
-                                    {"number": "1552"},
-                                ],
-                            },
-                            {
-                                "op": "OP100",
-                                "machines": [
-                                    {"number": "751"},
-                                ],
-                            },
-                            {
-                                "op": "OP110",
-                                "machines": [
-                                    {"number": "1554"},
-                                ],
-                            },
-                        ],
-                    },
-                ],
-            },
+            "program": "10R80 Mainline",
+            "lines": [
+                {
+                    "line": "Mainline",
+                    "scrap_line": "Mainline",
+                    "operations": [
+                        {
+                            "op": "OP10",
+                            "machines": [
+                                {"number": "1504"},
+                                {"number": "1506"},
+                                {"number": "1519"},
+                                {"number": "1520"},
+                                {"number": "1518"},
+                            ],
+                        },
+                        {
+                            "op": "OP30",
+                            "machines": [
+                                {"number": "1502"},
+                                {"number": "1507"},
+                            ],
+                        },
+                        {
+                            "op": "OP40",
+                            "machines": [
+                                {"number": "1501"},
+                                {"number": "1515"},
+                            ],
+                        },
+                        {
+                            "op": "OP50",
+                            "machines": [
+                                {"number": "1508"},
+                                {"number": "1532"},
+                            ],
+                        },
+                        {
+                            "op": "OP60",
+                            "machines": [
+                                {"number": "1509"},
+                            ],
+                        },
+                        {
+                            "op": "OP70",
+                            "machines": [
+                                {"number": "1514"},
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1510"},
+                            ],
+                        },
+                        {
+                            "op": "OP90",
+                            "machines": [
+                                {"number": "1513"},
+                            ],
+                        },
+                        {
+                            "op": "OP100",
+                            "machines": [
+                                {"number": "1503"},
+                            ],
+                        },
+                        {
+                            "op": "OP110",
+                            "machines": [
+                                {"number": "1511"},
+                            ],
+                        },
+                    ],
+                }
+            ],
+        },
+        {
+            "program": "10R80 OffLine",
+            "lines": [
+                {
+                    "line": "OffLine",
+                    "scrap_line": "OffLine",
+                    "operations": [
+                        {
+                            "op": "OP10",
+                            "machines": [
+                                {"number": "1521"},
+                                {"number": "1522"},
+                                {"number": "1523"},
+                            ],
+                        },
+                        {
+                            "op": "OP30",
+                            "machines": [
+                                {"number": "1539"},
+                                {"number": "1540"},
+                            ],
+                        },
+                        {
+                            "op": "OP40",
+                            "machines": [
+                                {"number": "1524"},
+                                {"number": "1525"},
+                            ],
+                        },
+                        {
+                            "op": "OP50",
+                            "machines": [
+                                {"number": "1538"},
+                            ],
+                        },
+                        {
+                            "op": "OP60",
+                            "machines": [
+                                {"number": "1541"},
+                            ],
+                        },
+                        {
+                            "op": "OP70",
+                            "machines": [
+                                {"number": "1531"},
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1527"},
+                            ],
+                        },
+                        {
+                            "op": "OP90",
+                            "machines": [
+                                {"number": "1552"},
+                            ],
+                        },
+                        {
+                            "op": "OP100",
+                            "machines": [
+                                {"number": "1530"},
+                            ],
+                        },
+                        {
+                            "op": "OP110",
+                            "machines": [
+                                {"number": "1528"},
+                            ],
+                        },
+                    ],
+                }
+            ],
+        },
+        {
+            "program": "10R80 Uplift",
+            "lines": [
+                {
+                    "line": "Uplift",
+                    "scrap_line": "Uplift",
+                    "operations": [
+                        {
+                            "op": "OP10",
+                            "machines": [],
+                        },
+                        {
+                            "op": "OP30",
+                            "machines": [
+                                {"number": "1546"},
+                            ],
+                        },
+                        {
+                            "op": "OP40",
+                            "machines": [
+                                {"number": "1547"},
+                            ],
+                        },
+                        {
+                            "op": "OP50",
+                            "machines": [
+                                {"number": "1548"},
+                            ],
+                        },
+                        {
+                            "op": "OP60",
+                            "machines": [
+                                {"number": "1549"},
+                            ],
+                        },
+                        {
+                            "op": "OP70",
+                            "machines": [
+                                {"number": "594"},
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1551"},
+                            ],
+                        },
+                        {
+                            "op": "OP90",
+                            "machines": [
+                                {"number": "1552"},
+                            ],
+                        },
+                        {
+                            "op": "OP100",
+                            "machines": [
+                                {"number": "751"},
+                            ],
+                        },
+                        {
+                            "op": "OP110",
+                            "machines": [
+                                {"number": "1554"},
+                            ],
+                        },
+                    ],
+                }
+            ],
+        },
+
             {
                 "program": "10R60",
                 "lines": [
