@@ -3089,11 +3089,15 @@ def dashboard_current_shift(request, page: str):
                     cell["efficiency"] = None  # no CT → “N/A”
 
             # ── 6‐g   NEW: LAST 5 MINUTES SMART TARGET & EFFICIENCY (for colouring)
-            if pieces5_made == 0 or smart_target_5min is None or smart_target_5min <= 0:
-                eff_5min = None
+            if pieces5_made == 0:
+                eff_5min = 0
             else:
-                eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                if smart_target_5min is not None and smart_target_5min > 0:
+                    eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                else:
+                    eff_5min = None  # no CT or target → “N/A”
 
+            # use last 5 min efficiency to shade the cell
             cell["color"] = (
                 efficiency_color(eff_5min)
                 if eff_5min is not None
