@@ -2255,8 +2255,10 @@ PAGES = {
                             {
                                 "op": "OP20",
                                 "machines": [
-                                    {"number": "1705"},
-                                    {"number": "1746"},
+                                    {"number": "1705L"},
+                                    {"number": "1705R"},
+                                    {"number": "1746L"},
+                                    {"number": "1746R"},
                                 ],
                             },
                             {
