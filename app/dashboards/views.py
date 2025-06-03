@@ -2522,6 +2522,117 @@ PAGES = {
             },
         ],
     },
+    "plant3": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+                "program": "Furnaces",
+                "lines": [
+                    {
+                        "line": "Furnaces",
+                        "scrap_line": "Furances",
+                        "operations": [
+                            {
+                            "op": "sinter",
+                            "machines": [
+                                {
+                                "number": "344",
+                                "parts": [
+                                    "50-5404",
+                                    "50-3214",
+                                    "50-0447",
+                                    "50-5214",
+                                    "50-9341",
+                                    "50-0519",
+                                    "50-5401"
+                                ]
+                                },
+                                {
+                                "number": "345",
+                                "parts": [
+                                    "50-5404",
+                                    "50-3214",
+                                    "50-0447",
+                                    "50-5214",
+                                    "50-9341",
+                                    "50-0519",
+                                    "50-5401"
+                                ]
+                                }
+                            ]
+                            }
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "Presses",
+                "lines": [
+                    {
+                        "line": "Presses",
+                        "scrap_line": "Presses",
+                        "operations": [
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "272" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "273" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "277" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "278" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "262" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "240" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "280" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "242" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "245" }
+                                ]
+                            },
+
+                        ],
+                    }
+                ],
+            },
+        ],
+    },
 }
 
 
@@ -2795,7 +2906,7 @@ def dashboard_current_shift(request, page: str):
     # 3 ── establish shift start in EST ---------------------------------
     tz_est  = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(tz_est)
-    base_hr = 7 if page == "8670" else 6
+    base_hr = 7 if page in ("8670", "plant3") else 6
     base_est = tz_est.localize(datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0))
     if now_est < base_est:
         base_est -= timedelta(days=1)
