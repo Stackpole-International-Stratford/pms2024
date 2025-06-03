@@ -77,7 +77,14 @@
                           {% with single=op.machines.0 %}
                             <td class="single-machine" colspan="{{ line.max_machines }}">
                               <div>{{ single.number }}</div>
-                              <div class="small text-muted">{{ single.count }}</div>
+                               <div class="small text-muted">
+                                {{ single.count }}
+                                {% if single.efficiency is not None %}
+                                  ({{ single.efficiency|floatformat:1 }}%)
+                                {% else %}
+                                  (N/A)
+                                {% endif %}
+                              </div>
                             </td>
                           {% endwith %}
 
@@ -85,7 +92,14 @@
                           {% for m in op.machines %}
                             <td class="text-center align-middle">
                               <div>{{ m.number }}</div>
-                              <div class="small text-muted">{{ m.count }}</div>
+                              <div class="small text-muted">
+                                {{ m.count }}
+                                {% if m.efficiency is not None %}
+                                  ({{ m.efficiency|floatformat:1 }}%)
+                                {% else %}
+                                  (N/A)
+                                {% endif %}
+                              </div>
                             </td>
                           {% endfor %}
 

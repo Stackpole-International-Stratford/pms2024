@@ -2330,7 +2330,13 @@ PAGES = {
                             {
                                 "op": "OP100",
                                 "machines": [
-                                    {"number": "1706"},
+                                    {
+                                    "number": "1706",
+                                    "parts": [
+                                        "50-0447",
+                                        "50-5401"
+                                    ]
+                                    }
                                 ],
                             },
                             {
@@ -2404,7 +2410,13 @@ PAGES = {
                             {
                                 "op": "OP70",
                                 "machines": [
-                                    {"number": "1706"},
+                                    {
+                                "number": "1706",
+                                "parts": [
+                                    "50-5214",
+                                    "50-3214"
+                                    ]
+                                    }
                                 ],
                             },
                             {
@@ -2731,9 +2743,17 @@ def dashboard_current_shift(request, page: str):
         for cell in cells:
             cell["count"]      = pieces_made
             cell["cycle_time"] = rep_ct
+            cell["smart_target"] = smart_target
+
+            # ── 6‐f   EFFICIENCY = actual / smart_target (as percentage) ──
+            if smart_target:
+                efficiency_pct = (pieces_made / smart_target) * 100
+                cell["efficiency"] = efficiency_pct
+            else:
+                cell["efficiency"] = None  # will render as “N/A” in the frontend
+
             if parts_key is not None:
                 cell["cycle_by_part"] = cycle_by_part
-            cell["smart_target"] = smart_target
 
     # 7 ── layout padding ------------------------------------------------
     for prog in programs:
