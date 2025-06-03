@@ -1829,75 +1829,103 @@ PAGES = {
                 }
             ],
         },
-        {
-            "program": "10R80 Uplift",
-            "lines": [
+       {
+        "program": "10R80 Uplift",
+        "lines": [
+            {
+            "line": "Uplift",
+            "scrap_line": "Uplift",
+            "operations": [
                 {
-                    "line": "Uplift",
-                    "scrap_line": "Uplift",
-                    "operations": [
-                        {
-                            "op": "OP10",
-                            "machines": [],
-                        },
-                        {
-                            "op": "OP30",
-                            "machines": [
-                                {"number": "1546"},
-                            ],
-                        },
-                        {
-                            "op": "OP40",
-                            "machines": [
-                                {"number": "1547"},
-                            ],
-                        },
-                        {
-                            "op": "OP50",
-                            "machines": [
-                                {"number": "1548"},
-                            ],
-                        },
-                        {
-                            "op": "OP60",
-                            "machines": [
-                                {"number": "1549"},
-                            ],
-                        },
-                        {
-                            "op": "OP70",
-                            "machines": [
-                                {"number": "594"},
-                            ],
-                        },
-                        {
-                            "op": "OP80",
-                            "machines": [
-                                {"number": "1551"},
-                            ],
-                        },
-                        {
-                            "op": "OP90",
-                            "machines": [
-                                {"number": "1552"},
-                            ],
-                        },
-                        {
-                            "op": "OP100",
-                            "machines": [
-                                {"number": "751"},
-                            ],
-                        },
-                        {
-                            "op": "OP110",
-                            "machines": [
-                                {"number": "1554"},
-                            ],
-                        },
-                    ],
+                "op": "OP10",
+                "machines": []
+                },
+                {
+                "op": "OP30",
+                "machines": [
+                    {
+                    "number": "1546",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP40",
+                "machines": [
+                    {
+                    "number": "1547",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP50",
+                "machines": [
+                    {
+                    "number": "1548",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP60",
+                "machines": [
+                    {
+                    "number": "1549",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP70",
+                "machines": [
+                    {
+                    "number": "594",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP80",
+                "machines": [
+                    {
+                    "number": "1551",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP90",
+                "machines": [
+                    {
+                    "number": "1552",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP100",
+                "machines": [
+                    {
+                    "number": "751",
+                    "parts": ["50-9341"]
+                    }
+                ]
+                },
+                {
+                "op": "OP110",
+                "machines": [
+                    {
+                    "number": "1554",
+                    "parts": ["50-9341"]
+                    }
+                ]
                 }
-            ],
+            ]
+            }
+        ]
         },
+
 
             {
                 "program": "10R60",
@@ -1989,11 +2017,16 @@ PAGES = {
                         "scrap_line": "Sinter",
                         "operations": [
                             {
-                                "op": "Compact",
-                                "machines": [
-                                    {"number": "262"},
-                                    {"number": "263"},
-                                ],
+                            "op": "Compact",
+                            "machines": [
+                                {
+                                "number": "262"
+                                },
+                                {
+                                "number": "263",
+                                "parts": ["compact"]
+                                }
+                            ]
                             },
                             {
                                 "op": "Assemb",
