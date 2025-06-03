@@ -2743,14 +2743,22 @@ def dashboard_current_shift(request, page: str):
         for cell in cells:
             cell["count"]      = pieces_made
             cell["cycle_time"] = rep_ct
-            cell["smart_target"] = smart_target
 
-            # ── 6‐f   EFFICIENCY = actual / smart_target (as percentage) ──
-            if smart_target:
-                efficiency_pct = int((pieces_made / smart_target) * 100)
-                cell["efficiency"] = efficiency_pct
+            # ── 6‐e   SMART TARGET & EFFICIENCY ─────────────────────────
+            # If nothing was produced, force target = 0 and efficiency = 0%.
+            if pieces_made == 0:
+                cell["smart_target"] = 0
+                cell["efficiency"]   = 0
             else:
-                cell["efficiency"] = None  # will render as “N/A” in the frontend
+                # Otherwise, use whatever smart_target we computed before.
+                # If smart_target was None (no cycle data), still leave it None
+                # so the frontend knows “no target exists.”
+                cell["smart_target"] = smart_target
+                if smart_target is not None and smart_target > 0:
+                    cell["efficiency"] = int((pieces_made / smart_target) * 100)
+                else:
+                    # smart_target is None (no CT) → show “N/A” in frontend
+                    cell["efficiency"] = None
 
             if parts_key is not None:
                 cell["cycle_by_part"] = cycle_by_part
