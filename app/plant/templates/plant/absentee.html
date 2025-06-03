@@ -2,35 +2,39 @@
 {% extends "parent.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Upload an Excel File</h1>
+<div class="d-flex justify-content-center align-items-center" style="min-height: 90vh;">
+    <div class="card shadow-lg w-100" style="max-width: 500px;">
+        <div class="card-body p-4">
+            <h3 class="card-title text-center mb-4">Upload an Excel File</h3>
 
-    {% if error %}
-        <div class="alert alert-danger" role="alert">
-            {{ error }}
-        </div>
-    {% endif %}
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
 
-    {% if success %}
-        <div class="alert alert-success" role="alert">
-            {{ success }}
-        </div>
-    {% endif %}
+            {% if success %}
+                <div class="alert alert-success" role="alert">
+                    {{ success }}
+                </div>
+            {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="row g-3">
-        {% csrf_token %}
-        <div class="col-md-8">
-            <label for="excel_file" class="form-label">Choose Excel file (.xls or .xlsx):</label>
-            <input type="file"
-                   id="excel_file"
-                   name="excel_file"
-                   accept=".xls,.xlsx"
-                   required
-                   class="form-control"/>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="excel_file" class="form-label">Choose Excel file (.xls or .xlsx)</label>
+                    <input
+                        type="file"
+                        id="excel_file"
+                        name="excel_file"
+                        accept=".xls,.xlsx"
+                        required
+                        class="form-control"
+                    />
+                </div>
+                <button type="submit" class="btn btn-warning w-100">Upload</button>
+            </form>
         </div>
-        <div class="col-md-4 align-self-end">
-            <button type="submit" class="btn btn-warning w-100">Upload</button>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}
