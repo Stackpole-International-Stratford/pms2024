@@ -2986,7 +2986,7 @@ def efficiency_color(eff: int) -> str:
     Given an efficiency percentage (0–100), return a hex color:
       •  0% → pure red   (#ff0000)
       • 50% → yellow     (#ffff00)
-      •100% → pure green (#00ff00)
+      •100% → forest‐green (#228b22)
 
     Below  0 or above 100 will be clamped.
     """
@@ -3002,10 +3002,16 @@ def efficiency_color(eff: int) -> str:
         g = int((eff / 50) * 255)
         b = 0
     else:
-        # Fade from yellow → green: keep G=255, decrease R from 255→0
-        g = 255
-        r = int(((100 - eff) / 50) * 255)
-        b = 0
+        # Fade from yellow → forest‐green
+        #   At eff=50: (255,255,0)
+        #   At eff=100: ( 34,139,34)  ← “forest green”
+        proportion = (eff - 50) / 50.0
+        # Linearly interpolate each channel:
+        start_r, start_g, start_b = 255, 255, 0
+        target_r, target_g, target_b = 34, 139, 34
+        r = int(start_r + (target_r - start_r) * proportion)
+        g = int(start_g + (target_g - start_g) * proportion)
+        b = int(start_b + (target_b - start_b) * proportion)
 
     return f"#{r:02x}{g:02x}{b:02x}"
 
