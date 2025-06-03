@@ -80,7 +80,7 @@
                                <div class="small text-muted">
                                 {{ single.count }}
                                 {% if single.efficiency is not None %}
-                                  ({{ single.efficiency|floatformat:1 }}%)
+                                  ({{ single.efficiency}}%)
                                 {% else %}
                                   (N/A)
                                 {% endif %}
@@ -95,7 +95,7 @@
                               <div class="small text-muted">
                                 {{ m.count }}
                                 {% if m.efficiency is not None %}
-                                  ({{ m.efficiency|floatformat:1 }}%)
+                                  ({{ m.efficiency }}%)
                                 {% else %}
                                   (N/A)
                                 {% endif %}

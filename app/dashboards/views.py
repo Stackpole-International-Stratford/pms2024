@@ -2747,7 +2747,7 @@ def dashboard_current_shift(request, page: str):
 
             # ── 6‐f   EFFICIENCY = actual / smart_target (as percentage) ──
             if smart_target:
-                efficiency_pct = (pieces_made / smart_target) * 100
+                efficiency_pct = int((pieces_made / smart_target) * 100)
                 cell["efficiency"] = efficiency_pct
             else:
                 cell["efficiency"] = None  # will render as “N/A” in the frontend
