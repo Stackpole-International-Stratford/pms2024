@@ -1,33 +1,25 @@
-{% extends "parent.html" %}
-{% block content %}
+<!-- absentee.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Excel</title>
+</head>
+<body>
+    <h1>Upload an Excel File</h1>
 
-  <h1>Upload Absentee Excel</h1>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
-  </form>
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+    {% if success %}
+        <p style="color: green;">{{ success }}</p>
+    {% endif %}
 
-  {% if data %}
-    <h2>Filtered Rows (only with a Shift value)</h2>
-    <table border="1" cellpadding="4" cellspacing="0">
-      <thead>
-        <tr>
-          {% for col in data.0.keys %}
-            <th>{{ col }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in data %}
-          <tr>
-            {% for val in row.values %}
-              <td>{{ val }}</td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% endif %}
-
-{% endblock %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="excel_file">Choose Excel file (.xls or .xlsx):</label>
+        <input type="file" id="excel_file" name="excel_file" accept=".xls,.xlsx" required>
+        <button type="submit">Upload</button>
+    </form>
+</body>
+</html>

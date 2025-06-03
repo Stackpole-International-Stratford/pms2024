@@ -1,1 +1,2 @@
 from .tempsensor_models import TempSensorEmailList
+from .absentee_models import AbsenteeReport
