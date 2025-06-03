@@ -2595,6 +2595,33 @@ def compute_part_durations_for_machine(
 
     return runs
 
+def efficiency_color(eff: int) -> str:
+    """
+    Given an efficiency percentage (0–100), return a hex color:
+      •  0% → pure red   (#ff0000)
+      • 50% → yellow     (#ffff00)
+      •100% → pure green (#00ff00)
+
+    Below  0 or above 100 will be clamped.
+    """
+    # Clamp onto [0,100]
+    if eff < 0:
+        eff = 0
+    elif eff > 100:
+        eff = 100
+
+    if eff <= 50:
+        # Fade from red → yellow: keep R=255, increase G from 0→255
+        r = 255
+        g = int((eff / 50) * 255)
+        b = 0
+    else:
+        # Fade from yellow → green: keep G=255, decrease R from 255→0
+        g = 255
+        r = int(((100 - eff) / 50) * 255)
+        b = 0
+
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 
@@ -2761,6 +2788,12 @@ def dashboard_current_shift(request, page: str):
                 else:
                     # smart_target is None (no CT) → show “N/A” in frontend
                     cell["efficiency"] = None
+
+                cell["color"] = (
+                    efficiency_color(cell["efficiency"])
+                    if cell["efficiency"] is not None
+                    else "#cccccc"  # or any “N/A” default color you prefer
+                )
 
             if parts_key is not None:
                 cell["cycle_by_part"] = cycle_by_part

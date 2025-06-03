@@ -75,12 +75,16 @@
 
                         {% elif op.machines|length == 1 %}
                           {% with single=op.machines.0 %}
-                            <td class="single-machine" colspan="{{ line.max_machines }}">
+                            <td
+                              class="single-machine"
+                              colspan="{{ line.max_machines }}"
+                              style="background-color: {{ single.color }};"
+                            >
                               <div>{{ single.number }}</div>
-                               <div class="small text-muted">
+                              <div class="small text-muted">
                                 {{ single.count }}
                                 {% if single.efficiency is not None %}
-                                  ({{ single.efficiency}}%)
+                                  ({{ single.efficiency }}%)
                                 {% else %}
                                   (N/A)
                                 {% endif %}
@@ -90,7 +94,10 @@
 
                         {% else %}
                           {% for m in op.machines %}
-                            <td class="text-center align-middle">
+                            <td
+                              class="text-center align-middle"
+                              style="background-color: {{ m.color }};"
+                            >
                               <div>{{ m.number }}</div>
                               <div class="small text-muted">
                                 {{ m.count }}
