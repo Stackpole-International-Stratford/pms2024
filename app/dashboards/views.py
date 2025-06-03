@@ -2971,269 +2971,289 @@ def efficiency_color(eff: int) -> str:
 # ──────────────────────────────────────────────────────────────────────────────-
 
 
-def dashboard_current_shift(request, page: str):
-    # 1 ── validate page -------------------------------------------------
-    if page not in PAGES:
+
+
+def dashboard_current_shift(request, pages: str):
+    """
+    pages: either "programA" or "programA&programB"
+    We split on "&", ensure 1 or 2 valid program names, and then
+    run the exact same annotation logic for each program.  Finally
+    we merge all the "annotated program‐dicts" into one list called "programs"
+    and hand it off to dashboard_renewed.html.
+
+    In context:
+      - "pages" is the literal string (e.g. "8670&plant3") for the <title>.
+      - "programs" is a list of one or two sets of annotated prog-objects.
+    """
+
+    # 1) Split on "&" and validate count
+    parts = [p.strip() for p in pages.split("&") if p.strip()]
+    if len(parts) == 0 or len(parts) > 2:
         return HttpResponseBadRequest(
-            {"error": f"Unknown page '{page}'. Valid pages: {list(PAGES.keys())}"},
+            {"error": f"Invalid URL segment '{pages}'.  Use /dashboard/foo/ or /dashboard/foo&bar/.  At most two programs allowed."},
             content_type="application/json",
         )
 
-    # 2 ── deep‐copy config so we can annotate --------------------------
-    programs = copy.deepcopy(PAGES[page]["programs"])
+    # 2) Make sure each program name exists in PAGES
+    for prog_name in parts:
+        if prog_name not in PAGES:
+            return HttpResponseBadRequest(
+                {
+                    "error": f"Unknown program '{prog_name}'. "
+                             f"Valid programs are: {list(PAGES.keys())}"
+                },
+                content_type="application/json",
+            )
 
-    machine_set: Set[str] = set()
-    # key = (machine_id, parts_key) where parts_key is frozenset of parts or None
-    machine_occ: Dict[Tuple[str, Optional[frozenset]], List[Dict]] = {}
+    # A tiny helper so we don’t repeat the "7 if in this set, else 6" logic
+    def get_base_hour_for(program: str) -> int:
+        return 7 if program in ("8670", "plant3", "trilobe") else 6
 
-    for prog in programs:
-        for line in prog["lines"]:
-            for op in line["operations"]:
-                for m in op["machines"]:
-                    mid = m["number"]
-                    machine_set.add(mid)
-                    if "parts" in m:
-                        parts_key = frozenset(m["parts"])
-                    else:
-                        parts_key = None
-                    machine_occ.setdefault((mid, parts_key), []).append(m)
-
-    # 3 ── establish shift start in EST ---------------------------------
+    # Compute “now” once, in EST
     tz_est  = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(tz_est)
-    base_hr = 7 if page in ("8670", "plant3", "trilobe") else 6
-    base_est = tz_est.localize(
-        datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0)
-    )
-    if now_est < base_est:
-        base_est -= timedelta(days=1)
 
-    day_start, aft_start = base_est, base_est + timedelta(hours=8)
-    nite_start           = base_est + timedelta(hours=16)
+    # We will accumulate ALL annotated program‐dicts into this list
+    all_programs: List[Dict] = []
 
-    if   day_start <= now_est < aft_start:
-        current_shift, shift_start_est = "day", day_start
-    elif aft_start <= now_est < nite_start:
-        current_shift, shift_start_est = "afternoon", aft_start
-    else:
-        current_shift, shift_start_est = "night", nite_start
-
-    shift_start_epoch = int(shift_start_est.astimezone(pytz.UTC).timestamp())
-    shift_end_epoch   = int(timezone.now().timestamp())
-    shift_length      = shift_end_epoch - shift_start_epoch  # total seconds in this shift so far
-
-    # ------------------------------------------------------------
-    # NEW: define the 5‐minute window (last 300 seconds)
-    last5_start_epoch = shift_end_epoch - 300
-
-    # 4 ── piece‐counts since shift start -------------------------------
-    placeholders = ",".join(["%s"] * len(machine_set))
-    params       = list(machine_set) + [shift_start_epoch]
-
-    sql = f"""
-        SELECT Machine, Part, SUM(`Count`) AS cnt
-        FROM   GFxPRoduction
-        WHERE  Machine IN ({placeholders})
-          AND  TimeStamp >= %s
-        GROUP  BY Machine, Part
-    """
-    cur = connections["prodrpt-md"].cursor()
-    cur.execute(sql, params)
-    counts_by_mp: Dict[Tuple[str, str], int] = {
-        (str(m), p): int(c) for m, p, c in cur.fetchall()
-    }
-
-    totals_by_machine: Dict[str, int] = defaultdict(int)
-    for (m, _p), c in counts_by_mp.items():
-        totals_by_machine[m] += c
-
-    # ── NEW: piece‐counts in the last 5 minutes ───────────────────────
-    params5      = list(machine_set) + [last5_start_epoch]
-    sql5 = f"""
-        SELECT Machine, Part, SUM(`Count`) AS cnt
-        FROM   GFxPRoduction
-        WHERE  Machine IN ({placeholders})
-          AND  TimeStamp >= %s
-        GROUP  BY Machine, Part
-    """
-    cur.execute(sql5, params5)
-    counts5_by_mp: Dict[Tuple[str, str], int] = {
-        (str(m), p): int(c) for m, p, c in cur.fetchall()
-    }
-
-    totals5_by_machine: Dict[str, int] = defaultdict(int)
-    for (m, _p), c in counts5_by_mp.items():
-        totals5_by_machine[m] += c
-
-    # 5 ── part‐runs for smart‐target math (only needed for single‐part logic) ---
-    part_runs: Dict[str, List[Dict]] = {}
-    part_runs_5min: Dict[str, List[Dict]] = {}
-    for mid in machine_set:
-        # runs over the _entire shift_:
-        runs = compute_part_durations_for_machine(mid, shift_start_epoch, shift_end_epoch)
-        part_runs[mid] = runs
-
-        # ── NEW: runs over the last 5 minutes (so we can build a “smart target” for 5 min)
-        runs_5 = compute_part_durations_for_machine(mid, last5_start_epoch, shift_end_epoch)
-        part_runs_5min[mid] = runs_5
-
-    # 6 ── annotate every machine‐cell ----------------------------------
-    for (mid, parts_key), cells in machine_occ.items():
-        # ── 6‐a   PIECES MADE (shift) ───────────────────────────────────
-        if parts_key is None:
-            pieces_made = totals_by_machine.get(mid, 0)
-        else:
-            pieces_made = sum(
-                counts_by_mp.get((mid, p), 0) for p in parts_key
-            )
-
-        # ── 6‐b   PIECES MADE (last 5min) ──────────────────────────────
-        if parts_key is None:
-            pieces5_made = totals5_by_machine.get(mid, 0)
-        else:
-            pieces5_made = sum(
-                counts5_by_mp.get((mid, p), 0) for p in parts_key
-            )
-
-        # ── 6‐c   CYCLE‐TIMES (sec / piece) ─────────────────────────────
-        if parts_key is None:
-            # single‐part (or no‐part) machine
-            ct_single = get_cycle_time_seconds(mid)  # part=None internally
-            cycle_by_part = {}
-            if ct_single is not None:
-                # assign the same CT to every run['part'] (if needed)
-                for run in part_runs[mid]:
-                    cycle_by_part[run["part"]] = ct_single
-                # also assign for the 5‐min window runs (if needed)
-                # (we only need ct to compute smart‐target; same ct applies)
-                # No extra loop here—reuse ct_single directly below
-            rep_ct = ct_single
-
-            # ── 6‐d (single‐part) SMART TARGET Σ(run_duration / ct) ────────
-            # shift‐target:
-            smart_pcs = 0.0
-            for run in part_runs[mid]:
-                part = run["part"]
-                ct = cycle_by_part.get(part)
-                if ct:
-                    smart_pcs += run["duration"] / ct
-            smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
-
-            # ── NEW: compute smart‐target for the last 5 minutes
-            smart5_pcs = 0.0
-            for run5 in part_runs_5min[mid]:
-                part5 = run5["part"]
-                ct5 = ct_single  # same cycle‐time
-                if ct5:
-                    smart5_pcs += run5["duration"] / ct5
-            smart_target_5min = int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
-
-        else:
-            # multi‐part machine: fetch each part’s CT
-            cycle_by_part: Dict[str, Optional[float]] = {}
-            for p in parts_key:
-                cycle_by_part[p] = get_cycle_time_seconds(mid, p)
-
-            # pick first non‐None CT as representative
-            rep_ct = next((v for v in cycle_by_part.values() if v is not None), None)
-
-            # ── 6‐d (multi‐part) SMART TARGET = shift_length / rep_ct ───────
-            if rep_ct:
-                smart_target = int(math.floor(shift_length / rep_ct))
-            else:
-                smart_target = None
-
-            # ── NEW: multi‐part, last 5 minutes → target = floor(300 / rep_ct)
-            if rep_ct:
-                smart_target_5min = int(math.floor(300 / rep_ct))
-            else:
-                smart_target_5min = None
-
-        # ── 6‐e   Console proof line  ───────────────────────────────────
-        if parts_key is None:
-            tag = mid
-            ct_disp = f"{rep_ct:.1f}s" if rep_ct is not None else "NA"
-        else:
-            parts_list = sorted(parts_key)
-            tag = f"{mid} /{','.join(parts_list)}"
-            ct_disp = "; ".join(
-                f"{p}:{cycle_by_part[p]:.1f}s" if cycle_by_part[p] is not None else f"{p}:NA"
-                for p in parts_list
-            )
-
-        print(
-            f"ST: {tag}  smart_target={smart_target if smart_target is not None else 'NA'}  "
-            f"pieces_made={pieces_made}  ct={ct_disp}"
+    # Loop over each (one or two) requested program
+    for prog_name in parts:
+        # 3) Compute that program’s base‐hour‐datetime in EST
+        base_hr = get_base_hour_for(prog_name)
+        base_est = tz_est.localize(
+            datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0)
         )
+        if now_est < base_est:
+            # if it’s still “before” today’s base‐hour, roll back one day
+            base_est -= timedelta(days=1)
 
-        # ── 6‐f   Write values back into every duplicate “cell” ─────────
-        for cell in cells:
-            # ── (1) shift‐wide counts & CT (unchanged)
-            cell["count"]      = pieces_made
-            cell["cycle_time"] = rep_ct
+        # define the three shifts:
+        day_start  = base_est
+        aft_start  = base_est + timedelta(hours=8)
+        nite_start = base_est + timedelta(hours=16)
 
-            # ── (2) SHIFT‐WIDE SMART TARGET & EFFICIENCY (sent for frontend display)
-            if pieces_made == 0:
-                cell["smart_target"] = 0
-                cell["efficiency"]   = 0
+        if day_start <= now_est < aft_start:
+            current_shift = "day"
+            shift_start   = day_start
+        elif aft_start <= now_est < nite_start:
+            current_shift = "afternoon"
+            shift_start   = aft_start
+        else:
+            current_shift = "night"
+            shift_start   = nite_start
+
+        shift_start_epoch = int(shift_start.astimezone(pytz.UTC).timestamp())
+        shift_end_epoch   = int(timezone.now().timestamp())
+        shift_length      = shift_end_epoch - shift_start_epoch
+
+        # for “last 5 minutes” cutoff:
+        last5_start_epoch = shift_end_epoch - 300
+
+        # 4) Deep‐copy this program’s config so we can annotate it in place:
+        programs_copy = copy.deepcopy(PAGES[prog_name]["programs"])
+        machine_set: Set[str] = set()
+        # key = (machine_id, parts_key); value = [list of machine‐cells]
+        machine_occ: Dict[Tuple[str, Optional[frozenset]], List[Dict]] = {}
+
+        # Build machine_set and machine_occ exactly as before
+        for prog_obj in programs_copy:
+            for line in prog_obj["lines"]:
+                for op in line["operations"]:
+                    for m in op["machines"]:
+                        mid = m["number"]
+                        machine_set.add(mid)
+                        if "parts" in m:
+                            pk = frozenset(m["parts"])
+                        else:
+                            pk = None
+                        machine_occ.setdefault((mid, pk), []).append(m)
+
+        # 5) Query “total pieces since shift start” for this program
+        placeholders = ",".join(["%s"] * len(machine_set))
+        params       = list(machine_set) + [shift_start_epoch]
+        sql = f"""
+            SELECT Machine, Part, SUM(`Count`) AS cnt
+            FROM   GFxPRoduction
+            WHERE  Machine IN ({placeholders})
+              AND  TimeStamp >= %s
+            GROUP  BY Machine, Part
+        """
+        cur = connections["prodrpt-md"].cursor()
+        cur.execute(sql, params)
+        counts_by_mp: Dict[Tuple[str, str], int] = {
+            (str(m), p): int(c) for m, p, c in cur.fetchall()
+        }
+
+        totals_by_machine: Dict[str, int] = defaultdict(int)
+        for (m, _p), c in counts_by_mp.items():
+            totals_by_machine[m] += c
+
+        # 6) Query “total pieces in last 5 minutes”
+        params5 = list(machine_set) + [last5_start_epoch]
+        sql5 = f"""
+            SELECT Machine, Part, SUM(`Count`) AS cnt
+            FROM   GFxPRoduction
+            WHERE  Machine IN ({placeholders})
+              AND  TimeStamp >= %s
+            GROUP  BY Machine, Part
+        """
+        cur.execute(sql5, params5)
+        counts5_by_mp: Dict[Tuple[str, str], int] = {
+            (str(m), p): int(c) for m, p, c in cur.fetchall()
+        }
+
+        totals5_by_machine: Dict[str, int] = defaultdict(int)
+        for (m, _p), c in counts5_by_mp.items():
+            totals5_by_machine[m] += c
+
+        # 7) Compute part_runs for the entire shift & last 5 minutes
+        part_runs: Dict[str, List[Dict]]      = {}
+        part_runs_5min: Dict[str, List[Dict]] = {}
+        for mid in machine_set:
+            runs  = compute_part_durations_for_machine(mid, shift_start_epoch, shift_end_epoch)
+            runs5 = compute_part_durations_for_machine(mid, last5_start_epoch, shift_end_epoch)
+            part_runs[mid]      = runs
+            part_runs_5min[mid] = runs5
+
+        # 8) Annotate each “machine‐cell” in machine_occ exactly as in your original code:
+        for (mid, parts_key), cells in machine_occ.items():
+            # a) shift‐wide pieces made
+            if parts_key is None:
+                pieces_made = totals_by_machine.get(mid, 0)
             else:
-                cell["smart_target"] = smart_target
-                if smart_target is not None and smart_target > 0:
-                    cell["efficiency"] = int((pieces_made / smart_target) * 100)
-                else:
-                    cell["efficiency"] = None  # no CT → “N/A”
-
-                # ── 6-g   LAST 5 MINUTES SMART TARGET & EFFICIENCY (for colouring)
-                if pieces5_made == 0:
-                    eff_5min = 0
-                else:
-                    if smart_target_5min is not None and smart_target_5min > 0:
-                        eff_5min = int((pieces5_made / smart_target_5min) * 100)
-                    else:
-                        eff_5min = None  # no CT or target → “N/A”
-
-                # (1) set color based on last-5min efficiency
-                cell["color"] = (
-                    efficiency_color(eff_5min)
-                    if eff_5min is not None
-                    else "#cccccc"
+                pieces_made = sum(
+                    counts_by_mp.get((mid, p), 0) for p in parts_key
                 )
 
-                # (2) override: if the machine has made 0 parts all shift, force gray
+            # b) last 5min pieces
+            if parts_key is None:
+                pieces5_made = totals5_by_machine.get(mid, 0)
+            else:
+                pieces5_made = sum(
+                    counts5_by_mp.get((mid, p), 0) for p in parts_key
+                )
+
+            # c) cycle times & “smart targets”
+            if parts_key is None:
+                # single‐part or no‐part machine
+                ct_single     = get_cycle_time_seconds(mid)  # part=None internally
+                cycle_by_part = {}
+                if ct_single is not None:
+                    for run in part_runs[mid]:
+                        cycle_by_part[run["part"]] = ct_single
+                rep_ct = ct_single
+
+                # shift‐wide smart target
+                if ct_single:
+                    smart_pcs = sum(
+                        run["duration"] / ct_single for run in part_runs[mid]
+                    )
+                    smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
+                else:
+                    smart_target = None
+
+                # last‐5min smart target
+                if ct_single:
+                    smart5_pcs = sum(
+                        run5["duration"] / ct_single for run5 in part_runs_5min[mid]
+                    )
+                    smart_target_5min = int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
+                else:
+                    smart_target_5min = None
+
+            else:
+                # multi‐part machine: one CT per part, pick the first non‐None as rep
+                cycle_by_part = {p: get_cycle_time_seconds(mid, p) for p in parts_key}
+                rep_ct = next((v for v in cycle_by_part.values() if v is not None), None)
+
+                if rep_ct:
+                    smart_target       = int(math.floor(shift_length / rep_ct))
+                    smart_target_5min  = int(math.floor(300 / rep_ct))
+                else:
+                    smart_target       = None
+                    smart_target_5min  = None
+
+            # d) annotate each “cell” in this group
+            for cell in cells:
+                cell["count"]      = pieces_made
+                cell["cycle_time"] = rep_ct
+
+                # shift‐wide smart + efficiency
                 if pieces_made == 0:
-                    cell["color"] = "#cccccc"
+                    cell["smart_target"] = 0
+                    cell["efficiency"]   = 0
+                    cell["color"]        = "#cccccc"
+                else:
+                    cell["smart_target"] = smart_target or 0
+                    if smart_target and smart_target > 0:
+                        cell["efficiency"] = int((pieces_made / smart_target) * 100)
+                    else:
+                        cell["efficiency"] = None
 
-            if parts_key is not None:
-                cell["cycle_by_part"] = cycle_by_part
+                    # last‐5min efficiency & color
+                    if pieces5_made == 0:
+                        eff_5min = 0
+                    else:
+                        if smart_target_5min and smart_target_5min > 0:
+                            eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                        else:
+                            eff_5min = None
 
-    # 7 ── layout padding ------------------------------------------------
-    for prog in programs:
-        for line in prog["lines"]:
-            max_m = max((len(op["machines"]) for op in line["operations"]), default=1)
-            line["max_machines"] = max_m
-            for op in line["operations"]:
-                op["pad"] = [None] * (max_m - len(op["machines"]))
+                    cell["color"] = (
+                        efficiency_color(eff_5min) if (eff_5min is not None) else "#cccccc"
+                    )
+                    if pieces_made == 0:
+                        # override: if the machine made 0 all shift, force gray
+                        cell["color"] = "#cccccc"
 
-    # 8 ── filter part_runs for template (only declare parts in config) --
-    filtered_part_runs: Dict[str, List[Dict]] = {}
-    for mid, runs in part_runs.items():
-        declared_parts = {
-            p
-            for (m, pk) in machine_occ
-            if m == mid and pk is not None
-            for p in pk
-        }
-        if declared_parts:
-            runs = [r for r in runs if r["part"] in declared_parts]
-        filtered_part_runs[mid] = runs
+                if parts_key is not None:
+                    cell["cycle_by_part"] = cycle_by_part
 
-    # 9 ── render --------------------------------------------------------
+        # 9) “Padding” exactly as you had before
+        for prog_obj in programs_copy:
+            for line in prog_obj["lines"]:
+                max_m = max((len(op["machines"]) for op in line["operations"]), default=1)
+                line["max_machines"] = max_m
+                for op in line["operations"]:
+                    op["pad"] = [None] * (max_m - len(op["machines"]))
+
+        # 10) Filter part_runs for parts declared in config (exactly as before)
+        filtered_part_runs: Dict[str, List[Dict]] = {}
+        for mid, runs in part_runs.items():
+            declared_parts = {
+                p
+                for (m, pk) in machine_occ
+                if m == mid and pk is not None
+                for p in pk
+            }
+            if declared_parts:
+                runs = [r for r in runs if r["part"] in declared_parts]
+            filtered_part_runs[mid] = runs
+
+        # 11) At this point, `programs_copy` is a list of one (or more) “prog” dicts
+        #     containing: { "program": <string>, "lines": [...], ... plus each machine has
+        #     "count", "cycle_time", "smart_target", "efficiency", "color", etc. }
+        #
+        #    We simply merge that list into the big `all_programs` list.
+        #
+        #    If PAGES[prog_name]["programs"] originally had multiple “prog” entries,
+        #    we keep them all—but now annotated. If you only ever had one “prog” entry
+        #    per page, that’s fine too.
+        for prog_obj in programs_copy:
+            # (Optionally, if you want to override the “program” field to display the page name,
+            #  you could do: prog_obj["program"] = prog_name 
+            #  But usually PAGES[prog_name]["program"] is already correct.)
+            all_programs.append(prog_obj)
+
+        # (note: we do **not** need to pass `current_shift` or `shift_start` per‐program
+        #  into template here unless your template explicitly uses them. The code above
+        #  already annotated each machine‐cell with all the numbers it needs.)
+    # end for prog_name
+
+    # 12) Render exactly the same template, except we give it “pages” and “programs”:
     context = {
-        "page":            page,
-        "dayshift_start":  PAGES[page]["dayshift_start"],
-        "current_shift":   current_shift,
-        "shift_start_est": shift_start_est,
-        "programs":        programs,
-        "part_runs":       filtered_part_runs,
+        "pages":    pages,         # template will use this in the <title>
+        "programs": all_programs,  # a list of 1 or 2 programs’ worth of annotated data
     }
     return render(request, "dashboards/dashboard_renewed.html", context)
+
