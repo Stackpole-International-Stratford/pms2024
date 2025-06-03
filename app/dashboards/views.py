@@ -2873,7 +2873,7 @@ def efficiency_color(eff: int) -> str:
 
 # ───────────────────────────────────────────────────────────────────────────────
 # view itself
-# ───────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────-
 
 
 def dashboard_current_shift(request, page: str):
@@ -2907,7 +2907,9 @@ def dashboard_current_shift(request, page: str):
     tz_est  = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(tz_est)
     base_hr = 7 if page in ("8670", "plant3") else 6
-    base_est = tz_est.localize(datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0))
+    base_est = tz_est.localize(
+        datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0)
+    )
     if now_est < base_est:
         base_est -= timedelta(days=1)
 
@@ -2924,6 +2926,10 @@ def dashboard_current_shift(request, page: str):
     shift_start_epoch = int(shift_start_est.astimezone(pytz.UTC).timestamp())
     shift_end_epoch   = int(timezone.now().timestamp())
     shift_length      = shift_end_epoch - shift_start_epoch  # total seconds in this shift so far
+
+    # ------------------------------------------------------------
+    # NEW: define the 5‐minute window (last 300 seconds)
+    last5_start_epoch = shift_end_epoch - 300
 
     # 4 ── piece‐counts since shift start -------------------------------
     placeholders = ",".join(["%s"] * len(machine_set))
@@ -2946,15 +2952,39 @@ def dashboard_current_shift(request, page: str):
     for (m, _p), c in counts_by_mp.items():
         totals_by_machine[m] += c
 
+    # ── NEW: piece‐counts in the last 5 minutes ───────────────────────
+    params5      = list(machine_set) + [last5_start_epoch]
+    sql5 = f"""
+        SELECT Machine, Part, SUM(`Count`) AS cnt
+        FROM   GFxPRoduction
+        WHERE  Machine IN ({placeholders})
+          AND  TimeStamp >= %s
+        GROUP  BY Machine, Part
+    """
+    cur.execute(sql5, params5)
+    counts5_by_mp: Dict[Tuple[str, str], int] = {
+        (str(m), p): int(c) for m, p, c in cur.fetchall()
+    }
+
+    totals5_by_machine: Dict[str, int] = defaultdict(int)
+    for (m, _p), c in counts5_by_mp.items():
+        totals5_by_machine[m] += c
+
     # 5 ── part‐runs for smart‐target math (only needed for single‐part logic) ---
     part_runs: Dict[str, List[Dict]] = {}
+    part_runs_5min: Dict[str, List[Dict]] = {}
     for mid in machine_set:
+        # runs over the _entire shift_:
         runs = compute_part_durations_for_machine(mid, shift_start_epoch, shift_end_epoch)
         part_runs[mid] = runs
 
+        # ── NEW: runs over the last 5 minutes (so we can build a “smart target” for 5 min)
+        runs_5 = compute_part_durations_for_machine(mid, last5_start_epoch, shift_end_epoch)
+        part_runs_5min[mid] = runs_5
+
     # 6 ── annotate every machine‐cell ----------------------------------
     for (mid, parts_key), cells in machine_occ.items():
-        # ── 6‐a   PIECES MADE (already produced) ─────────────────────────
+        # ── 6‐a   PIECES MADE (shift) ───────────────────────────────────
         if parts_key is None:
             pieces_made = totals_by_machine.get(mid, 0)
         else:
@@ -2962,7 +2992,15 @@ def dashboard_current_shift(request, page: str):
                 counts_by_mp.get((mid, p), 0) for p in parts_key
             )
 
-        # ── 6‐b   CYCLE‐TIMES (sec / piece) ─────────────────────────────
+        # ── 6‐b   PIECES MADE (last 5min) ──────────────────────────────
+        if parts_key is None:
+            pieces5_made = totals5_by_machine.get(mid, 0)
+        else:
+            pieces5_made = sum(
+                counts5_by_mp.get((mid, p), 0) for p in parts_key
+            )
+
+        # ── 6‐c   CYCLE‐TIMES (sec / piece) ─────────────────────────────
         if parts_key is None:
             # single‐part (or no‐part) machine
             ct_single = get_cycle_time_seconds(mid)  # part=None internally
@@ -2971,9 +3009,13 @@ def dashboard_current_shift(request, page: str):
                 # assign the same CT to every run['part'] (if needed)
                 for run in part_runs[mid]:
                     cycle_by_part[run["part"]] = ct_single
+                # also assign for the 5‐min window runs (if needed)
+                # (we only need ct to compute smart‐target; same ct applies)
+                # No extra loop here—reuse ct_single directly below
             rep_ct = ct_single
 
-            # ── 6‐c (single‐part) SMART TARGET Σ(run_duration / ct) ────────
+            # ── 6‐d (single‐part) SMART TARGET Σ(run_duration / ct) ────────
+            # shift‐target:
             smart_pcs = 0.0
             for run in part_runs[mid]:
                 part = run["part"]
@@ -2981,6 +3023,15 @@ def dashboard_current_shift(request, page: str):
                 if ct:
                     smart_pcs += run["duration"] / ct
             smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
+
+            # ── NEW: compute smart‐target for the last 5 minutes
+            smart5_pcs = 0.0
+            for run5 in part_runs_5min[mid]:
+                part5 = run5["part"]
+                ct5 = ct_single  # same cycle‐time
+                if ct5:
+                    smart5_pcs += run5["duration"] / ct5
+            smart_target_5min = int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
 
         else:
             # multi‐part machine: fetch each part’s CT
@@ -2991,13 +3042,19 @@ def dashboard_current_shift(request, page: str):
             # pick first non‐None CT as representative
             rep_ct = next((v for v in cycle_by_part.values() if v is not None), None)
 
-            # ── 6‐c (multi‐part) SMART TARGET = shift_length / rep_ct ───────
+            # ── 6‐d (multi‐part) SMART TARGET = shift_length / rep_ct ───────
             if rep_ct:
                 smart_target = int(math.floor(shift_length / rep_ct))
             else:
                 smart_target = None
 
-        # ── 6‐d   Console proof line  ───────────────────────────────────
+            # ── NEW: multi‐part, last 5 minutes → target = floor(300 / rep_ct)
+            if rep_ct:
+                smart_target_5min = int(math.floor(300 / rep_ct))
+            else:
+                smart_target_5min = None
+
+        # ── 6‐e   Console proof line  ───────────────────────────────────
         if parts_key is None:
             tag = mid
             ct_disp = f"{rep_ct:.1f}s" if rep_ct is not None else "NA"
@@ -3014,32 +3071,34 @@ def dashboard_current_shift(request, page: str):
             f"pieces_made={pieces_made}  ct={ct_disp}"
         )
 
-        # ── 6‐e   Write values back into every duplicate “cell” ─────────
+        # ── 6‐f   Write values back into every duplicate “cell” ─────────
         for cell in cells:
+            # ── (1) shift‐wide counts & CT (unchanged)
             cell["count"]      = pieces_made
             cell["cycle_time"] = rep_ct
 
-            # ── 6‐e   SMART TARGET & EFFICIENCY ─────────────────────────
-            # If nothing was produced, force target = 0 and efficiency = 0%.
+            # ── (2) SHIFT‐WIDE SMART TARGET & EFFICIENCY (sent for frontend display)
             if pieces_made == 0:
                 cell["smart_target"] = 0
                 cell["efficiency"]   = 0
             else:
-                # Otherwise, use whatever smart_target we computed before.
-                # If smart_target was None (no cycle data), still leave it None
-                # so the frontend knows “no target exists.”
                 cell["smart_target"] = smart_target
                 if smart_target is not None and smart_target > 0:
                     cell["efficiency"] = int((pieces_made / smart_target) * 100)
                 else:
-                    # smart_target is None (no CT) → show “N/A” in frontend
-                    cell["efficiency"] = None
+                    cell["efficiency"] = None  # no CT → “N/A”
 
-                cell["color"] = (
-                    efficiency_color(cell["efficiency"])
-                    if cell["efficiency"] is not None
-                    else "#cccccc"  # or any “N/A” default color you prefer
-                )
+            # ── 6‐g   NEW: LAST 5 MINUTES SMART TARGET & EFFICIENCY (for colouring)
+            if pieces5_made == 0 or smart_target_5min is None or smart_target_5min <= 0:
+                eff_5min = None
+            else:
+                eff_5min = int((pieces5_made / smart_target_5min) * 100)
+
+            cell["color"] = (
+                efficiency_color(eff_5min)
+                if eff_5min is not None
+                else "#cccccc"
+            )
 
             if parts_key is not None:
                 cell["cycle_by_part"] = cycle_by_part
