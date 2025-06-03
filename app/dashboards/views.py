@@ -1819,7 +1819,7 @@ PAGES = {
                         {
                             "op": "OP90",
                             "machines": [
-                                {"number": "1552"},
+                                {"number": "1513"},
                             ],
                         },
                         {
@@ -3001,7 +3001,7 @@ def dashboard_current_shift(request, page: str):
     # 3 ── establish shift start in EST ---------------------------------
     tz_est  = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(tz_est)
-    base_hr = 7 if page in ("8670", "plant3") else 6
+    base_hr = 7 if page in ("8670", "plant3", "trilobe") else 6
     base_est = tz_est.localize(
         datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0)
     )
