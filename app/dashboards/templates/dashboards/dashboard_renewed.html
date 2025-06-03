@@ -62,58 +62,74 @@
                   <tbody>
                     {% for op in line.operations %}
                       <tr>
-                        <td class="op-cell">{{ op.op }}</td>
+                      {# ── OP‐CELL now shows both the op label and its total ⁄ efficiency ── #}
+                      <td class="op-cell">
+                        {{ op.op }}
+                        <br/>
+                        <span class="small text-dark">
+                          {{ op.total_produced }}
+                          {% if op.efficiency is not None %}
+                            ({{ op.efficiency }}%)
+                          {% else %}
+                            (N/A)
+                          {% endif %}
+                        </span>
+                      </td>
 
-                        {% if op.machines|length == 0 %}
-                          <td class="no-mach" colspan="{{ line.max_machines }}">
-                            &mdash;
+                      {# ── NO MACHINES: just a placeholder cell spanning all machine‐slots ── #}
+                      {% if op.machines|length == 0 %}
+                        <td class="no-mach" colspan="{{ line.max_machines }}">
+                          &mdash;
+                        </td>
+
+                      {# ── SINGLE MACHINE: one big cell spanning all machine‐slots ── #}
+                      {% elif op.machines|length == 1 %}
+                        {% with single=op.machines.0 %}
+                          <td
+                            class="single-machine"
+                            colspan="{{ line.max_machines }}"
+                            style="background-color: {{ single.color }};"
+                          >
+                            <div>{{ single.number }}</div>
+                            <div class="small text-dark">
+                              {{ single.count }}
+                              {% if single.efficiency is not None %}
+                                ({{ single.efficiency }}%)
+                              {% else %}
+                                (N/A)
+                              {% endif %}
+                            </div>
                           </td>
+                        {% endwith %}
 
-                        {% elif op.machines|length == 1 %}
-                          {% with single=op.machines.0 %}
-                            <td
-                              class="single-machine"
-                              colspan="{{ line.max_machines }}"
-                              style="background-color: {{ single.color }};"
-                            >
-                              <div>{{ single.number }}</div>
-                              <div class="small text-dark">
-                                {{ single.count }}
-                                {% if single.efficiency is not None %}
-                                  ({{ single.efficiency }}%)
-                                {% else %}
-                                  (N/A)
-                                {% endif %}
-                              </div>
-                            </td>
-                          {% endwith %}
+                      {# ── MULTIPLE MACHINES: split into equal‐width cells ── #}
+                      {% else %}
+                        {% comment %}
+                          Compute colspan = floor(line.max_machines / (number of machines))
+                          using widthratio (widthratio a b 1 → floor(a/b)).
+                        {% endcomment %}
+                        {% widthratio line.max_machines op.machines|length 1 as colspan_value %}
 
-                        {% else %}
-                          {% comment %}
-                            Compute colspan = floor(line.max_machines / op.machines|length)
-                            using the widthratio tag (widthratio a b 1 → floor(a/b)).
-                          {% endcomment %}
-                          {% widthratio line.max_machines op.machines|length 1 as colspan_value %}
+                        {% for m in op.machines %}
+                          <td
+                            class="text-center align-middle"
+                            colspan="{{ colspan_value }}"
+                            style="background-color: {{ m.color }};"
+                          >
+                            <div>{{ m.number }}</div>
+                            <div class="small text-dark">
+                              {{ m.count }}
+                              {% if m.efficiency is not None %}
+                                ({{ m.efficiency }}%)
+                              {% else %}
+                                (N/A)
+                              {% endif %}
+                            </div>
+                          </td>
+                        {% endfor %}
+                      {% endif %}
+                    </tr>
 
-                          {% for m in op.machines %}
-                            <td
-                              class="text-center align-middle"
-                              colspan="{{ colspan_value }}"
-                              style="background-color: {{ m.color }};"
-                            >
-                              <div>{{ m.number }}</div>
-                              <div class="small text-dark">
-                                {{ m.count }}
-                                {% if m.efficiency is not None %}
-                                  ({{ m.efficiency }}%)
-                                {% else %}
-                                  (N/A)
-                                {% endif %}
-                              </div>
-                            </td>
-                          {% endfor %}
-                        {% endif %}
-                      </tr>
                     {% endfor %}
                   </tbody>
                 </table>
