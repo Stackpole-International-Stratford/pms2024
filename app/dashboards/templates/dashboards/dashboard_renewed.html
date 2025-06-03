@@ -42,7 +42,7 @@
       .no-mach {
         text-align: center;
         vertical-align: middle;
-        color: #6c757d; /* Bootstrap’s text-muted color */
+        color: #6c757d; /* Bootstrap’s text-dark color */
       }
     </style>
 </head>
@@ -77,7 +77,7 @@
                               style="background-color: {{ single.color }};"
                             >
                               <div>{{ single.number }}</div>
-                              <div class="small text-muted">
+                              <div class="small text-dark">
                                 {{ single.count }}
                                 {% if single.efficiency is not None %}
                                   ({{ single.efficiency }}%)
@@ -102,7 +102,7 @@
                               style="background-color: {{ m.color }};"
                             >
                               <div>{{ m.number }}</div>
-                              <div class="small text-muted">
+                              <div class="small text-dark">
                                 {{ m.count }}
                                 {% if m.efficiency is not None %}
                                   ({{ m.efficiency }}%)
