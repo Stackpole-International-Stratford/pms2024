@@ -2628,7 +2628,7 @@ PAGES = {
                         "scrap_line": "Furances",
                         "operations": [
                             {
-                            "op": "assemble",
+                            "op": "sinter",
                             "machines": [
                                 {
                                 "number": "344",
@@ -2708,7 +2708,7 @@ PAGES = {
                         "scrap_line": "Furances",
                         "operations": [
                             {
-                            "op": "assemble",
+                            "op": "sinter",
                             "machines": [
                                 {
                                 "number": "332",
@@ -2797,14 +2797,8 @@ def get_cycle_time_seconds(
     if as_of_epoch is None:
         as_of_epoch = int(timezone.now().timestamp())
 
-    # Debug: print entry whenever machine_id == "1703L"
-    if machine_id == "1703L":
-        print(f"[DEBUG][get_cycle_time_seconds] Called for machine=1703L, part={part}, as_of_epoch={as_of_epoch}")
-
     # If part is a list, compute each individually and take max
     if isinstance(part, list):
-        if machine_id == "1703L":
-            print(f"[DEBUG][get_cycle_time_seconds] machine=1703L encountered parts list: {part}")
 
         cts = []
         for p in part:
@@ -2813,15 +2807,10 @@ def get_cycle_time_seconds(
                 cts.append(single_ct)
 
         if not cts:
-            if machine_id == "1703L":
-                print(f"[DEBUG][get_cycle_time_seconds] machine=1703L: no CT found for any of {part}")
             print(f"NA: {machine_id} /{','.join(part)}")
             return None
 
         chosen = max(cts)
-        if machine_id == "1703L":
-            print(f"[DEBUG][get_cycle_time_seconds] machine=1703L: individual CTs={cts} → chosen={chosen:.1f}s")
-        print(f"CT: {machine_id} /{','.join(part)} → {chosen:.1f} s (max of individual parts)")
         return chosen
 
     # Single-part (or no-part) logic
@@ -2834,29 +2823,17 @@ def get_cycle_time_seconds(
     else:
         qs = qs.filter(part__isnull=True)
 
-    # Debug: show the ORM SQL when machine_id == "1703L"
-    if machine_id == "1703L":
-        print(f"[DEBUG][get_cycle_time_seconds] machine=1703L → ORM SQL:\n    {qs.query}")
 
     row = qs.order_by("-effective_date_unix").first()
     tag = f"{machine_id}{' /' + part if part else ''}"
 
-    # Debug: row existence / target
-    if machine_id == "1703L":
-        if row:
-            print(f"[DEBUG][get_cycle_time_seconds] machine=1703L: found row.target={row.target}")
-        else:
-            print(f"[DEBUG][get_cycle_time_seconds] machine=1703L: no matching row (row=None)")
 
     if not row or not row.target or row.target <= 0:
         print(f"NA: {tag}")
         return None
 
     seconds = _SECONDS_PER_WEEK_7200 / row.target
-    print(f"CT: {tag} → {seconds:.1f} s")
 
-    if machine_id == "1703L":
-        print(f"[DEBUG][get_cycle_time_seconds] machine=1703L: returning CT={seconds:.1f}s")
 
     return seconds
 
@@ -2877,9 +2854,6 @@ def compute_part_durations_for_machine(
     if shift_end_epoch is None:
         shift_end_epoch = int(timezone.now().timestamp())
 
-    # Debug: entry for machine 1703L
-    if machine_number == "1703L":
-        print(f"[DEBUG][compute_part_durations] machine=1703L, shift_start={shift_start_epoch}, shift_end={shift_end_epoch}")
 
     cursor = connections["prodrpt-md"].cursor()
 
@@ -2898,8 +2872,6 @@ def compute_part_durations_for_machine(
     row = cursor.fetchone()
     initial_part, _ = row if row else (None, None)
 
-    if machine_number == "1703L":
-        print(f"[DEBUG][compute_part_durations] machine=1703L: initial_part at shift start = {initial_part}")
 
     # ── all records inside the window ──────────────────────────────────
     cursor.execute(
@@ -2914,12 +2886,6 @@ def compute_part_durations_for_machine(
     )
     rows = cursor.fetchall()
 
-    if machine_number == "1703L":
-        print(f"[DEBUG][compute_part_durations] machine=1703L: fetched {len(rows)} rows in window")
-        for idx, (part, ts) in enumerate(rows[:10]):
-            print(f"  [{idx}] part={part}, timestamp={ts}")
-        if len(rows) > 10:
-            print(f"  [ ... and {len(rows) - 10} more rows ]")
 
     # ── walk through and segment contiguous runs ───────────────────────
     runs: List[Dict] = []
@@ -2932,8 +2898,6 @@ def compute_part_durations_for_machine(
     for part, ts in rows:
         if current_part is None:
             current_part, current_start = part, max(shift_start_epoch, ts)
-            if machine_number == "1703L":
-                print(f"[DEBUG][compute_part_durations] machine=1703L: start first run for part={part} at {current_start}")
             continue
 
         if part == current_part:
@@ -2947,15 +2911,8 @@ def compute_part_durations_for_machine(
             "end_ts": ts,
             "duration": duration,
         })
-        if machine_number == "1703L":
-            print(
-                "[DEBUG][compute_part_durations] machine=1703L: closed run "
-                f"part={current_part}, start={current_start}, end={ts}, duration={duration}"
-            )
 
         current_part, current_start = part, ts
-        if machine_number == "1703L":
-            print(f"[DEBUG][compute_part_durations] machine=1703L: new run part={part} begins at {ts}")
 
     # whatever is still running at shift end
     if current_part is not None:
@@ -2966,16 +2923,7 @@ def compute_part_durations_for_machine(
             "end_ts": shift_end_epoch,
             "duration": final_duration,
         })
-        if machine_number == "1703L":
-            print(
-                "[DEBUG][compute_part_durations] machine=1703L: final run "
-                f"part={current_part}, start={current_start}, end={shift_end_epoch}, duration={final_duration}"
-            )
 
-    if machine_number == "1703L":
-        print(f"[DEBUG][compute_part_durations] machine=1703L: total runs = {len(runs)}")
-        for idx, run in enumerate(runs):
-            print(f"  Run[{idx}]: {run}")
 
     return runs
 
