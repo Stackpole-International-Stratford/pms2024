@@ -2976,6 +2976,7 @@ def efficiency_color(eff: int) -> str:
 ALIASES: Dict[str, List[str]] = {
     "733": ["1701L", "1701R"],
     "1709": ["1708L", "1708R"],
+    "1542": ["1812"],
     # e.g. "XYZ": ["A", "B", "C"], 
 }
 
