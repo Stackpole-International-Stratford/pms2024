@@ -63,18 +63,22 @@
                     {% for op in line.operations %}
                       <tr>
                       {# ── OP‐CELL now shows both the op label and its total ⁄ efficiency ── #}
-                    <td class="op-cell bg-dark text-white">
-                      {{ op.op }}
-                      <br/>
-                      <span class="small text-white">
-                        {{ op.total_produced }}
-                        {% if op.efficiency is not None %}
-                          ({{ op.efficiency }}%)
-                        {% else %}
-                          (N/A)
-                        {% endif %}
-                      </span>
-                    </td>
+                      <td
+                        class="op-cell"
+                        style="background-color: {{ op.color }}; color: #000;"
+                      >
+                        {{ op.op }}
+                        <br/>
+                        <span class="small text-dark">
+                          {{ op.total_produced }}
+                          {% if op.efficiency is not None %}
+                            ({{ op.efficiency }}%)
+                          {% else %}
+                            (N/A)
+                          {% endif %}
+                        </span>
+                      </td>
+
 
 
                       {# ── NO MACHINES: just a placeholder cell spanning all machine‐slots ── #}

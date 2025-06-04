@@ -2979,9 +2979,11 @@ def dashboard_current_shift(request, pages: str):
     We split on "&", ensure 1 or 2 valid program names, run the annotation logic
     for each machine, and—when computing per-op totals—exclude any machines
     whose smart_target is None or zero so they don’t skew the efficiency.
+    Now also computes a 5-minute “recent efficiency” at the operation level and
+    colors the operation cell accordingly.
     """
 
-    # 1) Split on "&" and validate count
+    # ── 1) Split on "&" and validate count ──────────────────────────────────
     parts = [p.strip() for p in pages.split("&") if p.strip()]
     if len(parts) == 0 or len(parts) > 2:
         return HttpResponseBadRequest(
@@ -2989,7 +2991,7 @@ def dashboard_current_shift(request, pages: str):
             content_type="application/json",
         )
 
-    # 2) Ensure each program name exists in PAGES
+    # ── 2) Ensure each program name exists in PAGES ─────────────────────────
     for prog_name in parts:
         if prog_name not in PAGES:
             return HttpResponseBadRequest(
@@ -3000,17 +3002,17 @@ def dashboard_current_shift(request, pages: str):
                 content_type="application/json",
             )
 
-    # Helper for deciding base hour per program
+    # ── Helper for deciding base hour per program ───────────────────────────
     def get_base_hour_for(program: str) -> int:
         return 7 if program in ("8670", "plant3", "trilobe", "Area2") else 6
 
-    # Compute “now” once, in EST
+    # ── Compute “now” once, in EST ───────────────────────────────────────────
     tz_est  = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(tz_est)
 
     all_programs: List[Dict] = []
 
-    # Loop over each (one or two) requested program
+    # ── Loop over each (one or two) requested program ────────────────────────
     for prog_name in parts:
         # 3) Compute base‐hour in EST for this program
         base_hr = get_base_hour_for(prog_name)
@@ -3020,7 +3022,7 @@ def dashboard_current_shift(request, pages: str):
         if now_est < base_est:
             base_est -= timedelta(days=1)
 
-        # Define the three shift boundaries
+        # Define the three shift boundaries in EST
         day_start  = base_est
         aft_start  = base_est + timedelta(hours=8)
         nite_start = base_est + timedelta(hours=16)
@@ -3042,10 +3044,11 @@ def dashboard_current_shift(request, pages: str):
         # “Last 5 minutes” cutoff
         last5_start_epoch = shift_end_epoch - 300
 
-        # 4) Deep‐copy this program’s config so we can annotate
+        # 4) Deep‐copy this program’s config so we can annotate in place
         programs_copy = copy.deepcopy(PAGES[prog_name]["programs"])
         machine_set: Set[str] = set()
-        machine_occ: Dict[Tuple[str, Optional[frozenset]], List[Dict]] = {}
+        # machine_occ maps (machine_id, frozenset_of_parts) → list of cell‐dicts
+        machine_occ: Dict[Tuple[str, Optional[FrozenSet[str]]], List[Dict]] = {}
 
         # Build machine_set & machine_occ
         for prog_obj in programs_copy:
@@ -3060,7 +3063,7 @@ def dashboard_current_shift(request, pages: str):
                             pk = None
                         machine_occ.setdefault((mid, pk), []).append(m)
 
-        # 5) Query total pieces since shift start
+        # ── 5) Query total pieces since shift start ────────────────────────────
         placeholders = ",".join(["%s"] * len(machine_set))
         params       = list(machine_set) + [shift_start_epoch]
         sql = f"""
@@ -3080,7 +3083,7 @@ def dashboard_current_shift(request, pages: str):
         for (m, _p), c in counts_by_mp.items():
             totals_by_machine[m] += c
 
-        # 6) Query total pieces in last 5 minutes
+        # ── 6) Query total pieces in last 5 minutes ───────────────────────────
         params5 = list(machine_set) + [last5_start_epoch]
         sql5 = f"""
             SELECT Machine, Part, SUM(`Count`) AS cnt
@@ -3098,7 +3101,7 @@ def dashboard_current_shift(request, pages: str):
         for (m, _p), c in counts5_by_mp.items():
             totals5_by_machine[m] += c
 
-        # 7) Compute part_runs for entire shift & last 5 minutes
+        # ── 7) Compute part_runs for entire shift & last 5 minutes ──────────
         part_runs: Dict[str, List[Dict]]      = {}
         part_runs_5min: Dict[str, List[Dict]] = {}
         for mid in machine_set:
@@ -3107,9 +3110,9 @@ def dashboard_current_shift(request, pages: str):
             part_runs[mid]      = runs
             part_runs_5min[mid] = runs5
 
-        # 8) Annotate each “machine‐cell”
+        # ── 8) Annotate each “machine‐cell” with shift‐wide & 5min metrics ───
         for (mid, parts_key), cells in machine_occ.items():
-            # (a) shift‐wide pieces made
+            # (a) shift‐wide pieces made for this machine & part‐group
             if parts_key is None:
                 pieces_made = totals_by_machine.get(mid, 0)
             else:
@@ -3117,7 +3120,7 @@ def dashboard_current_shift(request, pages: str):
                     counts_by_mp.get((mid, p), 0) for p in parts_key
                 )
 
-            # (b) last 5min pieces
+            # (b) last 5min pieces for this machine & part‐group
             if parts_key is None:
                 pieces5_made = totals5_by_machine.get(mid, 0)
             else:
@@ -3125,25 +3128,35 @@ def dashboard_current_shift(request, pages: str):
                     counts5_by_mp.get((mid, p), 0) for p in parts_key
                 )
 
-            # (c) cycle times & smart targets
+            # (c) cycle times & “smart targets”
             if parts_key is None:
-                ct_single     = get_cycle_time_seconds(mid)  # (part=None internally)
-                cycle_by_part = {}
+                # No explicit part grouping → use single cycle time
+                ct_single = get_cycle_time_seconds(mid)  # part=None internally
+                cycle_by_part: Dict[str, Optional[float]] = {}
                 if ct_single is not None:
                     for run in part_runs[mid]:
                         cycle_by_part[run["part"]] = ct_single
                 rep_ct = ct_single
 
                 if ct_single:
+                    # shift‐long “smart target” = floor(total available seconds / cycle time)
                     smart_pcs = sum(run["duration"] / ct_single for run in part_runs[mid])
-                    smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
-                    smart5_pcs   = sum(run5["duration"] / ct_single for run5 in part_runs_5min[mid])
-                    smart_target_5min = int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
+                    smart_target = (
+                        int(math.floor(smart_pcs)) if smart_pcs > 0 else None
+                    )
+                    # 5min “smart target”
+                    smart5_pcs = sum(
+                        run5["duration"] / ct_single for run5 in part_runs_5min[mid]
+                    )
+                    smart_target_5min = (
+                        int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
+                    )
                 else:
                     smart_target = None
                     smart_target_5min = None
 
             else:
+                # Mixed‐part grouping → call cycle_time per part, take first non‐None
                 cycle_by_part = {p: get_cycle_time_seconds(mid, p) for p in parts_key}
                 rep_ct = next((v for v in cycle_by_part.values() if v is not None), None)
                 if rep_ct:
@@ -3155,38 +3168,35 @@ def dashboard_current_shift(request, pages: str):
 
             # (d) annotate each cell in this group
             for cell in cells:
-                cell["count"]      = pieces_made
-                cell["cycle_time"] = rep_ct
+                cell["count"]       = pieces_made
+                cell["pieces5_made"] = pieces5_made
+                cell["cycle_time"]  = rep_ct
+                cell["cycle_by_part"] = cycle_by_part
+                cell["smart_target"] = smart_target or 0
+                cell["smart_target_5min"] = smart_target_5min or 0
 
-                if pieces_made == 0:
-                    cell["smart_target"] = 0
-                    cell["efficiency"]   = 0
-                    cell["color"]        = "#cccccc"
+                # compute cell‐level efficiency for shift‐long
+                if pieces_made <= 0 or not smart_target:
+                    cell["efficiency"] = None
+                    cell["color"]      = "#cccccc"
                 else:
-                    cell["smart_target"] = smart_target or 0
-                    if smart_target and smart_target > 0:
-                        cell["efficiency"] = int((pieces_made / smart_target) * 100)
-                    else:
-                        cell["efficiency"] = None
+                    eff_pct = int((pieces_made / smart_target) * 100)
+                    eff_pct = max(0, min(eff_pct, 100))
+                    cell["efficiency"] = eff_pct
 
-                    if pieces5_made == 0:
-                        eff_5min = 0
+                    # compute 5‐min efficiency for this machine
+                    if pieces5_made <= 0 or not smart_target_5min:
+                        eff_5min = 0 if pieces5_made == 0 else None
                     else:
-                        if smart_target_5min and smart_target_5min > 0:
-                            eff_5min = int((pieces5_made / smart_target_5min) * 100)
-                        else:
-                            eff_5min = None
+                        eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                        eff_5min = max(0, min(eff_5min, 100))
 
+                    # color according to 5‐min eff if available
                     cell["color"] = (
-                        efficiency_color(eff_5min) if (eff_5min is not None) else "#cccccc"
+                        efficiency_color(eff_5min) if eff_5min is not None else "#cccccc"
                     )
-                    if pieces_made == 0:
-                        cell["color"] = "#cccccc"
 
-                if parts_key is not None:
-                    cell["cycle_by_part"] = cycle_by_part
-
-        # 9) “Padding” each line exactly as before
+        # ── 9) “Padding” each line exactly as before ─────────────────────────
         for prog_obj in programs_copy:
             for line in prog_obj["lines"]:
                 max_m = max((len(op["machines"]) for op in line["operations"]), default=1)
@@ -3194,7 +3204,7 @@ def dashboard_current_shift(request, pages: str):
                 for op in line["operations"]:
                     op["pad"] = [None] * (max_m - len(op["machines"]))
 
-        # 10) Filter part_runs for parts declared in config (no change)
+        # ── 10) Filter part_runs for parts declared in config (no change) ─────
         filtered_part_runs: Dict[str, List[Dict]] = {}
         for mid, runs in part_runs.items():
             declared_parts = {
@@ -3207,39 +3217,51 @@ def dashboard_current_shift(request, pages: str):
                 runs = [r for r in runs if r["part"] in declared_parts]
             filtered_part_runs[mid] = runs
 
-        # ───────────────────────────────────────────────────────────────────
-        # 11) UPDATE: Compute total_produced & efficiency at the OP level,
-        #             excluding any machine where smart_target <= 0
+        # ── 11) Compute total_produced & efficiency at the OP level,
+        #         excluding any machine where smart_target <= 0,
+        #         then compute 5-minute op-level efficiency and set op["color"].
         for prog_obj in programs_copy:
             for line in prog_obj["lines"]:
                 for op in line["operations"]:
-                    # Only include machines whose smart_target is > 0
-                    total_produced = sum(
-                        m["count"]
-                        for m in op["machines"]
-                        if m.get("smart_target", 0) > 0
-                    )
-                    total_smart = sum(
-                        m["smart_target"]
-                        for m in op["machines"]
-                        if m.get("smart_target", 0) > 0
-                    )
+                    # consider only machines whose shift-long smart_target > 0
+                    valid_machines = [m for m in op["machines"] if m.get("smart_target", 0) > 0]
+
+                    # (a) shift‐long op totals
+                    total_produced = sum(m["count"] for m in valid_machines)
+                    total_smart    = sum(m["smart_target"] for m in valid_machines)
 
                     if total_smart > 0:
                         op_eff = int(math.floor((total_produced / total_smart) * 100))
+                        op_eff = max(0, min(op_eff, 100))
                     else:
                         op_eff = None
 
                     op["total_produced"]     = total_produced
                     op["total_smart_target"] = total_smart
                     op["efficiency"]         = op_eff
-        # ───────────────────────────────────────────────────────────────────
 
-        # 12) Merge each prog_obj into all_programs
+                    # (b) last-5-minute op totals
+                    total5_produced = sum(m["pieces5_made"] for m in valid_machines)
+                    total5_smart    = sum(m["smart_target_5min"] for m in valid_machines)
+
+                    if total5_smart > 0:
+                        op_eff_5min = int(math.floor((total5_produced / total5_smart) * 100))
+                        op_eff_5min = max(0, min(op_eff_5min, 100))
+                    else:
+                        op_eff_5min = None
+
+                    op["recent_efficiency"] = op_eff_5min
+
+                    # (c) color the op cell by its 5-minute efficiency (or gray if none)
+                    op["color"] = (
+                        efficiency_color(op_eff_5min) if op_eff_5min is not None else "#808080"
+                    )
+
+        # ── 12) Merge each prog_obj into all_programs ─────────────────────────
         for prog_obj in programs_copy:
             all_programs.append(prog_obj)
 
-    # 13) Render the same template with updated efficiency logic
+    # ── 13) Render the template with updated efficiency & coloring logic ─────
     context = {
         "pages":    pages,
         "programs": all_programs,
