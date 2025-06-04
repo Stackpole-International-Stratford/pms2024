@@ -2622,6 +2622,41 @@ PAGES = {
         "dayshift_start": "07:00",
         "programs": [
             {
+                "program": "Area 2 Presses",
+                "lines": [
+                    {
+                        "line": "Area 2 Presses",
+                        "scrap_line": "Presses",
+                        "operations": [
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "272" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "273" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "277" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "278" }
+                                ]
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
                 "program": "Area 2 Furnaces",
                 "lines": [
                     {
@@ -2661,41 +2696,7 @@ PAGES = {
                     }
                 ],
             },
-            {
-                "program": "Area 2 Presses",
-                "lines": [
-                    {
-                        "line": "Area 2 Presses",
-                        "scrap_line": "Presses",
-                        "operations": [
-                            {
-                                "op": "compact",
-                                "machines": [
-                                { "number": "272" }
-                                ]
-                            },
-                            {
-                                "op": "compact",
-                                "machines": [
-                                { "number": "273" }
-                                ]
-                            },
-                            {
-                                "op": "compact",
-                                "machines": [
-                                { "number": "277" }
-                                ]
-                            },
-                            {
-                                "op": "compact",
-                                "machines": [
-                                { "number": "278" }
-                                ]
-                            },
-                        ],
-                    }
-                ],
-            },
+            
         ],
     },
     "Area1": {
