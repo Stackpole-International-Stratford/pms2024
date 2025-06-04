@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 
 from ..models.absentee_models import AbsenteeReport
 
-@login_required
+@login_required(login_url='/login/')
 def absentee_forms(request):
     """
     Only users in the 'hr_managers' group can access this page. Others get a 403‐forbidden response.
