@@ -2702,36 +2702,6 @@ PAGES = {
         "dayshift_start": "07:00",
         "programs": [
             {
-                "program": "Area 1 Furnaces",
-                "lines": [
-                    {
-                        "line": "Area 1 Furnaces",
-                        "scrap_line": "Furances",
-                        "operations": [
-                            {
-                            "op": "sinter",
-                            "machines": [
-                                {
-                                "number": "332",
-                                "parts": [
-                                    "50-3050",
-                                    "50-1467",
-                                ]
-                                },
-                                {
-                                "number": "333",
-                                "parts": [
-                                    "50-3050",
-                                    "50-1467",
-                                ]
-                                },
-                            ]
-                            }
-                        ],
-                    }
-                ],
-            },
-            {
                 "program": "Area 1 Presses",
                 "lines": [
                     {
@@ -2772,6 +2742,71 @@ PAGES = {
                     }
                 ],
             },
+            {
+                "program": "Area 1 Assemblers",
+                "lines": [
+                    {
+                        "line": "Area 1 Assemblers",
+                        "scrap_line": "Assemblers",
+                        "operations": [
+                            {
+                            "op": "assemble",
+                            "machines": [
+                                {
+                                "number": "1516C1",
+                                "parts": [
+                                    "50-9341",
+                                ]
+                                },
+                                {
+                                "number": "1516C2",
+                                "parts": [
+                                    "50-9341",
+                                ]
+                                },
+                            ]
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "Area 1 Furnaces",
+                "lines": [
+                    {
+                        "line": "Area 1 Furnaces",
+                        "scrap_line": "Furances",
+                        "operations": [
+                            {
+                            "op": "sinter",
+                            "machines": [
+                                {
+                                "number": "332",
+                                "parts": [
+                                    "50-3050",
+                                    "50-1467",
+                                ]
+                                },
+                                {
+                                "number": "333",
+                                "parts": [
+                                    "50-3050",
+                                    "50-1467",
+                                ]
+                                },
+                                {
+                                "number": "349",
+                                "parts": [
+                                    "50-9341",
+                                ]
+                                },
+                            ]
+                            }
+                        ],
+                    }
+                ],
+            },
+            
         ],
     },
 }
@@ -2976,6 +3011,7 @@ def efficiency_color(eff: int) -> str:
 ALIASES: Dict[str, List[str]] = {
     "733": ["1701L", "1701R"],
     "1709": ["1708L", "1708R"],
+    "1516": ["1516C1", "1516C2"],
     "1542": ["1812"],
     "784": ["770"],
     "573": ["728"],
