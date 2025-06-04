@@ -2975,6 +2975,7 @@ def efficiency_color(eff: int) -> str:
 # Add more entries here in future if similar aliasing is needed.
 ALIASES: Dict[str, List[str]] = {
     "733": ["1701L", "1701R"],
+    "1709": ["1708L", "1708R"],
     # e.g. "XYZ": ["A", "B", "C"], 
 }
 
