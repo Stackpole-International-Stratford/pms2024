@@ -1,14 +1,23 @@
 # views.py
 import pandas as pd
 from django.shortcuts import render
+from django.http import HttpResponseForbidden
+from django.contrib.auth.decorators import login_required
+
 from ..models.absentee_models import AbsenteeReport
 
+@login_required
 def absentee_forms(request):
     """
-    Handle the upload of an Excel file containing absentee data.
-    On POST: read the file, parse each row, and bulk‐insert into AbsenteeReport.
-    On GET: simply render the upload form.
+    Only users in the 'hr_managers' group can access this page. Others get a 403‐forbidden response.
     """
+    # 1) Check that the user belongs to the hr_managers group
+    if not request.user.groups.filter(name="hr_managers").exists():
+        return HttpResponseForbidden(
+            "You are not authorized to view this page. "
+            "If you need access, please contact site administrators to be added to the HR Managers group."
+        )
+
     context = {}
 
     if request.method == "POST":
