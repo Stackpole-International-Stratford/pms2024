@@ -651,20 +651,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Updated: Update downtime percentage values and apply color.
         document.querySelectorAll('.downtime-percentage').forEach(function(elem) {
-          var lineName = elem.getAttribute('data-line');
+          var lineName      = elem.getAttribute('data-line');
           var machineNumber = elem.getAttribute('data-machine');
-          var machineData = window.productionData[lineName] ? window.productionData[lineName][machineNumber] : null;
-          if (machineData && machineData.downtime_percentage !== undefined) {
-            // Display the raw downtime percentage with two decimals.
-            elem.innerText = parseFloat(machineData.downtime_percentage).toFixed(2) + "%";
-            // Apply the color gradient from the backend if available.
-            if (machineData.downtime_percentage_color) {
-              elem.style.color = machineData.downtime_percentage_color;
+          var m = window.productionData[lineName] && window.productionData[lineName][machineNumber];
+
+          if (m && m.downtime_percentage !== undefined) {
+            // if 100% of downtime was planned (i.e. no unplanned), show N/A
+            if (m.downtime_percentage === 100 && m.unplanned_downtime_minutes === 0) {
+              elem.innerText = "N/A";
+            } else {
+              elem.innerText = m.downtime_percentage.toFixed(2) + "%";
+              if (m.downtime_percentage_color) {
+                elem.style.color = m.downtime_percentage_color;
+              }
             }
           } else {
             elem.innerText = "0%";
           }
         });
+
 
 
 

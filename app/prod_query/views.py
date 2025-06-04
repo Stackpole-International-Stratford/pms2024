@@ -39,6 +39,7 @@ from .forms import ShiftTotalsForm
 import time
 import numpy as np
 from collections import Counter
+from django.http import HttpRequest
 
 
 DAVE_HOST = settings.DAVE_HOST
@@ -268,36 +269,53 @@ def strokes_per_min_graph(request):
             end_time = form.cleaned_data['end_time']
             numGraphPoints = int(request.POST.get('numGraphPoints', default_numGraphPoints))
 
-            # Ensure numGraphPoints is within the allowed range
-            if numGraphPoints < 50:
-                numGraphPoints = 50
-            elif numGraphPoints > 1000:
-                numGraphPoints = 1000
+            # clamp into [50,1000]
+            numGraphPoints = max(50, min(1000, numGraphPoints))
 
-            # Combine date and time into datetime objects
-            start_datetime = datetime.combine(start_date, start_time)
-            end_datetime = datetime.combine(end_date, end_time)
+            # build datetimes + timestamps
+            start_dt = datetime.combine(start_date, start_time)
+            end_dt   = datetime.combine(end_date,   end_time)
+            start_ts = int(time.mktime(start_dt.timetuple()))
+            end_ts   = int(time.mktime(end_dt.timetuple()))
 
-            # Convert datetimes to Unix timestamps
-            start_timestamp = int(time.mktime(start_datetime.timetuple()))
-            end_timestamp = int(time.mktime(end_datetime.timetuple()))
+            # compute your “ideal” interval in whole minutes
+            total_minutes = (end_dt - start_dt).total_seconds() / 60
+            interval      = max(int(total_minutes / numGraphPoints), 1)
 
-            # Calculate the total duration in minutes
-            total_minutes = (end_datetime - start_datetime).total_seconds() / 60
+            # if that interval is 1, override to 5 behind the scenes
+            effective_interval = 5 if interval == 1 else interval
 
-            # Calculate the interval to display numGraphPoints points
-            interval = max(int(total_minutes / numGraphPoints), 1)
+            # fetch with the effective interval
+            labels, counts = fetch_chart_data(
+                machine,
+                start_ts,
+                end_ts,
+                interval=effective_interval,
+                group_by_shift=False
+            )
 
-            labels, counts = fetch_chart_data(machine, start_timestamp, end_timestamp, interval=interval, group_by_shift=False)
+            # now: if we overrode (so interval==1), expand each 5m-bin
+            if interval == 1:
+                expanded_labels = []
+                expanded_counts = []
+                for dt, c in zip(labels, counts):
+                    # dt is the start of a 5-minute bin; replicate it 5 times
+                    for i in range(effective_interval):
+                        expanded_labels.append(dt + timedelta(minutes=i))
+                        expanded_counts.append(c)
+                labels, counts = expanded_labels, expanded_counts
+
+            # send to template
             context['chartdata'] = {
                 'labels': labels,
                 'dataset': {
-                    'label': 'Quantity',
+                    'label': 'Strokes per Minute',
                     'data': counts,
                     'borderWidth': 1
                 }
             }
-        context['form'] = form
+
+        context['form']           = form
         context['numGraphPoints'] = numGraphPoints
 
     return render(request, 'prod_query/strokes_per_minute.html', context)
@@ -1907,6 +1925,9 @@ def get_sc_production_data_v2(request):
 
 
 
+
+
+
 # Define lines object
 lines = [
     {
@@ -2360,6 +2381,9 @@ lines = [
                 "machines": [
                     {"number": "345", "target": 27496,},
                     {"number": "344", "target": 27496,},
+                    {"number": "349", "target": 27496,},
+                    {"number": "332", "target": 27496,},
+                    {"number": "333", "target": 27496,},
                 ],
             },
         ],
@@ -7551,6 +7575,10 @@ def fetch_combined_oee_production_data(request):
                 # 1) PPT = potential – planned
                 ppt = max(0, potential - planned)
                 machine_data["ppt"] = ppt
+        
+                # **NEW**: if there’s no planned production time, drop its target to zero
+                if ppt == 0:
+                    machine_data["target"] = 0
 
                 # 2) Runtime = PPT – unplanned
                 machine_data["runtime"] = max(0, ppt - unplanned)
@@ -7610,83 +7638,68 @@ def fetch_combined_oee_production_data(request):
         for operation in line.get("operations", []):
             # 1) Build per-op raw totals
             op_totals = {
-                "total_parts":               0,
-                "total_target":              0,
-                "total_downtime":            0,
-                "total_planned_downtime":    0,
-                "total_unplanned_downtime":  0,
-                "total_queried_minutes":     0,
+                "total_parts":             0,
+                "total_target":            0,
+                "total_downtime":          0,
+                "total_planned_downtime":  0,
+                "total_unplanned_downtime":0,
+                "total_queried_minutes":   0,
             }
             for machine in operation.get("machines", []):
-                mnum = machine["number"]
-                data = production_data[line_name][mnum]
-                op_totals["total_parts"]              += data.get("produced_parts", 0)
-                op_totals["total_target"]             += data.get("target", 0)
-                op_totals["total_downtime"]           += data.get("downtime_minutes", 0)
-                op_totals["total_planned_downtime"]   += data.get("planned_downtime_minutes", 0)
-                op_totals["total_unplanned_downtime"] += data.get("unplanned_downtime_minutes", 0)
-                op_totals["total_queried_minutes"]    += data.get("total_queried_minutes", 0)
+                data = production_data[line_name][machine["number"]]
 
-            # 2) Compute PPT, Runtime, and SCT (Standard Cycle Time)
-            potential   = op_totals["total_queried_minutes"]
-            planned     = op_totals["total_planned_downtime"]
-            unplanned   = op_totals["total_unplanned_downtime"]
+                # Always accumulate parts & target (target is already zero if ppt==0)
+                op_totals["total_parts"]  += data.get("produced_parts", 0)
+                op_totals["total_target"] += data.get("target", 0)
+
+                # Only include downtime & queried minutes if machine actually had PPT > 0
+                if data.get("ppt", 0) > 0:
+                    op_totals["total_downtime"]           += data.get("downtime_minutes", 0)
+                    op_totals["total_planned_downtime"]   += data.get("planned_downtime_minutes", 0)
+                    op_totals["total_unplanned_downtime"] += data.get("unplanned_downtime_minutes", 0)
+                    op_totals["total_queried_minutes"]    += data.get("total_queried_minutes", 0)
+
+            # 2) Compute PPT, Runtime, and SCT
+            potential    = op_totals["total_queried_minutes"]
+            planned      = op_totals["total_planned_downtime"]
+            unplanned    = op_totals["total_unplanned_downtime"]
             total_target = op_totals["total_target"]
 
-            # Planned Production Time = potential minus planned downtime
-            ppt = max(0, potential - planned)
-
-            # Runtime (Operating Time) = PPT minus unplanned downtime
+            ppt     = max(0, potential - planned)
             runtime = max(0, ppt - unplanned)
+            sct     = (ppt / total_target) if total_target > 0 else 0.0
 
-            # SCT = Standard Cycle Time = PPT minutes per part target
-            if total_target > 0:
-                sct = ppt / total_target
-            else:
-                sct = 0.0
-
-            # 3) Compute A & P via your helper
+            # 3) Compute A & P via your existing helper
             op_data = {
-                "produced_parts":           op_totals["total_parts"],
-                "target":                   op_totals["total_target"],
-                "planned_downtime_minutes": op_totals["total_planned_downtime"],
-                "unplanned_downtime_minutes": op_totals["total_unplanned_downtime"],
+                "produced_parts":            op_totals["total_parts"],
+                "target":                    total_target,
+                "planned_downtime_minutes":  planned,
+                "unplanned_downtime_minutes":unplanned,
             }
-            op_oee = compute_machine_oee(
-                op_data,
-                op_totals["total_queried_minutes"]
-            )
+            op_oee = compute_machine_oee(op_data, potential)
+
             # 4) Compute P×A
             op_pa = op_oee.get("P", 0.0) * op_oee.get("A", 0.0)
 
-            # 5) Assemble final metrics dict, including the three new fields
+            # 5) Assemble final metrics dict
             op_metrics = {
-                "line": line_name,
-                "op":   operation["op"],
-
-                # new time‐based fields
-                "ppt":                     ppt,
-                "runtime":                 runtime,
-                "standard_cycle_time":     sct,
-
-                # core OEE values
-                **op_oee,    # adds "A" and "P"
-                "PA": op_pa,
-
-                # raw totals
+                "line":                 line_name,
+                "op":                   operation["op"],
+                "ppt":                  ppt,
+                "runtime":              runtime,
+                "standard_cycle_time":  sct,
+                **op_oee,   # adds "A" and "P"
+                "PA":                   op_pa,
                 **op_totals,
             }
 
-            # 6) Downtime percentage
-            if op_totals["total_queried_minutes"] > 0:
-                op_metrics["downtime_percentage"] = (
-                    op_totals["total_downtime"]
-                    / op_totals["total_queried_minutes"]
-                ) * 100
+            # 6) Downtime percentage (aggregate)
+            if potential > 0:
+                op_metrics["downtime_percentage"] = (op_totals["total_downtime"] / potential) * 100
             else:
                 op_metrics["downtime_percentage"] = 0
 
-            # 7) Attach to operation and collect
+            # 7) Attach and collect
             operation["totals"] = op_metrics
             operation_oee_metrics.append(op_metrics)
 
@@ -7893,3 +7906,85 @@ def target_delete_ajax(request, pk):
         return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+
+
+
+# ===========================================================================
+# ===========================================================================
+# ======================= Single Machine OEE ================================
+# ===========================================================================
+# ===========================================================================
+
+
+def machine_oee(request: HttpRequest):
+    import datetime
+    """
+    A simplified OEE page: accepts GET params
+      - start_date (Y-m-d H:i)
+      - end_date   (Y-m-d H:i)
+      - machines   (comma-separated list, e.g. "1703R,12L")
+    Calls your existing `fetch_combined_oee_production_data` to build all data,
+    then filters out only the requested machines and passes them to a simple template.
+    """
+    # — parse machine list —
+    machines_param = request.GET.get('machines', '')
+    machine_list = [m.strip() for m in machines_param.split(',') if m.strip()]
+
+    # — default dates: yesterday@7am → today@7am —
+    now = datetime.datetime.now()
+    default_end = now.replace(hour=7, minute=0, second=0, microsecond=0)
+    if now < default_end:
+        default_end -= datetime.timedelta(days=1)
+    default_start = default_end - datetime.timedelta(days=1)
+
+    start_date = request.GET.get('start_date', default_start.strftime('%Y-%m-%d %H:%M'))
+    end_date   = request.GET.get('end_date',   default_end.strftime('%Y-%m-%d %H:%M'))
+
+    # — call your JSON-producing view to get all the data —
+    #    we just need the Python dict it builds:
+    fake_req = HttpRequest()
+    fake_req.method = 'GET'
+    fake_req.GET = request.GET.copy()
+    json_resp = fetch_combined_oee_production_data(fake_req)
+    all_data = json.loads(json_resp.content.decode())
+
+    # — filter production_data for only the machines we care about —
+    prod = all_data.get('production_data', {})
+    results = []
+
+    for line_name, machines in prod.items():
+        for mnum, mdata in machines.items():
+            # only include machines the user asked for (or all if none specified)
+            if not machine_list or mnum in machine_list:
+                # 1) figure out which operation this machine belongs to
+                op_name = None
+                for ln in lines:
+                    if ln['line'] == line_name:
+                        for op in ln.get('operations', []):
+                            if any(str(m['number']) == str(mnum) for m in op.get('machines', [])):
+                                op_name = op['op']
+                                break
+                        if op_name:
+                            break
+
+                # 2) scale your precomputed fractions to actual percentages
+                mdata['P']  = mdata.get('P', 0)  * 100
+                mdata['A']  = mdata.get('A', 0)  * 100
+                mdata['PA'] = mdata.get('PA', 0) * 100
+
+                # 3) collect into your final list
+                results.append({
+                    'machine':   mnum,
+                    'operation': op_name,
+                    **mdata
+                })
+
+
+    return render(request, 'prod_query/machine_oee.html', {
+        'start_date':       start_date,
+        'end_date':         end_date,
+        'machines_param':   machines_param,
+        'machine_data_list': results,
+    })

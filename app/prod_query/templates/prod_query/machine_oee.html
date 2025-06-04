@@ -1,0 +1,130 @@
+{% extends "parent.html" %}
+{% load static %}
+
+{% block extra_head %}
+  {{ block.super }}
+  <style>
+    /* Prevent wrapping in the P × A column */
+    .no-wrap { white-space: nowrap; }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <h1 class="mb-4">Machine OEE</h1>
+
+  <form method="get" class="row g-3 align-items-start mb-4">
+    <!-- Start Date -->
+    <div class="col-md-3">
+      <label for="start_date" class="form-label">Start Date/Time</label>
+      <input type="text"
+             id="start_date"
+             name="start_date"
+             class="form-control"
+             value="{{ start_date }}">
+    </div>
+
+    <!-- End Date -->
+    <div class="col-md-3">
+      <label for="end_date" class="form-label">End Date/Time</label>
+      <input type="text"
+             id="end_date"
+             name="end_date"
+             class="form-control"
+             value="{{ end_date }}">
+    </div>
+
+    <!-- Machines -->
+    <div class="col-md-3">
+      <label for="machines" class="form-label">Machine(s)</label>
+      <input type="text"
+             id="machines"
+             name="machines"
+             class="form-control"
+             placeholder="e.g. 333,332"
+             value="{{ machines_param }}">
+      <div class="form-text">
+        Enter one or more machine numbers, comma-separated.
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="col-md-3 d-flex justify-content-end">
+      <button type="submit" class="btn btn-dark mt-4">
+        Submit
+      </button>
+    </div>
+  </form>
+
+  {% if machine_data_list %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Machine</th>
+            <th>Operation</th>
+            <th>Parts</th>
+            <th>Target</th>
+            <th>Downtime</th>
+            <th>PPT (min)</th>
+            <th>Operating Time (min)</th>
+            <th>SCT (min/part)</th>
+            <th>Planned Downtime</th>
+            <th>Unplanned</th>
+            <th>Downtime %</th>
+            <th>Performance</th>
+            <th>Availability</th>
+            <th class="no-wrap">P&nbsp;×&nbsp;A</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in machine_data_list %}
+          <tr>
+            <td>{{ m.machine }}</td>
+            <td>{{ m.operation }}</td>
+            <td>{{ m.produced_parts }}</td>
+            <td>{{ m.target }}</td>
+            <td>{{ m.downtime_minutes }} min</td>
+            <td>{{ m.ppt|floatformat:0 }}</td>
+            <td>{{ m.runtime|floatformat:0 }}</td>
+            <td>{{ m.ideal_cycle_time|floatformat:4 }}</td>
+            <td>{{ m.planned_downtime_minutes }} min</td>
+            <td>{{ m.unplanned_downtime_minutes }} min</td>
+            <td>{{ m.downtime_percentage|floatformat:2 }} %</td>
+            <td style="color:{{ m.P_color }};">
+              {{ m.P|floatformat:2 }} %
+            </td>
+            <td style="color:{{ m.A_color }};">
+              {{ m.A|floatformat:2 }} %
+            </td>
+            <td class="no-wrap" style="color:{{ m.PA_color }};">
+              {{ m.PA|floatformat:2 }} %
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>No machines found for those parameters.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      flatpickr("#start_date", {
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:i"
+      });
+      flatpickr("#end_date", {
+        enableTime: true,
+        time_24hr: true,
+        dateFormat: "Y-m-d H:i"
+      });
+    });
+  </script>
+{% endblock %}
