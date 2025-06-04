@@ -23,7 +23,9 @@
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label for="excel_file" class="form-label">Choose Excel file (.xls or .xlsx)</label>
+                        <label for="excel_file" class="form-label">
+                            Choose Excel file (.xls or .xlsx)
+                        </label>
                         <input
                             type="file"
                             id="excel_file"
@@ -33,21 +35,29 @@
                             class="form-control"
                         />
                     </div>
-                    <button type="submit" class="btn btn-warning w-100">Upload</button>
+                    <button type="submit" class="btn btn-warning w-100">
+                        Upload
+                    </button>
                 </form>
             </div>
         </div>
-        {% if success %}
-            <div class="text-center mt-3">
-                <a
-                    href="http://pmdsdata8.stackpole.ca:6176/"
-                    target="_blank"
-                    class="btn btn-info"
-                >
-                    View results in Metabase
-                </a>
+
+        {# — New: Show last 5 distinct upload times — #}
+        {% if last_uploads %}
+            <div class="card mt-4 shadow-sm">
+                <div class="card-body p-3">
+                    <h5 class="card-title mb-2">Recent Upload Times</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for ut in last_uploads %}
+                            <li class="list-group-item">
+                                {{ ut|date:"Y-m-d H:i:s e" }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
         {% endif %}
+        {# If there are no uploads in the database yet, last_uploads will be empty and this block won’t render. #}
     </div>
 </div>
 {% endblock %}
