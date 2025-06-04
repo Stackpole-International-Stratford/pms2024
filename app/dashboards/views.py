@@ -2808,7 +2808,7 @@ def get_cycle_time_seconds(
                 cts.append(single_ct)
 
         if not cts:
-            print(f"NA: {machine_id} /{','.join(part)}")
+            # print(f"NA: {machine_id} /{','.join(part)}")
             return None
 
         chosen = max(cts)
@@ -2830,7 +2830,7 @@ def get_cycle_time_seconds(
 
 
     if not row or not row.target or row.target <= 0:
-        print(f"NA: {tag}")
+        # print(f"NA: {tag}")
         return None
 
     seconds = _SECONDS_PER_WEEK_7200 / row.target
