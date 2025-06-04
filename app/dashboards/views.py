@@ -2971,7 +2971,12 @@ def efficiency_color(eff: int) -> str:
 # ──────────────────────────────────────────────────────────────────────────────-
 
 
-
+# Define alias‐to‐sources mapping (so that “733” is computed from machines “1701L” & “1701R”)
+# Add more entries here in future if similar aliasing is needed.
+ALIASES: Dict[str, List[str]] = {
+    "733": ["1701L", "1701R"],
+    # e.g. "XYZ": ["A", "B", "C"], 
+}
 
 
 def dashboard_current_shift(request, pages: str):
@@ -2981,7 +2986,8 @@ def dashboard_current_shift(request, pages: str):
     for each machine, and—when computing per-op totals—exclude any machines
     whose smart_target is None or zero so they don’t skew the efficiency.
     Now also computes a 5-minute “recent efficiency” at the operation level and
-    colors the operation cell accordingly.
+    colors the operation cell accordingly.  Machines like “733” can be aliased
+    to sum the data from multiple source machines (e.g. “1701L” & “1701R”).
     """
 
     # ── 1) Split on "&" and validate count ──────────────────────────────────
@@ -3051,7 +3057,7 @@ def dashboard_current_shift(request, pages: str):
         # machine_occ maps (machine_id, frozenset_of_parts) → list of cell‐dicts
         machine_occ: Dict[Tuple[str, Optional[FrozenSet[str]]], List[Dict]] = {}
 
-        # Build machine_set & machine_occ
+        # Build initial machine_set & machine_occ from PAGES
         for prog_obj in programs_copy:
             for line in prog_obj["lines"]:
                 for op in line["operations"]:
@@ -3064,7 +3070,24 @@ def dashboard_current_shift(request, pages: str):
                             pk = None
                         machine_occ.setdefault((mid, pk), []).append(m)
 
-        # ── 5) Query total pieces since shift start ────────────────────────────
+        # ── 5) Handle aliases: remove alias keys, add their source machines ────
+        # alias_occ will hold the original cell‐dict lists (for later annotation)
+        alias_occ: Dict[Tuple[str, Optional[FrozenSet[str]]], List[Dict]] = {}
+
+        for alias_mid, sources in ALIASES.items():
+            # For each parts_key under which this alias appears:
+            for (mid_key, pk_key) in list(machine_occ.keys()):
+                if mid_key == alias_mid:
+                    # extract that cell list
+                    alias_occ[(mid_key, pk_key)] = machine_occ.pop((mid_key, pk_key))
+            # If alias was in machine_set, remove it
+            if alias_mid in machine_set:
+                machine_set.remove(alias_mid)
+            # Add all sources into machine_set so we compute their metrics
+            for src in sources:
+                machine_set.add(src)
+
+        # ── 6) Query total pieces since shift start ────────────────────────────
         placeholders = ",".join(["%s"] * len(machine_set))
         params       = list(machine_set) + [shift_start_epoch]
         sql = f"""
@@ -3084,7 +3107,7 @@ def dashboard_current_shift(request, pages: str):
         for (m, _p), c in counts_by_mp.items():
             totals_by_machine[m] += c
 
-        # ── 6) Query total pieces in last 5 minutes ───────────────────────────
+        # ── 7) Query total pieces in last 5 minutes ───────────────────────────
         params5 = list(machine_set) + [last5_start_epoch]
         sql5 = f"""
             SELECT Machine, Part, SUM(`Count`) AS cnt
@@ -3102,7 +3125,7 @@ def dashboard_current_shift(request, pages: str):
         for (m, _p), c in counts5_by_mp.items():
             totals5_by_machine[m] += c
 
-        # ── 7) Compute part_runs for entire shift & last 5 minutes ──────────
+        # ── 8) Compute part_runs for entire shift & last 5 minutes ─────────────
         part_runs: Dict[str, List[Dict]]      = {}
         part_runs_5min: Dict[str, List[Dict]] = {}
         for mid in machine_set:
@@ -3111,8 +3134,12 @@ def dashboard_current_shift(request, pages: str):
             part_runs[mid]      = runs
             part_runs_5min[mid] = runs5
 
-        # ── 8) Annotate each “machine‐cell” with shift‐wide & 5min metrics ───
-        for (mid, parts_key), cells in machine_occ.items():
+        # ── 9) Annotate each REAL “machine‐cell” with shift‐wide & 5min metrics ─
+        for (mid, parts_key), cells in list(machine_occ.items()):
+            # If this key was one of the alias keys, we removed it above, so skip
+            if mid in ALIASES:
+                continue
+
             # (a) shift‐wide pieces made for this machine & part‐group
             if parts_key is None:
                 pieces_made = totals_by_machine.get(mid, 0)
@@ -3140,18 +3167,14 @@ def dashboard_current_shift(request, pages: str):
                 rep_ct = ct_single
 
                 if ct_single:
-                    # shift‐long “smart target” = floor(total available seconds / cycle time)
+                    # shift‐long “smart target” = floor(sum(run_duration/ct_single))
                     smart_pcs = sum(run["duration"] / ct_single for run in part_runs[mid])
-                    smart_target = (
-                        int(math.floor(smart_pcs)) if smart_pcs > 0 else None
-                    )
+                    smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
                     # 5min “smart target”
                     smart5_pcs = sum(
                         run5["duration"] / ct_single for run5 in part_runs_5min[mid]
                     )
-                    smart_target_5min = (
-                        int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
-                    )
+                    smart_target_5min = int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
                 else:
                     smart_target = None
                     smart_target_5min = None
@@ -3167,14 +3190,14 @@ def dashboard_current_shift(request, pages: str):
                     smart_target = None
                     smart_target_5min = None
 
-            # (d) annotate each cell in this group
+            # (d) annotate each cell in this group (for this real machine)
             for cell in cells:
-                cell["count"]       = pieces_made
-                cell["pieces5_made"] = pieces5_made
-                cell["cycle_time"]  = rep_ct
-                cell["cycle_by_part"] = cycle_by_part
-                cell["smart_target"] = smart_target or 0
-                cell["smart_target_5min"] = smart_target_5min or 0
+                cell["count"]            = pieces_made
+                cell["pieces5_made"]     = pieces5_made
+                cell["cycle_time"]       = rep_ct
+                cell["cycle_by_part"]    = cycle_by_part
+                cell["smart_target"]     = smart_target or 0
+                cell["smart_target_5min"]= smart_target_5min or 0
 
                 # compute cell‐level efficiency for shift‐long
                 if pieces_made <= 0 or not smart_target:
@@ -3197,7 +3220,67 @@ def dashboard_current_shift(request, pages: str):
                         efficiency_color(eff_5min) if eff_5min is not None else "#cccccc"
                     )
 
-        # ── 9) “Padding” each line exactly as before ─────────────────────────
+        # ── 10) Build “alias” cells by summing their source machines ────────────
+        # At this point, machine_occ no longer contains alias entries; alias_occ
+        # holds the original cell‐dict lists from PAGES. We will compute each
+        # alias’s metrics from its sources (which we included in machine_set).
+        for (alias_mid, parts_key), cells in alias_occ.items():
+            sources = ALIASES.get(alias_mid, [])
+            # (a) Sum shift‐long pieces_made across sources
+            pieces_made_alias = sum(totals_by_machine.get(src, 0) for src in sources)
+            # (b) Sum 5min pieces across sources
+            pieces5_made_alias = sum(totals5_by_machine.get(src, 0) for src in sources)
+
+            # (c) Compute alias’s “smart” targets by summing each source’s smart_pcs
+            alias_smart_pcs     = 0.0
+            alias_smart_pcs_5   = 0.0
+            for src in sources:
+                ct_src = get_cycle_time_seconds(src)
+                if ct_src:
+                    # sum fractional “parts” from durations
+                    alias_smart_pcs   += sum(run["duration"] / ct_src for run in part_runs[src])
+                    alias_smart_pcs_5 += sum(run5["duration"] / ct_src for run5 in part_runs_5min[src])
+            smart_target_alias      = (
+                int(math.floor(alias_smart_pcs)) if alias_smart_pcs > 0 else None
+            )
+            smart_target_5min_alias = (
+                int(math.floor(alias_smart_pcs_5)) if alias_smart_pcs_5 > 0 else None
+            )
+
+            # (d) Determine alias’s shift-long efficiency and 5min efficiency
+            if smart_target_alias and smart_target_alias > 0:
+                eff_alias = int((pieces_made_alias / smart_target_alias) * 100)
+                eff_alias = max(0, min(eff_alias, 100))
+            else:
+                eff_alias = None
+
+            if smart_target_5min_alias and smart_target_5min_alias > 0:
+                eff5_alias = int((pieces5_made_alias / smart_target_5min_alias) * 100)
+                eff5_alias = max(0, min(eff5_alias, 100))
+            else:
+                eff5_alias = None
+
+            # (e) Color the alias by its 5min efficiency (or gray if none)
+            alias_color = (
+                efficiency_color(eff5_alias) if eff5_alias is not None else "#808080"
+            )
+
+            # (f) Annotate each original “m” dict (from PAGES) in place
+            for cell in cells:
+                cell["number"]            = alias_mid
+                cell["count"]             = pieces_made_alias
+                cell["pieces5_made"]      = pieces5_made_alias
+                cell["cycle_time"]        = None
+                cell["cycle_by_part"]     = {}
+                cell["smart_target"]      = smart_target_alias or 0
+                cell["smart_target_5min"] = smart_target_5min_alias or 0
+                cell["efficiency"]        = eff_alias
+                cell["color"]             = alias_color
+
+            # (g) Re‐insert alias entry into machine_occ so that downstream logic runs
+            machine_occ[(alias_mid, parts_key)] = cells
+
+        # ── 11) “Padding” each line exactly as before ─────────────────────────
         for prog_obj in programs_copy:
             for line in prog_obj["lines"]:
                 max_m = max((len(op["machines"]) for op in line["operations"]), default=1)
@@ -3205,7 +3288,7 @@ def dashboard_current_shift(request, pages: str):
                 for op in line["operations"]:
                     op["pad"] = [None] * (max_m - len(op["machines"]))
 
-        # ── 10) Filter part_runs for parts declared in config (no change) ─────
+        # ── 12) Filter part_runs for parts declared in config (no change) ─────
         filtered_part_runs: Dict[str, List[Dict]] = {}
         for mid, runs in part_runs.items():
             declared_parts = {
@@ -3218,9 +3301,9 @@ def dashboard_current_shift(request, pages: str):
                 runs = [r for r in runs if r["part"] in declared_parts]
             filtered_part_runs[mid] = runs
 
-        # ── 11) Compute total_produced & efficiency at the OP level,
-        #         excluding any machine where smart_target <= 0,
-        #         then compute 5-minute op-level efficiency and set op["color"].
+        # ── 13) Compute total_produced & efficiency at the OP level,
+        #          excluding any machine where smart_target <= 0,
+        #          then compute 5-minute op-level efficiency and set op["color"]. ─
         for prog_obj in programs_copy:
             for line in prog_obj["lines"]:
                 for op in line["operations"]:
@@ -3258,11 +3341,11 @@ def dashboard_current_shift(request, pages: str):
                         efficiency_color(op_eff_5min) if op_eff_5min is not None else "#808080"
                     )
 
-        # ── 12) Merge each prog_obj into all_programs ─────────────────────────
+        # ── 14) Merge each prog_obj into all_programs ─────────────────────────
         for prog_obj in programs_copy:
             all_programs.append(prog_obj)
 
-    # ── 13) Render the template with updated efficiency & coloring logic ─────
+    # ── 15) Render the template with updated efficiency & coloring logic ─────
     context = {
         "pages":    pages,
         "programs": all_programs,
