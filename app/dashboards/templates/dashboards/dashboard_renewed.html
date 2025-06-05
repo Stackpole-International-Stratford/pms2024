@@ -2,221 +2,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>Dashboard — {{ pages }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta charset="utf-8">
+  <title>Dashboard — {{ pages }}</title>
 
-    <!-- auto-reload every 5 seconds -->
-    <meta http-equiv="refresh" content="5" />
+  <!-- auto-refresh -->
+  <meta http-equiv="refresh" content="5">
 
-    <!-- Bootstrap CSS (served locally via static files) -->
-    <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet" />
+  <!-- keep scale identical on TV & browser -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <style>
-      /* Shrink table cell padding so more cells fit on-screen */
-      .table td,
-      .table th {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.85rem;
-      }
+  <!-- Bootstrap -->
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
 
-      /* Slightly larger text for program headers */
-      .program-header {
-        font-size: 1.1rem;
-        font-weight: bold;
-      }
+  <style>
+    /* ──────────────────────────────────────────────────
+       GLOBAL SCALE → every 1 rem = min(1 vh, 0.52 vw)
+       (≈ 10 px on a 1920×1080 TV)
+    ──────────────────────────────────────────────────*/
+    html { font-size: min(1vh, 0.52vw); }
 
-      /* Light border and background for each program panel */
-      .program-col {
-        border: 1px solid #dee2e6;
-        background-color: #f8f9fa;
-      }
+    body {
+      margin: 0;
+      background: #97a5b1;
+      overflow: hidden;                 /* never show scrollbars */
+    }
 
-      /* Operation-cell style (leftmost cell) */
-      .op-cell {
-        background-color: #e9ecef;
-        font-weight: 600;
-        text-align: center;
-        vertical-align: middle;
-        white-space: nowrap;
-      }
+    /* ──────────────────────────────────────────────────
+       FLEX GRID:   one row that fills the whole screen
+    ──────────────────────────────────────────────────*/
+    .dashboard {
+      display: flex; flex-wrap: nowrap;
+      height: 100vh; width: 100vw;
+      justify-content: center; align-items: stretch;
+    }
+    .dash-col {
+      flex: 1 1 0; min-width: 0;
+      margin: 1vh 0.5vw;
+      display: flex; flex-direction: column;
+      background: #f8f9fa;
+      border: .2rem solid #dee2e6;
+    }
 
-      /* Center a single-machine cell */
-      .single-machine {
-        text-align: center;
-        vertical-align: middle;
-      }
+    /* ──────────────────────────────────────────────────
+       PROGRAM HEADER
+    ──────────────────────────────────────────────────*/
+    .dash-hdr {
+      height: 6vh; line-height: 6vh;
+      background: #343a40; color:#fff;
+      font-size: 3.0rem;          /* ↓ from 3.4rem */
+      font-weight: 700; text-align:center;
+    }
 
-      /* Style for “no machines” placeholder */
-      .no-mach {
-        text-align: center;
-        vertical-align: middle;
-        color: #6c757d; /* Bootstrap’s text-dark color */
-      }
+    /* ──────────────────────────────────────────────────
+       OPERATION ROW
+    ──────────────────────────────────────────────────*/
+    .op-row   { display:flex; height:8vh; border-top:.15rem solid #bbb; }
+    .op-cell  {                       /* coloured dynamically! */
+      flex: 0 0 6.5vw;
+      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      color:#000;                     /* legible over any op.color */
+    }
+    .op-title { font-size: 2.4rem; font-weight:650; line-height:2.4rem; }   /* ↓ */
+    .op-stat  { font-size: 2.0rem; }                                         /* ↓ */
 
-      /* Legend container (appears once at page bottom) */
-      .page-legend {
-        display: flex;
-        justify-content: center;    /* center the legend items */
-        flex-wrap: nowrap;          /* never wrap onto multiple lines */
-        overflow-x: auto;           /* horizontal scroll if really too narrow */
-        margin: 1rem 0;             /* spacing above and below */
-        cursor: pointer;            /* indicates a tooltip is available */
+    /* MACHINES */
+    .mach-wrap { flex:1 1 0; display:flex; }
+    .mach-cell {
+      flex:1 1 0; display:flex; flex-direction:column;
+      justify-content:center; align-items:center;
+    }
+    .mach-num   { font-size: 2.4rem; font-weight:600; line-height:2.4rem; } /* ↓ */
+    .mach-count { font-size: 2.0rem; }                                       /* ↓ */
+    .no-mach    { background:#e0e0e0; font-size:2.0rem; }
+
+    /* ──────────────────────────────────────────────────
+       LEGEND  (bottom-centre, small boxes)
+    ──────────────────────────────────────────────────*/
+    .legend {
+      position:absolute; left:50%; bottom:1vh; transform:translateX(-50%);
+      display:flex; gap:1.4vw; font-size:2.0rem;
+    }
+    .legend-box { width:2.1rem; height:2.1rem; border:.18rem solid #000; margin-right:.6rem; }
+
+    /* ──────────────────────────────────────────────────
+       PORTRAIT device → rotate 90°
+    ──────────────────────────────────────────────────*/
+    @media (orientation: portrait) {
+      html {
+        transform: rotate(90deg);
+        transform-origin: left top;
+        width: 100vh; height: 100vw;
+        position:absolute; top:0; left:0; overflow:hidden;
       }
-      .page-legend .legend-item {
-        display: flex;
-        align-items: center;
-        margin-left: 1rem;          /* gutter between each legend box */
-        font-size: 0.85rem;
-        white-space: nowrap;        /* don’t let text wrap mid‐phrase */
-      }
-      .page-legend .legend-box {
-        width: 12px;
-        height: 12px;
-        border: 1px solid #000;
-        margin-right: 0.4rem;
-      }
-    </style>
+    }
+  </style>
 </head>
+
 <body>
-  <div class="container-fluid mt-2">
-    <div class="row no-gutters">
-      {% for prog in programs %}
-        <div class="col-sm-6 col-md-4 col-lg-3 px-1 mb-2 program-col d-flex flex-column">
-          <!-- Program header unchanged -->
-          <div class="bg-dark text-white text-center py-1 program-header">
-            {{ prog.program }}
-          </div>
 
-          {% for line in prog.lines %}
-            <div class="w-100 mt-1">
-              <div class="table-responsive">
-                <table class="table table-bordered table-sm mb-1">
-                  <tbody>
-                    {% for op in line.operations %}
-                      <tr>
-                        {# ── OP‐CELL now shows both the op label and its total/efficiency ── #}
-                        <td
-                          class="op-cell"
-                          style="background-color: {{ op.color }}; color: #000; border: 2px solid #000;"
-                        >
-                          {{ op.op }}
-                          <br/>
-                          <span class="small text-dark">
-                            {{ op.total_produced }}
-                            {% if op.efficiency is not None %}
-                              ({{ op.efficiency }}%)
-                            {% else %}
-                              (N/A)
-                            {% endif %}
-                          </span>
-                        </td>
+<div class="dashboard">
 
-                        {# ── NO MACHINES: just a placeholder cell spanning all machine‐slots ── #}
-                        {% if op.machines|length == 0 %}
-                          <td class="no-mach" colspan="{{ line.max_machines }}">
-                            &mdash;
-                          </td>
+  {% for prog in programs %}
+    <div class="dash-col">
+      <div class="dash-hdr">{{ prog.program }}</div>
 
-                        {# ── SINGLE MACHINE: one big cell spanning all machine‐slots ── #}
-                        {% elif op.machines|length == 1 %}
-                          {% with single=op.machines.0 %}
-                            <td
-                              class="single-machine"
-                              colspan="{{ line.max_machines }}"
-                              style="background-color: {{ single.color }};"
-                            >
-                              <div><strong>{{ single.number }}</strong></div>
-                              <div class="small text-dark">
-                                {{ single.count }}
-                                {% if single.efficiency is not None %}
-                                  ({{ single.efficiency }}%)
-                                {% else %}
-                                  (N/A)
-                                {% endif %}
-                              </div>
-                            </td>
-                          {% endwith %}
-
-                        {# ── MULTIPLE MACHINES: split into equal-width cells ── #}
-                        {% else %}
-                          {% comment %}
-                            Compute colspan = floor(line.max_machines / (number of machines))
-                            using widthratio (widthratio a b 1 → floor(a/b)).
-                          {% endcomment %}
-                          {% widthratio line.max_machines op.machines|length 1 as colspan_value %}
-
-                          {% for m in op.machines %}
-                            <td
-                              class="text-center align-middle"
-                              colspan="{{ colspan_value }}"
-                              style="background-color: {{ m.color }};"
-                            >
-                              <div><strong>{{ m.number }}</strong></div>
-                              <div class="small text-dark">
-                                {{ m.count }}
-                                {% if m.efficiency is not None %}
-                                  ({{ m.efficiency }}%)
-                                {% else %}
-                                  (N/A)
-                                {% endif %}
-                              </div>
-                            </td>
-                          {% endfor %}
-                        {% endif %}
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
+      {% for line in prog.lines %}
+        {% for op in line.operations %}
+          <div class="op-row">
+            <!-- coloured OP cell -->
+            <div class="op-cell" style="background: {{ op.color }};">
+              <div class="op-title">{{ op.op }}</div>
+              <div class="op-stat">
+                {{ op.total_produced }}
+                {% if op.efficiency is not None %}
+                  ({{ op.efficiency }}%)
+                {% else %}
+                  (N/A)
+                {% endif %}
               </div>
             </div>
-          {% endfor %}
 
-          <div class="mt-auto"></div>
-        </div>
+            <!-- machines -->
+            <div class="mach-wrap">
+              {% if op.machines|length == 0 %}
+                <div class="mach-cell no-mach">—</div>
+
+              {% elif op.machines|length == 1 %}
+                {% with m=op.machines.0 %}
+                  <div class="mach-cell" style="background: {{ m.color }};">
+                    <div class="mach-num">{{ m.number }}</div>
+                    <div class="mach-count">
+                      {{ m.count }}
+                      {% if m.efficiency is not None %}
+                        ({{ m.efficiency }}%)
+                      {% else %}
+                        (N/A)
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endwith %}
+
+              {% else %}
+                {% widthratio 100 op.machines|length 1 as perc %}
+                {% for m in op.machines %}
+                  <div class="mach-cell"
+                       style="background: {{ m.color }}; width: {{ perc }}%;">
+                    <div class="mach-num">{{ m.number }}</div>
+                    <div class="mach-count">
+                      {{ m.count }}
+                      {% if m.efficiency is not None %}
+                        ({{ m.efficiency }}%)
+                      {% else %}
+                        (N/A)
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
       {% endfor %}
+
     </div>
+  {% endfor %}
 
-    {# ── SINGLE LEGEND AT THE BOTTOM OF THE PAGE ── #}
-    <div
-      class="page-legend"
-      data-bs-toggle="tooltip"
-      data-bs-placement="top"
-      title="actual / target in the last 5 minutes"
-    >
-      <!-- Low efficiency (last 5 min actual < 50%) -->
-      <div class="legend-item">
-        <div class="legend-box" style="background-color: #ff0000;"></div>
-        <span>Low (&lt; 50 %)</span>
-      </div>
+</div>
 
-      <!-- Medium efficiency (last 5 min actual 50 – 85 %) -->
-      <div class="legend-item">
-        <div class="legend-box" style="background-color: #FFA500;"></div>
-        <span>Medium (50 % – 85 %)</span>
-      </div>
+<!-- legend -->
+<div class="legend" data-bs-toggle="tooltip" title="Color = last 5-minute efficiency">
+  <div><span class="legend-box" style="background:#ff0000;"></span>Low &lt; 50%</div>
+  <div><span class="legend-box" style="background:#FFA500;"></span>50–85%</div>
+  <div><span class="legend-box" style="background:#228b22;"></span>High ≥ 85%</div>
+</div>
 
-      <!-- High efficiency (last 5 min actual ≥ 85 %) -->
-      <div class="legend-item">
-        <div class="legend-box" style="background-color: #228b22;"></div>
-        <span>High (≥ 85 %)</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap JS Bundle (served via static files) -->
-  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-
-  <script>
-    // Initialize all tooltips on page load
-    document.addEventListener('DOMContentLoaded', function () {
-      var tooltipTriggerList = [].slice.call(
-        document.querySelectorAll('[data-bs-toggle="tooltip"]')
-      );
-      tooltipTriggerList.forEach(function (el) {
-        new bootstrap.Tooltip(el);
-      });
-    });
-  </script>
+<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script>
+  document.querySelectorAll('[data-bs-toggle="tooltip"]')
+          .forEach(el => new bootstrap.Tooltip(el));
+</script>
 </body>
 </html>
