@@ -6,7 +6,9 @@
   <title>Dashboard — {{ pages }}</title>
 
   <meta http-equiv="refresh" content="5">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# allow pinch-zoom on mobile #}
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, user-scalable=yes">
 
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
 
@@ -20,54 +22,49 @@
     /* ────────────────────────────────────────────────
        2) Grid – one row, fills viewport
     ────────────────────────────────────────────────*/
-    .dashboard      { display:flex; flex-wrap:nowrap; height:100vh; width:100vw; }
-    .dash-col       {
-        flex:1 1 0; min-width:0;
-        margin:1vh 0.5vw;
-        display:flex; flex-direction:column;
-        background:#f8f9fa; border:.2rem solid #dee2e6;
-    }
+    .dashboard      { display:flex; flex-wrap:nowrap;
+                      height:100vh; width:100vw; }
+    .dash-col       { flex:1 1 0; min-width:0;
+                      margin:1vh 0.5vw;
+                      display:flex; flex-direction:column;
+                      background:#f8f9fa; border:.2rem solid #dee2e6; }
 
-    /* ────────────────────────────────────────────────
-       3) Header
-    ────────────────────────────────────────────────*/
-    .dash-hdr { height:6vh; line-height:6vh;
-                background:#343a40; color:#fff;
+    .dash-hdr { height:6vh; line-height:6vh; background:#343a40; color:#fff;
                 font-size:3.0rem; font-weight:700; text-align:center; }
 
-    /* ────────────────────────────────────────────────
-       4) Operation row
-    ────────────────────────────────────────────────*/
-    .op-row  { display:flex; height:8vh; border-top:.15rem solid #bbb; }
-
-    .op-cell {
-        flex:0 0 6.5vw;
-        display:flex; flex-direction:column; justify-content:center; align-items:center;
-        border-right:.2rem solid #666;        /* vertical separator */
-        color:#000;
-    }
+    .op-row   { display:flex; height:8vh; border-top:.15rem solid #bbb; }
+    .op-cell  { flex:0 0 6.5vw; display:flex; flex-direction:column;
+                justify-content:center; align-items:center;
+                border-right:.2rem solid #666; color:#000; }
     .op-title { font-size:2.4rem; font-weight:650; line-height:2.4rem; }
     .op-stat  { font-size:2.0rem; }
 
-    .mach-wrap { flex:1 1 0; display:flex; }
-    .mach-cell {
-        flex:1 1 0;
-        display:flex; flex-direction:column; justify-content:center; align-items:center;
-    }
-    .mach-num     { font-size:2.4rem; font-weight:600; line-height:2.4rem; }
-    .mach-count   { font-size:2.0rem; }
-    .no-mach      { background:#e0e0e0; font-size:2.0rem; }
+    .mach-wrap   { flex:1 1 0; display:flex; }
+    .mach-cell   { flex:1 1 0; display:flex; flex-direction:column;
+                   justify-content:center; align-items:center; }
+    .mach-num    { font-size:2.4rem; font-weight:600; line-height:2.4rem; }
+    .mach-count  { font-size:2.0rem; }
+    .no-mach     { background:#e0e0e0; font-size:2.0rem; }
 
     /* ────────────────────────────────────────────────
-       5) Portrait orientation: rotate
+       3) Rotate ONLY on tablets / large portrait screens
+          (min-width stops it from firing on phones)
     ────────────────────────────────────────────────*/
-    @media (orientation: portrait) {
+    @media (orientation: portrait) and (min-width: 601px) {
       html {
-        transform:rotate(90deg);
-        transform-origin:left top;
-        width:100vh; height:100vw;
-        position:absolute; top:0; left:0; overflow:hidden;
+        transform: rotate(90deg);
+        transform-origin: left top;
+        width: 100vh; height: 100vw;
+        position: absolute; top: 0; left: 0;
+        overflow: hidden;
       }
+    }
+
+    /* ────────────────────────────────────────────────
+       4) Phones (≤ 600 px) – allow sideways scroll
+    ────────────────────────────────────────────────*/
+    @media (max-width: 600px) {
+      .dashboard { overflow-x: auto; }
     }
   </style>
 </head>
@@ -82,7 +79,6 @@
       {% for line in prog.lines %}
         {% for op in line.operations %}
           <div class="op-row">
-            <!-- OP cell (coloured) -->
             <div class="op-cell" style="background: {{ op.color }};">
               <div class="op-title">{{ op.op }}</div>
               <div class="op-stat">
@@ -95,7 +91,6 @@
               </div>
             </div>
 
-            <!-- machine cells -->
             <div class="mach-wrap">
               {% if op.machines|length == 0 %}
                 <div class="mach-cell no-mach">—</div>
@@ -136,7 +131,6 @@
           </div>
         {% endfor %}
       {% endfor %}
-
     </div>
   {% endfor %}
 
