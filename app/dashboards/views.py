@@ -2620,7 +2620,7 @@ PAGES = {
         "dayshift_start": "07:00",
         "programs": [
             {
-                "program": "Area 2 Presses",
+                "program": "Area 2",
                 "lines": [
                     {
                         "line": "Area 2 Presses",
@@ -2651,12 +2651,7 @@ PAGES = {
                                 ]
                             },
                         ],
-                    }
-                ],
-            },
-            {
-                "program": "Area 2 Furnaces",
-                "lines": [
+                    },
                     {
                         "line": "Area 2 Furnaces",
                         "scrap_line": "Furances",
@@ -2691,17 +2686,16 @@ PAGES = {
                             ]
                             }
                         ],
-                    }
+                    },
                 ],
             },
-            
         ],
     },
     "Area1": {
         "dayshift_start": "07:00",
         "programs": [
             {
-                "program": "Area 1 Presses",
+                "program": "Area 1",
                 "lines": [
                     {
                         "line": "Area 1 Presses",
@@ -2738,12 +2732,7 @@ PAGES = {
                                 ]
                             },
                         ],
-                    }
-                ],
-            },
-            {
-                "program": "Area 1 Assemblers",
-                "lines": [
+                    },
                     {
                         "line": "Area 1 Assemblers",
                         "scrap_line": "Assemblers",
@@ -2757,12 +2746,7 @@ PAGES = {
                             ]
                             },
                         ],
-                    }
-                ],
-            },
-            {
-                "program": "Area 1 Furnaces",
-                "lines": [
+                    },
                     {
                         "line": "Area 1 Furnaces",
                         "scrap_line": "Furances",
