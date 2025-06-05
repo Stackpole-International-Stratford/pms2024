@@ -5,93 +5,67 @@
   <meta charset="utf-8">
   <title>Dashboard — {{ pages }}</title>
 
-  <!-- auto-refresh -->
   <meta http-equiv="refresh" content="5">
-
-  <!-- keep scale identical on TV & browser -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Bootstrap -->
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
 
   <style>
-    /* ──────────────────────────────────────────────────
-       GLOBAL SCALE → every 1 rem = min(1 vh, 0.52 vw)
-       (≈ 10 px on a 1920×1080 TV)
-    ──────────────────────────────────────────────────*/
+    /* ────────────────────────────────────────────────
+       1) Global fluid scale
+    ────────────────────────────────────────────────*/
     html { font-size: min(1vh, 0.52vw); }
+    body { margin:0; background:#97a5b1; overflow:hidden; }
 
-    body {
-      margin: 0;
-      background: #97a5b1;
-      overflow: hidden;                 /* never show scrollbars */
+    /* ────────────────────────────────────────────────
+       2) Grid – one row, fills viewport
+    ────────────────────────────────────────────────*/
+    .dashboard      { display:flex; flex-wrap:nowrap; height:100vh; width:100vw; }
+    .dash-col       {
+        flex:1 1 0; min-width:0;
+        margin:1vh 0.5vw;
+        display:flex; flex-direction:column;
+        background:#f8f9fa; border:.2rem solid #dee2e6;
     }
 
-    /* ──────────────────────────────────────────────────
-       FLEX GRID:   one row that fills the whole screen
-    ──────────────────────────────────────────────────*/
-    .dashboard {
-      display: flex; flex-wrap: nowrap;
-      height: 100vh; width: 100vw;
-      justify-content: center; align-items: stretch;
-    }
-    .dash-col {
-      flex: 1 1 0; min-width: 0;
-      margin: 1vh 0.5vw;
-      display: flex; flex-direction: column;
-      background: #f8f9fa;
-      border: .2rem solid #dee2e6;
-    }
+    /* ────────────────────────────────────────────────
+       3) Header
+    ────────────────────────────────────────────────*/
+    .dash-hdr { height:6vh; line-height:6vh;
+                background:#343a40; color:#fff;
+                font-size:3.0rem; font-weight:700; text-align:center; }
 
-    /* ──────────────────────────────────────────────────
-       PROGRAM HEADER
-    ──────────────────────────────────────────────────*/
-    .dash-hdr {
-      height: 6vh; line-height: 6vh;
-      background: #343a40; color:#fff;
-      font-size: 3.0rem;          /* ↓ from 3.4rem */
-      font-weight: 700; text-align:center;
-    }
+    /* ────────────────────────────────────────────────
+       4) Operation row
+    ────────────────────────────────────────────────*/
+    .op-row  { display:flex; height:8vh; border-top:.15rem solid #bbb; }
 
-    /* ──────────────────────────────────────────────────
-       OPERATION ROW
-    ──────────────────────────────────────────────────*/
-    .op-row   { display:flex; height:8vh; border-top:.15rem solid #bbb; }
-    .op-cell  {                       /* coloured dynamically! */
-      flex: 0 0 6.5vw;
-      display:flex; flex-direction:column; justify-content:center; align-items:center;
-      color:#000;                     /* legible over any op.color */
+    .op-cell {
+        flex:0 0 6.5vw;
+        display:flex; flex-direction:column; justify-content:center; align-items:center;
+        border-right:.2rem solid #666;        /* vertical separator */
+        color:#000;
     }
-    .op-title { font-size: 2.4rem; font-weight:650; line-height:2.4rem; }   /* ↓ */
-    .op-stat  { font-size: 2.0rem; }                                         /* ↓ */
+    .op-title { font-size:2.4rem; font-weight:650; line-height:2.4rem; }
+    .op-stat  { font-size:2.0rem; }
 
-    /* MACHINES */
     .mach-wrap { flex:1 1 0; display:flex; }
     .mach-cell {
-      flex:1 1 0; display:flex; flex-direction:column;
-      justify-content:center; align-items:center;
+        flex:1 1 0;
+        display:flex; flex-direction:column; justify-content:center; align-items:center;
     }
-    .mach-num   { font-size: 2.4rem; font-weight:600; line-height:2.4rem; } /* ↓ */
-    .mach-count { font-size: 2.0rem; }                                       /* ↓ */
-    .no-mach    { background:#e0e0e0; font-size:2.0rem; }
+    .mach-num     { font-size:2.4rem; font-weight:600; line-height:2.4rem; }
+    .mach-count   { font-size:2.0rem; }
+    .no-mach      { background:#e0e0e0; font-size:2.0rem; }
 
-    /* ──────────────────────────────────────────────────
-       LEGEND  (bottom-centre, small boxes)
-    ──────────────────────────────────────────────────*/
-    .legend {
-      position:absolute; left:50%; bottom:1vh; transform:translateX(-50%);
-      display:flex; gap:1.4vw; font-size:2.0rem;
-    }
-    .legend-box { width:2.1rem; height:2.1rem; border:.18rem solid #000; margin-right:.6rem; }
-
-    /* ──────────────────────────────────────────────────
-       PORTRAIT device → rotate 90°
-    ──────────────────────────────────────────────────*/
+    /* ────────────────────────────────────────────────
+       5) Portrait orientation: rotate
+    ────────────────────────────────────────────────*/
     @media (orientation: portrait) {
       html {
-        transform: rotate(90deg);
-        transform-origin: left top;
-        width: 100vh; height: 100vw;
+        transform:rotate(90deg);
+        transform-origin:left top;
+        width:100vh; height:100vw;
         position:absolute; top:0; left:0; overflow:hidden;
       }
     }
@@ -99,7 +73,6 @@
 </head>
 
 <body>
-
 <div class="dashboard">
 
   {% for prog in programs %}
@@ -109,7 +82,7 @@
       {% for line in prog.lines %}
         {% for op in line.operations %}
           <div class="op-row">
-            <!-- coloured OP cell -->
+            <!-- OP cell (coloured) -->
             <div class="op-cell" style="background: {{ op.color }};">
               <div class="op-title">{{ op.op }}</div>
               <div class="op-stat">
@@ -122,7 +95,7 @@
               </div>
             </div>
 
-            <!-- machines -->
+            <!-- machine cells -->
             <div class="mach-wrap">
               {% if op.machines|length == 0 %}
                 <div class="mach-cell no-mach">—</div>
@@ -169,17 +142,6 @@
 
 </div>
 
-<!-- legend -->
-<div class="legend" data-bs-toggle="tooltip" title="Color = last 5-minute efficiency">
-  <div><span class="legend-box" style="background:#ff0000;"></span>Low &lt; 50%</div>
-  <div><span class="legend-box" style="background:#FFA500;"></span>50–85%</div>
-  <div><span class="legend-box" style="background:#228b22;"></span>High ≥ 85%</div>
-</div>
-
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-<script>
-  document.querySelectorAll('[data-bs-toggle="tooltip"]')
-          .forEach(el => new bootstrap.Tooltip(el));
-</script>
 </body>
 </html>
