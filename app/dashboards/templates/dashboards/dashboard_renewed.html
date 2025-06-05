@@ -2,69 +2,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>Dashboard — {{ pages }}</title>
 
+  <!-- refresh every 5 s -->
   <meta http-equiv="refresh" content="5">
-  {# allow pinch-zoom on mobile #}
+
+  <!-- allow pinch-zoom on phones -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1, user-scalable=yes">
 
+  <!-- Bootstrap -->
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
 
   <style>
-    /* ────────────────────────────────────────────────
-       1) Global fluid scale
-    ────────────────────────────────────────────────*/
+    /* ──────────────────────────────────────────
+       1) Fluid root scale – every 1 rem = min(1 vh, 0.52 vw)
+    ──────────────────────────────────────────*/
     html { font-size: min(1vh, 0.52vw); }
     body { margin:0; background:#97a5b1; overflow:hidden; }
 
-    /* ────────────────────────────────────────────────
-       2) Grid – one row, fills viewport
-    ────────────────────────────────────────────────*/
-    .dashboard      { display:flex; flex-wrap:nowrap;
-                      height:100vh; width:100vw; }
-    .dash-col       { flex:1 1 0; min-width:0;
-                      margin:1vh 0.5vw;
-                      display:flex; flex-direction:column;
-                      background:#f8f9fa; border:.2rem solid #dee2e6; }
+    /* ──────────────────────────────────────────
+       2) Main dashboard row
+    ──────────────────────────────────────────*/
+    .dashboard {
+      display:flex; flex-wrap:nowrap;
+      height:100vh; width:100vw;
+    }
+    .dash-col {
+      flex:1 1 0; min-width:0;
+      margin:1vh 0.5vw;
+      display:flex; flex-direction:column;
+      background:#f8f9fa; border:.2rem solid #dee2e6;
+    }
 
-    .dash-hdr { height:6vh; line-height:6vh; background:#343a40; color:#fff;
-                font-size:3.0rem; font-weight:700; text-align:center; }
+    /* ──────────────────────────────────────────
+       3) Program header
+    ──────────────────────────────────────────*/
+    .dash-hdr {
+      height:6vh; line-height:6vh;
+      background:#343a40; color:#fff;
+      font-size:3.0rem; font-weight:700; text-align:center;
+    }
 
+    /* ──────────────────────────────────────────
+       4) Operation rows & cells
+    ──────────────────────────────────────────*/
     .op-row   { display:flex; height:8vh; border-top:.15rem solid #bbb; }
-    .op-cell  { flex:0 0 6.5vw; display:flex; flex-direction:column;
-                justify-content:center; align-items:center;
-                border-right:.2rem solid #666; color:#000; }
+
+    .op-cell {
+      flex:0 0 6.5vw;
+      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      border-right:.2rem solid #666;          /* vertical separator */
+      color:#000;
+
+      /* legend tooltip */
+      cursor:help;
+    }
     .op-title { font-size:2.4rem; font-weight:650; line-height:2.4rem; }
     .op-stat  { font-size:2.0rem; }
 
-    .mach-wrap   { flex:1 1 0; display:flex; }
-    .mach-cell   { flex:1 1 0; display:flex; flex-direction:column;
-                   justify-content:center; align-items:center; }
-    .mach-num    { font-size:2.4rem; font-weight:600; line-height:2.4rem; }
-    .mach-count  { font-size:2.0rem; }
-    .no-mach     { background:#e0e0e0; font-size:2.0rem; }
+    .mach-wrap { flex:1 1 0; display:flex; }
+    .mach-cell {
+      flex:1 1 0;
+      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      cursor:help;                          /* tooltip hover/tap */
+    }
+    .mach-num   { font-size:2.4rem; font-weight:600; line-height:2.4rem; }
+    .mach-count { font-size:2.0rem; }
+    .no-mach    { background:#e0e0e0; font-size:2.0rem; }
 
-    /* ────────────────────────────────────────────────
-       3) Rotate ONLY on tablets / large portrait screens
-          (min-width stops it from firing on phones)
-    ────────────────────────────────────────────────*/
-    @media (orientation: portrait) and (min-width: 601px) {
-      html {
-        transform: rotate(90deg);
-        transform-origin: left top;
-        width: 100vh; height: 100vw;
-        position: absolute; top: 0; left: 0;
-        overflow: hidden;
-      }
+    /* ──────────────────────────────────────────
+       5) Phones (< 600 px wide) – allow swipe scroll
+    ──────────────────────────────────────────*/
+    @media (max-width:600px) {
+      .dashboard { overflow-x:auto; }
     }
 
-    /* ────────────────────────────────────────────────
-       4) Phones (≤ 600 px) – allow sideways scroll
-    ────────────────────────────────────────────────*/
-    @media (max-width: 600px) {
-      .dashboard { overflow-x: auto; }
+    /* ──────────────────────────────────────────
+       6) Rotate only on tall tablets / kiosks
+    ──────────────────────────────────────────*/
+    @media (orientation:portrait) and (min-width:601px) {
+      html {
+        transform:rotate(90deg);
+        transform-origin:left top;
+        width:100vh; height:100vw;
+        position:absolute; top:0; left:0; overflow:hidden;
+      }
     }
   </style>
 </head>
@@ -79,7 +103,11 @@
       {% for line in prog.lines %}
         {% for op in line.operations %}
           <div class="op-row">
-            <div class="op-cell" style="background: {{ op.color }};">
+            {# OP cell (with color & tooltip) #}
+            <div class="op-cell"
+                 style="background: {{ op.color }};"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 title="Color legend last 5min: red (&lt; 50 %), green (&gt; 85 %)">
               <div class="op-title">{{ op.op }}</div>
               <div class="op-stat">
                 {{ op.total_produced }}
@@ -91,13 +119,19 @@
               </div>
             </div>
 
+            {# machine cells #}
             <div class="mach-wrap">
               {% if op.machines|length == 0 %}
-                <div class="mach-cell no-mach">—</div>
+                <div class="mach-cell no-mach"
+                     data-bs-toggle="tooltip" data-bs-placement="top"
+                     title="Color legend: red (&lt; 50 %), green (&gt; 85 %)">—</div>
 
               {% elif op.machines|length == 1 %}
                 {% with m=op.machines.0 %}
-                  <div class="mach-cell" style="background: {{ m.color }};">
+                  <div class="mach-cell"
+                       style="background: {{ m.color }};"
+                       data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="Color legend: red (&lt; 50 %), green (&gt; 85 %)">
                     <div class="mach-num">{{ m.number }}</div>
                     <div class="mach-count">
                       {{ m.count }}
@@ -114,7 +148,9 @@
                 {% widthratio 100 op.machines|length 1 as perc %}
                 {% for m in op.machines %}
                   <div class="mach-cell"
-                       style="background: {{ m.color }}; width: {{ perc }}%;">
+                       style="background: {{ m.color }}; width: {{ perc }}%;"
+                       data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="Color legend: red (&lt; 50 %), green (&gt; 85 %)">
                     <div class="mach-num">{{ m.number }}</div>
                     <div class="mach-count">
                       {{ m.count }}
@@ -131,11 +167,17 @@
           </div>
         {% endfor %}
       {% endfor %}
+
     </div>
   {% endfor %}
 
 </div>
 
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script>
+  /* activate all tooltips (legend is now on every coloured cell) */
+  document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    .forEach(el => new bootstrap.Tooltip(el));
+</script>
 </body>
 </html>
