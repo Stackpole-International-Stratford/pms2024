@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <title>Dashboard — {{ pages }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    
+
     <!-- auto-reload every 5 seconds -->
     <meta http-equiv="refresh" content="5" />
 
@@ -14,20 +14,24 @@
 
     <style>
       /* Shrink table cell padding so more cells fit on-screen */
-      .table td, .table th {
+      .table td,
+      .table th {
         padding: 0.25rem 0.5rem;
         font-size: 0.85rem;
       }
+
       /* Slightly larger text for program headers */
       .program-header {
         font-size: 1.1rem;
         font-weight: bold;
       }
+
       /* Light border and background for each program panel */
       .program-col {
         border: 1px solid #dee2e6;
         background-color: #f8f9fa;
       }
+
       /* Operation-cell style (leftmost cell) */
       .op-cell {
         background-color: #e9ecef;
@@ -36,17 +40,41 @@
         vertical-align: middle;
         white-space: nowrap;
       }
+
       /* Center a single-machine cell */
       .single-machine {
         text-align: center;
         vertical-align: middle;
       }
+
       /* Style for “no machines” placeholder */
       .no-mach {
         text-align: center;
         vertical-align: middle;
         color: #6c757d; /* Bootstrap’s text-dark color */
       }
+
+      .line-legend {
+        display: flex;
+        justify-content: center;    /* keep it centered */
+        flex-wrap: nowrap;          /* ← prevent items from wrapping to the next row */
+        overflow-x: auto;           /* ← allow horizontal scrolling if it truly overflows */
+        margin-top: 0.25rem;
+      }
+      .line-legend .legend-item {
+        display: flex;
+        align-items: center;
+        margin-left: 1rem;          /* you can reduce this number if you still see wrapping */
+        font-size: 0.85rem;
+        white-space: nowrap;        /* ensure each “Low (< 50%)” block never breaks internally */
+      }
+      .line-legend .legend-box {
+        width: 12px;
+        height: 12px;
+        border: 1px solid #000;
+        margin-right: 0.4rem;
+      }
+
     </style>
 </head>
 <body>
@@ -54,7 +82,8 @@
     <div class="row no-gutters">
       {% for prog in programs %}
         <div class="col-sm-6 col-md-4 col-lg-3 px-1 mb-2 program-col d-flex flex-column">
-          <div class="bg-secondary text-white text-center py-1 program-header">
+          <!-- Program header unchanged -->
+          <div class="bg-dark text-white text-center py-1 program-header">
             {{ prog.program }}
           </div>
 
@@ -65,83 +94,105 @@
                   <tbody>
                     {% for op in line.operations %}
                       <tr>
-                      {# ── OP‐CELL now shows both the op label and its total ⁄ efficiency ── #}
-                      <td
-                        class="op-cell"
-                        style="background-color: {{ op.color }}; color: #000; border: 2px solid #000;"
-                      >
-                        {{ op.op }}
-                        <br/>
-                        <span class="small text-dark">
-                          {{ op.total_produced }}
-                          {% if op.efficiency is not None %}
-                            ({{ op.efficiency }}%)
-                          {% else %}
-                            (N/A)
-                          {% endif %}
-                        </span>
-                      </td>
-
-
-
-
-                      {# ── NO MACHINES: just a placeholder cell spanning all machine‐slots ── #}
-                      {% if op.machines|length == 0 %}
-                        <td class="no-mach" colspan="{{ line.max_machines }}">
-                          &mdash;
+                        {# ── OP‐CELL now shows both the op label and its total/efficiency ── #}
+                        <td
+                          class="op-cell"
+                          style="background-color: {{ op.color }}; color: #000; border: 2px solid #000;"
+                        >
+                          {{ op.op }}
+                          <br/>
+                          <span class="small text-dark">
+                            {{ op.total_produced }}
+                            {% if op.efficiency is not None %}
+                              ({{ op.efficiency }}%)
+                            {% else %}
+                              (N/A)
+                            {% endif %}
+                          </span>
                         </td>
 
-                      {# ── SINGLE MACHINE: one big cell spanning all machine‐slots ── #}
-                      {% elif op.machines|length == 1 %}
-                        {% with single=op.machines.0 %}
-                          <td
-                            class="single-machine"
-                            colspan="{{ line.max_machines }}"
-                            style="background-color: {{ single.color }};"
-                          >
-                            <div><strong>{{ single.number }}</strong></div>
-                            <div class="small text-dark">
-                              {{ single.count }}
-                              {% if single.efficiency is not None %}
-                                ({{ single.efficiency }}%)
-                              {% else %}
-                                (N/A)
-                              {% endif %}
-                            </div>
+                        {# ── NO MACHINES: just a placeholder cell spanning all machine‐slots ── #}
+                        {% if op.machines|length == 0 %}
+                          <td class="no-mach" colspan="{{ line.max_machines }}">
+                            &mdash;
                           </td>
-                        {% endwith %}
 
-                      {# ── MULTIPLE MACHINES: split into equal‐width cells ── #}
-                      {% else %}
-                        {% comment %}
-                          Compute colspan = floor(line.max_machines / (number of machines))
-                          using widthratio (widthratio a b 1 → floor(a/b)).
-                        {% endcomment %}
-                        {% widthratio line.max_machines op.machines|length 1 as colspan_value %}
+                        {# ── SINGLE MACHINE: one big cell spanning all machine‐slots ── #}
+                        {% elif op.machines|length == 1 %}
+                          {% with single=op.machines.0 %}
+                            <td
+                              class="single-machine"
+                              colspan="{{ line.max_machines }}"
+                              style="background-color: {{ single.color }};"
+                            >
+                              <div><strong>{{ single.number }}</strong></div>
+                              <div class="small text-dark">
+                                {{ single.count }}
+                                {% if single.efficiency is not None %}
+                                  ({{ single.efficiency }}%)
+                                {% else %}
+                                  (N/A)
+                                {% endif %}
+                              </div>
+                            </td>
+                          {% endwith %}
 
-                        {% for m in op.machines %}
-                          <td
-                            class="text-center align-middle"
-                            colspan="{{ colspan_value }}"
-                            style="background-color: {{ m.color }};"
-                          >
-                            <div><strong>{{ m.number }}</strong></div>
-                            <div class="small text-dark">
-                              {{ m.count }}
-                              {% if m.efficiency is not None %}
-                                ({{ m.efficiency }}%)
-                              {% else %}
-                                (N/A)
-                              {% endif %}
-                            </div>
-                          </td>
-                        {% endfor %}
-                      {% endif %}
-                    </tr>
+                        {# ── MULTIPLE MACHINES: split into equal-width cells ── #}
+                        {% else %}
+                          {% comment %}
+                            Compute colspan = floor(line.max_machines / (number of machines))
+                            using widthratio (widthratio a b 1 → floor(a/b)).
+                          {% endcomment %}
+                          {% widthratio line.max_machines op.machines|length 1 as colspan_value %}
 
+                          {% for m in op.machines %}
+                            <td
+                              class="text-center align-middle"
+                              colspan="{{ colspan_value }}"
+                              style="background-color: {{ m.color }};"
+                            >
+                              <div><strong>{{ m.number }}</strong></div>
+                              <div class="small text-dark">
+                                {{ m.count }}
+                                {% if m.efficiency is not None %}
+                                  ({{ m.efficiency }}%)
+                                {% else %}
+                                  (N/A)
+                                {% endif %}
+                              </div>
+                            </td>
+                          {% endfor %}
+                        {% endif %}
+                      </tr>
                     {% endfor %}
                   </tbody>
                 </table>
+              </div>
+
+              {# ── LEGEND AT THE FOOTER OF THE LINE WITH TOOLTIP ATTRIBUTES ── #}
+              <div
+                class="line-legend"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="actual / target in the last 5 minutes"
+              >
+                <!-- Low efficiency (last 5 min actual < 50%) -->
+                <div class="legend-item">
+                  <div class="legend-box" style="background-color: #ff0000;"></div>
+                  <span>Low (&lt; 50 %)</span>
+                </div>
+
+                <!-- Medium efficiency (last 5 min actual 50 – 85 %) -->
+                <div class="legend-item">
+                  <div class="legend-box" style="background-color: #ffff00;"></div>
+                  <span>Medium (50 % – 85 %)</span>
+                </div>
+
+                <!-- High efficiency (last 5 min actual ≥ 85 %) -->
+                <div class="legend-item">
+                  <div class="legend-box" style="background-color: #228b22;"></div>
+                  <span>High (≥ 85 %)</span>
+                </div>
               </div>
             </div>
           {% endfor %}
@@ -154,5 +205,17 @@
 
   <!-- Bootstrap JS Bundle (served via static files) -->
   <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <script>
+    // Initialize all tooltips on page load
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      );
+      tooltipTriggerList.forEach(function (el) {
+        new bootstrap.Tooltip(el);
+      });
+    });
+  </script>
 </body>
 </html>
