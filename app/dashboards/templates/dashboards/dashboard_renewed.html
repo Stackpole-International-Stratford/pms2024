@@ -54,27 +54,28 @@
         color: #6c757d; /* Bootstrap’s text-dark color */
       }
 
-      .line-legend {
+      /* Legend container (appears once at page bottom) */
+      .page-legend {
         display: flex;
-        justify-content: center;    /* keep it centered */
-        flex-wrap: nowrap;          /* ← prevent items from wrapping to the next row */
-        overflow-x: auto;           /* ← allow horizontal scrolling if it truly overflows */
-        margin-top: 0.25rem;
+        justify-content: center;    /* center the legend items */
+        flex-wrap: nowrap;          /* never wrap onto multiple lines */
+        overflow-x: auto;           /* horizontal scroll if really too narrow */
+        margin: 1rem 0;             /* spacing above and below */
+        cursor: pointer;            /* indicates a tooltip is available */
       }
-      .line-legend .legend-item {
+      .page-legend .legend-item {
         display: flex;
         align-items: center;
-        margin-left: 1rem;          /* you can reduce this number if you still see wrapping */
+        margin-left: 1rem;          /* gutter between each legend box */
         font-size: 0.85rem;
-        white-space: nowrap;        /* ensure each “Low (< 50%)” block never breaks internally */
+        white-space: nowrap;        /* don’t let text wrap mid‐phrase */
       }
-      .line-legend .legend-box {
+      .page-legend .legend-box {
         width: 12px;
         height: 12px;
         border: 1px solid #000;
         margin-right: 0.4rem;
       }
-
     </style>
 </head>
 <body>
@@ -168,38 +169,38 @@
                   </tbody>
                 </table>
               </div>
-
-              {# ── LEGEND AT THE FOOTER OF THE LINE WITH TOOLTIP ATTRIBUTES ── #}
-              <div
-                class="line-legend"
-                data-bs-toggle="tooltip"
-                data-bs-placement="top"
-                title="actual / target in the last 5 minutes"
-              >
-                <!-- Low efficiency (last 5 min actual < 50%) -->
-                <div class="legend-item">
-                  <div class="legend-box" style="background-color: #ff0000;"></div>
-                  <span>Low (&lt; 50 %)</span>
-                </div>
-
-                <!-- Medium efficiency (last 5 min actual 50 – 85 %) -->
-                <div class="legend-item">
-                  <div class="legend-box" style="background-color: #ffff00;"></div>
-                  <span>Medium (50 % – 85 %)</span>
-                </div>
-
-                <!-- High efficiency (last 5 min actual ≥ 85 %) -->
-                <div class="legend-item">
-                  <div class="legend-box" style="background-color: #228b22;"></div>
-                  <span>High (≥ 85 %)</span>
-                </div>
-              </div>
             </div>
           {% endfor %}
 
           <div class="mt-auto"></div>
         </div>
       {% endfor %}
+    </div>
+
+    {# ── SINGLE LEGEND AT THE BOTTOM OF THE PAGE ── #}
+    <div
+      class="page-legend"
+      data-bs-toggle="tooltip"
+      data-bs-placement="top"
+      title="actual / target in the last 5 minutes"
+    >
+      <!-- Low efficiency (last 5 min actual < 50%) -->
+      <div class="legend-item">
+        <div class="legend-box" style="background-color: #ff0000;"></div>
+        <span>Low (&lt; 50 %)</span>
+      </div>
+
+      <!-- Medium efficiency (last 5 min actual 50 – 85 %) -->
+      <div class="legend-item">
+        <div class="legend-box" style="background-color: #ffff00;"></div>
+        <span>Medium (50 % – 85 %)</span>
+      </div>
+
+      <!-- High efficiency (last 5 min actual ≥ 85 %) -->
+      <div class="legend-item">
+        <div class="legend-box" style="background-color: #228b22;"></div>
+        <span>High (≥ 85 %)</span>
+      </div>
     </div>
   </div>
 
