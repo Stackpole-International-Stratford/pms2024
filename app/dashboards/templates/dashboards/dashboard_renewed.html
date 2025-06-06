@@ -11,59 +11,100 @@
 
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
 
-  <style>
-    /* ── 1) root scale: use min(vh,vw) if supported, else ~10 px fallback ──*/
+ <style>
+    /* ── 1) Root scale: use min(vh,vw) if supported, else ~10px fallback ── */
     html {
-      font-size: 10px;                               /* fallback (~FHD TV)  */
+      font-size: 10px; /* fallback (~FHD TV) */
     }
     @supports (font-size: min(1vh, 1vw)) {
       html { font-size: min(1vh, 0.52vw); }
     }
 
-    body { margin:0; background:#97a5b1; overflow:hidden; }
+    body { margin: 0; background: #97a5b1; overflow: hidden; }
 
-    /* ── 2) main row ────────────────────────────────────────────────────*/
+    /* ── 2) Main dashboard row ─────────────────────────────────────────── */
     .dashboard {
-      display:flex; flex-wrap:nowrap;
-      height:100vh; width:100vw;
+      display: flex;
+      flex-wrap: nowrap;
+      height: 100vh;
+      width: 100vw;
     }
     .dash-col {
-      flex:1 1 0; min-width:0;
-      margin:1vh 0.5vw;
-      display:flex; flex-direction:column;
-      background:#f8f9fa; border:.2rem solid #dee2e6;
+      flex: 1 1 0;
+      min-width: 0;
+      margin: 1vh 0.5vw;
+      display: flex;
+      flex-direction: column;
+      background: #f8f9fa;
+      border: 0.2rem solid #dee2e6;
     }
 
-    /* ── 3) header ─────────────────────────────────────────────────────*/
+    /* ── 3) Program header ─────────────────────────────────────────────── */
     .dash-hdr {
-      height:6vh; line-height:6vh;
-      background:#343a40; color:#fff;
-      font-size:3rem; font-weight:700; text-align:center;
+      height: 6vh;
+      line-height: 6vh;
+      background: #343a40;
+      color: #fff;
+      font-size: 3rem;
+      font-weight: 700;
+      text-align: center;
     }
 
-    /* ── 4) op & machine cells ─────────────────────────────────────────*/
-    .op-row   { display:flex; height:8vh; border-top:.15rem solid #bbb; }
-
-    .op-cell  {
-      flex:0 0 6.5vw; border-right:.2rem solid #666;
-      display:flex; flex-direction:column; justify-content:center; align-items:center;
-      color:#000; cursor:help;
+    /* ── 4) Operation rows & cells ─────────────────────────────────────── */
+    .op-row { 
+      display: flex;
+      height: 8vh;
+      border-top: 0.15rem solid #bbb;
     }
-    .op-title { font-size:2.4rem; font-weight:650; line-height:2.4rem; }
-    .op-stat  { font-size:2rem; }
 
-    .mach-wrap { flex:1 1 0; display:flex; }
+    .op-cell {
+      flex: 0 0 6.5vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border-right: 0.2rem solid #666;  /* vertical separator */
+      margin-right: 0.3rem;             /* slight gap before machines */
+      color: #000;
+      cursor: help;                     /* tooltip indicator */
+    }
+    .op-title { 
+      font-size: 2.4rem;
+      font-weight: 650;
+      line-height: 2.4rem;
+    }
+    .op-stat { 
+      font-size: 2rem;
+    }
+
+    .mach-wrap { 
+      flex: 1 1 0;
+      display: flex;
+    }
     .mach-cell {
-      flex:1 1 0; cursor:help;
-      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: help; /* tooltip indicator */
     }
-    .mach-num   { font-size:2.4rem; font-weight:600; line-height:2.4rem; }
-    .mach-count { font-size:2rem; }
-    .no-mach    { background:#e0e0e0; font-size:2rem; }
+    .mach-num { 
+      font-size: 2.4rem;
+      font-weight: 600;
+      line-height: 2.4rem;
+    }
+    .mach-count { 
+      font-size: 2rem;
+    }
+    .no-mach { 
+      background: #e0e0e0;
+      font-size: 2rem;
+    }
 
-    /* ── 5) touch devices ≤1000 px: enable sideways swipe ──────────────*/
-    @media (max-width:1000px) {
-      .dashboard { overflow-x:auto; }
+    /* ── 5) Touch devices ≤1000px: enable sideways swipe ──────────────── */
+    @media (max-width: 1000px) {
+      .dashboard { overflow-x: auto; }
     }
   </style>
 </head>
