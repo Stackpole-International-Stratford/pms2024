@@ -2838,6 +2838,8 @@ ALIASES: Dict[str, List[str]] = {
 }
 
 
+
+
 def dashboard_current_shift(request, pages: str):
     """
     pages: either "programA" or "programA&programB"
@@ -3106,7 +3108,7 @@ def dashboard_current_shift(request, pages: str):
                 int(math.floor(alias_smart_pcs_5)) if alias_smart_pcs_5 > 0 else None
             )
 
-            # (d) Determine alias’s shift-long efficiency and 5min efficiency
+            # (d) Determine alias’s shift‐long efficiency and 5min efficiency
             if smart_target_alias and smart_target_alias > 0:
                 eff_alias = int((pieces_made_alias / smart_target_alias) * 100)
                 eff_alias = max(0, min(eff_alias, 100))
@@ -3183,10 +3185,22 @@ def dashboard_current_shift(request, pages: str):
                     op["total_smart_target"] = total_smart
                     op["efficiency"]         = op_eff
 
-                    # (b) last-5-minute op totals
+                    # (a) shift‐long op totals
+                    total_produced = sum(m["count"] for m in valid_machines)
+                    total_smart    = sum(m["smart_target"] for m in valid_machines)
+                    if total_smart > 0:
+                        op_eff = int(math.floor((total_produced / total_smart) * 100))
+                        op_eff = max(0, min(op_eff, 100))
+                    else:
+                        op_eff = None
+
+                    op["total_produced"]     = total_produced
+                    op["total_smart_target"] = total_smart
+                    op["efficiency"]         = op_eff
+
+                    # (b) last‐5‐minute op totals
                     total5_produced = sum(m["pieces5_made"] for m in valid_machines)
                     total5_smart    = sum(m["smart_target_5min"] for m in valid_machines)
-
                     if total5_smart > 0:
                         op_eff_5min = int(math.floor((total5_produced / total5_smart) * 100))
                         op_eff_5min = max(0, min(op_eff_5min, 100))
@@ -3195,9 +3209,9 @@ def dashboard_current_shift(request, pages: str):
 
                     op["recent_efficiency"] = op_eff_5min
 
-                    # (c) color the op cell by its 5-minute efficiency (or gray if none)
+                    # (c) color the op cell by its shift‐to‐date efficiency (or gray if none)
                     op["color"] = (
-                        efficiency_color(op_eff_5min) if op_eff_5min is not None else "#808080"
+                        efficiency_color(op_eff) if op_eff is not None else "#808080"
                     )
 
         # ── 14) Merge each prog_obj into all_programs ─────────────────────────

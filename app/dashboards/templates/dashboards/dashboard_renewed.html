@@ -123,7 +123,7 @@
             <div class="op-cell"
                  style="background: {{ op.color }};"
                  data-bs-toggle="tooltip" data-bs-placement="top"
-                 title="Color legend (last 5 min): red < 50 %, green > 85 %">
+                 title="Color legend (shift): yellow = 50 %, green > 85 %">
               <div class="op-title">{{ op.op }}</div>
               <div class="op-stat">
                 {{ op.total_produced }}
@@ -140,14 +140,14 @@
               {% if op.machines|length == 0 %}
                 <div class="mach-cell no-mach"
                      data-bs-toggle="tooltip" data-bs-placement="top"
-                     title="Color legend: red < 50 %, green > 85 %">—</div>
+                     title="Color legend: yellow = 50 %, green > 85 %">—</div>
 
               {% elif op.machines|length == 1 %}
                 {% with m=op.machines.0 %}
                   <div class="mach-cell"
                        style="background: {{ m.color }};"
                        data-bs-toggle="tooltip" data-bs-placement="top"
-                       title="Color legend: red < 50 %, green > 85 %">
+                       title="Color legend (5min): yellow = 50 %, green > 85 %">
                     <div class="mach-num">{{ m.number }}</div>
                     <div class="mach-count">
                       {{ m.count }}
@@ -166,7 +166,7 @@
                   <div class="mach-cell"
                        style="background: {{ m.color }}; width:{{ perc }}%;"
                        data-bs-toggle="tooltip" data-bs-placement="top"
-                       title="Color legend: red < 50 %, green > 85 %">
+                       title="Color legend (5min): yellow = 50 %, green > 85 %">
                     <div class="mach-num">{{ m.number }}</div>
                     <div class="mach-count">
                       {{ m.count }}
