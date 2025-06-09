@@ -103,9 +103,35 @@ lines_untracked = [
         ],
     },
     {
+        "line": "10R60",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "30",
+                "machines": [
+                    {"number": "1826", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
         "line": "AB1V Reaction",
         "scrap_line": "NA",
         "operations": [
+            {
+                "op": "10",
+                "machines": [
+                    {"number": "658", "target": 27496,},
+                    {"number": "661", "target": 27496,},
+
+                ],
+            },
+            {
+                "op": "50",
+                "machines": [
+                    {"number": "660", "target": 27496,},
+                ],
+            },
             {
                 "op": "120",
                 "machines": [
@@ -133,6 +159,18 @@ lines_untracked = [
                 ],
             },
             {
+                "op": "60",
+                "machines": [
+                    {"number": "1742", "target": 27496,},
+                ],
+            },
+            {
+                "op": "70",
+                "machines": [
+                    {"number": "604", "target": 27496,},
+                ],
+            },
+            {
                 "op": "Final",
                 "machines": [
                     {"number": "1730", "target": 27496,},
@@ -144,6 +182,20 @@ lines_untracked = [
         "line": "AB1V Overdrive",
         "scrap_line": "NA",
         "operations": [
+            {
+                "op": "35",
+                "machines": [
+                    {"number": "668", "target": 27496,},
+                    {"number": "580", "target": 27496,},
+
+                ],
+            },
+            {
+                "op": "50",
+                "machines": [
+                    {"number": "580", "target": 27496,},
+                ],
+            },
             {
                 "op": "100",
                 "machines": [
@@ -209,6 +261,26 @@ lines_untracked = [
                 ],
             },
              {
+                "op": "op20",
+                "machines": [
+                    {"number": "611", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
+        "line": "10R140 Front",
+        "scrap_line": "NA",
+        "operations": [
+                        {
+                "op": "op10",
+                "machines": [
+                    {"number": "686", "target": 27496,},
+                    {"number": "655", "target": 27496,},
+                    {"number": "654", "target": 27496,},
+                ],
+            },
+            {
                 "op": "op20",
                 "machines": [
                     {"number": "611", "target": 27496,},
@@ -342,7 +414,7 @@ lines_untracked = [
         "scrap_line": "NA",
         "operations": [
             {
-                "op": "furnaces",
+                "op": "furnace",
                 "machines": [
                     {"number": "1516", "target": 27496,},
                     {"number": "859", "target": 27496,},
@@ -351,6 +423,9 @@ lines_untracked = [
                     {"number": "343", "target": 27496,},
                     {"number": "346", "target": 27496,},
                     {"number": "441", "target": 27496,},
+                    {"number": "331", "target": 27496,},
+                    {"number": "314", "target": 27496,},
+
                 ],
             },
 
