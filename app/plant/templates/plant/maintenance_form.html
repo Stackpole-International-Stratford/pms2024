@@ -5,7 +5,7 @@
   <form id="maintenance-form" method="POST">
     {% csrf_token %}
     <!-- store the labour choice -->
-    <input type="hidden" id="labour_types_input" name="labour_types" value="[]" />
+     <input type="hidden" id="labour_types_input" name="labour_types" value="[]" />
     <input type="hidden" id="employeeIdInput"   name="employee_id" value="" />
 
     <div id="downtime-table-wrapper" class="table-responsive" style="-webkit-overflow-scrolling: touch;">
@@ -161,20 +161,7 @@
               </div>
             </div>
 
-            <!-- Labour Types -->
-            <div class="row mt-4">
-              <div class="col-md-6">
-                <p class="mb-1 fw-semibold">Labour Types</p>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="edit-labour-op"   value="OPERATOR">
-                  <label class="form-check-label" for="edit-labour-op">Operator Can Fix</label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="edit-labour-tech" value="TECH">
-                  <label class="form-check-label" for="edit-labour-tech">Need Tech</label>
-                </div>
-              </div>
-            </div>
+           
           </div>
           <div class="modal-footer">
             <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
@@ -337,9 +324,6 @@
     subSelect:     document.getElementById('edit-subcategory-select'),
     descInput:     document.getElementById('edit-description')
   };
-  const opChk            = document.getElementById('edit-labour-op');
-  const techChk          = document.getElementById('edit-labour-tech');
-  const editLabourHidden = document.getElementById('edit-labour-types-input');
 
   // Close-out modal
   const closeoutOpenBtn = document.getElementById('closeout-open-button');
@@ -547,28 +531,10 @@
       .setChoiceByValue(subCode);
     edit.subSelect.value = subCode;
 
-    // — Populate the labour checkboxes from data attribute —
-    let labourList = [];
-    try {
-      labourList = JSON.parse(tr.dataset.labourTypes || '[]');
-    } catch(err) {
-      console.error('Failed to parse labour-types JSON:', tr.dataset.labourTypes, err);
-    }
-    opChk.checked   = labourList.includes('OPERATOR');
-    techChk.checked = labourList.includes('TECH');
-
     // — Show the modal —
     new bootstrap.Modal(editModalEl).show();
   });
 
-  // ─── BEFORE EDIT FORM SUBMIT: write back the JSON list —
-  editForm.addEventListener('submit', function(e){
-    const out = [];
-    if (opChk.checked)   out.push('OPERATOR');
-    if (techChk.checked) out.push('TECH');
-    editLabourHidden.value = JSON.stringify(out);
-    // then normal POST
-  });
 
   // ─── DELETE ENTRY ───────────────────────────────────────────────────
   document.getElementById('delete-button').addEventListener('click', ()=>{
