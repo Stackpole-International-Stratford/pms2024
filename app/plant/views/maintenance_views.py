@@ -973,25 +973,20 @@ def toggle_active(request):
 
 
 
-
+from django.db.models import Q
 
 # --------------------------- rewritten view ---------------------------------- #
 
 def filter_out_operator_only_events(qs):
     """
     Given a MachineDowntimeEvent queryset, return a new queryset
-    with all events whose labour_types == ["OPERATOR"] removed.
+    with all events whose labour_types == ["OPERATOR"] OR ["NA"] removed.
     """
-    # Find IDs of operator‑only events
-    operator_only_ids = list(
-        qs
-        .filter(labour_types=["OPERATOR"])   # If your JSONField supports direct list lookups
-        .values_list("id", flat=True)
+    # Exclude any event whose labour_types exactly equals ["OPERATOR"] or ["NA"]
+    return qs.exclude(
+        Q(labour_types=["OPERATOR"]) |
+        Q(labour_types=["NA"])
     )
-    # if operator_only_ids:
-    #     print(f"Excluding operator‑only event IDs: {operator_only_ids}")
-    # Return qs without those IDs
-    return qs.exclude(id__in=operator_only_ids)
 
 
 
