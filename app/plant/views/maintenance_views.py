@@ -492,12 +492,16 @@ lines_untracked = [
                     {"number": "1516", "target": 27496,},
                     {"number": "859", "target": 27496,},
                     {"number": "341", "target": 27496,},
+                    {"number": "697", "target": 27496,},
+                    {"number": "678", "target": 27496,},
+                    {"number": "743", "target": 27496,},
                     {"number": "342", "target": 27496,},
                     {"number": "343", "target": 27496,},
                     {"number": "346", "target": 27496,},
                     {"number": "441", "target": 27496,},
                     {"number": "331", "target": 27496,},
                     {"number": "314", "target": 27496,},
+
 
                 ],
             },
@@ -513,7 +517,7 @@ lines_untracked = [
                 "op": "Assembler",
                 "machines": [
                     {"number": "859", "target": 27496,},
-                    {"number": "743", "target": 27496,},
+                   
 
 
 
