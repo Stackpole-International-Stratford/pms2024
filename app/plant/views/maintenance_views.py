@@ -440,6 +440,9 @@ lines_untracked = [
                 "op": "Assembler",
                 "machines": [
                     {"number": "859", "target": 27496,},
+                    {"number": "743", "target": 27496,},
+
+
 
                 ],
             },
