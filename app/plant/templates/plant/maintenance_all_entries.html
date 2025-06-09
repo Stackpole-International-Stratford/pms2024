@@ -212,6 +212,14 @@ Add New or Update Employee
                 aria-label="Machine History">
                 Machine History
               </button>
+              <!-- New filter input -->
+              <input
+                id="job-filter"
+                type="text"
+                class="form-control form-control-sm ms-2"
+                placeholder="Filter jobs…"
+                style="max-width: 150px;"
+              >
             </th>
           </tr>
         </thead>
@@ -1279,7 +1287,27 @@ Add New or Update Employee
           resetInactivityTimer();
       </script>
         
-        
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('job-filter');
+        const rows  = document.querySelectorAll('table tbody tr.editable-row');
+
+        input.addEventListener('input', function() {
+          const q = this.value.trim().toLowerCase();
+          rows.forEach(row => {
+            // 1) text match (machine #, subcategory, comment…)
+            const textMatch = row.textContent.toLowerCase().includes(q);
+
+            // 2) labour-role match (using full role in data-role)
+            const roleMatch = Array.from(row.querySelectorAll('.labour-btn'))
+              .some(btn => btn.dataset.role.toLowerCase().includes(q));
+
+            row.style.display = (textMatch || roleMatch) ? '' : 'none';
+          });
+        });
+      });
+    </script>
+
 
 
 

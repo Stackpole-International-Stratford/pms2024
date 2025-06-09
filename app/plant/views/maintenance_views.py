@@ -103,9 +103,35 @@ lines_untracked = [
         ],
     },
     {
+        "line": "10R60",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "30",
+                "machines": [
+                    {"number": "1826", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
         "line": "AB1V Reaction",
         "scrap_line": "NA",
         "operations": [
+            {
+                "op": "10",
+                "machines": [
+                    {"number": "658", "target": 27496,},
+                    {"number": "661", "target": 27496,},
+
+                ],
+            },
+            {
+                "op": "50",
+                "machines": [
+                    {"number": "660", "target": 27496,},
+                ],
+            },
             {
                 "op": "120",
                 "machines": [
@@ -133,6 +159,18 @@ lines_untracked = [
                 ],
             },
             {
+                "op": "60",
+                "machines": [
+                    {"number": "1742", "target": 27496,},
+                ],
+            },
+            {
+                "op": "70",
+                "machines": [
+                    {"number": "604", "target": 27496,},
+                ],
+            },
+            {
                 "op": "Final",
                 "machines": [
                     {"number": "1730", "target": 27496,},
@@ -144,6 +182,20 @@ lines_untracked = [
         "line": "AB1V Overdrive",
         "scrap_line": "NA",
         "operations": [
+            {
+                "op": "35",
+                "machines": [
+                    {"number": "668", "target": 27496,},
+                    {"number": "580", "target": 27496,},
+
+                ],
+            },
+            {
+                "op": "50",
+                "machines": [
+                    {"number": "580", "target": 27496,},
+                ],
+            },
             {
                 "op": "100",
                 "machines": [
@@ -184,6 +236,8 @@ lines_untracked = [
                     {"number": "204", "target": 27496,},
                     {"number": "265", "target": 27496,},
                     {"number": "205", "target": 27496,},
+                    {"number": "261", "target": 27496,},
+                    {"number": "263", "target": 27496,},
                 ],
             },
         ],
@@ -207,6 +261,26 @@ lines_untracked = [
                 ],
             },
              {
+                "op": "op20",
+                "machines": [
+                    {"number": "611", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
+        "line": "10R140 Front",
+        "scrap_line": "NA",
+        "operations": [
+                        {
+                "op": "op10",
+                "machines": [
+                    {"number": "686", "target": 27496,},
+                    {"number": "655", "target": 27496,},
+                    {"number": "654", "target": 27496,},
+                ],
+            },
+            {
                 "op": "op20",
                 "machines": [
                     {"number": "611", "target": 27496,},
@@ -340,7 +414,7 @@ lines_untracked = [
         "scrap_line": "NA",
         "operations": [
             {
-                "op": "furnaces",
+                "op": "furnace",
                 "machines": [
                     {"number": "1516", "target": 27496,},
                     {"number": "859", "target": 27496,},
@@ -349,6 +423,9 @@ lines_untracked = [
                     {"number": "343", "target": 27496,},
                     {"number": "346", "target": 27496,},
                     {"number": "441", "target": 27496,},
+                    {"number": "331", "target": 27496,},
+                    {"number": "314", "target": 27496,},
+
                 ],
             },
 
@@ -896,25 +973,20 @@ def toggle_active(request):
 
 
 
-
+from django.db.models import Q
 
 # --------------------------- rewritten view ---------------------------------- #
 
 def filter_out_operator_only_events(qs):
     """
     Given a MachineDowntimeEvent queryset, return a new queryset
-    with all events whose labour_types == ["OPERATOR"] removed.
+    with all events whose labour_types == ["OPERATOR"] OR ["NA"] removed.
     """
-    # Find IDs of operator‑only events
-    operator_only_ids = list(
-        qs
-        .filter(labour_types=["OPERATOR"])   # If your JSONField supports direct list lookups
-        .values_list("id", flat=True)
+    # Exclude any event whose labour_types exactly equals ["OPERATOR"] or ["NA"]
+    return qs.exclude(
+        Q(labour_types=["OPERATOR"]) |
+        Q(labour_types=["NA"])
     )
-    # if operator_only_ids:
-    #     print(f"Excluding operator‑only event IDs: {operator_only_ids}")
-    # Return qs without those IDs
-    return qs.exclude(id__in=operator_only_ids)
 
 
 
