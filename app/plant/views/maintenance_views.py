@@ -364,6 +364,79 @@ lines_untracked = [
             },
         ],
     },
+    {
+  "line": "GFX",
+  "scrap_line": "NA",
+  "operations": [
+    {
+      "op": "10",
+      "machines": [
+        { "number": "771",  "target": 27496, },
+        { "number": "773",  "target": 27496, }
+      ]
+    },
+    {
+      "op": "10/20",
+      "machines": [
+        { "number": "1601", "target": 27496, },
+        { "number": "1602", "target": 27496, },
+        { "number": "1604", "target": 27496, },
+        { "number": "1603", "target": 27496, }
+      ]
+    },
+    {
+      "op": "20",
+      "machines": [
+        { "number": "772",  "target": 27496, },
+        { "number": "774",  "target": 27496, }
+      ]
+    },
+    {
+      "op": "30",
+      "machines": [
+        { "number": "1606", "target": 27496, },
+        { "number": "1607", "target": 27496, },
+        { "number": "1608", "target": 27496, },
+        { "number": "1605", "target": 27496, }
+      ]
+    },
+    {
+      "op": "40",
+      "machines": [
+        { "number": "888",  "target": 27496, },
+        { "number": "1611", "target": 27496, }
+      ]
+    },
+    {
+      "op": "50",
+      "machines": [
+        { "number": "887",  "target": 27496, },
+        { "number": "1610", "target": 27496, },
+        { "number": "639",  "target": 27496, },
+        { "number": "780",  "target": 27496, }
+      ]
+    },
+    {
+      "op": "60",
+      "machines": [
+        { "number": "1612", "target": 27496, },
+        { "number": "1620", "target": 27496, }
+      ]
+    },
+    {
+      "op": "70",
+      "machines": [
+        { "number": "1609", "target": 27496, }
+      ]
+    },
+    {
+      "op": "80",
+      "machines": [
+        { "number": "1617", "target": 27496, }
+      ]
+    }
+  ]
+},
      {
         "line": "9HP/ZF",
         "scrap_line": "NA",
