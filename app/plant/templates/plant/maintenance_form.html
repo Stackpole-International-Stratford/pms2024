@@ -46,7 +46,7 @@
               Comment<br>
               <textarea id="description" name="description"
                         class="form-control form-control-sm"
-                        rows="1" maxlength="5000" required></textarea>
+                        rows="1" maxlength="5000"></textarea>
             </th>
             <th style="width:1%;">
               <button type="button"
@@ -414,13 +414,11 @@
       add.lineSelect.value &&
       add.machineSelect.value &&
       add.catSelect.value &&
-      add.subSelect.value &&
-      add.descInput.value.trim()
+      add.subSelect.value
     );
   }
   [ add.lineSelect, add.machineSelect, add.catSelect, add.subSelect ]
     .forEach(el=>el.addEventListener('change', validateAdd));
-  add.descInput.addEventListener('input', validateAdd);
 
   // ─── ROW FILTERING ───────────────────────────────────────────────────
   function filterRows(){
