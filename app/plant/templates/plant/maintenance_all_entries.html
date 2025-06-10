@@ -484,12 +484,17 @@ Add New or Update Employee
 
             <div class="mb-3">
               <label for="closeout-category" class="form-label">Category</label>
-              <select id="closeout-category" class="form-select"></select>
+              <select id="closeout-category" class="form-select" required>
+                <option value="" disabled selected>— Select category —</option>
+              </select>
             </div>
             <div class="mb-3">
               <label for="closeout-subcategory" class="form-label">Subcategory</label>
-              <select id="closeout-subcategory" class="form-select"></select>
+              <select id="closeout-subcategory" class="form-select" required>
+                <option value="" disabled selected>— Select subcategory —</option>
+              </select>
             </div>
+
 
             <div class="mb-3">
               <label class="form-label">Started At</label>
@@ -746,214 +751,241 @@ Add New or Update Employee
 
   <!-- 2) Close-out modal logic -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Grab the modal element and instantiate it once
-      const modalEl       = document.getElementById('closeoutModal');
-      const closeoutModal = new bootstrap.Modal(modalEl);
-    
-      // URLs & CSRF token
-      const fetchUrl    = "{% url 'maintenance_edit' %}";
-      const updateUrl   = "{% url 'maintenance_update_event' %}";
-      const closeoutUrl = "{% url 'closeout_downtime_entry' %}";
-      const token       = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-      // Form fields
-      const idIn        = document.getElementById('closeout-entry-id');
-      const lineSel     = document.getElementById('closeout-line');
-      const machineSel  = document.getElementById('closeout-machine');
-      const catSel      = document.getElementById('closeout-category');
-      const subcatSel   = document.getElementById('closeout-subcategory');
-      const startDate   = document.getElementById('closeout-start-date');
-      const startTime   = document.getElementById('closeout-start-time');
-      const origComm    = document.getElementById('closeout-original-comment');
-      const closeDate   = document.getElementById('closeout-date');
-      const closeTime   = document.getElementById('closeout-time');
-      const closeComm   = document.getElementById('closeout-comment');
-    
-      const btnSave     = document.getElementById('closeout-save');
-      const btnConfirm  = document.getElementById('closeout-confirm');
-    
-      // Helper to fill a <select>
-      function populateSelect(sel, items, isSimple=false) {
-        sel.innerHTML = '';
-        items.forEach(i => {
-          const opt = document.createElement('option');
-          if (isSimple) {
-            opt.value = opt.text = i;
-          } else {
-            opt.value = i.code;
-            opt.text  = i.name;
-          }
-          sel.appendChild(opt);
-        });
-      }
-    
-      // Wire up each “Close” button to load and show the modal
-      document.querySelectorAll('.closeout-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const entryId = btn.dataset.entryId;
-          idIn.value = entryId;
-    
-          fetch(fetchUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken':  token
-            },
-            body: JSON.stringify({ entry_id: entryId })
-          })
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => {
-            const linesData  = data.lines_data;
-            const allSubcats = data.subcategories;
-    
-            // Top-level selects
-            populateSelect(lineSel,  data.lines,       true);
-            populateSelect(catSel,   data.categories);
-    
-            // Dependent: machines for the selected line
-            function updateMachines() {
-              const lineObj = linesData.find(l => l.line === lineSel.value);
-              const machinesForLine = lineObj
-                ? lineObj.operations.flatMap(op => op.machines.map(m => m.number))
-                : [];
-              populateSelect(machineSel, machinesForLine, true);
-            }
-    
-            // Dependent: subcats for the selected category
-            function updateSubcats() {
-              const subcatsForCat = allSubcats
-                .filter(s => s.parent === catSel.value)
-                .map(s => ({ code: s.code, name: s.name }));
-              populateSelect(subcatSel, subcatsForCat);
-            }
-    
-            // Initialize and hook change events
-            updateMachines();
-            updateSubcats();
-            lineSel.addEventListener('change', updateMachines);
-            catSel.addEventListener('change', updateSubcats);
-    
-            // Set current values
-            lineSel.value       = data.line;
-            updateMachines();
-            machineSel.value    = data.machine;
-    
-            catSel.value        = data.category_code;
-            updateSubcats();
-            subcatSel.value     = data.subcategory_code;
-    
-            // Start timestamp
-            startDate.value     = data.start_date;
-            startTime.value     = data.start_time;
-    
-            // Original comment
-            origComm.value      = data.comment;
-    
+  document.addEventListener('DOMContentLoaded', () => {
+    // Grab the modal element and instantiate it once
+    const modalEl       = document.getElementById('closeoutModal');
+    const closeoutModal = new bootstrap.Modal(modalEl);
 
-            // 1) get all labour checkboxes
-            const labourCbs = Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'));
-            // 2) clear them
-            labourCbs.forEach(cb => cb.checked = false);
-            // 3) pre-check whatever the entry already has
-            if (Array.isArray(data.labour_types)) {
-              data.labour_types.forEach(code => {
-                const cb = labourCbs.find(c=>c.value===code);
-                if (cb) cb.checked = true;
-              });
-            }
+    // URLs & CSRF token
+    const fetchUrl    = "{% url 'maintenance_edit' %}";
+    const updateUrl   = "{% url 'maintenance_update_event' %}";
+    const closeoutUrl = "{% url 'closeout_downtime_entry' %}";
+    const token       = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-            // Preload close-out inputs
-            const now = new Date();
-            closeDate.value     = now.toISOString().slice(0,10);
-            closeTime.value     = now.toTimeString().slice(0,5);
-            closeComm.value     = '';
-    
-            // Finally show the modal
-            closeoutModal.show();
-          })
-          .catch(() => alert('Could not load event details.'));
-        });
+    // Form fields
+    const idIn        = document.getElementById('closeout-entry-id');
+    const lineSel     = document.getElementById('closeout-line');
+    const machineSel  = document.getElementById('closeout-machine');
+    const catSel      = document.getElementById('closeout-category');
+    const subcatSel   = document.getElementById('closeout-subcategory');
+    const startDate   = document.getElementById('closeout-start-date');
+    const startTime   = document.getElementById('closeout-start-time');
+    const origComm    = document.getElementById('closeout-original-comment');
+    const closeDate   = document.getElementById('closeout-date');
+    const closeTime   = document.getElementById('closeout-time');
+    const closeComm   = document.getElementById('closeout-comment');
+
+    const btnSave     = document.getElementById('closeout-save');
+    const btnConfirm  = document.getElementById('closeout-confirm');
+
+    // Helper to fill a <select> with a placeholder
+    function populateSelect(sel, items, isSimple=false, placeholderText='— Select —') {
+      sel.innerHTML = '';
+      const ph = document.createElement('option');
+      ph.value    = '';
+      ph.text     = placeholderText;
+      ph.disabled = true;
+      ph.selected = true;
+      sel.appendChild(ph);
+      items.forEach(i => {
+        const opt = document.createElement('option');
+        if (isSimple) {
+          opt.value = opt.text = i;
+        } else {
+          opt.value = i.code;
+          opt.text  = i.name;
+        }
+        sel.appendChild(opt);
       });
-    
-      // Save edits
-      btnSave.addEventListener('click', () => {
-        const payload = {
-          entry_id:    idIn.value,
-          line:        lineSel.value,
-          machine:     machineSel.value,
-          category:    catSel.value,
-          subcategory: subcatSel.value,
-          start_at:    `${startDate.value} ${startTime.value}`,
-          comment:     origComm.value,
-          labour_types: Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'))
-                    .filter(cb=>cb.checked)
-                    .map(cb=>cb.value),
-        };
-        fetch(updateUrl, {
+    }
+
+    // Wire up each “Close” button to load and show the modal
+    document.querySelectorAll('.closeout-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entryId = btn.dataset.entryId;
+        idIn.value = entryId;
+
+        fetch(fetchUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken':  token
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ entry_id: entryId })
         })
         .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => {
-          alert('Saved changes.');
-          closeoutModal.hide();
-          location.reload();
-        })
-        .catch(() => alert('Error saving changes.'));
-      });
-    
-      // Confirm Close
-      btnConfirm.addEventListener('click', () => {
-        const id   = idIn.value;
-        const date = closeDate.value;
-        const time = closeTime.value;
-        const note = closeComm.value.trim();
-        if (!date || !time) {
-          return alert('Date and time are required.');
-        }
+        .then(data => {
+          const linesData  = data.lines_data;
+          const allSubcats = data.subcategories;
 
-        fetch(closeoutUrl, {
+          // Populate selects with placeholders
+          populateSelect(lineSel,  data.lines,       true,  '— Select line —');
+          populateSelect(catSel,   data.categories,  false, '— Select category —');
+
+          // Dependent: machines for the selected line
+          function updateMachines() {
+            const lineObj = linesData.find(l => l.line === lineSel.value);
+            const machinesForLine = lineObj
+              ? lineObj.operations.flatMap(op => op.machines.map(m => m.number))
+              : [];
+            populateSelect(machineSel, machinesForLine, true, '— Select machine —');
+          }
+
+          // Dependent: subcats for the selected category
+          function updateSubcats() {
+            const subcatsForCat = allSubcats
+              .filter(s => s.parent === catSel.value)
+              .map(s => ({ code: s.code, name: s.name }));
+            populateSelect(subcatSel, subcatsForCat, false, '— Select subcategory —');
+          }
+
+          // Initialize and hook change events
+          updateMachines();
+          updateSubcats();
+          lineSel.addEventListener('change', updateMachines);
+          catSel.addEventListener('change', updateSubcats);
+
+          // Set current values
+          lineSel.value       = data.line;
+          updateMachines();
+          machineSel.value    = data.machine;
+
+          catSel.value        = data.category_code;
+          updateSubcats();
+          subcatSel.value     = data.subcategory_code;
+
+          // Start timestamp
+          startDate.value     = data.start_date;
+          startTime.value     = data.start_time;
+
+          // Original comment
+          origComm.value      = data.comment;
+
+          // Labour types
+          const labourCbs = Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'));
+          labourCbs.forEach(cb => cb.checked = false);
+          if (Array.isArray(data.labour_types)) {
+            data.labour_types.forEach(code => {
+              const cb = labourCbs.find(c=>c.value===code);
+              if (cb) cb.checked = true;
+            });
+          }
+
+          // Preload close-out inputs
+          const now = new Date();
+          closeDate.value = now.toISOString().slice(0,10);
+          closeTime.value = now.toTimeString().slice(0,5);
+          closeComm.value = '';
+
+          closeoutModal.show();
+        })
+        .catch(() => alert('Could not load event details.'));
+      });
+    });
+
+    // Save edits (unchanged)
+    btnSave.addEventListener('click', () => {
+      const payload = {
+        entry_id:     idIn.value,
+        line:         lineSel.value,
+        machine:      machineSel.value,
+        category:     catSel.value,
+        subcategory:  subcatSel.value,
+        start_at:     `${startDate.value} ${startTime.value}`,
+        comment:      origComm.value,
+        labour_types: Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'))
+                          .filter(cb => cb.checked)
+                          .map(cb => cb.value),
+      };
+      fetch(updateUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  token
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(() => {
+        alert('Saved changes.');
+        closeoutModal.hide();
+        location.reload();
+      })
+      .catch(() => alert('Error saving changes.'));
+    });
+
+    // Confirm Close: first update, then closeout
+    btnConfirm.addEventListener('click', () => {
+      // Validation
+      if (!catSel.value || !subcatSel.value) {
+        return alert('Please choose both a category and a subcategory before closing out.');
+      }
+      if (!closeDate.value || !closeTime.value) {
+        return alert('Date and time are required.');
+      }
+
+      // 1) Build and send the update payload
+      const updatePayload = {
+        entry_id:     idIn.value,
+        line:         lineSel.value,
+        machine:      machineSel.value,
+        category:     catSel.value,
+        subcategory:  subcatSel.value,
+        start_at:     `${startDate.value} ${startTime.value}`,
+        comment:      origComm.value,
+        labour_types: Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'))
+                          .filter(cb => cb.checked)
+                          .map(cb => cb.value),
+      };
+
+      fetch(updateUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken':  token
+        },
+        body: JSON.stringify(updatePayload)
+      })
+      .then(r => r.ok ? r.json() : Promise.reject('update_failed'))
+      .then(() => {
+        // 2) Only after a successful update, perform the closeout
+        const note = closeComm.value.trim();
+        return fetch(closeoutUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken':  token
           },
           body: JSON.stringify({
-            entry_id:         id,
-            closeout:         `${date} ${time}`,
+            entry_id:         idIn.value,
+            closeout:         `${closeDate.value} ${closeTime.value}`,
             closeout_comment: note
           })
-        })
-        .then(response => {
-          if (response.ok) {
-            return response.json();
-          }
-          // if it’s a 403, we know it’s “not everyone left”
-          if (response.status === 403) {
-            throw new Error('not_all_left');
-          }
-          // other errors
-          throw new Error('other_error');
-        })
-        .then(() => {
-          // success!
-          location.reload();
-        })
-        .catch(err => {
-          if (err.message === 'not_all_left') {
-            alert('Cannot close out job until all participants have left');
-          } else {
-            alert('Error closing out entry.');
-          }
         });
+      })
+      .then(response => {
+        if (response.ok) return response.json();
+        if (response.status === 403) throw new Error('not_all_left');
+        throw new Error('other_error');
+      })
+      .then(() => {
+        location.reload();
+      })
+      .catch(err => {
+        if (err === 'update_failed') {
+          alert('Error saving your edits. Please try again.');
+        } else if (err.message === 'not_all_left') {
+          alert('Cannot close out job until all participants have left');
+        } else {
+          alert('Error closing out entry.');
+        }
       });
     });
-    </script>
+
+  });
+  </script>
+
+
     
     
     
