@@ -71,21 +71,54 @@
             >
               <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
               <td>{{ e.line }}</td>
-              <td>
-                {{ e.machine }}
-                {% if e.has_electrician %}
-                  <span class="badge bg-dark">E</span>
-                {% endif %}
-                {% if e.has_millwright %}
-                  <span class="badge bg-dark">M</span>
-                {% endif %}
-                {% if e.has_tech %}
-                  <span class="badge bg-dark">T</span>
-                {% endif %}
-                {% if e.has_operator %}
-                <span class="badge bg-dark">O</span>
-              {% endif %}
-              </td>
+<td>
+  {{ e.machine }}
+  {% for code in e.labour_types %}
+    {% if code == "ELECTRICIAN" %}
+      <button
+        type="button"
+        class="btn btn-sm me-1
+          {% if e.has_electrician %}
+            btn-dark
+          {% else %}
+            btn-outline-dark
+          {% endif %}"
+      >E</button>
+    {% elif code == "MILLWRIGHT" %}
+      <button
+        type="button"
+        class="btn btn-sm me-1
+          {% if e.has_millwright %}
+            btn-dark
+          {% else %}
+            btn-outline-dark
+          {% endif %}"
+      >M</button>
+    {% elif code == "TECH" %}
+      <button
+        type="button"
+        class="btn btn-sm me-1
+          {% if e.has_tech %}
+            btn-dark
+          {% else %}
+            btn-outline-dark
+          {% endif %}"
+      >T</button>
+    {% elif code == "OPERATOR" %}
+      <button
+        type="button"
+        class="btn btn-sm
+          {% if e.has_operator %}
+            btn-dark
+          {% else %}
+            btn-outline-dark
+          {% endif %}"
+      >O</button>
+    {% endif %}
+  {% endfor %}
+</td>
+
+
               <td data-category-code="{{ e.code|cut:'-' }}">{{ e.category }}</td>
               <td data-subcategory-code="{{ e.code }}">{{ e.subcategory }}</td>
               <td>{{ e.code }}</td>
@@ -453,41 +486,7 @@
     form.submit();
   });
 
-  // ─── LOAD-MORE AJAX ─────────────────────────────────────────────────
-  if (loadBtn) {
-    loadBtn.addEventListener('click', ()=>{
-      loadBtn.disabled = true;
-      fetch(`${entriesUrl}?offset=${offset}`)
-        .then(r=>r.json())
-        .then(({entries, has_more})=>{
-          entries.forEach(e=>{
-            const tr = document.createElement('tr');
-            tr.dataset.entryId     = e.id;
-            tr.dataset.employeeId  = e.employee_id;
-            tr.dataset.labourTypes = JSON.stringify(e.labour_types);
-            tr.innerHTML = `
-              <td>${e.start_at}</td>
-              <td>${e.line}</td>
-              <td>${e.machine}</td>
-              <td data-category-code="${e.category_code}">${e.category}</td>
-              <td data-subcategory-code="${e.subcategory_code}">${e.subcategory}</td>
-              <td>${e.code}</td>
-              <td>${e.comment.substring(0,50)}${e.comment.length>50?'…':''}</td>
-              <td></td>`;
-            tbody.appendChild(tr);
-          });
-          offset += entries.length;
-          if (!has_more) loadBtn.style.display = 'none';
-          else          loadBtn.disabled      = false;
-          filterRows();
-        })
-        .catch(err=>{
-          console.error(err);
-          loadBtn.disabled = false;
-        });
-    });
-  }
-
+  
   // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
   tbody.addEventListener('click', ev=>{
     const tr = ev.target.closest('tr[data-entry-id]');
