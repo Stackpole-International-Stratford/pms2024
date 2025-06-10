@@ -240,6 +240,7 @@ Add New or Update Employee
           <tr
             class="editable-row {% if not e.closeout_epoch %}table-light{% endif %}"
             data-entry-id="{{ e.id }}"
+            data-line="{{ e.line }}"
           >
             <td class="py-1">
               <div class="d-flex align-items-center">
@@ -584,15 +585,15 @@ Add New or Update Employee
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="excludeLinesModalLabel">Exclude Lines</h5>
+          <h5 class="modal-title" id="excludeLinesModalLabel">Exclude Lines (Personal Preference)</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body" id="exclude-lines-body">
           <!-- checkboxes will be injected here -->
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="exclude-lines-save">Save</button>
+          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning" id="exclude-lines-save">Save</button>
         </div>
       </div>
     </div>
@@ -1341,63 +1342,77 @@ Add New or Update Employee
     </script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // helpers for cookie storage
-      function getExcludedLines() {
-        const m = document.cookie.match(/(?:^|; )excluded_lines=([^;]+)/);
-        return m ? JSON.parse(decodeURIComponent(m[1])) : [];
-      }
-      function setExcludedLines(list) {
-        document.cookie = `excluded_lines=${encodeURIComponent(JSON.stringify(list))};path=/;max-age=${60*60*24*30}`;
-      }
+document.addEventListener('DOMContentLoaded', () => {
+  // ─── Cookie helpers ───────────────────────────────────────────────────────
+  function getExcludedLines() {
+    const m = document.cookie.match(/(?:^|; )excluded_lines=([^;]+)/);
+    return m ? JSON.parse(decodeURIComponent(m[1])) : [];
+  }
+  function setExcludedLines(list) {
+    document.cookie =
+      `excluded_lines=${encodeURIComponent(JSON.stringify(list))};path=/;max-age=${60*60*24*30}`;
+  }
 
-      // filter the table based on excluded lines
-      function applyExcludedFilter() {
+  // ─── Row-filtering based on excluded lines ───────────────────────────────
+  function applyExcludedFilter() {
+    const excluded = getExcludedLines();
+    document
+      .querySelectorAll('table.table-striped tbody tr.editable-row')
+      .forEach(tr => {
+        const line = tr.dataset.line;
+        tr.style.display = excluded.includes(line) ? 'none' : '';
+      });
+  }
+
+
+  // ─── Wire up the SVG icon to open & populate the modal ───────────────────
+  const icon     = document.getElementById('target-lines-icon');
+  const modalEl  = document.getElementById('excludeLinesModal');
+  const modal    = new bootstrap.Modal(modalEl);
+  const body     = modalEl.querySelector('.modal-body');
+
+  icon.addEventListener('click', () => {
+    fetch("{% url 'target_lines' %}")
+      .then(r => r.json())
+      .then(data => {
         const excluded = getExcludedLines();
-        document.querySelectorAll('#entries-body tr').forEach(tr => {
-          const line = tr.children[1].textContent.trim();
-          tr.style.display = excluded.includes(line) ? 'none' : '';
+        body.innerHTML = '';
+        data.lines.forEach(line => {
+          // sanitize for an ID
+          const id = 'exclude-line-' + line.replace(/\W+/g,'_');
+          body.insertAdjacentHTML('beforeend', `
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="${id}"
+                value="${line}"
+                ${excluded.includes(line) ? 'checked' : ''}
+              >
+              <label class="form-check-label" for="${id}">${line}</label>
+            </div>`);
         });
-      }
-
-      // open the Exclude Lines modal and populate it
-      const icon = document.getElementById('target-lines-icon'); // your SVG wrapper
-      const modalEl = document.getElementById('excludeLinesModal');
-      const modal = new bootstrap.Modal(modalEl);
-      const body  = document.getElementById('exclude-lines-body');
-
-      icon.addEventListener('click', () => {
-        fetch("{% url 'target_lines' %}")
-          .then(r => r.json())
-          .then(data => {
-            const excluded = getExcludedLines();
-            body.innerHTML = '';  // clear
-            data.lines.forEach(line => {
-              const id = 'chk-' + line.replace(/\s+/g,'_');
-              const checked = excluded.includes(line) ? 'checked' : '';
-              body.insertAdjacentHTML('beforeend', `
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" value="${line}" id="${id}" ${checked}>
-                  <label class="form-check-label" for="${id}">${line}</label>
-                </div>`);
-            });
-            modal.show();
-          });
+        modal.show();
       });
+  });
 
-      // save button in the modal
-      document.getElementById('exclude-lines-save').addEventListener('click', () => {
-        const chosen = Array.from(modalEl.querySelectorAll('.form-check-input:checked'))
-                            .map(cb => cb.value);
-        setExcludedLines(chosen);
-        applyExcludedFilter();
-        modal.hide();
-      });
-
-      // apply filter on initial load
+  // ─── Save & reapply on “Save” click ───────────────────────────────────────
+  document
+    .getElementById('exclude-lines-save')
+    .addEventListener('click', () => {
+      const chosen = Array.from(
+        modalEl.querySelectorAll('.form-check-input:checked')
+      ).map(cb => cb.value);
+      setExcludedLines(chosen);
       applyExcludedFilter();
+      modal.hide();
     });
-    </script>
+
+  // ─── Initial run on page load ────────────────────────────────────────────
+  applyExcludedFilter();
+});
+</script>
+
 
 
 
