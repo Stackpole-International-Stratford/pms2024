@@ -591,10 +591,23 @@ Add New or Update Employee
         <div class="modal-body" id="exclude-lines-body">
           <!-- checkboxes will be injected here -->
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-warning" id="exclude-lines-save">Save</button>
-        </div>
+          <div class="modal-footer">
+            <!-- new select controls -->
+            <button type="button"
+                    class="btn btn-sm btn-link me-auto"
+                    id="exclude-lines-select-all">
+              Select All
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-link"
+                    id="exclude-lines-deselect-all">
+              Deselect All
+            </button>
+
+            <!-- existing buttons -->
+            <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-warning" id="exclude-lines-save">Save</button>
+          </div>
       </div>
     </div>
   </div>
@@ -1341,77 +1354,96 @@ Add New or Update Employee
       });
     </script>
 
+
+
+
+
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // ─── Cookie helpers ───────────────────────────────────────────────────────
-  function getExcludedLines() {
-    const m = document.cookie.match(/(?:^|; )excluded_lines=([^;]+)/);
-    return m ? JSON.parse(decodeURIComponent(m[1])) : [];
-  }
-  function setExcludedLines(list) {
-    document.cookie =
-      `excluded_lines=${encodeURIComponent(JSON.stringify(list))};path=/;max-age=${60*60*24*30}`;
-  }
+    document.addEventListener('DOMContentLoaded', () => {
+      // ─── Cookie helpers ───────────────────────────────────────────────────────
+      function getExcludedLines() {
+        const m = document.cookie.match(/(?:^|; )excluded_lines=([^;]+)/);
+        return m ? JSON.parse(decodeURIComponent(m[1])) : [];
+      }
+      function setExcludedLines(list) {
+        document.cookie =
+          `excluded_lines=${encodeURIComponent(JSON.stringify(list))};path=/;max-age=${60*60*24*30}`;
+      }
 
-  // ─── Row-filtering based on excluded lines ───────────────────────────────
-  function applyExcludedFilter() {
-    const excluded = getExcludedLines();
-    document
-      .querySelectorAll('table.table-striped tbody tr.editable-row')
-      .forEach(tr => {
-        const line = tr.dataset.line;
-        tr.style.display = excluded.includes(line) ? 'none' : '';
-      });
-  }
-
-
-  // ─── Wire up the SVG icon to open & populate the modal ───────────────────
-  const icon     = document.getElementById('target-lines-icon');
-  const modalEl  = document.getElementById('excludeLinesModal');
-  const modal    = new bootstrap.Modal(modalEl);
-  const body     = modalEl.querySelector('.modal-body');
-
-  icon.addEventListener('click', () => {
-    fetch("{% url 'target_lines' %}")
-      .then(r => r.json())
-      .then(data => {
+      // ─── Row-filtering based on excluded lines ───────────────────────────────
+      function applyExcludedFilter() {
         const excluded = getExcludedLines();
-        body.innerHTML = '';
-        data.lines.forEach(line => {
-          // sanitize for an ID
-          const id = 'exclude-line-' + line.replace(/\W+/g,'_');
-          body.insertAdjacentHTML('beforeend', `
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                id="${id}"
-                value="${line}"
-                ${excluded.includes(line) ? 'checked' : ''}
-              >
-              <label class="form-check-label" for="${id}">${line}</label>
-            </div>`);
-        });
-        modal.show();
+        document
+          .querySelectorAll('table.table-striped tbody tr.editable-row')
+          .forEach(tr => {
+            const line = tr.dataset.line;
+            tr.style.display = excluded.includes(line) ? 'none' : '';
+          });
+      }
+
+      // ─── Modal & controls setup ───────────────────────────────────────────────
+      const icon     = document.getElementById('target-lines-icon');
+      const modalEl  = document.getElementById('excludeLinesModal');
+      const modal    = new bootstrap.Modal(modalEl);
+      const body     = modalEl.querySelector('.modal-body');
+      const btnSelectAll    = document.getElementById('exclude-lines-select-all');
+      const btnDeselectAll  = document.getElementById('exclude-lines-deselect-all');
+      const btnSave         = document.getElementById('exclude-lines-save');
+
+      // When you click the crosshair icon, fetch and build the checkbox list
+      icon.addEventListener('click', () => {
+        fetch("{% url 'target_lines' %}")
+          .then(r => r.json())
+          .then(data => {
+            const excluded = getExcludedLines();
+            body.innerHTML = '';
+            data.lines.forEach(line => {
+              const id = 'exclude-line-' + line.replace(/\W+/g,'_');
+              body.insertAdjacentHTML('beforeend', `
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="${id}"
+                    value="${line}"
+                    ${excluded.includes(line) ? 'checked' : ''}
+                  >
+                  <label class="form-check-label" for="${id}">${line}</label>
+                </div>`);
+            });
+            modal.show();
+          })
+          .catch(() => {
+            body.innerHTML = '<div class="alert alert-danger">Could not load lines.</div>';
+            modal.show();
+          });
       });
-  });
 
-  // ─── Save & reapply on “Save” click ───────────────────────────────────────
-  document
-    .getElementById('exclude-lines-save')
-    .addEventListener('click', () => {
-      const chosen = Array.from(
-        modalEl.querySelectorAll('.form-check-input:checked')
-      ).map(cb => cb.value);
-      setExcludedLines(chosen);
+      // Select All
+      btnSelectAll.addEventListener('click', () => {
+        modalEl.querySelectorAll('.form-check-input').forEach(cb => cb.checked = true);
+      });
+
+      // Deselect All
+      btnDeselectAll.addEventListener('click', () => {
+        modalEl.querySelectorAll('.form-check-input').forEach(cb => cb.checked = false);
+      });
+
+      // Save & reapply filter
+      btnSave.addEventListener('click', () => {
+        const chosen = Array.from(
+          modalEl.querySelectorAll('.form-check-input:checked')
+        ).map(cb => cb.value);
+        setExcludedLines(chosen);
+        applyExcludedFilter();
+        modal.hide();
+      });
+
+      // Initial run on page load
       applyExcludedFilter();
-      modal.hide();
     });
+    </script>
 
-  // ─── Initial run on page load ────────────────────────────────────────────
-  applyExcludedFilter();
-});
-</script>
 
 
 
