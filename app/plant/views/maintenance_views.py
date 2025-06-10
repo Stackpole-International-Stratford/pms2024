@@ -114,6 +114,19 @@ lines_untracked = [
             },
         ],
     },
+     {
+        "line": "Tyler Test",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "10",
+                "machines": [
+                    {"number": "test", "target": 27496,},
+
+                ],
+            },
+        ],
+    },
     {
         "line": "AB1V Reaction",
         "scrap_line": "NA",
