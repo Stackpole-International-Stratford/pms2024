@@ -842,9 +842,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // — Subcategories for the selected category —
         function updateSubcats() {
-          const scs = data.subcategories
+          // pull only the “real” subcats for this category
+          let scs = data.subcategories
             .filter(s => s.parent === catSel.value)
             .map(s => ({ code: s.code, name: s.name }));
+
+          // if this record was saved with NOTSELECTED, prepend it so it can be selected
+          if (data.subcategory_code === 'NOTSELECTED') {
+            scs.unshift({ code: 'NOTSELECTED', name: 'Not Selected' });
+          }
+
           populateSelect(subcatSel, scs, false, '— Select subcategory —');
         }
         updateSubcats();

@@ -884,8 +884,8 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             subcategory_name = sub_obj.subcategory
             code_value       = raw_sub
         else:
-            subcategory_name = ""
-            code_value       = ""
+            subcategory_name = "NOTSELECTED"
+            code_value       = "NOTSELECTED"
 
         #── Build epoch timestamp ─────────────────────────────────────
         try:
