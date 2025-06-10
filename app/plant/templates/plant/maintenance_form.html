@@ -194,17 +194,16 @@
 
            
           </div>
-<div class="modal-footer">
-  {% if user.is_authenticated %}
-    <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
-  {% endif %}
-  <button type="button" id="closeout-open-button" class="btn btn-info mx-3">Close Out</button>
-  <div class="ms-auto">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-    <button type="submit" id="save-button" class="btn btn-warning ms-2">Save changes</button>
-  </div>
-</div>
-
+          <div class="modal-footer">
+            {% if user.is_authenticated %}
+              <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
+            {% endif %}
+            <button type="button" id="closeout-open-button" class="btn btn-info mx-3">Close Out</button>
+            <div class="ms-auto">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" id="save-button" class="btn btn-warning ms-2">Save changes</button>
+            </div>
+          </div>
         </form>
       </div>
     </div>
