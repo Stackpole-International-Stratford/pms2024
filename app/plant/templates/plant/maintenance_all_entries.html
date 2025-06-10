@@ -263,7 +263,7 @@ Add New or Update Employee
                     {% else %}
                       <span class="text-muted ms-2">–</span>
                     {% endif %}
-                     – {{ e.subcategory }}
+                     – {{ e.category }}
                   </span>
                 </div>
       
@@ -558,7 +558,8 @@ Add New or Update Employee
               <textarea id="closeout-comment"
                         class="form-control"
                         rows="3"
-                        maxlength="2000"></textarea>
+                        maxlength="2000"
+                        placeholder="Optional, but make sure to select sub-category"></textarea>
             </div>
 
             <div class="d-grid">
@@ -1002,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (err.message === 'not_all_left') {
         alert('Cannot close out until all participants have left.');
       } else {
-        alert('Error closing out entry.');
+        alert('Error closing out entry. Did you select a sub-category?');
       }
     });
   });
