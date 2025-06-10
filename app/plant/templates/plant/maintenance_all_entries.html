@@ -553,8 +553,7 @@ Add New or Update Employee
               <textarea id="closeout-comment"
                         class="form-control"
                         rows="3"
-                        maxlength="2000"
-                        required></textarea>
+                        maxlength="2000"></textarea>
             </div>
 
             <div class="d-grid">
@@ -914,8 +913,8 @@ Add New or Update Employee
         const date = closeDate.value;
         const time = closeTime.value;
         const note = closeComm.value.trim();
-        if (!date || !time || !note) {
-          return alert('All fields are required.');
+        if (!date || !time) {
+          return alert('Date and time are required.');
         }
 
         fetch(closeoutUrl, {
