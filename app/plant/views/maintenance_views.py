@@ -1701,6 +1701,7 @@ def maintenance_edit(request):
         'line':             e.line,
         'machine':          e.machine,
         'category_code':    e.code.split('-', 1)[0],  # Assuming category code is prefix before '-'
+        'category_name':    e.category,         # ← the display name
         'subcategory_code': e.code,
         'start_date':       local.strftime('%Y-%m-%d'),
         'start_time':       local.strftime('%H:%M'),
