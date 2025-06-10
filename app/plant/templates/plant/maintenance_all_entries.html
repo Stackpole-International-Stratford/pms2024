@@ -579,21 +579,25 @@ Add New or Update Employee
 </div>
 
 
-  <!-- Target Lines Modal -->
-  <div class="modal fade" id="targetLinesModal" tabindex="-1" aria-hidden="true">
+ <!-- Exclude Lines Modal -->
+  <div class="modal fade" id="excludeLinesModal" tabindex="-1" aria-labelledby="excludeLinesModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Target Lines</h5>
+          <h5 class="modal-title" id="excludeLinesModalLabel">Exclude Lines</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body">
-          <!-- you can later populate this via AJAX if you like -->
-          <p>Loading…</p>
+        <div class="modal-body" id="exclude-lines-body">
+          <!-- checkboxes will be injected here -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="exclude-lines-save">Save</button>
         </div>
       </div>
     </div>
   </div>
+
 
   
     
@@ -1338,26 +1342,63 @@ Add New or Update Employee
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const icon = document.getElementById('target-lines-icon');
-      const modalEl = document.getElementById('targetLinesModal');
-      const targetLinesModal = new bootstrap.Modal(modalEl);
+      // helpers for cookie storage
+      function getExcludedLines() {
+        const m = document.cookie.match(/(?:^|; )excluded_lines=([^;]+)/);
+        return m ? JSON.parse(decodeURIComponent(m[1])) : [];
+      }
+      function setExcludedLines(list) {
+        document.cookie = `excluded_lines=${encodeURIComponent(JSON.stringify(list))};path=/;max-age=${60*60*24*30}`;
+      }
+
+      // filter the table based on excluded lines
+      function applyExcludedFilter() {
+        const excluded = getExcludedLines();
+        document.querySelectorAll('#entries-body tr').forEach(tr => {
+          const line = tr.children[1].textContent.trim();
+          tr.style.display = excluded.includes(line) ? 'none' : '';
+        });
+      }
+
+      // open the Exclude Lines modal and populate it
+      const icon = document.getElementById('target-lines-icon'); // your SVG wrapper
+      const modalEl = document.getElementById('excludeLinesModal');
+      const modal = new bootstrap.Modal(modalEl);
+      const body  = document.getElementById('exclude-lines-body');
 
       icon.addEventListener('click', () => {
-        // 1) open the modal
-        targetLinesModal.show();
-
-        // 2) fire off the AJAX GET
         fetch("{% url 'target_lines' %}")
-          .then(response => {
-            console.log("target_lines status:", response.status);
-            // server will have printed "Hit with a get request"
-            return response.text();
-          })
-          .then(text => console.log("response payload:", text))
-          .catch(err => console.error("Error hitting target_lines:", err));
+          .then(r => r.json())
+          .then(data => {
+            const excluded = getExcludedLines();
+            body.innerHTML = '';  // clear
+            data.lines.forEach(line => {
+              const id = 'chk-' + line.replace(/\s+/g,'_');
+              const checked = excluded.includes(line) ? 'checked' : '';
+              body.insertAdjacentHTML('beforeend', `
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" value="${line}" id="${id}" ${checked}>
+                  <label class="form-check-label" for="${id}">${line}</label>
+                </div>`);
+            });
+            modal.show();
+          });
       });
+
+      // save button in the modal
+      document.getElementById('exclude-lines-save').addEventListener('click', () => {
+        const chosen = Array.from(modalEl.querySelectorAll('.form-check-input:checked'))
+                            .map(cb => cb.value);
+        setExcludedLines(chosen);
+        applyExcludedFilter();
+        modal.hide();
+      });
+
+      // apply filter on initial load
+      applyExcludedFilter();
     });
     </script>
+
 
 
 

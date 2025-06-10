@@ -2045,11 +2045,10 @@ def employee_login_status(request):
 
 
 
+
 def target_lines(request):
     if request.method == 'GET':
-        # this will show up in your server console / logs
-        print("Hit with a get request")
-        # just return an empty 204 so AJAX resolves
-        return HttpResponse(status=204)
-    # reject any non-GET
+        # extract just the line names
+        line_names = [blk['line'] for blk in prod_lines]
+        return JsonResponse({'lines': line_names})
     return HttpResponse(status=405)
