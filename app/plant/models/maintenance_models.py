@@ -16,9 +16,19 @@ class MachineDowntimeEvent(models.Model):
     line               = models.CharField("Line",         max_length=50)
     machine            = models.CharField("Machine",      max_length=50)
     category           = models.TextField("Category")
-    subcategory        = models.TextField("Subcategory")
-    code               = models.CharField("Downtime Code",max_length=20,
-                                          help_text="Same as subcategory")
+    subcategory        = models.TextField(
+        "Subcategory",
+        blank=True,
+        default="",
+        help_text="Optional sub-category"
+    )
+    code               = models.CharField(
+        "Downtime Code",
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Optional, same as subcategory if provided"
+    )
     start_epoch        = models.BigIntegerField("Start (epoch)")
     closeout_epoch     = models.BigIntegerField("Closeout (epoch)", null=True, blank=True)
     comment            = models.TextField("Comment")

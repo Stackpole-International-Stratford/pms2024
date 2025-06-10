@@ -37,7 +37,7 @@
             </th>
             <th style="min-width:180px">
               Sub-category<br>
-              <select id="subcategory-select" name="subcategory" class="form-select form-select-sm" required disabled>
+              <select id="subcategory-select" name="subcategory" class="form-select form-select-sm" disabled>
                 <option value="">Select Subcategory</option>
               </select>
             </th>
@@ -439,12 +439,11 @@
     add.submitBtn.disabled = !(
       add.lineSelect.value &&
       add.machineSelect.value &&
-      add.catSelect.value &&
-      add.subSelect.value
+      add.catSelect.value
     );
   }
-  [ add.lineSelect, add.machineSelect, add.catSelect, add.subSelect ]
-    .forEach(el=>el.addEventListener('change', validateAdd));
+ [ add.lineSelect, add.machineSelect, add.catSelect ]
+   .forEach(el=>el.addEventListener('change', validateAdd));
 
   // ─── ROW FILTERING ───────────────────────────────────────────────────
   function filterRows(){

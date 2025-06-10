@@ -824,23 +824,28 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
 
 
-
-
 def maintenance_form(request: HttpRequest) -> HttpResponse:
-    if request.method == 'POST':
-        # ——— Pull Form Data ———
-        entry_id    = request.POST.get('entry_id')      # None for “Add”
-        line        = request.POST.get('line', '').strip()
-        machine     = request.POST.get('machine', '').strip()
-        cat_code    = request.POST.get('category', '').strip()
-        sub_code    = request.POST.get('subcategory', '').strip()
-        start_date  = request.POST.get('start_date', '') # "YYYY-MM-DD"
-        start_time  = request.POST.get('start_time', '') # "HH:MM"
-        description = request.POST.get('description', '').strip()
-        employee_id = request.POST.get('employee_id', '').strip()  # Pull the employee_id from the form
+    """
+    Downtime‐entry form: CATEGORY is required; SUBCATEGORY + code are optional.
+    """
+    #── Paging params ─────────────────────────────────────────────────
+    offset    = int(request.GET.get('offset', 0))
+    page_size = 300
 
-        # ——— Parse Out the List of Labour Codes ———
-        raw_labour = request.POST.get('labour_types', '[]')
+    if request.method == "POST":
+        #── Pull form data ─────────────────────────────────────────────
+        entry_id     = request.POST.get('entry_id')   # None for new
+        line         = request.POST.get('line', '').strip()
+        machine      = request.POST.get('machine', '').strip()
+        raw_cat      = request.POST.get('category', '').strip()
+        raw_sub      = request.POST.get('subcategory', '').strip()
+        start_date   = request.POST.get('start_date', '')   # "YYYY-MM-DD"
+        start_time   = request.POST.get('start_time', '')   # "HH:MM"
+        comment      = request.POST.get('description', '').strip()
+        emp_id       = request.POST.get('employee_id', '').strip()
+        raw_labour   = request.POST.get('labour_types', '[]')
+
+        #── Parse labour JSON ──────────────────────────────────────────
         try:
             labour_list = json.loads(raw_labour)
             if not isinstance(labour_list, list):
@@ -848,62 +853,70 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         except json.JSONDecodeError:
             labour_list = []
 
-        # ——— Lookup Display Names from DowntimeCode Model ———
-        try:
-            # Fetch the subcategory DowntimeCode instance
-            sub_code_obj = DowntimeCode.objects.get(code=sub_code)
-            category_name = sub_code_obj.category
-            subcategory_name = sub_code_obj.subcategory
-        except DowntimeCode.DoesNotExist:
-            return HttpResponseBadRequest("Invalid category or subcategory code")
+        #── Validate & look up CATEGORY ───────────────────────────────
+        if not raw_cat:
+            return HttpResponseBadRequest("You must choose a category.")
+        # find any DowntimeCode that starts with "raw_cat-"
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        if not cat_obj:
+            return HttpResponseBadRequest("Invalid category code.")
+        category_name = cat_obj.category
 
-        # ——— Build Epoch Timestamp ———
+        #── Validate & look up SUBCATEGORY (optional) ─────────────────
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest("Invalid subcategory code.")
+            subcategory_name = sub_obj.subcategory
+            code_value       = raw_sub
+        else:
+            subcategory_name = ""
+            code_value       = ""
+
+        #── Build epoch timestamp ─────────────────────────────────────
         try:
             dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
-            # Make timezone-aware based on your project's settings
             if timezone.is_naive(dt):
                 dt = timezone.make_aware(dt, timezone.get_default_timezone())
         except ValueError:
-            return HttpResponseBadRequest("Invalid date/time format")
+            return HttpResponseBadRequest("Bad date/time format.")
         epoch_ts = int(dt.timestamp())
 
-        # ——— Create or Update Maintenance Downtime Event ———
+        #── Create or update the event ───────────────────────────────
         if entry_id:
-            # Update Existing
             e = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
-            e.line           = line
-            e.machine        = machine
-            e.category       = category_name
-            e.subcategory    = subcategory_name
-            e.code           = sub_code
-            e.start_epoch    = epoch_ts
-            e.comment        = description
-            e.labour_types_json = json.dumps(e.labour_types)
-            e.employee_id    = employee_id     # Set employee_id
+            e.line        = line
+            e.machine     = machine
+            e.category    = category_name
+            e.subcategory = subcategory_name
+            e.code        = code_value
+            e.start_epoch = epoch_ts
+            e.comment     = comment
+            e.labour_types= labour_list
+            e.employee_id = emp_id or None
             e.save(update_fields=[
-                'line', 'machine', 'category', 'subcategory',
-                'code', 'start_epoch', 'comment', 'labour_types', 'employee_id'
+                'line','machine','category','subcategory',
+                'code','start_epoch','comment',
+                'labour_types','employee_id'
             ])
         else:
-            # Create New
             MachineDowntimeEvent.objects.create(
-                line           = line,
-                machine        = machine,
-                category       = category_name,
-                subcategory    = subcategory_name,
-                code           = sub_code,
-                start_epoch    = epoch_ts,
-                comment        = description,
-                labour_types   = labour_list,
-                employee_id    = employee_id      # Set employee_id
+                line         = line,
+                machine      = machine,
+                category     = category_name,
+                subcategory  = subcategory_name,
+                code         = code_value,
+                start_epoch  = epoch_ts,
+                comment      = comment,
+                labour_types = labour_list,
+                employee_id  = emp_id or None,
             )
 
-        # ——— Redirect to Same Page (Preserve ?offset=…) ———
+        #── Redirect back, preserving ?offset=… ───────────────────────
         return redirect(request.get_full_path())
 
-    # ——— GET: Render Form + List of Open Entries ———
-    offset    = int(request.GET.get('offset', 0))
-    page_size = 300
+    #── GET: list open events + render form ─────────────────────────
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
@@ -929,8 +942,6 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
                 user__groups__name='maintenance_tech'
             )
         ),
-
-        # True if the JSONField `labour_types` contains the string "OPERATOR"
         has_operator=Case(
             When(labour_types__contains=['OPERATOR'], then=Value(True)),
             default=Value(False),
@@ -939,46 +950,27 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
     ).order_by('-start_epoch')
 
     total     = qs.count()
-    page_objs = list(qs[offset: offset + page_size])
+    entries   = list(qs[offset: offset + page_size])
     has_more  = (offset + page_size) < total
 
-    # ——— Fetch All Downtime Codes and Structure Them ———
-    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
-    structured_codes = {}
-    for code_obj in downtime_codes:
-        cat_code = code_obj.code.split('-', 1)[0]  # Assumes category code is the prefix before '-'
-        if cat_code not in structured_codes:
-            structured_codes[cat_code] = {
-                'name': code_obj.category,
-                'code': cat_code,
-                'subcategories': []
-            }
-        structured_codes[cat_code]['subcategories'].append({
-            'name': code_obj.subcategory,
-            'code': code_obj.code
-        })
+    # rebuild your JSON blobs for the selects just like before…
+    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    structured     = {}
+    for c in downtime_codes:
+        cat = c.code.split('-',1)[0]
+        if cat not in structured:
+            structured[cat] = {'name': c.category, 'code': cat, 'subcategories': []}
+        structured[cat]['subcategories'].append({'code': c.code, 'name': c.subcategory})
+    downtime_codes_list = list(structured.values())
 
-    # Convert the structured dictionary to a list
-    downtime_codes_list = list(structured_codes.values())
-
-    # ——— Prepare Context ———
-    context = {
-        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
-        'lines_json':          mark_safe(json.dumps(prod_lines)),
-        'entries':             page_objs,
+    return render(request, 'plant/maintenance_form.html', {
+        'entries':             entries,
         'offset':              offset,
         'page_size':           page_size,
         'has_more':            has_more,
-        # You can also pass your labour-choices to the template if needed:
-        # 'labour_choices': MachineDowntimeEvent.LABOUR_CHOICES,
-    }
-
-    return render(request, 'plant/maintenance_form.html', context)
-
-
-
-
-
+        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
+        'lines_json':          mark_safe(json.dumps(prod_lines)),
+    })
 
 
 
