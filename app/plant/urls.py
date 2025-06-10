@@ -94,4 +94,7 @@ urlpatterns = [
 
 
     path('maintenance/employee-login-status/', employee_login_status, name='employee_login_status'),
+
+    path('maintenance/target_lines/', target_lines, name='target_lines'),
+
 ]

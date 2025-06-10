@@ -202,27 +202,39 @@ Add New or Update Employee
       <!-- 1) Table header with a warning‐style button -->
       <!-- Trigger button (in your <th> next to “Open Jobs”) -->
         <thead class="table-light">
-          <tr>
-            <th class="py-1 d-flex align-items-center">
-              <span>Open Jobs</span>
-              <button
-                id="machine-history-btn"
-                type="button"
-                class="btn btn-warning btn-sm ms-2"
-                aria-label="Machine History">
-                Machine History
-              </button>
-              <!-- New filter input -->
-              <input
-                id="job-filter"
-                type="text"
-                class="form-control form-control-sm ms-2"
-                placeholder="Filter jobs…"
-                style="max-width: 150px;"
-              >
-            </th>
-          </tr>
-        </thead>
+  <tr>
+    <th class="py-1 d-flex align-items-center">
+      <span>Open Jobs</span>
+
+      <button
+        id="machine-history-btn"
+        type="button"
+        class="btn btn-warning btn-sm ms-2"
+        aria-label="Machine History">
+        Machine History
+      </button>
+
+      <!-- New filter input -->
+      <input
+        id="job-filter"
+        type="text"
+        class="form-control form-control-sm ms-2"
+        placeholder="Filter jobs…"
+        style="max-width: 150px;"
+      >
+
+      <!-- ► our new SVG button: -->
+      <span id="target-lines-icon" class="ms-2" style="cursor: pointer;" title="Show Target Lines">
+        <!-- ─── replace the contents of this <svg> with your actual icon ─── -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+        </svg>
+      </span>
+
+    </th>
+  </tr>
+</thead>
+
       <tbody>
         {% for e in entries %}
           <tr
@@ -566,6 +578,22 @@ Add New or Update Employee
   </div>
 </div>
 
+
+  <!-- Target Lines Modal -->
+  <div class="modal fade" id="targetLinesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Target Lines</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- you can later populate this via AJAX if you like -->
+          <p>Loading…</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   
     
@@ -1307,6 +1335,30 @@ Add New or Update Employee
         });
       });
     </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const icon = document.getElementById('target-lines-icon');
+      const modalEl = document.getElementById('targetLinesModal');
+      const targetLinesModal = new bootstrap.Modal(modalEl);
+
+      icon.addEventListener('click', () => {
+        // 1) open the modal
+        targetLinesModal.show();
+
+        // 2) fire off the AJAX GET
+        fetch("{% url 'target_lines' %}")
+          .then(response => {
+            console.log("target_lines status:", response.status);
+            // server will have printed "Hit with a get request"
+            return response.text();
+          })
+          .then(text => console.log("response payload:", text))
+          .catch(err => console.error("Error hitting target_lines:", err));
+      });
+    });
+    </script>
+
 
 
 
