@@ -1064,8 +1064,7 @@ def filter_out_operator_only_events(qs):
     """
     # Exclude any event whose labour_types exactly equals ["OPERATOR"] or ["NA"]
     return qs.exclude(
-        Q(labour_types=["OPERATOR"]) |
-        Q(labour_types=["NA"])
+        Q(labour_types=["OPERATOR"])
     )
 
 
