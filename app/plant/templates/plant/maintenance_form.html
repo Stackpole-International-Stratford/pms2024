@@ -71,54 +71,52 @@
             >
               <td>{{ e.start_at|date:"Y-m-d H:i" }}</td>
               <td>{{ e.line }}</td>
-<td>
-  {{ e.machine }}
-  {% for code in e.labour_types %}
-    {% if code == "ELECTRICIAN" %}
-      <button
-        type="button"
-        class="btn btn-sm me-1
-          {% if e.has_electrician %}
-            btn-dark
-          {% else %}
-            btn-outline-dark
-          {% endif %}"
-      >E</button>
-    {% elif code == "MILLWRIGHT" %}
-      <button
-        type="button"
-        class="btn btn-sm me-1
-          {% if e.has_millwright %}
-            btn-dark
-          {% else %}
-            btn-outline-dark
-          {% endif %}"
-      >M</button>
-    {% elif code == "TECH" %}
-      <button
-        type="button"
-        class="btn btn-sm me-1
-          {% if e.has_tech %}
-            btn-dark
-          {% else %}
-            btn-outline-dark
-          {% endif %}"
-      >T</button>
-    {% elif code == "OPERATOR" %}
-      <button
-        type="button"
-        class="btn btn-sm
-          {% if e.has_operator %}
-            btn-dark
-          {% else %}
-            btn-outline-dark
-          {% endif %}"
-      >O</button>
-    {% endif %}
-  {% endfor %}
-</td>
-
-
+              <td>
+                {{ e.machine }}
+                {% for code in e.labour_types %}
+                  {% if code == "ELECTRICIAN" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm me-1
+                        {% if e.has_electrician %}
+                          btn-dark
+                        {% else %}
+                          btn-outline-dark
+                        {% endif %}"
+                    >E</button>
+                  {% elif code == "MILLWRIGHT" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm me-1
+                        {% if e.has_millwright %}
+                          btn-dark
+                        {% else %}
+                          btn-outline-dark
+                        {% endif %}"
+                    >M</button>
+                  {% elif code == "TECH" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm me-1
+                        {% if e.has_tech %}
+                          btn-dark
+                        {% else %}
+                          btn-outline-dark
+                        {% endif %}"
+                    >T</button>
+                  {% elif code == "OPERATOR" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm
+                        {% if e.has_operator %}
+                          btn-dark
+                        {% else %}
+                          btn-outline-dark
+                        {% endif %}"
+                    >O</button>
+                  {% endif %}
+                {% endfor %}
+              </td>
               <td data-category-code="{{ e.code|cut:'-' }}">{{ e.category }}</td>
               <td data-subcategory-code="{{ e.code }}">{{ e.subcategory }}</td>
               <td>{{ e.code }}</td>
@@ -196,14 +194,17 @@
 
            
           </div>
-          <div class="modal-footer">
-            <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
-            <button type="button" id="closeout-open-button" class="btn btn-info mx-3">Close Out</button>
-            <div class="ms-auto">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" id="save-button" class="btn btn-warning ms-2">Save changes</button>
-            </div>
-          </div>
+<div class="modal-footer">
+  {% if user.is_authenticated %}
+    <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
+  {% endif %}
+  <button type="button" id="closeout-open-button" class="btn btn-info mx-3">Close Out</button>
+  <div class="ms-auto">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <button type="submit" id="save-button" class="btn btn-warning ms-2">Save changes</button>
+  </div>
+</div>
+
         </form>
       </div>
     </div>
