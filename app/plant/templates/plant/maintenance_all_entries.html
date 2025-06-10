@@ -833,9 +833,21 @@ document.addEventListener('DOMContentLoaded', () => {
           machineSel.value = '';
         });
 
-        // — Categories (just select, don’t re-insert) —
+        // populate the dropdown…
         populateSelect(catSel, data.categories, false, '— Select category —');
-        catSel.value = data.category_code;
+
+        // pick which code to select
+        let pick = data.category_code;
+
+        // if the API told us “NOTSELECTED”, look up the real category by its display-name
+        if (!data.categories.some(c => c.code === pick)) {
+          const match = data.categories.find(c => c.name === data.category_name);
+          if (match) pick = match.code;
+        }
+
+        catSel.value = pick;
+
+
         if (catSel.value !== data.category_code) {
           console.warn(`Category "${data.category_code}" not found in dropdown`);
         }
