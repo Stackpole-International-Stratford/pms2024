@@ -1279,7 +1279,6 @@ Add New or Update Employee
           function resetInactivityTimer(){
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(()=>{
-              console.log('Reloading after 5 m inactivity');
               location.reload();
             }, 2*60*1000);
           }
