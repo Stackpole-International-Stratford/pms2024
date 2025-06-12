@@ -565,13 +565,15 @@ Add New or Update Employee
             </div>
             <div class="mb-3">
               <label for="closeout-comment" class="form-label">What was done?</label>
-              <textarea id="closeout-comment"
-                        class="form-control"
-                        rows="3"
-                        maxlength="2000"
-                        placeholder="Optional, but make sure to select sub-category"></textarea>
-            </div>
-
+              <textarea
+                id="closeout-comment"
+                class="form-control"
+                rows="3"
+                maxlength="2000"
+                placeholder="Maintenance – enter EAM work order #&#10;Tech – description required"
+                required
+              ></textarea>
+                    </div>
             <div class="d-grid">
               <button type="button"
                       id="closeout-confirm"
@@ -952,6 +954,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 3) “Confirm Close” (update, then close out)
   btnConfirm.addEventListener('click', () => {
+    if (!closeComm.value.trim()) {
+    return alert('Please enter a close-out comment before continuing.');
+    }
     if (!catSel.value || !subcatSel.value) {
       return alert('Please select both category and subcategory before closing out.');
     }
