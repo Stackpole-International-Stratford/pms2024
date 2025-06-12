@@ -1074,28 +1074,36 @@ def annotate_being_worked_on(qs):
 
 @login_required
 @require_POST
-def toggle_active(request):
-    # only managers may do this
+def bulk_toggle_active(request):
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized")
 
-    # use FormData in JS so request.POST is populated
-    username = request.POST.get("username")
-    action   = request.POST.get("action")  # "activate" or "deactivate"
-    if not username or action not in ("activate", "deactivate"):
-        return HttpResponseBadRequest("Invalid parameters")
+    try:
+        data       = json.loads(request.body)
+        activate   = set(data.get("activate", []))
+        deactivate = set(data.get("deactivate", []))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest("Bad JSON payload")
+
+    # avoid dupes
+    deactivate -= activate
 
     User = get_user_model()
-    user = get_object_or_404(User, username=username)
     grp, _ = Group.objects.get_or_create(name="maintenance_active")
 
-    if action == "activate":
-        user.groups.add(grp)
-    else:
-        user.groups.remove(grp)
+    # Activate
+    for u in User.objects.filter(username__in=activate):
+        u.groups.add(grp)
 
-    return JsonResponse({"status": "ok", "action": action, "username": username})
+    # Deactivate
+    for u in User.objects.filter(username__in=deactivate):
+        u.groups.remove(grp)
 
+    return JsonResponse({
+        "status": "ok",
+        "activated"  : list(activate),
+        "deactivated": list(deactivate),
+    })
 
 
 

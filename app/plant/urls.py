@@ -67,7 +67,7 @@ urlpatterns = [
 
     path('downtime/<int:event_id>/history/', downtime_history, name='downtime_history'),
 
-    path("toggle_active/", toggle_active, name="toggle_active"),
+    path("bulk_toggle_active/", bulk_toggle_active, name="bulk_toggle_active"),
 
 
     path('maintenance/edit/', maintenance_edit, name='maintenance_edit'),

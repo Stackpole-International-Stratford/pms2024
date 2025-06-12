@@ -344,130 +344,134 @@ Add New or Update Employee
 </div>
 
 
-  {% if is_manager or is_supervisor %}
-    <!-- Right: Active List + Maintenance Staff Status -->
-    <div class="col-md-4">
+{% if is_manager or is_supervisor %}
+  <!-- Right: Active List + Maintenance Staff Status -->
+  <div class="col-md-4">
 
-      <!-- Active List accordion -->
-      <div class="accordion mb-3" id="activeListAccordion">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="activeListHeading">
-            <button class="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#activeListCollapse"
-                    aria-expanded="false"
-                    aria-controls="activeListCollapse">
-              Active List (who’s working)
-            </button>
-          </h2>
-          <div id="activeListCollapse"
-               class="accordion-collapse collapse"
-               aria-labelledby="activeListHeading"
-               data-bs-parent="#activeListAccordion">
-            <div class="accordion-body p-0">
-  <ul class="list-group list-group-flush">
-
-  {# Inactive block #}
-  <li class="list-group-item text-muted"><em>Inactive</em></li>
-  {% for role, workers in inactive_workers_by_role.items %}
-    {% if workers %}
-      <li class="list-group-item bg-light">
-        <strong>{{ role|title }}</strong>
-      </li>
-      {% for w in workers %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          {{ w.name }} ({{ w.roles|join:", " }})
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-danger toggle-active-btn"
-            data-username="{{ w.username }}"
-            data-action="activate">
-            Not Active
+    <!-- Active List accordion -->
+    <div class="accordion mb-3" id="activeListAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="activeListHeading">
+          <button class="accordion-button collapsed"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#activeListCollapse"
+                  aria-expanded="false"
+                  aria-controls="activeListCollapse">
+            Active List (who’s working)
           </button>
-        </li>
-      {% endfor %}
-    {% endif %}
-  {% endfor %}
+        </h2>
 
-  {# Active block #}
-  <li class="list-group-item text-muted mt-2"><em>Active</em></li>
-  {% for role, workers in active_workers_by_role.items %}
-    {% if workers %}
-      <li class="list-group-item bg-light">
-        <strong>{{ role|title }}</strong>
-      </li>
-      {% for w in workers %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          {{ w.name }} ({{ w.roles|join:", " }})
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-info toggle-active-btn"
-            data-username="{{ w.username }}"
-            data-action="deactivate">
-            Active
-          </button>
-        </li>
-      {% endfor %}
-    {% endif %}
-  {% endfor %}
+        <div id="activeListCollapse"
+             class="accordion-collapse collapse"
+             aria-labelledby="activeListHeading"
+             data-bs-parent="#activeListAccordion">
+          <div class="accordion-body p-0">
 
-</ul>
+            <!-- ========================= -->
+            <!--  ACTIVE / INACTIVE LIST  -->
+            <!-- ========================= -->
+            <ul class="list-group list-group-flush">
 
+              {# ---------- Inactive ---------- #}
+              <li class="list-group-item text-muted"><em>Inactive</em></li>
+              {% for role, workers in inactive_workers_by_role.items %}
+                {% if workers %}
+                  <li class="list-group-item bg-light">
+                    <strong>{{ role|title }}</strong>
+                  </li>
+                  {% for w in workers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      {{ w.name }} ({{ w.roles|join:", " }})
+                      <input  type="checkbox"
+                              class="form-check-input ms-2 active-checkbox"
+                              data-username="{{ w.username }}">
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
 
+              {# ---------- Active ---------- #}
+              <li class="list-group-item text-muted mt-2"><em>Active</em></li>
+              {% for role, workers in active_workers_by_role.items %}
+                {% if workers %}
+                  <li class="list-group-item bg-light">
+                    <strong>{{ role|title }}</strong>
+                  </li>
+                  {% for w in workers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      {{ w.name }} ({{ w.roles|join:", " }})
+                      <input  type="checkbox"
+                              class="form-check-input ms-2 active-checkbox"
+                              data-username="{{ w.username }}"
+                              checked>
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </ul>
 
+            <!-- ---------- bulk-save button ---------- -->
+            <div class="d-grid p-2 border-top">
+              <button id="active-save-btn"
+                      class="btn btn-warning btn-sm">
+                Save changes
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Maintenance Staff Status table -->
-      <div class="table-responsive">
-        <table class="table table-sm table-striped table-bordered align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Name</th>
-              <th>Roles</th>
-              <th>Machine</th>
-              <th>Subcategory</th>
-              <th>Priority</th>
-            </tr>
-          </thead>
+          </div><!-- /.accordion-body -->
+        </div><!-- /.collapse -->
+      </div><!-- /.accordion-item -->
+    </div><!-- /.accordion -->
+
+    <!-- Maintenance Staff Status table (unchanged) -->
+    <div class="table-responsive">
+      <table class="table table-sm table-striped table-bordered align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Roles</th>
+            <th>Machine</th>
+            <th>Subcategory</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
         <tbody>
-            {% for role, workers in active_workers_by_role.items %}
-              {% if workers %}
-                <tr class="table-secondary">
-                  <td colspan="5"><strong>{{ role|title }}</strong></td>
-                </tr>
-                {% for w in workers %}
-                  {% if w.jobs %}
-                    {% for job in w.jobs %}
-                      <tr>
-                        {% if forloop.first %}
-                          <td rowspan="{{ w.jobs|length }}">{{ w.name }}</td>
-                          <td rowspan="{{ w.jobs|length }}">{{ w.roles|join:", " }}</td>
-                        {% endif %}
-                        <td>{{ job.machine }}</td>
-                        <td>{{ job.subcategory }}</td>
-                        <td>{{ job.priority }}</td>
-                      </tr>
-                    {% endfor %}
-                  {% else %}
+          {% for role, workers in active_workers_by_role.items %}
+            {% if workers %}
+              <tr class="table-secondary">
+                <td colspan="5"><strong>{{ role|title }}</strong></td>
+              </tr>
+              {% for w in workers %}
+                {% if w.jobs %}
+                  {% for job in w.jobs %}
                     <tr>
-                      <td>{{ w.name }}</td>
-                      <td>{{ w.roles|join:", " }}</td>
-                      <td colspan="2" class="text-center text-muted">Free</td>
+                      {% if forloop.first %}
+                        <td rowspan="{{ w.jobs|length }}">{{ w.name }}</td>
+                        <td rowspan="{{ w.jobs|length }}">{{ w.roles|join:", " }}</td>
+                      {% endif %}
+                      <td>{{ job.machine }}</td>
+                      <td>{{ job.subcategory }}</td>
+                      <td>{{ job.priority }}</td>
                     </tr>
-                  {% endif %}
-                {% endfor %}
-              {% endif %}
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td>{{ w.name }}</td>
+                    <td>{{ w.roles|join:", " }}</td>
+                    <td colspan="2" class="text-center text-muted">Free</td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  {% endif %}
+
+  </div><!-- /.col-md-4 -->
+{% endif %}
+
 
 </div>
 
@@ -833,7 +837,7 @@ const URLS = {
   leave         : "{% url 'leave_downtime_event' %}",
   history       : id => `/plant/downtime/${id}/history/`,
   forceLeave    : id => `/plant/downtime/participation/${id}/force-leave/`,
-  toggleActive  : "{% url 'toggle_active' %}",
+  bulkToggleActive  : "{% url 'bulk_toggle_active' %}",
   machineHistory: "{% url 'machine_history' %}",
   targetLines   : "{% url 'target_lines' %}"
 };
@@ -1169,25 +1173,49 @@ function initLoadMore(pageSize){
 }
 
 /* ------------------------------------------------------------------
- *  ACTIVE-LIST toggle (manager)
+ *  ACTIVE-LIST bulk save (manager / supervisor)
  * ------------------------------------------------------------------ */
-function initActiveToggle(){
-  $$('.toggle-active-btn').forEach(btn=>{
-    btn.onclick = ()=>{
-      const collapse = $('#activeListCollapse');
-      localStorage.setItem('activeListWasOpen', collapse?.classList.contains('show'));
-      const fd = new FormData(); fd.append('username',btn.dataset.username); fd.append('action',btn.dataset.action);
-      jsonFetch(URLS.toggleActive,{method:'POST',headers:{'X-CSRFToken':CSRF_TOKEN},body:fd})
-        .then(()=>location.reload())
-        .catch(()=>alert('Update failed'));
-    };
-  });
-  /* reopen if saved */
-  if(localStorage.getItem('activeListWasOpen')==='true'){
-    new bootstrap.Collapse($('#activeListCollapse'),{toggle:false}).show();
-    localStorage.removeItem('activeListWasOpen');
-  }
+function initActiveBulkToggle(){
+  const saveBtn = $('#active-save-btn');
+  if (!saveBtn) return;                    // non-manager view = no-op
+
+  const cbs = [...$$('.active-checkbox')]; // static NodeList is fine
+  cbs.forEach(cb => cb.dataset.orig = cb.checked ? '1' : '0');
+
+  /* keep accordion reopen behaviour */
+  const collapse = $('#activeListCollapse');
+  const rememberOpen = () =>
+    localStorage.setItem('activeListWasOpen',
+                         collapse?.classList.contains('show'));
+
+  saveBtn.onclick = () => {
+    const activate   = [];
+    const deactivate = [];
+
+    cbs.forEach(cb => {
+      const changed = (cb.checked ? '1' : '0') !== cb.dataset.orig;
+      if (!changed) return;
+      (cb.checked ? activate : deactivate).push(cb.dataset.username);
+    });
+
+    if (!activate.length && !deactivate.length){
+      alert('Nothing to save');
+      return;
+    }
+
+    rememberOpen();                        // store open state
+    jsonFetch(URLS.bulkToggleActive, {     // NEW endpoint
+      method : 'POST',
+      headers: {'Content-Type':'application/json',
+                'X-CSRFToken':CSRF_TOKEN},
+      body   : JSON.stringify({activate, deactivate})
+    })
+    .then(()=>location.reload())
+    .catch(()=>alert('Update failed'));
+  };
 }
+
+
 
 /* ------------------------------------------------------------------
  *  MACHINE HISTORY little helper (no changes)
@@ -1385,7 +1413,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   initLabourHistory();
   initRowShortcut();
   initLoadMore({{ page_size }});
-  initActiveToggle();
+  initActiveBulkToggle();
   initMachineHistory();
   initJobFilter();
   initPersonalFilter();   // ← replaces initLineExclusion()
