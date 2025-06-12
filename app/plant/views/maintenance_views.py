@@ -722,75 +722,51 @@ def delete_downtime_entry(request):
 @require_POST
 def closeout_downtime_entry(request):
     """
-    Close out a downtime event and auto-leave all participants.
+    Close out a downtime event *only* when every participant has already left.
     Expects JSON body:
       {
-        "entry_id":           <int>,
-        "closeout":           "YYYY-MM-DD HH:MM",
-        "closeout_comment":   <string>
+        "entry_id":         <int>,
+        "closeout":         "YYYY-MM-DD HH:MM",
+        "closeout_comment": <string>
       }
     """
-    # ── 1) parse payload ───────────────────────────────────────────────────────
+    # 1) payload -----------------------------------------------------------
     try:
-        payload          = json.loads(request.body)
-        entry_id         = payload['entry_id']
-        close_str        = payload['closeout']            # e.g. "2025-05-01 18:08"
-        closeout_comment = payload['closeout_comment']
-        close_dt         = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
+        p               = json.loads(request.body)
+        entry_id        = p["entry_id"]
+        close_dt        = datetime.strptime(p["closeout"], "%Y-%m-%d %H:%M")
+        close_comment   = p["closeout_comment"].strip()
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    # ── 2) fetch event ─────────────────────────────────────────────────────────
-    try:
-        event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
-        return HttpResponseBadRequest("Entry not found")
+    # 2) event -------------------------------------------------------------
+    event = get_object_or_404(MachineDowntimeEvent,
+                              pk=entry_id,
+                              is_deleted=False)
 
-    # ── 3) gather any still-open participations ───────────────────────────────
+    # 3) open participations ----------------------------------------------
     open_parts_qs = DowntimeParticipation.objects.filter(
         event=event,
         leave_epoch__isnull=True
     )
 
-    # ── 4) enforce “everyone must leave” for non-supervisors ─────────────────
+    # 4) hard stop if anyone is still joined ------------------------------
     if open_parts_qs.exists():
-        # 4a) anonymous users can never close out if people are still joined
-        if not request.user.is_authenticated:
-            return HttpResponseForbidden(
-                "Authentication required to close out until all participants have left."
-            )
+        return HttpResponseForbidden(
+            "Cannot close out until all participants have left."
+        )
 
-        # 4b) only maintenance_supervisors OR maintenance_managers may override
-        allowed = request.user.groups.filter(
-            name__in=["maintenance_supervisors", "maintenance_managers"]
-        ).exists()
-        if not allowed:
-            return HttpResponseForbidden(
-                "Cannot close out until all participants have left."
-            )
-
-    # ── 5) compute epoch ───────────────────────────────────────────────────────
+    # 5) epoch -------------------------------------------------------------
     epoch_ts = int(close_dt.timestamp())
 
-    # ── 6) perform updates atomically ─────────────────────────────────────────
-    with transaction.atomic():
-        # 6a) close out the event itself
-        event.closeout_epoch   = epoch_ts
-        event.closeout_comment = closeout_comment
-        event.save(update_fields=['closeout_epoch', 'closeout_comment'])
+    # 6) close event (no open parts, so nothing else to touch) ------------
+    event.closeout_epoch   = epoch_ts
+    event.closeout_comment = close_comment
+    event.save(update_fields=["closeout_epoch", "closeout_comment"])
 
-        # 6b) mark each still‐joined participation as left now
-        for part in open_parts_qs:
-            part.leave_epoch   = epoch_ts
-            part.leave_comment = f"Job is finished: {closeout_comment}"
-            part.total_minutes = math.ceil((epoch_ts - part.join_epoch) / 60)
-            part.save(update_fields=['leave_epoch', 'leave_comment', 'total_minutes'])
+    # 7) response ----------------------------------------------------------
+    return JsonResponse({"status": "ok", "closed_at_epoch": epoch_ts})
 
-    # ── 7) respond to caller ───────────────────────────────────────────────────
-    return JsonResponse({
-        'status':          'ok',
-        'closed_at_epoch': epoch_ts,
-    })
 
 
 
