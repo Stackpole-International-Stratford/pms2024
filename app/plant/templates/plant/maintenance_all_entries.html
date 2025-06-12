@@ -255,7 +255,7 @@ Add New or Update Employee
                         {% with code|title as role %}
                           <button
                             type="button"
-                            class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn btn-sm ms-2 py-0 px-1"
+                            class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
                             data-event-id="{{ e.id }}"
                             data-role="{{ role }}"
                           >{{ role|slice:":1" }}</button>
