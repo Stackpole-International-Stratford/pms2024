@@ -788,6 +788,16 @@ Add New or Update Employee
       </div>
       <div class="modal-body">
         <input type="hidden" id="force-participation-id">
+
+        <!-- NEW date/time control  ----------------------------->
+        <div class="mb-3">
+          <label class="form-label">Leave&nbsp;at&nbsp;(local)</label>
+          <input type="datetime-local"
+                 id="force-datetime"
+                 class="form-control">
+        </div>
+        <!-- /NEW ---------------------------------------------->
+
         <div class="mb-3">
           <label for="force-comment" class="form-label">Leave comment&nbsp;*</label>
           <textarea id="force-comment" class="form-control" rows="2" required></textarea>
@@ -800,6 +810,7 @@ Add New or Update Employee
     </div>
   </div>
 </div>
+
 
 
 
@@ -1070,17 +1081,43 @@ function initLabourHistory(){
     forceModal.show();
   });
 
-  $('#force-confirm-btn').onclick = ()=>{
+  /* --- inside initLabourHistory() --- */
+  $('#force-confirm-btn').onclick = () => {
     const note = forceCmt.value.trim();
-    if(!note){alert('Comment required');return;}
-    jsonFetch(URLS.forceLeave(forcePid.value),{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-      body:JSON.stringify({leave_comment:note})
-    }).then(()=>location.reload())
-      .catch(()=>alert('Force leave failed'));
+    if (!note) { alert('Comment required'); return; }
+
+    /* NEW ---------------------------------------------------- */
+    const whenVal = $('#force-datetime').value || nowLocalDT();   // default “now”
+    /* -------------------------------------------------------- */
+
+    jsonFetch(URLS.forceLeave(forcePid.value), {
+      method : 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
+      body   : JSON.stringify({
+        leave_comment : note,
+        leave_datetime: whenVal        /*  ← NEW  */
+      })
+    })
+    .then(()=>location.reload())
+    .catch(()=>alert('Force leave failed'));
   };
+
+  /* set default each time modal opens */
+  document.addEventListener('click', e => {
+    const fBtn = e.target.closest('.force-leave-btn');
+    if (!fBtn) return;
+    forcePid.value         = fBtn.dataset.pid;
+    $('#force-comment').value = '';
+    $('#force-datetime').value = nowLocalDT();   // NEW
+    forceModal.show();
+  });
+
 }
+
+
+
+
+
 
 /* ------------------------------------------------------------------
  *  ROW CLICK → open close-out (hidden .closeout-btn)

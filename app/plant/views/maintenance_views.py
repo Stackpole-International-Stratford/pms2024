@@ -33,6 +33,7 @@ import csv
 from django.utils.encoding import smart_str
 from collections import OrderedDict
 from django.contrib.auth.decorators import user_passes_test
+from django.utils.dateparse import parse_datetime
 
 
 lines_untracked = [
@@ -2141,15 +2142,32 @@ def user_is_supervisor_or_manager(user):
 def force_leave_participation(request, pk):
     """
     Managers/supervisors can finish someone else’s open participation,
-    supplying a mandatory comment.
+    supplying a mandatory comment and an optional leave_datetime.
     """
     try:
-        payload       = json.loads(request.body)
-        comment       = payload["leave_comment"].strip()
+        payload = json.loads(request.body)
+        comment = payload["leave_comment"].strip()
         if not comment:
             raise KeyError
     except (ValueError, KeyError):
         return HttpResponseBadRequest("leave_comment is required")
+
+    # ---------- pull & parse leave_datetime -----------------
+    leave_dt_str = payload.get("leave_datetime")         # "2025-06-12T14:35"
+    tz           = get_default_timezone()                # America/Toronto
+    try:
+        if leave_dt_str:
+            naive = parse_datetime(leave_dt_str)         # → naive DT
+            if naive is None:
+                raise ValueError
+            aware_local = make_aware(naive, timezone=tz) # → aware local
+            aware_utc   = aware_local.astimezone(timezone.utc)
+            leave_ts    = int(aware_utc.timestamp())
+        else:
+            leave_ts = int(time.time())                  # fallback to “now”
+    except Exception:
+        return HttpResponseBadRequest("Bad leave_datetime")
+    # -------------------------------------------------------
 
     part = get_object_or_404(
         DowntimeParticipation,
@@ -2159,18 +2177,17 @@ def force_leave_participation(request, pk):
         event__closeout_epoch__isnull=True,
     )
 
-    # close it *now* (in UTC)
-    now_ts = int(time.time())
-    delta_s = now_ts - part.join_epoch
-    part.leave_epoch   = now_ts
+    if leave_ts <= part.join_epoch:
+        return HttpResponseBadRequest("Leave time must be after join time.")
+
+    delta_s = leave_ts - part.join_epoch
+    part.leave_epoch   = leave_ts
     part.leave_comment = comment
     part.total_minutes = math.ceil(delta_s / 60)
     part.save(update_fields=["leave_epoch", "leave_comment", "total_minutes"])
 
-    return JsonResponse(
-        {
-            "status": "ok",
-            "leave_epoch": now_ts,
-            "total_minutes": part.total_minutes,
-        }
-    )
+    return JsonResponse({
+        "status"       : "ok",
+        "leave_epoch"  : leave_ts,
+        "total_minutes": part.total_minutes,
+    })
