@@ -101,6 +101,13 @@ lines_untracked = [
                     {"number": "1557", "target": 27496,},
                 ],
             },
+            {
+                "op": "lasermark",
+                "machines": [
+                    {"number": "1505", "target": 27496,},
+                    {"number": "1534", "target": 27496,},
+                ],
+            },
         ],
     },
     {
@@ -111,6 +118,12 @@ lines_untracked = [
                 "op": "30",
                 "machines": [
                     {"number": "1826", "target": 27496,},
+                ],
+            },
+            {
+                "op": "lasermark",
+                "machines": [
+                    {"number": "1811", "target": 27496,},
                 ],
             },
         ],
