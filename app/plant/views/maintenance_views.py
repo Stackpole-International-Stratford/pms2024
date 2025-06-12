@@ -1098,7 +1098,7 @@ def filter_out_operator_only_events(qs):
 
 
 # Define the order in which roles should appear
-ROLE_ORDER = ["electrician", "millwright", "tech", "PLC tech", "IMT"]
+ROLE_ORDER = ["electrician", "millwright", "tech", "plctech", "imt"]
 
 
 def group_by_role(workers):
@@ -1553,8 +1553,8 @@ ROLE_TO_GROUP = {
     "millwright":  "maintenance_millwright",
     "tech":        "maintenance_tech",
 
-    "PLC tech":      "maintenance_plctech",
-    "IMT":          "maintenance_imt",
+    "plctech":      "maintenance_plctech",
+    "imt":          "maintenance_imt",
 }
 
 @require_POST
