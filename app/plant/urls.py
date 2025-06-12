@@ -97,4 +97,7 @@ urlpatterns = [
 
     path('maintenance/target_lines/', target_lines, name='target_lines'),
 
+
+    path("downtime/participation/<int:pk>/force-leave/", force_leave_participation, name="force_leave_participation",),
+
 ]

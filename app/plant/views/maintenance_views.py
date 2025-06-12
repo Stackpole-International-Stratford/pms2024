@@ -32,6 +32,7 @@ import copy
 import csv
 from django.utils.encoding import smart_str
 from collections import OrderedDict
+from django.contrib.auth.decorators import user_passes_test
 
 
 lines_untracked = [
@@ -1402,6 +1403,7 @@ def downtime_history(request, event_id):
         ]
 
         history.append({
+            "id"            : p.id,
             'user'          : p.user.username,
             'roles'         : roles,
             'join_at'       : join_at,
@@ -2111,3 +2113,64 @@ def target_lines(request):
         line_names = [blk['line'] for blk in prod_lines]
         return JsonResponse({'lines': line_names})
     return HttpResponse(status=405)
+
+
+
+
+
+
+
+
+
+
+# ========================================================================
+# ========================================================================
+# =========== Forceleave Feature for Supervisors and Managers ============
+# ========================================================================
+# ========================================================================
+
+
+def user_is_supervisor_or_manager(user):
+    return user.groups.filter(
+        name__in={"maintenance_supervisors", "maintenance_managers"}
+    ).exists()
+
+@login_required
+@require_POST
+@user_passes_test(user_is_supervisor_or_manager)      # <--- permission gate
+def force_leave_participation(request, pk):
+    """
+    Managers/supervisors can finish someone else’s open participation,
+    supplying a mandatory comment.
+    """
+    try:
+        payload       = json.loads(request.body)
+        comment       = payload["leave_comment"].strip()
+        if not comment:
+            raise KeyError
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest("leave_comment is required")
+
+    part = get_object_or_404(
+        DowntimeParticipation,
+        pk=pk,
+        leave_epoch__isnull=True,
+        event__is_deleted=False,
+        event__closeout_epoch__isnull=True,
+    )
+
+    # close it *now* (in UTC)
+    now_ts = int(time.time())
+    delta_s = now_ts - part.join_epoch
+    part.leave_epoch   = now_ts
+    part.leave_comment = comment
+    part.total_minutes = math.ceil(delta_s / 60)
+    part.save(update_fields=["leave_epoch", "leave_comment", "total_minutes"])
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "leave_epoch": now_ts,
+            "total_minutes": part.total_minutes,
+        }
+    )
