@@ -1310,10 +1310,35 @@ function initPersonalFilter(){
 /* ------------------------------------------------------------------
  *  2-minute inactivity reload
  * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ *  2-minute inactivity reload –  (v2: pauses when a modal is open)
+ * ------------------------------------------------------------------ */
 function initAutoReload(){
-  let timer; const reset=()=>{clearTimeout(timer);timer=setTimeout(()=>location.reload(),2*60*1000);};
-  document.addEventListener('click',reset); reset();
+  const DELAY   = 1 * 60 * 1000;      // 2 minutes
+  let   timerId = null;
+  let   openModals = 0;               // reference-count
+
+  /* ------------ helpers ---------------- */
+  const stop  = () => { if (timerId) { clearTimeout(timerId); timerId = null; } };
+  const start = () => { timerId = setTimeout(()=>location.reload(), DELAY); };
+  const reset = () => { stop(); if (openModals === 0) start(); };
+
+  /* ------------ count modal opens/closes */
+  window.addEventListener('shown.bs.modal',  () => { openModals++; stop(); });
+  window.addEventListener('hidden.bs.modal', () => {
+    if (--openModals <= 0) { openModals = 0; reset(); }
+  });
+
+  /* ------------ user interaction (ignore clicks **inside** open modals) */
+  document.addEventListener('click', e => {
+    if (e.target.closest('.modal.show')) return;   // modal click → don’t reset
+    reset();
+  });
+
+  /* ------------ first start */
+  start();
 }
+
 
 /* ------------------------------------------------------------------
  *  BOOTSTRAP
