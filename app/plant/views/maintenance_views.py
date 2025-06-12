@@ -1236,12 +1236,22 @@ def list_all_downtime_entries(request):
     is_supervisor = "maintenance_supervisors" in user_grps
 
     # 8) Build the labour_choices list
-    full_choices   = MachineDowntimeEvent.LABOUR_CHOICES
-    if is_manager or is_supervisor:
+    full_choices = MachineDowntimeEvent.LABOUR_CHOICES
+
+    # Allow electricians, millwrights, supervisors, or managers to see PLCTECH & IMT
+    allowed_groups = {
+        ROLE_TO_GROUP["electrician"],
+        ROLE_TO_GROUP["millwright"],
+        "maintenance_supervisors",
+        "maintenance_managers",
+    }
+
+    if user_grps & allowed_groups:
         labour_choices = list(full_choices)
     else:
         labour_choices = [
-            (code, label) for code, label in full_choices
+            (code, label)
+            for code, label in full_choices
             if code not in ("PLCTECH", "IMT")
         ]
 
