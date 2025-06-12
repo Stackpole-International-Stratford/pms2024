@@ -96,75 +96,77 @@
       </form>
     </div>
   </div>
-  {# ───────────────────────── Line priorities accordion ────────────────────────── #}
-  <div class="accordion mt-5 mb-4" id="linesPriorityAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="linesPriorityHeading">
-        <button class="accordion-button d-flex justify-content-between"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#linesPriorityCollapse"
-                aria-expanded="false"
-                aria-controls="linesPriorityCollapse">
-          <span>Line Priorities</span>
-        </button>
-      </h2>
+    {# ───────────────────────── Line priorities accordion ────────────────────────── #}
+    <div class="accordion mt-5 mb-4" id="linesPriorityAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="linesPriorityHeading">
+          <button class="accordion-button d-flex justify-content-between"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#linesPriorityCollapse"
+                  aria-expanded="false"
+                  aria-controls="linesPriorityCollapse">
+            <span>Line Priorities</span>
+          </button>
+        </h2>
 
-      <div id="linesPriorityCollapse"
-           class="accordion-collapse collapse"
-           aria-labelledby="linesPriorityHeading"
-           data-bs-parent="#linesPriorityAccordion">
+        <div id="linesPriorityCollapse"
+            class="accordion-collapse collapse"
+            aria-labelledby="linesPriorityHeading"
+            data-bs-parent="#linesPriorityAccordion">
 
-        <div class="accordion-body p-0">
+          <div class="accordion-body p-0">
 
-        <ul class="list-group list-group-flush">
-          {% for role, workers in inactive_workers_by_role.items %}
-            {% if workers %}
-              <li class="list-group-item bg-light">
-                <strong>{{ role|title }}</strong>
-              </li>
-              {% for w in workers %}
+            <ul class="list-group list-group-flush">
+              {% for lp in line_priorities %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {{ w.name }} ({{ w.roles|join:", " }})
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger toggle-active-btn"
-                    data-username="{{ w.username }}"
-                    data-action="activate">
-                    Not Active
-                  </button>
+
+                  <div class="d-flex align-items-center gap-2">
+                    <strong>{{ lp.line }}</strong>
+
+                    {% if not forloop.first %}
+                      <form method="post"
+                            action="{% url 'move_line_priority' lp.id 'up' %}"
+                            class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                title="Move up one">▲</button>
+                      </form>
+                    {% endif %}
+
+                    {% if not forloop.last %}
+                      <form method="post"
+                            action="{% url 'move_line_priority' lp.id 'down' %}"
+                            class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                title="Move down one">▼</button>
+                      </form>
+                    {% endif %}
+                  </div>
+
+                  {% if lp.priority <= 3 %}
+                    <span class="badge bg-danger rounded-pill">{{ lp.priority }}</span>
+                  {% elif lp.priority <= 7 %}
+                    <span class="badge bg-warning text-dark rounded-pill">{{ lp.priority }}</span>
+                  {% else %}
+                    <span class="badge bg-success rounded-pill">{{ lp.priority }}</span>
+                  {% endif %}
+
+                </li>
+              {% empty %}
+                <li class="list-group-item text-muted">
+                  No line priorities defined.
                 </li>
               {% endfor %}
-            {% endif %}
-          {% endfor %}
-          {# …same for active… #}
-          {% for role, workers in active_workers_by_role.items %}
-            {% if workers %}
-              <li class="list-group-item bg-light">
-                <strong>{{ role|title }}</strong>
-              </li>
-              {% for w in workers %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {{ w.name }} ({{ w.roles|join:", " }})
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-info toggle-active-btn"
-                    data-username="{{ w.username }}"
-                    data-action="deactivate">
-                    Active
-                  </button>
-                </li>
-              {% endfor %}
-            {% endif %}
-          {% endfor %}
-        </ul>
+            </ul>
 
-
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  {# ───────────────────────── end accordion ────────────────────────────────────── #}
+    {# ───────────────────────── end accordion ────────────────────────────────────── #}
+
 
 
 
