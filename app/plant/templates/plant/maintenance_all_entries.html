@@ -373,26 +373,8 @@ Add New or Update Employee
             <!-- ========================= -->
             <ul class="list-group list-group-flush">
 
-              {# ---------- Inactive ---------- #}
-              <li class="list-group-item text-muted"><em>Inactive</em></li>
-              {% for role, workers in inactive_workers_by_role.items %}
-                {% if workers %}
-                  <li class="list-group-item bg-light">
-                    <strong>{{ role|title }}</strong>
-                  </li>
-                  {% for w in workers %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                      {{ w.name }} ({{ w.roles|join:", " }})
-                      <input  type="checkbox"
-                              class="form-check-input ms-2 active-checkbox"
-                              data-username="{{ w.username }}">
-                    </li>
-                  {% endfor %}
-                {% endif %}
-              {% endfor %}
-
-              {# ---------- Active ---------- #}
-              <li class="list-group-item text-muted mt-2"><em>Active</em></li>
+              {# ---------- Active FIRST ---------- #}
+              <li class="list-group-item text-muted"><em>Active</em></li>
               {% for role, workers in active_workers_by_role.items %}
                 {% if workers %}
                   <li class="list-group-item bg-light">
@@ -409,7 +391,27 @@ Add New or Update Employee
                   {% endfor %}
                 {% endif %}
               {% endfor %}
+
+              {# ---------- Inactive AFTER ---------- #}
+              <li class="list-group-item text-muted mt-2"><em>Inactive</em></li>
+              {% for role, workers in inactive_workers_by_role.items %}
+                {% if workers %}
+                  <li class="list-group-item bg-light">
+                    <strong>{{ role|title }}</strong>
+                  </li>
+                  {% for w in workers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      {{ w.name }} ({{ w.roles|join:", " }})
+                      <input  type="checkbox"
+                              class="form-check-input ms-2 active-checkbox"
+                              data-username="{{ w.username }}">
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+
             </ul>
+
 
             <!-- ---------- bulk-save button ---------- -->
             <div class="d-grid p-2 border-top">
