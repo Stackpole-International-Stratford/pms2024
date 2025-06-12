@@ -31,6 +31,7 @@ from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
 import copy
 import csv
 from django.utils.encoding import smart_str
+from collections import OrderedDict
 
 
 lines_untracked = [
@@ -1096,6 +1097,25 @@ def filter_out_operator_only_events(qs):
     )
 
 
+# Define the order in which roles should appear
+ROLE_ORDER = ["electrician", "millwright", "tech", "PLC tech", "IMT"]
+
+
+def group_by_role(workers):
+    """
+    Given a list of worker-dicts (with 'roles' and 'username', 'name', etc.),
+    bucket them by their first-listed role, in the order of ROLE_ORDER.
+    """
+    buckets = OrderedDict((r, []) for r in ROLE_ORDER)
+    buckets["other"] = []
+    for w in workers:
+        primary = w["roles"][0].lower() if w["roles"] else "other"
+        if primary in buckets:
+            buckets[primary].append(w)
+        else:
+            buckets["other"].append(w)
+    return buckets
+
 
 
 @login_required(login_url='login')
@@ -1104,7 +1124,8 @@ def list_all_downtime_entries(request):
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
 
-    # ── 2) Build & Annotate Open-Events Queryset ─────────────────────────
+    # ── 2) Build & annotate open events ────────────────────────────────
+    # priority per line
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
@@ -1117,144 +1138,117 @@ def list_all_downtime_entries(request):
             line_priority=Coalesce(
                 Subquery(priority_sq, output_field=IntegerField()),
                 Value(999),
-                output_field=IntegerField(),
+                output_field=IntegerField()
             )
         )
         .order_by("line_priority", "-start_epoch")
         .prefetch_related("participants__user")
     )
     qs = annotate_being_worked_on(base_qs)
-
-    # ── 2b) Strip Out Operator-Only Events ─────────────────────────────
     qs = filter_out_operator_only_events(qs)
 
-    # ── 3) Format First PAGE_SIZE Entries for Left Table ────────────────
+    # ── 3) Format entries for downtime table ───────────────────────────
+    PAGE_SIZE = 500
     entries = list(qs[:PAGE_SIZE])
-    today   = timezone.localdate()
-    tz      = get_default_timezone()
+    today = timezone.localdate()
+    tz = get_default_timezone()
     for e in entries:
         dt = e.start_at
         if is_naive(dt):
             dt = make_aware(dt, tz)
         local_dt = localtime(dt)
         e.start_display = (
-            local_dt.strftime('%H:%M')
-            if local_dt.date() == today
+            local_dt.strftime('%H:%M') if local_dt.date() == today
             else local_dt.strftime('%m/%d')
         )
         e.user_has_open = e.participants.filter(
             user=request.user, leave_epoch__isnull=True
         ).exists()
 
-    # ── 4) Gather All Maintenance-Role Users ────────────────────────────
+    # ── 4) Gather all maintenance-role users ────────────────────────────
     User = get_user_model()
-    maintenance_group_names = set(ROLE_TO_GROUP.values())
+    maintenance_groups = list(ROLE_TO_GROUP.values())
     users = (
         User.objects
-        .filter(groups__name__in=maintenance_group_names, is_active=True)
+        .filter(groups__name__in=maintenance_groups, is_active=True)
         .distinct()
         .order_by('username')
     )
 
-    # ── 5) Partition into Active vs Inactive Based on maintenance_active Group ─
+    # partition into active vs inactive
     active_grp, _   = Group.objects.get_or_create(name="maintenance_active")
     active_qs       = users.filter(groups=active_grp)
     inactive_qs     = users.exclude(groups=active_grp)
 
-   # then, in your view:
-    machine_priority_map = get_machine_priority_map()
+    # helper to build worker-dicts
+    machine_priority_map = get_machine_priority_map()  # assume prod_lines from your merged data
 
     def build_worker_list(qs):
-        """
-        Turn a queryset of User into a list of dicts:
-        { username, name, roles, jobs:[{machine, subcategory, priority}, …] }
-        """
         lst = []
         for u in qs:
-            # display name
             name = u.get_full_name() or u.username
-
-            # pull their maintenance roles
             user_groups = set(u.groups.values_list("name", flat=True))
-            roles = [
-                role for role, grp in ROLE_TO_GROUP.items()
-                if grp in user_groups
-            ]
-
-            # fetch all still‐open participations
+            roles = [ role for role, grp in ROLE_TO_GROUP.items() if grp in user_groups ]
             parts = DowntimeParticipation.objects.filter(
-                user=u,
-                leave_epoch__isnull=True,
-                event__closeout_epoch__isnull=True
+                user=u, leave_epoch__isnull=True, event__closeout_epoch__isnull=True
             ).select_related('event')
-
-            # build their job list, injecting priority
-            jobs = []
-            for p in parts:
-                mn = p.event.machine
-                jobs.append({
-                    "machine":     mn,
+            jobs = [
+                {
+                    "machine":     p.event.machine,
                     "subcategory": p.event.subcategory,
-                    "priority":    machine_priority_map.get(mn, "—"),
-                })
-
+                    "priority":    machine_priority_map.get(p.event.machine, "—"),
+                }
+                for p in parts
+            ]
             lst.append({
                 "username": u.username,
                 "name":     name,
                 "roles":    roles,
                 "jobs":     jobs,
             })
-
-        # sort alphabetically by display name
+        # keep your existing alphabetical sort
         return sorted(lst, key=lambda w: w["name"])
-
-
 
     active_workers   = build_worker_list(active_qs)
     inactive_workers = build_worker_list(inactive_qs)
 
-    # ── 6) Determine Manager Flag & Roles for Current User ───────────────
+    # ── 5) Group by profession ───────────────────────────────────────────
+    active_workers_by_role   = group_by_role(active_workers)
+    inactive_workers_by_role = group_by_role(inactive_workers)
+
+    # ── 6) Determine current-user flags & roles ──────────────────────────
     user_groups   = set(request.user.groups.values_list("name", flat=True))
     is_manager    = "maintenance_managers" in user_groups
     is_supervisor = "maintenance_supervisors" in user_groups
     user_roles    = [
-        r for r, grp in ROLE_TO_GROUP.items()
-        if grp in user_groups
+        r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
     ]
 
-    # ── 7) Fetch and Structure Downtime Codes from Database ──────────────
-    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
-    structured_codes = {}
-    for code_obj in downtime_codes:
-        # Extract the category code (assumes it's the prefix before the first '-')
-        cat_code = code_obj.code.split('-', 1)[0]  
-        if cat_code not in structured_codes:
-            structured_codes[cat_code] = {
-                'name': code_obj.category,
-                'code': cat_code,
-                'subcategories': []
-            }
-        structured_codes[cat_code]['subcategories'].append({
-            'name': code_obj.subcategory,
-            'code': code_obj.code
+    # ── 7) Fetch & structure downtime codes & lines ──────────────────────
+    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split('-',1)[0]
+        structured.setdefault(cat, {
+            'name': c.category, 'code': cat, 'subcategories': []
+        })['subcategories'].append({
+            'code': c.code, 'name': c.subcategory
         })
+    downtime_codes_list = list(structured.values())
 
-    # Convert the structured dictionary to a list for JSON serialization
-    downtime_codes_list = list(structured_codes.values())
-
-    # ── 8) Render ─────────────────────────────────────────────────────────
+    # ── 8) Render template ───────────────────────────────────────────────
     return render(request, "plant/maintenance_all_entries.html", {
-        "entries":             entries,
-        "page_size":           PAGE_SIZE,
-        "line_priorities":     LinePriority.objects.all(),
-        "is_manager":          is_manager,
-        "is_supervisor":       is_supervisor,
-        "labour_choices":      MachineDowntimeEvent.LABOUR_CHOICES,
-        "user_roles":          user_roles,
-        "active_workers":      active_workers,
-        "inactive_workers":    inactive_workers,
-        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
-        'lines_json':          mark_safe(json.dumps(prod_lines)),
+        "entries":                      entries,
+        "page_size":                    PAGE_SIZE,
+        "line_priorities":              LinePriority.objects.all(),
+        "is_manager":                   is_manager,
+        "is_supervisor":                is_supervisor,
+        "labour_choices":               MachineDowntimeEvent.LABOUR_CHOICES,
+        "user_roles":                   user_roles,
+        "active_workers_by_role":       active_workers_by_role,
+        "inactive_workers_by_role":     inactive_workers_by_role,
+        "downtime_codes_json":          mark_safe(json.dumps(downtime_codes_list)),
+        "lines_json":                   mark_safe(json.dumps(prod_lines)),
     })
 
 

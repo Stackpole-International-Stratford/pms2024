@@ -117,57 +117,48 @@
 
         <div class="accordion-body p-0">
 
-          <ul class="list-group list-group-flush">
-            {% for lp in line_priorities %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-
-                {# ►► left side: line name + arrow buttons                         #}
-                <div class="d-flex align-items-center gap-2">
-                  <strong>{{ lp.line }}</strong>
-
-                  {# move‑up form — hidden if already top priority (#1)            #}
-                  {% if not forloop.first %}
-                  <form method="post"
-                        action="{% url 'move_line_priority' lp.id 'up' %}"
-                        class="d-inline">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
-                            title="Move up one">
-                      ▲
-                    </button>
-                  </form>
-                  {% endif %}
-
-                  {# move‑down form — hidden if last entry                         #}
-                  {% if not forloop.last %}
-                  <form method="post"
-                        action="{% url 'move_line_priority' lp.id 'down' %}"
-                        class="d-inline">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
-                            title="Move down one">
-                      ▼
-                    </button>
-                  </form>
-                  {% endif %}
-                </div>
-
-                {# ►► right side: coloured priority badge                         #}
-                {% if lp.priority <= 3 %}
-                  <span class="badge bg-danger rounded-pill">{{ lp.priority }}</span>
-                {% elif lp.priority <= 7 %}
-                  <span class="badge bg-warning text-dark rounded-pill">{{ lp.priority }}</span>
-                {% else %}
-                  <span class="badge bg-success rounded-pill">{{ lp.priority }}</span>
-                {% endif %}
-
+        <ul class="list-group list-group-flush">
+          {% for role, workers in inactive_workers_by_role.items %}
+            {% if workers %}
+              <li class="list-group-item bg-light">
+                <strong>{{ role|title }}</strong>
               </li>
-            {% empty %}
-              <li class="list-group-item text-muted">
-                No line priorities defined.
+              {% for w in workers %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  {{ w.name }} ({{ w.roles|join:", " }})
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger toggle-active-btn"
+                    data-username="{{ w.username }}"
+                    data-action="activate">
+                    Not Active
+                  </button>
+                </li>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+          {# …same for active… #}
+          {% for role, workers in active_workers_by_role.items %}
+            {% if workers %}
+              <li class="list-group-item bg-light">
+                <strong>{{ role|title }}</strong>
               </li>
-            {% endfor %}
-          </ul>
+              {% for w in workers %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  {{ w.name }} ({{ w.roles|join:", " }})
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-info toggle-active-btn"
+                    data-username="{{ w.username }}"
+                    data-action="deactivate">
+                    Active
+                  </button>
+                </li>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </ul>
+
 
         </div>
       </div>
@@ -371,32 +362,56 @@ Add New or Update Employee
                aria-labelledby="activeListHeading"
                data-bs-parent="#activeListAccordion">
             <div class="accordion-body p-0">
-              <ul class="list-group list-group-flush">
-                {% for w in inactive_workers %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ w.name }} ({{ w.roles|join:", " }})
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger toggle-active-btn"
-                            data-username="{{ w.username }}"
-                            data-action="activate">
-                      Not Active
-                    </button>
-                  </li>
-                {% empty %}
-                  <li class="list-group-item text-muted">No inactive staff.</li>
-                {% endfor %}
-                {% for w in active_workers %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ w.name }} ({{ w.roles|join:", " }})
-                    <button type="button"
-                            class="btn btn-sm btn-outline-info toggle-active-btn"
-                            data-username="{{ w.username }}"
-                            data-action="deactivate">
-                      Active
-                    </button>
-                  </li>
-                {% endfor %}
-              </ul>
+  <ul class="list-group list-group-flush">
+
+  {# Inactive block #}
+  <li class="list-group-item text-muted"><em>Inactive</em></li>
+  {% for role, workers in inactive_workers_by_role.items %}
+    {% if workers %}
+      <li class="list-group-item bg-light">
+        <strong>{{ role|title }}</strong>
+      </li>
+      {% for w in workers %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ w.name }} ({{ w.roles|join:", " }})
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger toggle-active-btn"
+            data-username="{{ w.username }}"
+            data-action="activate">
+            Not Active
+          </button>
+        </li>
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+
+  {# Active block #}
+  <li class="list-group-item text-muted mt-2"><em>Active</em></li>
+  {% for role, workers in active_workers_by_role.items %}
+    {% if workers %}
+      <li class="list-group-item bg-light">
+        <strong>{{ role|title }}</strong>
+      </li>
+      {% for w in workers %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ w.name }} ({{ w.roles|join:", " }})
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-info toggle-active-btn"
+            data-username="{{ w.username }}"
+            data-action="deactivate">
+            Active
+          </button>
+        </li>
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+
+</ul>
+
+
+
             </div>
           </div>
         </div>
@@ -414,31 +429,34 @@ Add New or Update Employee
               <th>Priority</th>
             </tr>
           </thead>
-          <tbody>
-            {% for w in active_workers %}
-              {% if w.jobs %}
-                {% for job in w.jobs %}
-                  <tr>
-                    {% if forloop.first %}
-                      <td rowspan="{{ w.jobs|length }}">{{ w.name }}</td>
-                      <td rowspan="{{ w.jobs|length }}">{{ w.roles|join:", " }}</td>
-                    {% endif %}
-                    <td>{{ job.machine }}</td>
-                    <td>{{ job.subcategory }}</td>
-                    <td>{{ job.priority }}</td>
-                  </tr>
-                {% endfor %}
-              {% else %}
-                <tr>
-                  <td>{{ w.name }}</td>
-                  <td>{{ w.roles|join:", " }}</td>
-                  <td colspan="2" class="text-center text-muted">Free</td>
+        <tbody>
+            {% for role, workers in active_workers_by_role.items %}
+              {% if workers %}
+                <tr class="table-secondary">
+                  <td colspan="5"><strong>{{ role|title }}</strong></td>
                 </tr>
+                {% for w in workers %}
+                  {% if w.jobs %}
+                    {% for job in w.jobs %}
+                      <tr>
+                        {% if forloop.first %}
+                          <td rowspan="{{ w.jobs|length }}">{{ w.name }}</td>
+                          <td rowspan="{{ w.jobs|length }}">{{ w.roles|join:", " }}</td>
+                        {% endif %}
+                        <td>{{ job.machine }}</td>
+                        <td>{{ job.subcategory }}</td>
+                        <td>{{ job.priority }}</td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr>
+                      <td>{{ w.name }}</td>
+                      <td>{{ w.roles|join:", " }}</td>
+                      <td colspan="2" class="text-center text-muted">Free</td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
               {% endif %}
-            {% empty %}
-              <tr>
-                <td colspan="4" class="text-center py-2">No active maintenance staff.</td>
-              </tr>
             {% endfor %}
           </tbody>
         </table>
