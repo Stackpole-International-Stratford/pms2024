@@ -1131,15 +1131,13 @@ def group_by_role(workers):
     return buckets
 
 
-
-@login_required(login_url='login')
+@login_required(login_url="login")
 def list_all_downtime_entries(request):
-    # ── 1) Access Control ───────────────────────────────────────────────
+    # 1) Access control
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
 
-    # ── 2) Build & annotate open events ────────────────────────────────
-    # priority per line
+    # 2) Fetch & annotate live events
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
@@ -1161,51 +1159,54 @@ def list_all_downtime_entries(request):
     qs = annotate_being_worked_on(base_qs)
     qs = filter_out_operator_only_events(qs)
 
-    # ── 3) Format entries for downtime table ───────────────────────────
+    # 3) Paginate + format “entries” for the table
     PAGE_SIZE = 500
-    entries = list(qs[:PAGE_SIZE])
-    today = timezone.localdate()
-    tz = get_default_timezone()
+    entries   = list(qs[:PAGE_SIZE])
+    today     = timezone.localdate()
+    tz        = get_default_timezone()
     for e in entries:
         dt = e.start_at
         if is_naive(dt):
             dt = make_aware(dt, tz)
-        local_dt = localtime(dt)
+        local_dt      = localtime(dt)
         e.start_display = (
-            local_dt.strftime('%H:%M') if local_dt.date() == today
-            else local_dt.strftime('%m/%d')
+            local_dt.strftime("%H:%M")
+            if local_dt.date() == today
+            else local_dt.strftime("%m/%d")
         )
         e.user_has_open = e.participants.filter(
-            user=request.user, leave_epoch__isnull=True
+            user=request.user,
+            leave_epoch__isnull=True
         ).exists()
 
-    # ── 4) Gather all maintenance-role users ────────────────────────────
-    User = get_user_model()
-    maintenance_groups = list(ROLE_TO_GROUP.values())
-    users = (
+    # 4) Collect all maintenance‐role users
+    User               = get_user_model()
+    maint_groups       = list(ROLE_TO_GROUP.values())
+    all_maint_users    = (
         User.objects
-        .filter(groups__name__in=maintenance_groups, is_active=True)
+        .filter(groups__name__in=maint_groups, is_active=True)
         .distinct()
-        .order_by('username')
+        .order_by("username")
     )
+    active_group, _    = Group.objects.get_or_create(name="maintenance_active")
+    active_users       = all_maint_users.filter(groups=active_group)
+    inactive_users     = all_maint_users.exclude(groups=active_group)
 
-    # partition into active vs inactive
-    active_grp, _   = Group.objects.get_or_create(name="maintenance_active")
-    active_qs       = users.filter(groups=active_grp)
-    inactive_qs     = users.exclude(groups=active_grp)
-
-    # helper to build worker-dicts
-    machine_priority_map = get_machine_priority_map()  # assume prod_lines from your merged data
-
-    def build_worker_list(qs):
+    # 5) Build per‐user dicts (with their open jobs)
+    machine_priority_map = get_machine_priority_map()
+    def build_worker_list(user_qs):
         lst = []
-        for u in qs:
-            name = u.get_full_name() or u.username
-            user_groups = set(u.groups.values_list("name", flat=True))
-            roles = [ role for role, grp in ROLE_TO_GROUP.items() if grp in user_groups ]
+        for u in user_qs:
+            name         = u.get_full_name() or u.username
+            user_groups  = set(u.groups.values_list("name", flat=True))
+            roles        = [
+                r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
+            ]
             parts = DowntimeParticipation.objects.filter(
-                user=u, leave_epoch__isnull=True, event__closeout_epoch__isnull=True
-            ).select_related('event')
+                user=u,
+                leave_epoch__isnull=True,
+                event__closeout_epoch__isnull=True
+            ).select_related("event")
             jobs = [
                 {
                     "machine":     p.event.machine,
@@ -1220,51 +1221,57 @@ def list_all_downtime_entries(request):
                 "roles":    roles,
                 "jobs":     jobs,
             })
-        # keep your existing alphabetical sort
         return sorted(lst, key=lambda w: w["name"])
 
-    active_workers   = build_worker_list(active_qs)
-    inactive_workers = build_worker_list(inactive_qs)
+    active_workers   = build_worker_list(active_users)
+    inactive_workers = build_worker_list(inactive_users)
 
-    # ── 5) Group by profession ───────────────────────────────────────────
-    active_workers_by_role   = group_by_role(active_workers)
-    inactive_workers_by_role = group_by_role(inactive_workers)
+    # 6) Bucket by role
+    active_by_role   = group_by_role(active_workers)
+    inactive_by_role = group_by_role(inactive_workers)
 
-    # ── 6) Determine current-user flags & roles ──────────────────────────
-    user_groups   = set(request.user.groups.values_list("name", flat=True))
-    is_manager    = "maintenance_managers" in user_groups
-    is_supervisor = "maintenance_supervisors" in user_groups
-    user_roles    = [
-        r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
-    ]
+    # 7) Determine current‐user flags
+    user_grps     = set(request.user.groups.values_list("name", flat=True))
+    is_manager    = "maintenance_managers" in user_grps
+    is_supervisor = "maintenance_supervisors" in user_grps
 
-    # ── 7) Fetch & structure downtime codes & lines ──────────────────────
-    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
-    structured = {}
+    # 8) Build the labour_choices list
+    full_choices   = MachineDowntimeEvent.LABOUR_CHOICES
+    if is_manager or is_supervisor:
+        labour_choices = list(full_choices)
+    else:
+        labour_choices = [
+            (code, label) for code, label in full_choices
+            if code not in ("PLCTECH", "IMT")
+        ]
+
+    # 9) Downtime‐codes JSON for the modal
+    downtime_codes = DowntimeCode.objects.all().order_by("category","subcategory","code")
+    structured     = {}
     for c in downtime_codes:
-        cat = c.code.split('-',1)[0]
+        cat = c.code.split("-",1)[0]
         structured.setdefault(cat, {
-            'name': c.category, 'code': cat, 'subcategories': []
-        })['subcategories'].append({
-            'code': c.code, 'name': c.subcategory
+            "name": cat,
+            "code": cat,
+            "subcategories": []
+        })["subcategories"].append({
+            "code": c.code,
+            "name": c.subcategory
         })
-    downtime_codes_list = list(structured.values())
 
-    # ── 8) Render template ───────────────────────────────────────────────
+    # 10) Final render
     return render(request, "plant/maintenance_all_entries.html", {
-        "entries":                      entries,
-        "page_size":                    PAGE_SIZE,
-        "line_priorities":              LinePriority.objects.all(),
-        "is_manager":                   is_manager,
-        "is_supervisor":                is_supervisor,
-        "labour_choices":               MachineDowntimeEvent.LABOUR_CHOICES,
-        "user_roles":                   user_roles,
-        "active_workers_by_role":       active_workers_by_role,
-        "inactive_workers_by_role":     inactive_workers_by_role,
-        "downtime_codes_json":          mark_safe(json.dumps(downtime_codes_list)),
-        "lines_json":                   mark_safe(json.dumps(prod_lines)),
+        "entries":                    entries,
+        "page_size":                  PAGE_SIZE,
+        "line_priorities":            LinePriority.objects.all(),
+        "is_manager":                 is_manager,
+        "is_supervisor":              is_supervisor,
+        "labour_choices":             labour_choices,
+        "active_workers_by_role":     active_by_role,
+        "inactive_workers_by_role":   inactive_by_role,
+        "downtime_codes_json":        mark_safe(json.dumps(list(structured.values()))),
+        "lines_json":                 mark_safe(json.dumps(prod_lines)),
     })
-
 
 @login_required
 def load_more_downtime_entries(request):
