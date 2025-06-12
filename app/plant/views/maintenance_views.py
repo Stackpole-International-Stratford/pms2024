@@ -1559,8 +1559,8 @@ ROLE_TO_GROUP = {
     "millwright":  "maintenance_millwright",
     "tech":        "maintenance_tech",
 
-    "plctech":      "maintenance_plctech",
-    "imt":          "maintenance_imt",
+    "PLC tech":      "maintenance_plctech",
+    "IMT":          "maintenance_imt",
 }
 
 @require_POST
