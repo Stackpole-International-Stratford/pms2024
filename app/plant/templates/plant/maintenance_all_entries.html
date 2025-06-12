@@ -890,6 +890,16 @@ function initCloseoutModal(){
         /* populate categories / subcats */
         populate(catSel,data.categories,false);
         catSel.value = data.category_code || data.categories.find(c=>c.name===data.category_name)?.code || '';
+
+        // NEW: if nothing matched, fall back to comparing visible option text
+        if (!catSel.value && data.category_name) {
+          [...catSel.options].forEach(opt => {
+            if (opt.text.trim().toLowerCase() ===
+                data.category_name.trim().toLowerCase()) {
+              catSel.value = opt.value;
+            }
+          });
+        }
         const setSubcats = ()=>{
           const scs = data.subcategories
               .filter(s=>s.parent===catSel.value)
@@ -954,7 +964,7 @@ function initCloseoutModal(){
     }).then(()=>{location.reload();})
       .catch(e=>{
         if(e.status===403) alert('All participants must leave first');
-        else               alert('Save / close-out failed');
+        else               alert('Save / close-out failed. Did you choose a subcategory?');
       });
   }
 }
