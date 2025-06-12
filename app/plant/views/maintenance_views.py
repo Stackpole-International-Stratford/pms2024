@@ -959,7 +959,21 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             When(labour_types__contains=['OPERATOR'], then=Value(True)),
             default=Value(False),
             output_field=BooleanField(),
-        )
+        ),
+                has_plctech = Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_plctech'
+            )
+        ),
+        has_imt = Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_imt'
+            )
+        ),
     ).order_by('-start_epoch')
 
     total     = qs.count()
@@ -1007,6 +1021,9 @@ MAINT_GROUPS = {
     "maintenance_millwright",
     "maintenance_tech",
     "maintenance_supervisors",
+
+    "maintenance_plctech",
+    "maintenance_imt",
 }
 
 def user_has_maintenance_access(user) -> bool:
@@ -1541,6 +1558,9 @@ ROLE_TO_GROUP = {
     "electrician": "maintenance_electrician",
     "millwright":  "maintenance_millwright",
     "tech":        "maintenance_tech",
+
+    "plctech":      "maintenance_plctech",
+    "imt":          "maintenance_imt",
 }
 
 @require_POST
