@@ -1249,6 +1249,7 @@ def list_all_downtime_entries(request):
         ROLE_TO_GROUP["millwright"],
         "maintenance_supervisors",
         "maintenance_managers",
+        "maintenance_tech",
     }
 
     if user_grps & allowed_groups:
