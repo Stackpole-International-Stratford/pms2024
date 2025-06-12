@@ -244,6 +244,8 @@ Add New or Update Employee
             class="editable-row {% if not e.closeout_epoch %}table-light{% endif %}"
             data-entry-id="{{ e.id }}"
             data-line="{{ e.line }}"
+            data-roles="{{ e.labour_types|join:',' }}"        {#  ← NEW  #}
+            data-busy="{{ e.being_worked_on|yesno:'1,0' }}"   {#  ← NEW  #}
           >
             <td class="py-1">
               <div class="d-flex align-items-center">
@@ -1202,47 +1204,108 @@ function initJobFilter(){
 /* ------------------------------------------------------------------
  *  PERSONAL “EXCLUDE LINES” FILTER
  * ------------------------------------------------------------------ */
-function initLineExclusion(){
-  const icon   = $('#target-lines-icon');
-  const modal  = new bootstrap.Modal($('#excludeLinesModal'));
-  const body   = $('#exclude-lines-body');
-  const save   = $('#exclude-lines-save');
-  const selectAll   = $('#exclude-lines-select-all');
-  const deselectAll = $('#exclude-lines-deselect-all');
+function initPersonalFilter(){
+  const icon        = $('#target-lines-icon');
+  const modal       = new bootstrap.Modal($('#excludeLinesModal'));
+  const body        = $('#exclude-lines-body');
+  const save        = $('#exclude-lines-save');
+  const selLinesBtn = $('#exclude-lines-select-all');
+  const deselLinesBtn = $('#exclude-lines-deselect-all');
 
-  const getCookie = ()=>{const m=document.cookie.match(/(?:^|; )excluded_lines=([^;]+)/);return m?JSON.parse(decodeURIComponent(m[1])):[];};
-  const setCookie = v=>{document.cookie=`excluded_lines=${encodeURIComponent(JSON.stringify(v))};path=/;max-age=${60*60*24*30}`;};
-  const apply = ()=>{
-    const ex = getCookie();
+  /* ---------- helpers ------------------------------------------------ */
+  const BLANK = {lines:[], roles:[], hideBusy:false};
+
+  const getPrefs = () => {
+    const m = document.cookie.match(/(?:^|; )filter_prefs=([^;]+)/);
+    if(!m) return {...BLANK};
+    try {
+      const parsed = JSON.parse(decodeURIComponent(m[1]));
+      /* allow for legacy plain-array cookie */
+      return Array.isArray(parsed)
+                ? {lines:parsed, roles:[], hideBusy:false}
+                : {...BLANK, ...parsed};
+    } catch { return {...BLANK}; }
+  };
+
+  const setPrefs = p => {
+    document.cookie = `filter_prefs=${encodeURIComponent(JSON.stringify(p))};path=/;max-age=${60*60*24*30}`;
+  };
+
+  const applyPrefs = () => {
+    const {lines, roles, hideBusy} = getPrefs();
     $$('.editable-row').forEach(tr=>{
-      tr.style.display = ex.includes(tr.dataset.line)?'none':'';
+      const hideLine   = lines.includes(tr.dataset.line);
+      const jobRoles   = (tr.dataset.roles||'').toLowerCase().split(/[, ]+/).filter(Boolean);
+      const hideRole   = roles.some(r=>jobRoles.includes(r));
+      const hideActive = hideBusy && tr.dataset.busy==='1';
+      tr.style.display = (hideLine || hideRole || hideActive) ? 'none' : '';
     });
   };
 
-  icon.onclick = ()=>{
+  /* ---------- build modal each time it opens ------------------------ */
+  icon.onclick = () => {
+    const prefs = getPrefs();
+
     jsonFetch(URLS.targetLines).then(d=>{
-      const ex=getCookie(); body.innerHTML='';
-      d.lines.forEach(l=>{
-        const id='ex_'+l.replace(/\W+/g,'_');
-        body.insertAdjacentHTML('beforeend',`
-          <div class="form-check">
-            <input id="${id}" class="form-check-input" type="checkbox" value="${l}" ${ex.includes(l)?'checked':''}>
-            <label class="form-check-label" for="${id}">${l}</label>
-          </div>`);
-      });
+      const mkChk = ({id,label,checked,kind}) =>
+        `<div class="form-check">
+           <input class="form-check-input" data-kind="${kind}" type="checkbox" id="${id}" value="${label}" ${checked?'checked':''}>
+           <label class="form-check-label" for="${id}">${label}</label>
+         </div>`;
+
+      /* lines */
+      const linesHTML = d.lines.map(l=>mkChk({
+        id:`ex_line_${l}`, label:l,
+        checked:prefs.lines.includes(l), kind:'line'
+      })).join('');
+
+      /* job roles */
+      const ROLE_MAP = ['tech','electrician','millwright'];
+      const rolesHTML = ROLE_MAP.map(r=>mkChk({
+        id:`ex_role_${r}`, label:r.charAt(0).toUpperCase()+r.slice(1),
+        checked:prefs.roles.includes(r), kind:'role'
+      })).join('');
+
+      /* busy flag */
+      const busyHTML = `
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="ex_hidebusy" ${prefs.hideBusy?'checked':''}>
+          <label class="form-check-label" for="ex_hidebusy">
+            Exclude jobs already being worked on
+          </label>
+        </div>`;
+
+      body.innerHTML = `
+        <p class="fw-semibold mb-1">Exclude Lines</p>${linesHTML}
+        <hr class="my-2">
+        <p class="fw-semibold mb-1">Exclude Job Types</p>${rolesHTML}
+        ${busyHTML}`;
       modal.show();
-    }).catch(()=>{body.innerHTML='<div class="alert alert-danger">Could not load</div>';modal.show();});
+    })
+    .catch(()=>{body.innerHTML='<div class="alert alert-danger">Could not load</div>';modal.show();});
   };
 
-  selectAll.onclick = ()=> body.querySelectorAll('.form-check-input').forEach(cb=>cb.checked=true);
-  deselectAll.onclick = ()=> body.querySelectorAll('.form-check-input').forEach(cb=>cb.checked=false);
-
-  save.onclick = ()=>{
-    const chosen=[...body.querySelectorAll('.form-check-input')].filter(cb=>cb.checked).map(cb=>cb.value);
-    setCookie(chosen); apply(); modal.hide();
+  /* ---------- line select/deselect buttons -------------------------- */
+  const toggleLineChecks = wantChecked => {
+    body.querySelectorAll('input[data-kind="line"]').forEach(cb=>cb.checked=wantChecked);
   };
-  apply();
+  selLinesBtn.onclick    = () => toggleLineChecks(true);
+  deselLinesBtn.onclick  = () => toggleLineChecks(false);
+
+  /* ---------- save --------------------------------------------------- */
+  save.onclick = () => {
+    const lines = [...body.querySelectorAll('input[data-kind="line"]:checked')].map(cb=>cb.value);
+    const roles = [...body.querySelectorAll('input[data-kind="role"]:checked')].map(cb=>cb.value.toLowerCase());
+    const hideBusy = $('#ex_hidebusy').checked;
+    setPrefs({lines, roles, hideBusy});
+    applyPrefs();
+    modal.hide();
+  };
+
+  /* ---------- run once on page-load ---------------------------------- */
+  applyPrefs();
 }
+
 
 /* ------------------------------------------------------------------
  *  2-minute inactivity reload
@@ -1263,7 +1326,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   initActiveToggle();
   initMachineHistory();
   initJobFilter();
-  initLineExclusion();
+  initPersonalFilter();   // ← replaces initLineExclusion()
   initAutoReload();
 });
 </script>
