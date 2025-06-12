@@ -32,7 +32,7 @@ import copy
 import csv
 from django.utils.encoding import smart_str
 
-.
+
 lines_untracked = [
      {
         "line": "10R80",
