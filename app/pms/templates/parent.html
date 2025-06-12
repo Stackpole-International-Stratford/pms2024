@@ -26,15 +26,15 @@
 
     <!-- Additional CSS -->
     <link href="{% static 'css/styles.css' %}" rel="stylesheet">
-<style>
-  body {
-    /* remove the image */
-    background-image: none;
-    /* set a flat black background */
-    background-color: #000000;
-  }
-</style>
-
+    <style>
+        /* full‐page background */
+        body {
+          /* use your static tag to resolve the image URL */
+          background: url("{% static 'images/sleek_background.png' %}") no-repeat center center fixed;
+          background-size: cover;
+        }
+    
+      </style>
 
     <style>
         .btn-warning {
