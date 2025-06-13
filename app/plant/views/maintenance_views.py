@@ -1342,14 +1342,18 @@ def load_more_downtime_entries(request):
 
 @login_required
 def downtime_history(request, event_id):
-    # 1) ensure the event exists
+    """
+    Return the complete labour-history JSON for one downtime event,
+    PLUS the event’s own opening and close-out comments.
+    """
+    # 1) validate event
     event = get_object_or_404(
         MachineDowntimeEvent,
         pk=event_id,
         is_deleted=False
     )
 
-    # 2) pull all participations for that event, in chronological order
+    # 2) collect participations
     parts = (
         DowntimeParticipation.objects
         .filter(event=event)
@@ -1357,18 +1361,18 @@ def downtime_history(request, event_id):
         .select_related('user')
     )
 
-    # 3) serialize them
-    tz = get_default_timezone()
-    history = []
+    # 3) serialise
+    tz       = get_default_timezone()
+    history  = []
     for p in parts:
-        # — join time
+        # join time
         jdt = datetime.fromtimestamp(p.join_epoch)
         if is_naive(jdt):
             jdt = make_aware(jdt, tz)
         jdt = localtime(jdt)
         join_at = jdt.strftime('%Y-%m-%d %H:%M')
 
-        # — leave time (may be null)
+        # leave time (may be null)
         if p.leave_epoch:
             ldt = datetime.fromtimestamp(p.leave_epoch)
             if is_naive(ldt):
@@ -1378,7 +1382,7 @@ def downtime_history(request, event_id):
         else:
             leave_at = None
 
-        # — compute this user’s maintenance roles
+        # roles
         user_group_names = set(
             p.user.groups.values_list('name', flat=True)
         )
@@ -1390,17 +1394,20 @@ def downtime_history(request, event_id):
 
         history.append({
             "id"            : p.id,
-            'user'          : p.user.username,
-            'roles'         : roles,
-            'join_at'       : join_at,
-            'join_comment'  : p.join_comment,
-            'leave_at'      : leave_at or '',
-            'leave_comment' : p.leave_comment or '',
-            'total_minutes': p.total_minutes or 0,
+            "user"          : p.user.username,
+            "roles"         : roles,
+            "join_at"       : join_at,
+            "join_comment"  : p.join_comment,
+            "leave_at"      : leave_at or "",
+            "leave_comment" : p.leave_comment or "",
+            "total_minutes" : p.total_minutes or 0,
         })
 
-    return JsonResponse({'history': history})
-
+    return JsonResponse({
+        "history"         : history,
+        "event_comment"   : event.comment,
+        "closeout_comment": event.closeout_comment or "",
+    })
 
 @require_POST
 @login_required

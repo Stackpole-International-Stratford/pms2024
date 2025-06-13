@@ -663,41 +663,46 @@ Add New or Update Employee
 
 <!-- -------------------------------------------------------------------------------------->
   
-<!-- 1. History Modal -->
-<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
-  <!-- fullscreen-sm-down makes it modal-lg on md+ but fullscreen on sm and xs -->
-  <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
+<!-- Labour-history modal -->
+<div class="modal fade" id="historyModal" tabindex="-1"
+     aria-labelledby="historyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
     <div class="modal-content">
+
       <div class="modal-header">
-        <h5 class="modal-title">Labour History</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="historyModalLabel">Labour History</h5>
+        <button type="button" class="btn-close"
+                data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
+
       <div class="modal-body">
-        <!-- Wrap table in table-responsive -->
+
+        <!-- NEW – show the event’s own notes -->
+        <div class="mb-2 small text-muted">
+          <div><strong>Event note:</strong> <span id="hist-event-cmt">—</span></div>
+          <div><strong>Close-out:</strong> <span id="hist-closeout-cmt">—</span></div>
+        </div>
+
         <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead>
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
               <tr>
-                <th>User</th>
-                <th>Roles</th>
-                <th>Joined At</th>
-                <th>Join Comment</th>
-                <th>Left At</th>
-                <th>Leave Comment</th>
-                <th>Total Min</th>
+                <th>User</th><th>Roles</th><th>Joined</th><th>Join comment</th>
+                <th>Left</th><th>Leave comment</th><th>Minutes</th><th></th>
               </tr>
             </thead>
-            <tbody id="history-body">
-              <!-- JS will inject <tr>…</tr> here -->
-            </tbody>
+            <tbody id="history-body"></tbody>
           </table>
         </div>
+
       </div>
+
       <div class="modal-footer">
-        <button id="history-join-btn" type="button" class="btn btn-warning">Join</button>
-        <button id="history-leave-btn" type="button" class="btn btn-outline-danger">Leave</button>
-        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+        <!-- action buttons filled dynamically -->
+        <button id="history-join-btn"  class="btn btn-success btn-sm d-none">Join</button>
+        <button id="history-leave-btn" class="btn btn-danger  btn-sm d-none">Leave</button>
       </div>
+
     </div>
   </div>
 </div>
