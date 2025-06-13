@@ -1960,7 +1960,6 @@ def downtime_codes_delete(request, pk):
 
 
 
-
 @require_POST
 @csrf_exempt
 def machine_history(request):
@@ -1968,7 +1967,6 @@ def machine_history(request):
     if not machine:
         return JsonResponse({"error": "Machine parameter is required."}, status=400)
 
-    # fetch last 500 non-deleted events for that machine
     events = (
         MachineDowntimeEvent.objects
         .filter(machine=machine, is_deleted=False)
@@ -1979,10 +1977,20 @@ def machine_history(request):
     for e in events:
         parts = []
         for p in e.participants.all().order_by("join_epoch"):
+            # build a python datetime (in local time) from your epoch seconds
+            join_dt = datetime.fromtimestamp(p.join_epoch, tz=timezone.get_current_timezone())
+            leave_dt = (
+                datetime.fromtimestamp(p.leave_epoch, tz=timezone.get_current_timezone())
+                if p.leave_epoch
+                else None
+            )
+
             parts.append({
                 "user": p.user.get_full_name() or p.user.username,
                 "join_epoch": p.join_epoch,
+                "join_display": join_dt.strftime("%B %d, %Y %I:%M %p"),
                 "leave_epoch": p.leave_epoch,
+                "leave_display": leave_dt.strftime("%B %d, %Y %I:%M %p") if leave_dt else None,
                 "join_comment": p.join_comment,
                 "leave_comment": p.leave_comment,
                 "total_minutes": p.total_minutes,
@@ -2003,8 +2011,6 @@ def machine_history(request):
         })
 
     return JsonResponse({"events": payload})
-
-
 
 
 @login_required

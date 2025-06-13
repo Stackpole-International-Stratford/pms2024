@@ -1265,6 +1265,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const machineEl = document.getElementById('mh-machine-num');
   const url       = "{% url 'machine_history' %}";   // same endpoint
 
+  // ---- configure date/time formatting (no seconds) ----------
+  const dateTimeOpts = {
+    year:   'numeric',
+    month:  'short',    // e.g. “Jun”
+    day:    'numeric',
+    hour:   'numeric',
+    minute: 'numeric',
+    hour12: true
+  };
+
   form.addEventListener('submit', e => {
     e.preventDefault();
 
@@ -1272,19 +1282,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!machine) return;
 
     // UI prep
-    statusBox.innerHTML = '<p>Loading…</p>';
-    tbody.innerHTML     = '';
-    machineEl.textContent = machine;
+    statusBox.innerHTML    = '<p>Loading…</p>';
+    tbody.innerHTML        = '';
+    machineEl.textContent  = machine;
 
     // fetch history
     fetch(url, {
-      method: 'POST',
+      method:      'POST',
       credentials: 'same-origin',
-      body: new FormData(form)
+      body:        new FormData(form)
     })
     .then(r => r.json())
     .then(data => {
-      statusBox.innerHTML = '';         // clear messages
+      statusBox.innerHTML = ''; // clear messages
 
       if (data.error) {
         statusBox.innerHTML =
@@ -1297,49 +1307,52 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-    // ----- populate rows -------------------------------------------------
-    data.events.forEach(ev => {
-      const tr = tbody.insertRow();
-      tr.insertCell().textContent = ev.start_display;
-      tr.insertCell().textContent = ev.category;
-      tr.insertCell().textContent = ev.comment ?? '';
-      tr.insertCell().textContent = ev.closeout_display ?? '';
-      tr.insertCell().textContent = ev.closeout_comment ?? '';
+      // ----- populate rows -------------------------------------------------
+      data.events.forEach(ev => {
+        const tr = tbody.insertRow();
+        tr.insertCell().textContent = ev.start_display;
+        tr.insertCell().textContent = ev.category;
+        tr.insertCell().textContent = ev.comment ?? '';
+        tr.insertCell().textContent = ev.closeout_display ?? '';
+        tr.insertCell().textContent = ev.closeout_comment ?? '';
 
-      // participants cell: build a mini table via DOM
-      const partCell = tr.insertCell();
-      const innerTbl  = document.createElement('table');
-      innerTbl.className = 'table table-borderless table-sm mb-0';
+        // participants cell: build a mini table via DOM
+        const partCell = tr.insertCell();
+        const innerTbl = document.createElement('table');
+        innerTbl.className = 'table table-borderless table-sm mb-0';
 
-      /* ---------- NEW: header for the sub-table ---------- */
-      const innerHead = innerTbl.createTHead();
-      innerHead.className = 'table-light';          // Bootstrap style
-      const headRow  = innerHead.insertRow();
-      ['User', 'Joined', 'Left', 'Join Comment', 'Leave Comment', 'Minutes Down']
-        .forEach(text => {
-          const th = document.createElement('th');
-          th.textContent = text;
-          headRow.appendChild(th);
+        /* ---------- header for the sub-table ---------- */
+        const innerHead = innerTbl.createTHead();
+        innerHead.className = 'table-light';
+        const headRow = innerHead.insertRow();
+        ['User', 'Joined', 'Left', 'Join Comment', 'Leave Comment', 'Minutes Down']
+          .forEach(text => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            headRow.appendChild(th);
+          });
+
+        /* ---------- body with no-seconds formatting ---------- */
+        const innerBody = document.createElement('tbody');
+        ev.participations.forEach(p => {
+          const row = innerBody.insertRow();
+          row.insertCell().textContent = p.user;
+          row.insertCell().textContent =
+            new Date(p.join_epoch * 1000)
+              .toLocaleString(undefined, dateTimeOpts);
+          row.insertCell().textContent =
+            p.leave_epoch
+              ? new Date(p.leave_epoch * 1000)
+                  .toLocaleString(undefined, dateTimeOpts)
+              : '';
+          row.insertCell().textContent = p.join_comment ?? '';
+          row.insertCell().textContent = p.leave_comment ?? '';
+          row.insertCell().textContent = p.total_minutes ?? '';
         });
 
-      /* ---------- body (unchanged) ---------- */
-      const innerBody = document.createElement('tbody');
-      ev.participations.forEach(p => {
-        const row = innerBody.insertRow();
-        row.insertCell().textContent = p.user;
-        row.insertCell().textContent =
-          new Date(p.join_epoch * 1000).toLocaleString();
-        row.insertCell().textContent =
-          p.leave_epoch ? new Date(p.leave_epoch * 1000).toLocaleString() : '';
-        row.insertCell().textContent = p.join_comment ?? '';
-        row.insertCell().textContent = p.leave_comment ?? '';
-        row.insertCell().textContent = p.total_minutes ?? '';
+        innerTbl.appendChild(innerBody);
+        partCell.appendChild(innerTbl);
       });
-
-      innerTbl.appendChild(innerBody);
-      partCell.appendChild(innerTbl);
-    });
-
 
       // show results, hide lookup
       lookupModal.hide();
@@ -1352,6 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
 
 
 
