@@ -295,7 +295,7 @@ lines_untracked = [
                 ],
             },
             {
-                "op": "op10",
+                "op": "10",
                 "machines": [
                     {"number": "654", "target": 27496,},
                     {"number": "686", "target": 27496,},
@@ -303,7 +303,7 @@ lines_untracked = [
                 ],
             },
              {
-                "op": "op20",
+                "op": "20",
                 "machines": [
                     {"number": "611", "target": 27496,},
                     {"number": "1709", "target": 27496,},
