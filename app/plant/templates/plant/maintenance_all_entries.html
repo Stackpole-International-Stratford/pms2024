@@ -32,12 +32,20 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* keep your existing rules */
 .scrollable-table {
-  max-height: 60vh;      /* or whatever fits your layout */
-  overflow-x: auto;      /* horizontal scroll when needed */
-  overflow-y: auto;      /* vertical scroll when needed */
-  -webkit-overflow-scrolling: touch; /* smooth iOS scrolling */
+  max-height: 60vh;
+  overflow-x: auto;       /* horizontal scroll when needed */
+  overflow-y: auto;       /* vertical scroll when needed */
+  -webkit-overflow-scrolling: touch;
 }
+
+/* NEW – only affects tables inside that wrapper */
+.scrollable-table table {
+  width:   max-content;   /* grow as wide as it needs */
+  min-width: 100%;        /* but never smaller than the wrapper */
+}
+
 
 
 </style>
@@ -303,60 +311,6 @@ Add New or Update Employee
       
     </table>
   </div>
-
-
- <!-- Machine History Modal (wide + scrollable) -->
- <div class="modal fade" id="machineHistoryModal"
- tabindex="-1"
- aria-labelledby="machineHistoryModalLabel"
- aria-hidden="true">
- <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-<div class="modal-content">
-  <form id="machineHistoryForm">
-    <div class="modal-header">
-      <h5 class="modal-title" id="machineHistoryModalLabel">
-        Machine History
-      </h5>
-      <button type="button" class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"></button>
-    </div>
-    <div class="modal-body">
-      {% csrf_token %}
-      <div class="mb-3">
-        <label for="machine-input" class="form-label">Machine #</label>
-        <input
-          type="text"
-          id="machine-input"
-          name="machine"
-          class="form-control"
-          placeholder="Enter machine number"
-          required
-        >
-      </div>
-
-      <!-- add this: -->
-      <div id="machine-history-results" class="mt-3">
-        <!-- JS will inject accordion here -->
-      </div>
-
-
-    </div>
-    <div class="modal-footer">
-      <button type="button"
-              class="btn btn-dark"
-              data-bs-dismiss="modal">
-        Cancel
-      </button>
-      <button type="submit"
-              class="btn btn-warning">
-        Submit
-      </button>
-    </div>
-  </form>
-</div>
-</div>
-</div>
 
 
 </div>
@@ -676,7 +630,64 @@ Add New or Update Employee
   </div>
 
 
-  
+<!-- 1️⃣  Little lookup modal (unchanged name so existing button keeps working) -->
+<div class="modal fade" id="machineHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="machineHistoryForm" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">Machine History – lookup</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <label for="machine-input" class="form-label">Machine #</label>
+        <input id="machine-input" name="machine" class="form-control" required>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-warning">Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- 2️⃣  Results modal – **all structure lives here** -->
+<div class="modal fade" id="machineHistoryResultsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Machine #<span id="mh-machine-num"></span> – history</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- status messages -->
+        <div id="mh-status" class="mb-2"></div>
+
+        <!-- full history table -->
+        <div class="table-responsive scrollable-table">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Start</th><th>Category</th><th>Comment</th>
+                <th>Closed</th><th>Close Comment</th><th>Participants</th>
+              </tr>
+            </thead>
+            <tbody id="mh-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
     
 
 <!-- -------------------------------------------------------------------------------------->
@@ -1250,112 +1261,88 @@ function initActiveBulkToggle(){
 /* ------------------------------------------------------------------
  *  MACHINE HISTORY little helper (no changes)
  * ------------------------------------------------------------------ */
-document.addEventListener("DOMContentLoaded", function() {
-  const form = document.getElementById("machineHistoryForm");
-  const results = document.getElementById("machine-history-results");
-  const url = "{% url 'machine_history' %}";
+document.addEventListener('DOMContentLoaded', () => {
+  const lookupModal  = new bootstrap.Modal('#machineHistoryModal');
+  const resultsModal = new bootstrap.Modal('#machineHistoryResultsModal');
 
-  form.addEventListener("submit", function(e) {
+  const form      = document.getElementById('machineHistoryForm');
+  const statusBox = document.getElementById('mh-status');
+  const tbody     = document.getElementById('mh-tbody');
+  const machineEl = document.getElementById('mh-machine-num');
+  const url       = "{% url 'machine_history' %}";   // same endpoint
+
+  form.addEventListener('submit', e => {
     e.preventDefault();
-    results.innerHTML = "<p>Loading…</p>";
 
+    const machine = form.machine.value.trim();
+    if (!machine) return;
+
+    // UI prep
+    statusBox.innerHTML = '<p>Loading…</p>';
+    tbody.innerHTML     = '';
+    machineEl.textContent = machine;
+
+    // fetch history
     fetch(url, {
-      method: "POST",
-      credentials: "same-origin",
+      method: 'POST',
+      credentials: 'same-origin',
       body: new FormData(form)
     })
     .then(r => r.json())
     .then(data => {
+      statusBox.innerHTML = '';         // clear messages
+
       if (data.error) {
-        results.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+        statusBox.innerHTML =
+          `<div class="alert alert-danger">${data.error}</div>`;
         return;
       }
-      const events = data.events;
-      if (!events.length) {
-        results.innerHTML = "<p>No downtime history found for this machine.</p>";
+      if (!data.events.length) {
+        statusBox.innerHTML =
+          '<p class="text-muted">No downtime history found.</p>';
         return;
       }
 
-      // Build a big table instead of an accordion
-      let html = `
-        <div class="table-responsive scrollable-table">
-          <table class="table table-sm mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Start</th>
-                <th>Category</th>
-                <th>Comment</th>
-                <th>Closed</th>
-                <th>Close Comment</th>
-                <th>Participants</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
+      // ----- populate rows -------------------------------------------------
+      data.events.forEach(ev => {
+        const tr = tbody.insertRow();
+        tr.insertCell().textContent = ev.start_display;
+        tr.insertCell().textContent = ev.category;
+        tr.insertCell().textContent = ev.comment ?? '';
+        tr.insertCell().textContent = ev.closeout_display ?? '';
+        tr.insertCell().textContent = ev.closeout_comment ?? '';
 
-      events.forEach(e => {
-        html += `
-          <tr>
-            <td>${e.start_display}</td>
-            <td>${e.category}</td>
-            <td>${e.comment || ""}</td>
-            <td>${e.closeout_display || ""}</td>
-            <td>${e.closeout_comment || ""}</td>
-            <td>
-              <div class="table-responsive scrollable-table">
-                <table class="table table-borderless table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Joined</th>
-                      <th>Left</th>
-                      <th>Join Comment</th>
-                      <th>Leave Comment</th>
-                      <th>Minutes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-        `;
+        // participants cell: build a mini table via DOM
+        const partCell = tr.insertCell();
+        const innerTbl = document.createElement('table');
+        innerTbl.className = 'table table-borderless table-sm mb-0';
+        const innerBody = document.createElement('tbody');
 
-        e.participations.forEach(p => {
-          const joined = new Date(p.join_epoch * 1000).toLocaleString();
-          const left = p.leave_epoch
-            ? new Date(p.leave_epoch * 1000).toLocaleString()
-            : "";
-          html += `
-            <tr>
-              <td>${p.user}</td>
-              <td>${joined}</td>
-              <td>${left}</td>
-              <td>${p.join_comment || ""}</td>
-              <td>${p.leave_comment || ""}</td>
-              <td>${p.total_minutes ?? ""}</td>
-            </tr>
-          `;
+        ev.participations.forEach(p => {
+          const row = innerBody.insertRow();
+          row.insertCell().textContent = p.user;
+          row.insertCell().textContent =
+            new Date(p.join_epoch * 1000).toLocaleString();
+          row.insertCell().textContent =
+            p.leave_epoch ? new Date(p.leave_epoch * 1000).toLocaleString() : '';
+          row.insertCell().textContent = p.join_comment ?? '';
+          row.insertCell().textContent = p.leave_comment ?? '';
+          row.insertCell().textContent = p.total_minutes ?? '';
         });
 
-        html += `
-                  </tbody>
-                </table>
-              </div>
-            </td>
-          </tr>
-        `;
+        innerTbl.appendChild(innerBody);
+        partCell.appendChild(innerTbl);
       });
 
-      html += `
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      results.innerHTML = html;
+      // show results, hide lookup
+      lookupModal.hide();
+      resultsModal.show();
     })
     .catch(err => {
       console.error(err);
-      results.innerHTML = '<div class="alert alert-danger">Error loading history.</div>';
+      statusBox.innerHTML =
+        '<div class="alert alert-danger">Error loading history.</div>';
     });
-
   });
 });
 
