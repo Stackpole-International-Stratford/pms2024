@@ -17,7 +17,7 @@ urlpatterns = [
     path('1467/', views.cell_track_1467, {'template': 'cell_track_1467.html'}, name='1467'),
     path('cell_track_1467/', views.cell_track_1467, {'template': 'cell_track_1467.html'}, name='track1467'),
 
-    path('trilobe/', views.cell_track_trilobe, {'template': 'cell_track_trilobe.html'}, name='trilobe'),
+    # path('trilobe/', views.cell_track_trilobe, {'template': 'cell_track_trilobe.html'}, name='trilobe'),
     path('cell_track_trilobe/', views.cell_track_trilobe, {'template': 'cell_track_trilobe.html'}, name='tracktrilobe'),
 
     # path('8670/', views.cell_track_8670, {'template': 'cell_track_8670.html'}, name='ab1v'),
