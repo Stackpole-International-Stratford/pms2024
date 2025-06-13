@@ -654,17 +654,26 @@ Add New or Update Employee
         <div id="mh-status" class="mb-2"></div>
 
         <!-- full history table -->
-        <div class="table-responsive scrollable-table">
-          <table class="table table-sm mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Start</th><th>Category</th><th>Comment</th>
-                <th>Closed</th><th>Close Comment</th><th>Participants</th>
-              </tr>
-            </thead>
-            <tbody id="mh-tbody"></tbody>
-          </table>
-        </div>
+       <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Start</th>
+                  <th>Category</th>
+                  <th>Comment</th>
+                  <th>Closed</th>
+                  <th>Close Comment</th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="mh-tbody"></tbody>
+            </table>
+          </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-dark" data-bs-dismiss="modal">Close</button>
@@ -1288,36 +1297,49 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // ----- populate rows -------------------------------------------------
-      data.events.forEach(ev => {
-        const tr = tbody.insertRow();
-        tr.insertCell().textContent = ev.start_display;
-        tr.insertCell().textContent = ev.category;
-        tr.insertCell().textContent = ev.comment ?? '';
-        tr.insertCell().textContent = ev.closeout_display ?? '';
-        tr.insertCell().textContent = ev.closeout_comment ?? '';
+    // ----- populate rows -------------------------------------------------
+    data.events.forEach(ev => {
+      const tr = tbody.insertRow();
+      tr.insertCell().textContent = ev.start_display;
+      tr.insertCell().textContent = ev.category;
+      tr.insertCell().textContent = ev.comment ?? '';
+      tr.insertCell().textContent = ev.closeout_display ?? '';
+      tr.insertCell().textContent = ev.closeout_comment ?? '';
 
-        // participants cell: build a mini table via DOM
-        const partCell = tr.insertCell();
-        const innerTbl = document.createElement('table');
-        innerTbl.className = 'table table-borderless table-sm mb-0';
-        const innerBody = document.createElement('tbody');
+      // participants cell: build a mini table via DOM
+      const partCell = tr.insertCell();
+      const innerTbl  = document.createElement('table');
+      innerTbl.className = 'table table-borderless table-sm mb-0';
 
-        ev.participations.forEach(p => {
-          const row = innerBody.insertRow();
-          row.insertCell().textContent = p.user;
-          row.insertCell().textContent =
-            new Date(p.join_epoch * 1000).toLocaleString();
-          row.insertCell().textContent =
-            p.leave_epoch ? new Date(p.leave_epoch * 1000).toLocaleString() : '';
-          row.insertCell().textContent = p.join_comment ?? '';
-          row.insertCell().textContent = p.leave_comment ?? '';
-          row.insertCell().textContent = p.total_minutes ?? '';
+      /* ---------- NEW: header for the sub-table ---------- */
+      const innerHead = innerTbl.createTHead();
+      innerHead.className = 'table-light';          // Bootstrap style
+      const headRow  = innerHead.insertRow();
+      ['User', 'Joined', 'Left', 'Join Comment', 'Leave Comment', 'Minutes Down']
+        .forEach(text => {
+          const th = document.createElement('th');
+          th.textContent = text;
+          headRow.appendChild(th);
         });
 
-        innerTbl.appendChild(innerBody);
-        partCell.appendChild(innerTbl);
+      /* ---------- body (unchanged) ---------- */
+      const innerBody = document.createElement('tbody');
+      ev.participations.forEach(p => {
+        const row = innerBody.insertRow();
+        row.insertCell().textContent = p.user;
+        row.insertCell().textContent =
+          new Date(p.join_epoch * 1000).toLocaleString();
+        row.insertCell().textContent =
+          p.leave_epoch ? new Date(p.leave_epoch * 1000).toLocaleString() : '';
+        row.insertCell().textContent = p.join_comment ?? '';
+        row.insertCell().textContent = p.leave_comment ?? '';
+        row.insertCell().textContent = p.total_minutes ?? '';
       });
+
+      innerTbl.appendChild(innerBody);
+      partCell.appendChild(innerTbl);
+    });
+
 
       // show results, hide lookup
       lookupModal.hide();
