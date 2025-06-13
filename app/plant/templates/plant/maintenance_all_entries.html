@@ -32,25 +32,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* keep your existing rules */
-.scrollable-table {
-  max-height: 60vh;
-  overflow-x: auto;       /* horizontal scroll when needed */
-  overflow-y: auto;       /* vertical scroll when needed */
-  -webkit-overflow-scrolling: touch;
-}
-
-/* NEW – only affects tables inside that wrapper */
-.scrollable-table table {
-  width:   max-content;   /* grow as wide as it needs */
-  min-width: 100%;        /* but never smaller than the wrapper */
-}
-
-.scrollable-table th,
-.scrollable-table td{
-  white-space: nowrap;  /* no ugly wraps mid-date */
-}
-
 
 </style>
 
