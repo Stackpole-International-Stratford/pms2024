@@ -727,222 +727,222 @@ def cell_track_trilobe(request, template):
     context['elapsed'] = time.time()-tic
     return render(request, f'dashboards/{template}', context)
 
-@cache_page(5)
-def cell_track_8670(request, template):
-    tic = time.time()  # track the execution time
-    context = {}  # data sent to template
+# @cache_page(5)
+# def cell_track_8670(request, template):
+#     tic = time.time()  # track the execution time
+#     context = {}  # data sent to template
 
-    target_production_AB1V_Rx = int(
-        request.site_variables.get('target_production_AB1V_Rx', 300))
-    target_production_AB1V_Input = int(
-        request.site_variables.get('target_production_AB1V_Input', 300))
-    target_production_AB1V_OD = int(
-        request.site_variables.get('target_production_AB1V_OD', 300))
-    target_production_10R140 = int(request.site_variables.get(
-        'target_production_10R140_Rear', 300))
+#     target_production_AB1V_Rx = int(
+#         request.site_variables.get('target_production_AB1V_Rx', 300))
+#     target_production_AB1V_Input = int(
+#         request.site_variables.get('target_production_AB1V_Input', 300))
+#     target_production_AB1V_OD = int(
+#         request.site_variables.get('target_production_AB1V_OD', 300))
+#     target_production_10R140 = int(request.site_variables.get(
+#         'target_production_10R140_Rear', 300))
 
-    # Get the Time Stamp info
-    shift_start, shift_time, shift_left, shift_end = stamp_shift_start_3()
-    context['t'] = shift_start + shift_time
-    request.session["shift_start"] = shift_start
+#     # Get the Time Stamp info
+#     shift_start, shift_time, shift_left, shift_end = stamp_shift_start_3()
+#     context['t'] = shift_start + shift_time
+#     request.session["shift_start"] = shift_start
 
-    line_spec_10R140 = [
-        # OP 10
-        ('1708L', ['1708L'], 2, 10),
-        ('1708R', ['1708R'], 2, 10),
-        # OP 20
-        ('1709', ['1708L', '1708R'], 1, 20),
-        # OP 30
-        ('1710', ['1710'], 1, 30),
-        # OP 40
-        ('1711', ['1711'], 1, 40),
-        # OP 50
-        ('1715', ['1715'], 1, 50),
-        # OP 60
-        ('1717R', ['1717R'], 1, 60),
-        # OP 70
-        ('1706', ['1706'], 1, 70),
-        # OP 80
-        ('1720', ['1720'], 1, 80),
-        # OP 90
-        ('677', ['677'], 1, 90),
-        ('748', ['748'], 1, 90),
-        # OP 100
-        ('1723', ['1723'], 1, 100),
-        # Laser
-        ('1725', ['1725'], 1, 130),
-    ]
-
-
-
-    machine_production_10R140, op_production_10R140 = get_line_prod(
-        line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
-
-    context['codes_10R140'] = machine_production_10R140
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
-    part_list = ["50-3214", "50-5214"]
-    context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op_10R140'] = op_production_10R140
+#     line_spec_10R140 = [
+#         # OP 10
+#         ('1708L', ['1708L'], 2, 10),
+#         ('1708R', ['1708R'], 2, 10),
+#         # OP 20
+#         ('1709', ['1708L', '1708R'], 1, 20),
+#         # OP 30
+#         ('1710', ['1710'], 1, 30),
+#         # OP 40
+#         ('1711', ['1711'], 1, 40),
+#         # OP 50
+#         ('1715', ['1715'], 1, 50),
+#         # OP 60
+#         ('1717R', ['1717R'], 1, 60),
+#         # OP 70
+#         ('1706', ['1706'], 1, 70),
+#         # OP 80
+#         ('1720', ['1720'], 1, 80),
+#         # OP 90
+#         ('677', ['677'], 1, 90),
+#         ('748', ['748'], 1, 90),
+#         # OP 100
+#         ('1723', ['1723'], 1, 100),
+#         # Laser
+#         ('1725', ['1725'], 1, 130),
+#     ]
 
 
-    # -- surgical insertion for 10R140 OEE stuff --
-    op_actual_10R140, op_oee_10R140 = compute_op_actual_and_oee(
-        line_spec_10R140,
-        machine_production_10R140,
-        shift_start,
-        shift_time,
-        part_list=["50-3214", "50-5214"]
-    )
-    context['op_actual_10R140'] = op_actual_10R140
-    context['op_oee_10R140']    = op_oee_10R140
 
-    context['wip_10R140'] = []
+#     machine_production_10R140, op_production_10R140 = get_line_prod(
+#         line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
 
-    line_spec_8670 = [
-        # OP 10
-        ('1703L', ['1703L'], 4, 10), ('1704L', ['1704L'], 4, 10),
-        ('658', ['658'], 4, 10), ('661', ['661'], 4, 10),
-        ('622', ['622'], 4, 10),
-        # OP 20/30
-        ('1703R', ['1703R'], 4, 30), ('1704R', ['1704R'], 4, 30),
-        ('616', ['616'], 4, 30), ('623', ['623'], 4, 30),
-        ('617', ['617'], 4, 30),
-        # OP 40
-        ('1727', ['1727'], 1, 40),
-        # OP 50
-        ('659', ['659'], 2, 50), ('626', ['626'], 2, 50),
-        # OP 60
-        ('1712', ['1712'], 1, 60),
-        ('1716L', ['1716L'], 1, 70),
-        ('1719', ['1719'], 1, 80),
-        ('1723', ['1723'], 1, 90),
-        ('1750', ['1750'], 1, 130),
-        ('1724', ['1724'], 1, 130),
-        ('1725', ['1725'], 1, 130),
-    ]
+#     context['codes_10R140'] = machine_production_10R140
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
+#     part_list = ["50-3214", "50-5214"]
+#     context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op_10R140'] = op_production_10R140
 
 
-    machine_production_8670, op_production_8670 = get_line_prod(
-        line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
+#     # -- surgical insertion for 10R140 OEE stuff --
+#     op_actual_10R140, op_oee_10R140 = compute_op_actual_and_oee(
+#         line_spec_10R140,
+#         machine_production_10R140,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-3214", "50-5214"]
+#     )
+#     context['op_actual_10R140'] = op_actual_10R140
+#     context['op_oee_10R140']    = op_oee_10R140
 
-    context['codes'] = machine_production_8670
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
-    part_list = ["50-8670", "50-0450"]
-    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op'] = op_production_8670
+#     context['wip_10R140'] = []
 
-
-    # -- surgical insertion for 8670 OEE stuff --
-    op_actual_8670, op_oee_8670 = compute_op_actual_and_oee(
-        line_spec_8670,
-        machine_production_8670,
-        shift_start,
-        shift_time,
-        part_list=["50-8670", "50-0450"]
-    )
-    context['op_actual_8670'] = op_actual_8670
-    context['op_oee_8670']    = op_oee_8670
-
-
-    context['wip'] = []
-
-    line_spec_5401 = [
-        ('1740L', ['1740L'], 2, 10), ('1740R', ['1740R'], 2, 10),
-        ('1701L', ['1701L'], 2, 40), ('1701R', ['1701R'], 2, 40),
-        ('733', ['1701L', '1701R'], 1, 50),
-        ('775', ['775'], 2, 60), ('1702', ['1702'], 2, 60),
-        ('581', ['581'], 2, 70), ('788', ['788'], 2, 70),
-        ('1714', ['1714'], 1, 80),
-        ('1717L', ['1717L'], 1, 90),
-        ('1706', ['1706'], 1, 100),
-        ('1723', ['1723'], 1, 110),
-        ('1750', ['1750'], 1, 130),
-        ('1724', ['1724'], 1, 130),
-        ('1725', ['1725'], 1, 130),
-    ]
+#     line_spec_8670 = [
+#         # OP 10
+#         ('1703L', ['1703L'], 4, 10), ('1704L', ['1704L'], 4, 10),
+#         ('658', ['658'], 4, 10), ('661', ['661'], 4, 10),
+#         ('622', ['622'], 4, 10),
+#         # OP 20/30
+#         ('1703R', ['1703R'], 4, 30), ('1704R', ['1704R'], 4, 30),
+#         ('616', ['616'], 4, 30), ('623', ['623'], 4, 30),
+#         ('617', ['617'], 4, 30),
+#         # OP 40
+#         ('1727', ['1727'], 1, 40),
+#         # OP 50
+#         ('659', ['659'], 2, 50), ('626', ['626'], 2, 50),
+#         # OP 60
+#         ('1712', ['1712'], 1, 60),
+#         ('1716L', ['1716L'], 1, 70),
+#         ('1719', ['1719'], 1, 80),
+#         ('1723', ['1723'], 1, 90),
+#         ('1750', ['1750'], 1, 130),
+#         ('1724', ['1724'], 1, 130),
+#         ('1725', ['1725'], 1, 130),
+#     ]
 
 
-    machine_production_5401, op_production_5401 = get_line_prod(
-        line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
+#     machine_production_8670, op_production_8670 = get_line_prod(
+#         line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
 
-    context['codes_5401'] = machine_production_5401
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
-    part_list = ["50-5401", "50-0447"]
-    context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op_5401'] = op_production_5401
-
-
-    # -- surgical insertion for 5401 OEE stuff --
-    op_actual_5401, op_oee_5401 = compute_op_actual_and_oee(
-        line_spec_5401,
-        machine_production_5401,
-        shift_start,
-        shift_time,
-        part_list=["50-5401", "50-0447"]
-    )
-    context['op_actual_5401'] = op_actual_5401
-    context['op_oee_5401']    = op_oee_5401
+#     context['codes'] = machine_production_8670
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
+#     part_list = ["50-8670", "50-0450"]
+#     context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op'] = op_production_8670
 
 
-    context['wip_5401'] = []
-
-    line_spec_5404 = [
-        ('1705', ['1705L'], 2, 20), ('1746', ['1746R'], 2, 20),
-        ('621', ['621'], 2, 25), ('629', ['629'], 2, 25),
-        ('785', ['785'], 3, 30), ('1748', ['1748'],
-                                  3, 30), ('1718', ['1718'], 3, 30),
-        ('669', ['669'], 1, 35),
-        ('1726', ['1726'], 1, 40),
-        ('1722', ['1722'], 1, 50),
-        ('1713', ['1713'], 1, 60),
-        ('1716R', ['1716R'], 1, 70),
-        ('1719', ['1719'], 1, 80),
-        ('1723', ['1723'], 1, 90),
-        ('1750', ['1750'], 1, 130),
-        ('1724', ['1724'], 1, 130),
-        ('1725', ['1725'], 1, 130),
-    ]
+#     # -- surgical insertion for 8670 OEE stuff --
+#     op_actual_8670, op_oee_8670 = compute_op_actual_and_oee(
+#         line_spec_8670,
+#         machine_production_8670,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-8670", "50-0450"]
+#     )
+#     context['op_actual_8670'] = op_actual_8670
+#     context['op_oee_8670']    = op_oee_8670
 
 
-    target_production = 300
-    machine_production_5404, op_production_5404 = get_line_prod(
-        line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
+#     context['wip'] = []
 
-    context['codes_5404'] = machine_production_5404
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
-    part_list = ["50-5404", "50-0519"]
-    context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op_5404'] = op_production_5404
-
-
-    # -- surgical insertion for 5404 OEE stuff --
-    op_actual_5404, op_oee_5404 = compute_op_actual_and_oee(
-        line_spec_5404,
-        machine_production_5404,
-        shift_start,
-        shift_time,
-        part_list=["50-5404", "50-0519"]
-    )
-    context['op_actual_5404'] = op_actual_5404
-    context['op_oee_5404']    = op_oee_5404
+#     line_spec_5401 = [
+#         ('1740L', ['1740L'], 2, 10), ('1740R', ['1740R'], 2, 10),
+#         ('1701L', ['1701L'], 2, 40), ('1701R', ['1701R'], 2, 40),
+#         ('733', ['1701L', '1701R'], 1, 50),
+#         ('775', ['775'], 2, 60), ('1702', ['1702'], 2, 60),
+#         ('581', ['581'], 2, 70), ('788', ['788'], 2, 70),
+#         ('1714', ['1714'], 1, 80),
+#         ('1717L', ['1717L'], 1, 90),
+#         ('1706', ['1706'], 1, 100),
+#         ('1723', ['1723'], 1, 110),
+#         ('1750', ['1750'], 1, 130),
+#         ('1724', ['1724'], 1, 130),
+#         ('1725', ['1725'], 1, 130),
+#     ]
 
 
-    context['wip_5404'] = []
+#     machine_production_5401, op_production_5401 = get_line_prod(
+#         line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
 
-    # Date entry for History
-    if request.POST:
-        request.session["track_date"] = request.POST.get("date_st")
-        request.session["track_shift"] = request.POST.get("shift")
-        return render(request, 'redirect_cell_track_8670_history.html')
-    else:
-        form = sup_downForm()
-    args = {}
-    # args.update(csrf(request))
-    args['form'] = form
-    context['args'] = args
+#     context['codes_5401'] = machine_production_5401
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
+#     part_list = ["50-5401", "50-0447"]
+#     context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op_5401'] = op_production_5401
 
-    context['elapsed'] = time.time()-tic
-    return render(request, f'dashboards/{template}', context)
+
+#     # -- surgical insertion for 5401 OEE stuff --
+#     op_actual_5401, op_oee_5401 = compute_op_actual_and_oee(
+#         line_spec_5401,
+#         machine_production_5401,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-5401", "50-0447"]
+#     )
+#     context['op_actual_5401'] = op_actual_5401
+#     context['op_oee_5401']    = op_oee_5401
+
+
+#     context['wip_5401'] = []
+
+#     line_spec_5404 = [
+#         ('1705', ['1705L'], 2, 20), ('1746', ['1746R'], 2, 20),
+#         ('621', ['621'], 2, 25), ('629', ['629'], 2, 25),
+#         ('785', ['785'], 3, 30), ('1748', ['1748'],
+#                                   3, 30), ('1718', ['1718'], 3, 30),
+#         ('669', ['669'], 1, 35),
+#         ('1726', ['1726'], 1, 40),
+#         ('1722', ['1722'], 1, 50),
+#         ('1713', ['1713'], 1, 60),
+#         ('1716R', ['1716R'], 1, 70),
+#         ('1719', ['1719'], 1, 80),
+#         ('1723', ['1723'], 1, 90),
+#         ('1750', ['1750'], 1, 130),
+#         ('1724', ['1724'], 1, 130),
+#         ('1725', ['1725'], 1, 130),
+#     ]
+
+
+#     target_production = 300
+#     machine_production_5404, op_production_5404 = get_line_prod(
+#         line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
+
+#     context['codes_5404'] = machine_production_5404
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
+#     part_list = ["50-5404", "50-0519"]
+#     context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op_5404'] = op_production_5404
+
+
+#     # -- surgical insertion for 5404 OEE stuff --
+#     op_actual_5404, op_oee_5404 = compute_op_actual_and_oee(
+#         line_spec_5404,
+#         machine_production_5404,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-5404", "50-0519"]
+#     )
+#     context['op_actual_5404'] = op_actual_5404
+#     context['op_oee_5404']    = op_oee_5404
+
+
+#     context['wip_5404'] = []
+
+#     # Date entry for History
+#     if request.POST:
+#         request.session["track_date"] = request.POST.get("date_st")
+#         request.session["track_shift"] = request.POST.get("shift")
+#         return render(request, 'redirect_cell_track_8670_history.html')
+#     else:
+#         form = sup_downForm()
+#     args = {}
+#     # args.update(csrf(request))
+#     args['form'] = form
+#     context['args'] = args
+
+#     context['elapsed'] = time.time()-tic
+#     return render(request, f'dashboards/{template}', context)
 
 
 def track_graph_track(request, index):
