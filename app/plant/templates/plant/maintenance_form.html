@@ -135,112 +135,71 @@
     {% endif %}
   </form>
 
-  <!-- EDIT ENTRY MODAL -->
-  <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="editEntryModalLabel">Downtime Entry Details</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <form id="edit-entry-form" method="POST">
-          {% csrf_token %}
+    <!-- DETAILS ENTRY MODAL -->
+    <div class="modal fade" id="editEntryModal" tabindex="-1" aria-labelledby="editEntryModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editEntryModalLabel">Downtime Entry Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
           <div class="modal-body">
-            <!-- Hidden fields -->
-            <input type="hidden" id="edit-entry-id"    name="entry_id"      value="">
-            <input type="hidden" id="edit-employee-id" name="employee_id"   value="">
-            <input type="hidden" id="edit-labour-types-input" name="labour_types" value="[]">
+            {% csrf_token %}
+            <input type="hidden" id="edit-entry-id"            name="entry_id"      value="">
+            <input type="hidden" id="edit-employee-id"         name="employee_id"   value="">
+            <input type="hidden" id="edit-labour-types-input"  name="labour_types"  value="[]">
 
             <div class="row g-3">
               <div class="col-md-6">
                 <label for="edit-start-date" class="form-label">Date</label>
-                <input type="date" id="edit-start-date" name="start_date" class="form-control form-control-sm" required>
+                <input type="date" id="edit-start-date" class="form-control form-control-sm" readonly disabled>
               </div>
               <div class="col-md-6">
                 <label for="edit-start-time" class="form-label">Time</label>
-                <input type="time" id="edit-start-time" name="start_time" class="form-control form-control-sm" required>
+                <input type="time" id="edit-start-time" class="form-control form-control-sm" readonly disabled>
               </div>
               <div class="col-md-4">
                 <label for="edit-line-select" class="form-label">Line</label>
-                <select id="edit-line-select" name="line" class="form-select form-select-sm" required>
+                <select id="edit-line-select" class="form-select form-select-sm" disabled>
                   <option value="">Select Line</option>
                 </select>
               </div>
               <div class="col-md-4">
                 <label for="edit-machine-select" class="form-label">Machine</label>
-                <select id="edit-machine-select" name="machine" class="form-select form-select-sm" required disabled>
+                <select id="edit-machine-select" class="form-select form-select-sm" disabled>
                   <option value="">Select Machine</option>
                 </select>
               </div>
               <div class="col-md-4">
                 <label for="edit-category-select" class="form-label">Category</label>
-                <select id="edit-category-select" name="category" class="form-select form-select-sm" required disabled>
+                <select id="edit-category-select" class="form-select form-select-sm" disabled>
                   <option value="">Select Category</option>
                 </select>
               </div>
               <div class="col-md-6">
                 <label for="edit-subcategory-select" class="form-label">Sub-category</label>
-                <select id="edit-subcategory-select" name="subcategory" class="form-select form-select-sm" required disabled>
+                <select id="edit-subcategory-select" class="form-select form-select-sm" disabled>
                   <option value="">Select Subcategory</option>
                 </select>
               </div>
               <div class="col-md-6">
                 <label for="edit-description" class="form-label">Comment</label>
-                <textarea id="edit-description" name="description"
-                          class="form-control form-control-sm"
-                          rows="2" maxlength="5000" required></textarea>
+                <textarea id="edit-description" class="form-control form-control-sm"
+                          rows="2" maxlength="5000" readonly disabled></textarea>
               </div>
             </div>
-
-           
           </div>
           <div class="modal-footer">
             {% if user.is_authenticated %}
               <button type="button" id="delete-button" class="btn btn-danger">Delete</button>
             {% endif %}
-            <div class="ms-auto">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            </div>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- CLOSE-OUT MODAL -->
-  <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Close Out Downtime</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="closeout-form">
-            {% csrf_token %}
-            <input type="hidden" id="closeout-entry-id">
-            <div class="mb-3">
-              <label for="closeout-date" class="form-label">Date</label>
-              <input type="date" id="closeout-date" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label for="closeout-time" class="form-label">Time</label>
-              <input type="time" id="closeout-time" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label for="closeout-comment" class="form-label">What was done?</label>
-              <textarea id="closeout-comment" name="closeout_comment"
-                        class="form-control" rows="3" maxlength="2000" required></textarea>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" id="closeout-cancel" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" id="closeout-confirm" class="btn btn-info">Confirm</button>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- LABOUR-CHOICE MODAL -->
   <div class="modal fade" id="labourModal" tabindex="-1" aria-labelledby="labourModalLabel" aria-hidden="true">
@@ -511,19 +470,19 @@
 
     choices.editMachine.clearChoices()
       .setChoices(getMachines(lineVal),'value','label',true)
-      .enable()
+      .disable()
       .setChoiceByValue(machVal);
     edit.machineSelect.value = machVal;
 
     choices.editCat.clearChoices()
       .setChoices(getCats(),'value','label',true)
-      .enable()
+      .disable()
       .setChoiceByValue(catCode);
     edit.catSelect.value = catCode;
 
     choices.editSub.clearChoices()
       .setChoices(getSubs(catCode),'value','label',true)
-      .enable()
+      .disable()
       .setChoiceByValue(subCode);
     edit.subSelect.value = subCode;
 
