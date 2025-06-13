@@ -1991,9 +1991,9 @@ def machine_history(request):
         payload.append({
             "id": e.id,
             "start_epoch": e.start_epoch,
-            "start_display": e.start_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "start_display": e.start_at.strftime("%Y-%m-%d %H:%M"),
             "closeout_epoch": e.closeout_epoch,
-            "closeout_display": e.closeout_at.strftime("%Y-%m-%d %H:%M:%S") if e.closeout_at else None,
+            "closeout_display": e.closeout_at.strftime("%Y-%m-%d %H:%M") if e.closeout_at else None,
             "category": e.category,
             "subcategory": e.subcategory,
             "code": e.code,
