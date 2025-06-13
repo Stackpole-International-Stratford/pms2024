@@ -1964,6 +1964,45 @@ def downtime_codes_delete(request, pk):
 @require_POST
 @csrf_exempt
 def machine_history(request):
+    machine = request.POST.get("machine", "").strip()
+    if not machine:
+        return JsonResponse({"error": "Machine parameter is required."}, status=400)
+
+    # fetch last 500 non-deleted events for that machine
+    events = (
+        MachineDowntimeEvent.objects
+        .filter(machine=machine, is_deleted=False)
+        .order_by("-start_epoch")[:500]
+    )
+
+    payload = []
+    for e in events:
+        parts = []
+        for p in e.participants.all().order_by("join_epoch"):
+            parts.append({
+                "user": p.user.get_full_name() or p.user.username,
+                "join_epoch": p.join_epoch,
+                "leave_epoch": p.leave_epoch,
+                "join_comment": p.join_comment,
+                "leave_comment": p.leave_comment,
+                "total_minutes": p.total_minutes,
+            })
+
+        payload.append({
+            "id": e.id,
+            "start_epoch": e.start_epoch,
+            "start_display": e.start_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "closeout_epoch": e.closeout_epoch,
+            "closeout_display": e.closeout_at.strftime("%Y-%m-%d %H:%M:%S") if e.closeout_at else None,
+            "category": e.category,
+            "subcategory": e.subcategory,
+            "code": e.code,
+            "comment": e.comment,
+            "closeout_comment": e.closeout_comment,
+            "participations": parts,
+        })
+
+    return JsonResponse({"events": payload})
 
 
 
