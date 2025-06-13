@@ -1222,35 +1222,12 @@ function initActiveBulkToggle(){
 /* ------------------------------------------------------------------
  *  MACHINE HISTORY little helper (no changes)
  * ------------------------------------------------------------------ */
-function initMachineHistory(){
-  const outer = $('#machineHistoryModal');
-  const dialog= outer.querySelector('.modal-dialog');
-  const body  = outer.querySelector('.modal-body');
-  const form  = $('#machineHistoryForm');
-  const bs    = new bootstrap.Modal(outer);
 
-  $('#machine-history-btn').onclick = ()=>{
-    dialog.classList.remove('modal-xl','modal-dialog-scrollable');
-    body.innerHTML = form.innerHTML;             // reset fields
-    outer.querySelector('[type=submit]').classList.remove('d-none');
-    bs.show();
-  };
 
-  form.onsubmit = e=>{
-    e.preventDefault();
-    const machine = $('#machine-input').value.trim(); if(!machine) return;
-    jsonFetch(URLS.machineHistory,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-      body:JSON.stringify({machine})
-    }).then(d=>{
-      if(d.status!=='ok') throw Error(d.message);
-      dialog.classList.add('modal-xl','modal-dialog-scrollable');
-      body.innerHTML = `<div class="overflow-auto" style="max-height:75vh"><div class="table-responsive">${d.html}</div></div>`;
-      outer.querySelector('[type=submit]').classList.add('d-none');
-    }).catch(()=> body.innerHTML='<div class="alert alert-danger">Load failed</div>');
-  };
-}
+
+
+
+ 
 
 /* ------------------------------------------------------------------
  *  JOB FILTER  (simple text box)

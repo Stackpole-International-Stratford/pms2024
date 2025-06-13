@@ -1964,49 +1964,6 @@ def downtime_codes_delete(request, pk):
 @require_POST
 @csrf_exempt
 def machine_history(request):
-    """
-    AJAX endpoint: receives {"machine": "..."} and returns
-    a rendered HTML accordion of that machine’s last 500 downtime events.
-    """
-    try:
-        payload = json.loads(request.body.decode())
-        machine = payload.get('machine')
-
-        events = (
-            MachineDowntimeEvent.objects
-            .filter(machine=machine, is_deleted=False)
-            .order_by('-start_epoch')[:500]
-            .prefetch_related('participants__user')
-        )
-
-        # ─────── DEBUG OUTPUT ───────
-        for ev in events:
-            # prints to stdout if you're running runserver,
-            # or send to your logging backend if configured
-            print(
-                f"[machine_history] event_id={ev.id!r} "
-                f"comment={ev.comment!r} "
-                f"closeout_comment={ev.closeout_comment!r}"
-            )
-            # fallback print() if you don't have logging set up:
-            print(
-                f"[machine_history DEBUG] "
-                f"id={ev.id}, "
-                f"comment={ev.comment!r}, "
-                f"closeout_comment={ev.closeout_comment!r}"
-            )
-        # ────────────────────────────
-
-        html = render_to_string(
-            'maintenance/snippets/machine_history.html',
-            {'events': events},
-            request=request
-        )
-        return JsonResponse({'status': 'ok', 'html': html})
-
-    except Exception as e:
-        print("Error in machine_history")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 
