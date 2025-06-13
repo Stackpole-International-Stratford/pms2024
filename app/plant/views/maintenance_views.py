@@ -153,8 +153,6 @@ lines_untracked = [
                     {"number": "658", "target": 27496,},
                     {"number": "661", "target": 27496,},
                     {"number": "622", "target": 27496,},
-                    {"number": "1703L", "target": 27496,},
-                    {"number": "1704L", "target": 27496,},
 
                 ],
             },

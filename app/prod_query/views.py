@@ -1939,6 +1939,13 @@ lines = [
                 "machines": [
                     {"number": "1703R", "target": 1925},
                     {"number": "1704R", "target": 1925},
+                ],
+            },
+            {
+                "op": "20/30",
+                "machines": [
+                    {"number": "1703L", "target": 1925},
+                    {"number": "1704L", "target": 1925},
                     {"number": "616", "target": 1050},
                     {"number": "623", "target": 1050},
                     {"number": "617", "target": 1050},
