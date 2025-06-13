@@ -433,7 +433,7 @@ lines_untracked = [
       "op": "20",
       "machines": [
         { "number": "772",  "target": 27496, },
-        { "number": "774",  "target": 27496, }
+        { "number": "774",  "target": 27496, },
       ]
     },
     {
