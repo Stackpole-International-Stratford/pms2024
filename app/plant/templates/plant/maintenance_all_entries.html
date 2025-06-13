@@ -1256,8 +1256,8 @@ function initActiveBulkToggle(){
  *  MACHINE HISTORY little helper (no changes)
  * ------------------------------------------------------------------ */
 document.addEventListener('DOMContentLoaded', () => {
-  const lookupModal  = new bootstrap.Modal('#machineHistoryModal');
-  const resultsModal = new bootstrap.Modal('#machineHistoryResultsModal');
+ const lookupModal  = new bootstrap.Modal(document.getElementById('machineHistoryModal'));
+ const resultsModal = new bootstrap.Modal(document.getElementById('machineHistoryResultsModal'));
 
   const form      = document.getElementById('machineHistoryForm');
   const statusBox = document.getElementById('mh-status');
