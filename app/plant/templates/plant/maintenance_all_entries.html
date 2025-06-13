@@ -825,64 +825,78 @@ Add New or Update Employee
 
 
 
-<!----------------- BEGIN new maintenance.js 2025-06-12 ----------------->
+<!----------------- BEGIN new maintenance.js  2025-06-13 ----------------->
 <script>
 /* ------------------------------------------------------------------
- *  GLOBAL CONSTANTS
+ *  MODULE-LEVEL GUARD – makes sure the script is initialised only once,
+ *  even if the HTML fragment is hot-reloaded or re-included.
  * ------------------------------------------------------------------ */
-const IS_MANAGER     = {{ is_manager|yesno:"true,false" }};
-const IS_SUPERVISOR  = {{ is_supervisor|yesno:"true,false" }};
-const CURRENT_USER   = "{{ request.user.username }}";
-const CSRF_TOKEN     = document.querySelector('[name=csrfmiddlewaretoken]').value;
+if (!window.__maintenanceScriptInit) {
+  window.__maintenanceScriptInit = true;         //  ← latch
+
+/* ------------------------------------------------------------------
+ *  GLOBAL CONSTANTS (template vars are expanded server-side)
+ * ------------------------------------------------------------------ */
+const IS_MANAGER    = {{ is_manager|yesno:"true,false" }};
+const IS_SUPERVISOR = {{ is_supervisor|yesno:"true,false" }};
+const CURRENT_USER  = "{{ request.user.username }}";
+const CSRF_TOKEN    = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
 const URLS = {
-  edit          : "{% url 'maintenance_edit' %}",
-  update        : "{% url 'maintenance_update_event' %}",
-  closeout      : "{% url 'closeout_downtime_entry' %}",
-  loadMore      : "{% url 'load_more_downtime_entries' %}",
-  join          : "{% url 'join_downtime_event' %}",
-  leave         : "{% url 'leave_downtime_event' %}",
-  history       : id => `/plant/downtime/${id}/history/`,
-  forceLeave    : id => `/plant/downtime/participation/${id}/force-leave/`,
-  bulkToggleActive  : "{% url 'bulk_toggle_active' %}",
-  machineHistory: "{% url 'machine_history' %}",
-  targetLines   : "{% url 'target_lines' %}"
+  edit             : "{% url 'maintenance_edit' %}",
+  update           : "{% url 'maintenance_update_event' %}",
+  closeout         : "{% url 'closeout_downtime_entry' %}",
+  loadMore         : "{% url 'load_more_downtime_entries' %}",
+  join             : "{% url 'join_downtime_event' %}",
+  leave            : "{% url 'leave_downtime_event' %}",
+  history          : id => `/plant/downtime/${id}/history/`,
+  forceLeave       : id => `/plant/downtime/participation/${id}/force-leave/`,
+  bulkToggleActive : "{% url 'bulk_toggle_active' %}",
+  machineHistory   : "{% url 'machine_history' %}",
+  targetLines      : "{% url 'target_lines' %}"
 };
 
 /* ------------------------------------------------------------------
- *  UTILITY FUNCTIONS
+ *  UTILITY HELPERS
  * ------------------------------------------------------------------ */
-const $          = sel => document.querySelector(sel);
-const $$         = sel => document.querySelectorAll(sel);
-const jsonFetch  = (url, opts={}) => fetch(url, opts).then(r => r.ok ? r.json() : Promise.reject(r));
-const nowISODate = () => new Date().toISOString().slice(0,10);
-const pad2       = n => String(n).padStart(2,'0');
-const nowISOTime = () => { const d=new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
-const nowLocalDT = () => { const d=new Date(); return `${nowISODate()}T${nowISOTime()}`; };
+const $  = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
 
-/* ------------------------------------------------------------------
- *  CLOSE-OUT / EDIT  (modal: #closeoutModal)
- * ------------------------------------------------------------------ */
-function initCloseoutModal(){
-  const modalEl      = $('#closeoutModal');
-  const bsModal      = new bootstrap.Modal(modalEl);
-  const idIn         = $('#closeout-entry-id');
-  const lineSel      = $('#closeout-line');
-  const machineSel   = $('#closeout-machine');
-  const catSel       = $('#closeout-category');
-  const subcatSel    = $('#closeout-subcategory');
-  const startDate    = $('#closeout-start-date');
-  const startTime    = $('#closeout-start-time');
-  const origComm     = $('#closeout-original-comment');
-  const closeDate    = $('#closeout-date');
-  const closeTime    = $('#closeout-time');
-  const closeComm    = $('#closeout-comment');
-  const btnSave      = $('#closeout-save');
-  const btnConfirm   = $('#closeout-confirm');
+const jsonFetch = (url, opts = {}) =>
+  fetch(url, opts).then(r => (r.ok ? r.json() : Promise.reject(r)));
 
-  const populate = (sel, list, simple=false, ph='— Select —') => {
+const pad2 = n => String(n).padStart(2, '0');
+const isoDate = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const isoTime = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const nowISODate = () => isoDate(new Date());
+const nowISOTime = () => isoTime(new Date());
+const nowLocalDT = () => `${nowISODate()}T${nowISOTime()}`;
+
+/* ==================================================================
+ *  CLOSE-OUT / EDIT  (modal #closeoutModal)
+ * ================================================================== */
+function initCloseoutModal () {
+  const modalEl = $('#closeoutModal');           if (!modalEl) return;
+  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  /* —— fields ------------------------------------------------------ */
+  const idIn       = $('#closeout-entry-id');
+  const lineSel    = $('#closeout-line');
+  const machineSel = $('#closeout-machine');
+  const catSel     = $('#closeout-category');
+  const subcatSel  = $('#closeout-subcategory');
+  const startDate  = $('#closeout-start-date');
+  const startTime  = $('#closeout-start-time');
+  const origComm   = $('#closeout-original-comment');
+  const closeDate  = $('#closeout-date');
+  const closeTime  = $('#closeout-time');
+  const closeComm  = $('#closeout-comment');
+  const btnSave    = $('#closeout-save');
+  const btnConfirm = $('#closeout-confirm');
+
+  const populate = (sel, list, simple = false, ph = '— Select —') => {
     sel.innerHTML = `<option value="" disabled selected>${ph}</option>`;
-    list.forEach(item=>{
+    list.forEach(item => {
       sel.insertAdjacentHTML(
         'beforeend',
         simple
@@ -892,304 +906,330 @@ function initCloseoutModal(){
     });
   };
 
-  /* fetch + open */
-  $$('.closeout-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
+  /* —— open modal with AJAX data ---------------------------------- */
+  $$('.closeout-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
       idIn.value = btn.dataset.entryId;
-      jsonFetch(URLS.edit,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-        body:JSON.stringify({entry_id:idIn.value})
-      }).then(data=>{
-        /* populate lines / machines */
-        populate(lineSel,data.lines,true,'— Select line —');
-        const setMachines = ()=>{
-          const blk = data.lines_data.find(l=>l.line===lineSel.value) || {operations:[]};
-          const machines = blk.operations.flatMap(op=>op.machines.map(m=>m.number));
-          populate(machineSel,machines,true,'— Select machine —');
+      jsonFetch(URLS.edit, {
+        method : 'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
+        body   : JSON.stringify({entry_id: idIn.value})
+      })
+      .then(data => {
+        /* --- lines & machines ------------------------------------ */
+        populate(lineSel, data.lines, true, '— Select line —');
+        const setMachines = () => {
+          const blk = data.lines_data.find(l => l.line === lineSel.value) || {operations: []};
+          const machines = blk.operations.flatMap(op => op.machines.map(m => m.number));
+          populate(machineSel, machines, true, '— Select machine —');
         };
-        lineSel.value = data.line;  setMachines(); machineSel.value = data.machine;
-        lineSel.onchange = ()=>{ setMachines(); machineSel.value=''; };
+        lineSel.value = data.line; setMachines(); machineSel.value = data.machine;
+        lineSel.onchange = () => { setMachines(); machineSel.value = ''; };
 
-        /* populate categories / subcats */
-        populate(catSel,data.categories,false);
-        catSel.value = data.category_code || data.categories.find(c=>c.name===data.category_name)?.code || '';
+        /* --- category & sub-category ----------------------------- */
+        populate(catSel, data.categories, false);
+        catSel.value =
+          data.category_code ||
+          data.categories.find(c => c.name === data.category_name)?.code || '';
 
-        // NEW: if nothing matched, fall back to comparing visible option text
+        /* fall-back: compare option text (legacy rows) */
         if (!catSel.value && data.category_name) {
           [...catSel.options].forEach(opt => {
-            if (opt.text.trim().toLowerCase() ===
-                data.category_name.trim().toLowerCase()) {
+            if (opt.text.trim().toLowerCase() === data.category_name.trim().toLowerCase()) {
               catSel.value = opt.value;
             }
           });
         }
-        const setSubcats = ()=>{
-          const scs = data.subcategories
-              .filter(s=>s.parent===catSel.value)
-              .map(s=>({code:s.code,name:s.name}));
-          if(data.subcategory_code==='NOTSELECTED') scs.unshift({code:'NOTSELECTED',name:'Not Selected'});
-          populate(subcatSel,scs,false,'— Select subcategory —');
+
+        const setSubcats = () => {
+          const subs = data.subcategories
+            .filter(s => s.parent === catSel.value)
+            .map(s => ({code: s.code, name: s.name}));
+          if (data.subcategory_code === 'NOTSELECTED') {
+            subs.unshift({code: 'NOTSELECTED', name: 'Not Selected'});
+          }
+          populate(subcatSel, subs, false, '— Select subcategory —');
         };
         setSubcats(); subcatSel.value = data.subcategory_code || '';
-        catSel.onchange = ()=>{ setSubcats(); subcatSel.value=''; };
+        catSel.onchange = () => { setSubcats(); subcatSel.value = ''; };
 
-        /* dates / comments */
-        startDate.value = data.start_date;  startTime.value = data.start_time;
+        /* --- times & comments ------------------------------------ */
+        startDate.value = data.start_date;
+        startTime.value = data.start_time;
         origComm.value  = data.comment;
-        closeDate.value = nowISODate();     closeTime.value = nowISOTime();  closeComm.value='';
+        closeDate.value = nowISODate();
+        closeTime.value = nowISOTime();
+        closeComm.value = '';
 
-        /* labour checkboxes */
-        $$('.closeout-labour-checkbox').forEach(cb=>cb.checked=false);
-        (data.labour_types||[]).forEach(c=>$('#closeout-labour-'+c)?.click());
+        /* --- labour check-boxes ---------------------------------- */
+        $$('.closeout-labour-checkbox').forEach(cb => cb.checked = false);
+        (data.labour_types || []).forEach(c =>
+          $('#closeout-labour-' + c)?.click());
 
         bsModal.show();
-      }).catch(()=>alert('Could not load event details.'));
+      })
+      .catch(() => alert('Could not load event details.'));
     });
   });
 
-  /* save-only */
-  btnSave.onclick = ()=> doUpdate(false);
-  /* save-and-close */
-  btnConfirm.onclick = ()=> doUpdate(true);
+  /* —— Save buttons ------------------------------------------------ */
+  btnSave.onclick    = () => doUpdate(false);   // save only
+  btnConfirm.onclick = () => doUpdate(true);    // save & close
 
-  function gatherPayload(){
+  function gatherPayload () {
     return {
-      entry_id:idIn.value,
-      line:lineSel.value,
-      machine:machineSel.value,
-      category:catSel.value,
-      subcategory:subcatSel.value,
-      start_at:`${startDate.value} ${startTime.value}`,
-      comment:origComm.value.trim(),
-      labour_types:[...$$('.closeout-labour-checkbox')].filter(c=>c.checked).map(c=>c.value)
+      entry_id    : idIn.value,
+      line        : lineSel.value,
+      machine     : machineSel.value,
+      category    : catSel.value,
+      subcategory : subcatSel.value,
+      start_at    : `${startDate.value} ${startTime.value}`,
+      comment     : origComm.value.trim(),
+      labour_types: [...$$('.closeout-labour-checkbox')]
+                     .filter(c => c.checked)
+                     .map(c => c.value)
     };
   }
 
-  function doUpdate(andClose){
-    if(!catSel.value||!subcatSel.value){alert('Pick category & subcategory');return;}
-    if(andClose && !closeComm.value.trim()){alert('Close-out comment required');return;}
+  function doUpdate (andClose) {
+    if (!catSel.value || !subcatSel.value) {
+      alert('Pick category & subcategory'); return;
+    }
+    if (andClose && !closeComm.value.trim()) {
+      alert('Close-out comment required'); return;
+    }
 
-    jsonFetch(URLS.update,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-      body:JSON.stringify(gatherPayload())
-    }).then(()=>{
-      if(!andClose){ bsModal.hide(); location.reload(); return; }
-      return jsonFetch(URLS.closeout,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-        body:JSON.stringify({
-          entry_id:idIn.value,
-          closeout:`${closeDate.value} ${closeTime.value}`,
-          closeout_comment:closeComm.value.trim()
+    jsonFetch(URLS.update, {
+      method : 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
+      body   : JSON.stringify(gatherPayload())
+    })
+    .then(() => {
+      if (!andClose) { bsModal.hide(); location.reload(); return; }
+
+      return jsonFetch(URLS.closeout, {
+        method : 'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
+        body   : JSON.stringify({
+          entry_id        : idIn.value,
+          closeout        : `${closeDate.value} ${closeTime.value}`,
+          closeout_comment: closeComm.value.trim()
         })
       });
-    }).then(()=>{location.reload();})
-      .catch(e=>{
-        if(e.status===403) alert('All participants must leave first');
-        else               alert('Save / close-out failed. Did you choose a subcategory?');
-      });
+    })
+    .then(() => location.reload())
+    .catch(e => {
+      if (e.status === 403) alert('All participants must leave first');
+      else                  alert('Save / close-out failed. Did you pick a sub-category?');
+    });
   }
 }
 
-/* ------------------------------------------------------------------
- *  LABOUR HISTORY (modal: #historyModal)
- * ------------------------------------------------------------------ */
-function initLabourHistory(){
-  const histModal  = new bootstrap.Modal($('#historyModal'));
-  const joinModal  = new bootstrap.Modal($('#joinModal'));
-  const leaveModal = new bootstrap.Modal($('#leaveModal'));
-  const forceModal = new bootstrap.Modal($('#forceLeaveModal'));
+/* ==================================================================
+ *  LABOUR-HISTORY  (modal #historyModal)
+ * ================================================================== */
+function initLabourHistory () {
+  if (window.__labourHistInit) return;      // one-time guard
+  window.__labourHistInit = true;
 
-  const tbody      = $('#history-body');
-  const joinBtn    = $('#history-join-btn');
-  const leaveBtn   = $('#history-leave-btn');
-  const forceCmt   = $('#force-comment');
-  const forcePid   = $('#force-participation-id');
+  /* —— modal handles (cached) -------------------------------------- */
+  const histModal  = bootstrap.Modal.getOrCreateInstance($('#historyModal'));
+  const joinModal  = bootstrap.Modal.getOrCreateInstance($('#joinModal'));
+  const leaveModal = bootstrap.Modal.getOrCreateInstance($('#leaveModal'));
+  const forceModal = bootstrap.Modal.getOrCreateInstance($('#forceLeaveModal'));
 
-  /* helper to build one <tr> */
-  const trHTML = p=>{
+  const tbody    = $('#history-body');
+  const joinBtn  = $('#history-join-btn');
+  const leaveBtn = $('#history-leave-btn');
+  const forcePid = $('#force-participation-id');
+  const forceCmt = $('#force-comment');
+  const forceDT  = $('#force-datetime');
+
+  /* —— <tr> builder ------------------------------------------------- */
+  const trHTML = p => {
     const roles = p.roles.length
-      ? p.roles.map(r=>`<span class="badge bg-secondary me-1">${r}</span>`).join('')
+      ? p.roles.map(r => `<span class="badge bg-secondary me-1">${r}</span>`).join('')
       : '<span class="text-muted">—</span>';
-    const needForce = (IS_MANAGER||IS_SUPERVISOR) && !p.leave_at;
+    const needForce = (IS_MANAGER || IS_SUPERVISOR) && !p.leave_at;
     return `<tr>
       <td>${p.user}</td>
       <td>${roles}</td>
       <td>${p.join_at}</td>
       <td>${p.join_comment}</td>
-      <td>${p.leave_at||'—'}</td>
+      <td>${p.leave_at || '—'}</td>
       <td>${p.leave_comment}</td>
       <td>${p.total_minutes}</td>
-      ${needForce?`<td><button class="btn btn-sm btn-outline-danger force-leave-btn" data-pid="${p.id}">Leave</button></td>`:'<td></td>'}
+      <td>${needForce
+             ? `<button class="btn btn-sm btn-outline-danger force-leave-btn"
+                        data-pid="${p.id}">Leave</button>` : ''}</td>
     </tr>`;
   };
 
-  /* event-delegation open */
-  document.addEventListener('click',e=>{
-    const labBtn = e.target.closest('.labour-btn');
-    if(!labBtn) return;
-    const eventId = labBtn.dataset.eventId;
+  /* —— open modal --------------------------------------------------- */
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.labour-btn');
+    if (!btn) return;
 
-    jsonFetch(URLS.history(eventId)).then(data=>{
-      tbody.innerHTML = data.history.map(trHTML).join('');
-      const meOpen = data.history.some(h=>h.user===CURRENT_USER && !h.leave_at);
-      joinBtn.style.display  = meOpen ? 'none'        : 'inline-block';
-      leaveBtn.style.display = meOpen ? 'inline-block': 'none';
-      joinBtn.dataset.eid  = leaveBtn.dataset.eid = eventId;
-      histModal.show();
-    }).catch(()=>alert('Could not load history'));
+    const eventId = btn.dataset.eventId;
+    jsonFetch(URLS.history(eventId))
+      .then(data => {
+        /* show the event’s own notes (HTML must contain those spans) */
+        $('#hist-event-cmt').textContent    = data.event_comment   || '—';
+        $('#hist-closeout-cmt').textContent = data.closeout_comment || '—';
+
+        tbody.innerHTML = data.history.map(trHTML).join('');
+
+        const meOpen = data.history.some(h =>
+          h.user === CURRENT_USER && !h.leave_at);
+
+        joinBtn.classList.toggle('d-none', meOpen);
+        leaveBtn.classList.toggle('d-none', !meOpen);
+
+        joinBtn.dataset.eid = leaveBtn.dataset.eid = eventId;
+        histModal.show();
+      })
+      .catch(() => alert('Could not load history'));
   });
 
-  /* join / leave (self) */
-  joinBtn.onclick = ()=>{ $('#join-event-id').value = joinBtn.dataset.eid;
-                          $('#join-datetime').value = nowLocalDT();
-                          $('#join-comment').value  = 'Assess the situation';
-                          histModal.hide(); joinModal.show(); };
-  leaveBtn.onclick= ()=>{ $('#leave-event-id').value = leaveBtn.dataset.eid;
-                          $('#leave-datetime').value= nowLocalDT();
-                          $('#leave-comment').value = '';
-                          histModal.hide(); leaveModal.show(); };
+  /* —— join / leave (self) ----------------------------------------- */
+  joinBtn.onclick = () => {
+    $('#join-event-id').value = joinBtn.dataset.eid;
+    $('#join-datetime').value = nowLocalDT();
+    $('#join-comment').value  = 'Assess the situation';
+    histModal.hide(); joinModal.show();
+  };
 
-  /* confirm join */
-  $('#join-confirm-btn').onclick = ()=>{
+  leaveBtn.onclick = () => {
+    $('#leave-event-id').value = leaveBtn.dataset.eid;
+    $('#leave-datetime').value = nowLocalDT();
+    $('#leave-comment').value  = '';
+    histModal.hide(); leaveModal.show();
+  };
+
+  $('#join-confirm-btn').onclick = () => {
     const note = $('#join-comment').value.trim();
-    if(!note) return alert('Please enter an action plan');
-    jsonFetch(URLS.join,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-      body:JSON.stringify({
-        event_id:$('#join-event-id').value,
-        join_comment:note,
-        join_datetime:$('#join-datetime').value
+    if (!note) { alert('Please enter an action plan'); return; }
+
+    jsonFetch(URLS.join, {
+      method : 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
+      body   : JSON.stringify({
+        event_id     : $('#join-event-id').value,
+        join_comment : note,
+        join_datetime: $('#join-datetime').value
       })
-    }).then(()=>location.reload())
-      .catch(()=>alert('Join failed'));
+    })
+    .then(() => location.reload())
+    .catch(() => alert('Join failed'));
   };
 
-  /* confirm self leave */
-  $('#leave-confirm-btn').onclick = ()=>{
+  $('#leave-confirm-btn').onclick = () => {
     const note = $('#leave-comment').value.trim();
-    if(!note) return alert('Describe what you did');
-    jsonFetch(URLS.leave,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-      body:JSON.stringify({
-        event_id:$('#leave-event-id').value,
-        leave_comment:note,
-        leave_datetime:$('#leave-datetime').value
+    if (!note) { alert('Describe what you did'); return; }
+
+    jsonFetch(URLS.leave, {
+      method : 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
+      body   : JSON.stringify({
+        event_id      : $('#leave-event-id').value,
+        leave_comment : note,
+        leave_datetime: $('#leave-datetime').value
       })
-    }).then(()=>location.reload())
-      .catch(()=>alert('Leave failed'));
+    })
+    .then(() => location.reload())
+    .catch(() => alert('Leave failed'));
   };
 
-  /* --- FORCE-LEAVE --------------------------------------------------- */
-  document.addEventListener('click',e=>{
+  /* —— force-leave (mgr / sup) ------------------------------------- */
+  document.addEventListener('click', e => {
     const fBtn = e.target.closest('.force-leave-btn');
-    if(!fBtn) return;
-    forcePid.value = fBtn.dataset.pid;  forceCmt.value='';
+    if (!fBtn) return;
+    forcePid.value = fBtn.dataset.pid;
+    forceCmt.value = '';
+    forceDT.value  = nowLocalDT();
     forceModal.show();
   });
 
-  /* --- inside initLabourHistory() --- */
   $('#force-confirm-btn').onclick = () => {
     const note = forceCmt.value.trim();
     if (!note) { alert('Comment required'); return; }
 
-    /* NEW ---------------------------------------------------- */
-    const whenVal = $('#force-datetime').value || nowLocalDT();   // default “now”
-    /* -------------------------------------------------------- */
-
     jsonFetch(URLS.forceLeave(forcePid.value), {
       method : 'POST',
-      headers: {'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
       body   : JSON.stringify({
         leave_comment : note,
-        leave_datetime: whenVal        /*  ← NEW  */
+        leave_datetime: forceDT.value || nowLocalDT()
       })
     })
-    .then(()=>location.reload())
-    .catch(()=>alert('Force leave failed'));
+    .then(() => location.reload())
+    .catch(() => alert('Force leave failed'));
   };
-
-  /* set default each time modal opens */
-  document.addEventListener('click', e => {
-    const fBtn = e.target.closest('.force-leave-btn');
-    if (!fBtn) return;
-    forcePid.value         = fBtn.dataset.pid;
-    $('#force-comment').value = '';
-    $('#force-datetime').value = nowLocalDT();   // NEW
-    forceModal.show();
-  });
-
 }
 
-
-
-
-
-
-/* ------------------------------------------------------------------
- *  ROW CLICK → open close-out (hidden .closeout-btn)
- * ------------------------------------------------------------------ */
-function initRowShortcut(){
-  $$('.editable-row').forEach(row=>{
-    row.addEventListener('click',e=>{
-      if(e.target.closest('.labour-btn')) return;          // ignore labour-btn clicks
+/* ==================================================================
+ *  ROW-CLICK SHORTCUT → hidden .closeout-btn
+ * ================================================================== */
+function initRowShortcut () {
+  $$('.editable-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.labour-btn')) return;      // ignore “labour” btns
       row.querySelector('.closeout-btn')?.click();
     });
   });
 }
 
-/* ------------------------------------------------------------------
- *  LOAD-MORE
- * ------------------------------------------------------------------ */
-function initLoadMore(pageSize){
-  const btn = $('#load-more-btn'); if(!btn) return;
+/* ==================================================================
+ *  LOAD-MORE (pagination)
+ * ================================================================== */
+function initLoadMore (pageSize) {
+  const btn = $('#load-more-btn');   if (!btn) return;
   let offset = pageSize;
 
-  const rowHTML = e=>`
-    <tr class="${e.closeout_at?'':'table-warning'} editable-row" data-entry-id="${e.id}">
+  const rowHTML = e => `
+    <tr class="${e.closeout_at ? '' : 'table-warning'} editable-row"
+        data-entry-id="${e.id}">
       <td>${e.start_display}</td>
-      <td>${e.closeout_at||`<button class="btn btn-sm btn-info closeout-btn" data-entry-id="${e.id}">Close out</button>`}</td>
+      <td>${e.closeout_at || `<button class="btn btn-sm btn-info closeout-btn"
+                       data-entry-id="${e.id}">Close out</button>`}</td>
       <td>${e.line}</td>
       <td>${e.machine}</td>
       <td><span class="badge bg-dark">${e.category}</span></td>
       <td><span class="badge bg-secondary">${e.subcategory}</span></td>
       <td>${
-        (e.labour_types||[]).length
-          ? e.labour_types.map(c=>`<button class="btn ${e.being_worked_on?'btn-dark':'btn-outline-dark'} btn-sm labour-btn me-1" data-event-id="${e.id}" data-role="${c}">${c}</button>`).join('')
+        (e.labour_types || []).length
+          ? e.labour_types.map(c =>
+              `<button class="btn ${e.being_worked_on ? 'btn-dark' : 'btn-outline-dark'}
+                       btn-sm labour-btn me-1"
+                       data-event-id="${e.id}" data-role="${c}">${c}</button>`).join('')
           : '<span class="text-muted">—</span>'
       }</td>
       <td>${e.comment}</td>
     </tr>`;
 
-  btn.onclick = ()=>{
+  btn.onclick = () => {
     btn.disabled = true;
     jsonFetch(`${URLS.loadMore}?offset=${offset}`)
-      .then(data=>{
+      .then(data => {
         offset += pageSize;
         const tbody = document.querySelector('table tbody');
-        tbody.insertAdjacentHTML('beforeend',data.entries.map(rowHTML).join(''));
-        if(!data.has_more) btn.remove(); else btn.disabled=false;
-        initRowShortcut();              // new rows
+        tbody.insertAdjacentHTML('beforeend', data.entries.map(rowHTML).join(''));
+
+        if (!data.has_more) btn.remove(); else btn.disabled = false;
+        initRowShortcut();          // activate new rows
       })
-      .catch(()=>{alert('Load failed');btn.disabled=false;});
+      .catch(() => { alert('Load failed'); btn.disabled = false; });
   };
 }
 
-/* ------------------------------------------------------------------
- *  ACTIVE-LIST bulk save (manager / supervisor)
- * ------------------------------------------------------------------ */
-function initActiveBulkToggle(){
-  const saveBtn = $('#active-save-btn');
-  if (!saveBtn) return;                    // non-manager view = no-op
-
-  const cbs = [...$$('.active-checkbox')]; // static NodeList is fine
+/* ==================================================================
+ *  ACTIVE-LIST BULK TOGGLE (mgr / sup)
+ * ================================================================== */
+function initActiveBulkToggle () {
+  const saveBtn = $('#active-save-btn');           if (!saveBtn) return;
+  const cbs = [...$$('.active-checkbox')];
   cbs.forEach(cb => cb.dataset.orig = cb.checked ? '1' : '0');
 
-  /* keep accordion reopen behaviour */
   const collapse = $('#activeListCollapse');
   const rememberOpen = () =>
     localStorage.setItem('activeListWasOpen',
@@ -1205,217 +1245,238 @@ function initActiveBulkToggle(){
       (cb.checked ? activate : deactivate).push(cb.dataset.username);
     });
 
-    if (!activate.length && !deactivate.length){
-      alert('Nothing to save');
-      return;
+    if (!activate.length && !deactivate.length) {
+      alert('Nothing to save'); return;
     }
 
-    rememberOpen();                        // store open state
-    jsonFetch(URLS.bulkToggleActive, {     // NEW endpoint
+    rememberOpen();
+    jsonFetch(URLS.bulkToggleActive, {
       method : 'POST',
-      headers: {'Content-Type':'application/json',
-                'X-CSRFToken':CSRF_TOKEN},
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
       body   : JSON.stringify({activate, deactivate})
     })
-    .then(()=>location.reload())
-    .catch(()=>alert('Update failed'));
+    .then(() => location.reload())
+    .catch(() => alert('Update failed'));
   };
 }
 
+/* ==================================================================
+ *  MACHINE-HISTORY modal helper
+ * ================================================================== */
+function initMachineHistory() {
+  const modalEl = document.getElementById('machineHistoryModal');
+  if (!modalEl) return;
 
+  const dialog = modalEl.querySelector('.modal-dialog');
+  const body   = modalEl.querySelector('.modal-body');
+  const form   = document.getElementById('machineHistoryForm');
+  const bs     = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-/* ------------------------------------------------------------------
- *  MACHINE HISTORY little helper (no changes)
- * ------------------------------------------------------------------ */
-function initMachineHistory(){
-  const outer = $('#machineHistoryModal');
-  const dialog= outer.querySelector('.modal-dialog');
-  const body  = outer.querySelector('.modal-body');
-  const form  = $('#machineHistoryForm');
-  const bs    = new bootstrap.Modal(outer);
+  // 1) Capture the pristine body (just the input)
+  const pristineBodyHTML = body.innerHTML;
 
-  $('#machine-history-btn').onclick = ()=>{
-    dialog.classList.remove('modal-xl','modal-dialog-scrollable');
-    body.innerHTML = form.innerHTML;             // reset fields
-    outer.querySelector('[type=submit]').classList.remove('d-none');
-    bs.show();
-  };
+  // 2) Open-button handler — reset to pristine
+  document
+    .getElementById('machine-history-btn')
+    ?.addEventListener('click', () => {
+      // restore original size/scrolling
+      dialog.classList.remove('modal-xl', 'modal-dialog-scrollable');
+      // restore the clean input form
+      body.innerHTML = pristineBodyHTML;
+      // make sure the Submit button is visible
+      modalEl.querySelector('button[type="submit"]').classList.remove('d-none');
+      bs.show();
+    });
 
-  form.onsubmit = e=>{
+  // 3) Form-submit handler — fetch and replace only the body
+  form.addEventListener('submit', e => {
     e.preventDefault();
-    const machine = $('#machine-input').value.trim(); if(!machine) return;
-    jsonFetch(URLS.machineHistory,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
-      body:JSON.stringify({machine})
-    }).then(d=>{
-      if(d.status!=='ok') throw Error(d.message);
-      dialog.classList.add('modal-xl','modal-dialog-scrollable');
-      body.innerHTML = `<div class="overflow-auto" style="max-height:75vh"><div class="table-responsive">${d.html}</div></div>`;
-      outer.querySelector('[type=submit]').classList.add('d-none');
-    }).catch(()=> body.innerHTML='<div class="alert alert-danger">Load failed</div>');
-  };
+    const machine = document.getElementById('machine-input').value.trim();
+    if (!machine) return;
+
+    jsonFetch(URLS.machineHistory, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': CSRF_TOKEN},
+      body:    JSON.stringify({machine})
+    })
+    .then(d => {
+      if (d.status !== 'ok') throw new Error(d.message);
+
+      // expand modal, swap in the returned HTML
+      dialog.classList.add('modal-xl', 'modal-dialog-scrollable');
+      body.innerHTML = `
+        <div class="overflow-auto" style="max-height:75vh">
+          <div class="table-responsive">${d.html}</div>
+        </div>`;
+      // hide the Submit (we’re now in “view mode”)
+      modalEl.querySelector('button[type="submit"]').classList.add('d-none');
+    })
+    .catch(() => {
+      body.innerHTML = '<div class="alert alert-danger">Load failed</div>';
+      // bring the submit button back so user can retry
+      modalEl.querySelector('button[type="submit"]').classList.remove('d-none');
+    });
+  });
 }
 
-/* ------------------------------------------------------------------
- *  JOB FILTER  (simple text box)
- * ------------------------------------------------------------------ */
-function initJobFilter(){
-  const input = $('#job-filter');
-  if(!input) return;
-  input.oninput = ()=>{
+
+
+/* ==================================================================
+ *  JOB FILTER (simple text input)
+ * ================================================================== */
+function initJobFilter () {
+  const input = $('#job-filter');   if (!input) return;
+  input.oninput = () => {
     const q = input.value.trim().toLowerCase();
-    $$('.editable-row').forEach(row=>{
+    $$('.editable-row').forEach(row => {
       const textMatch = row.textContent.toLowerCase().includes(q);
-      const roleMatch = [...row.querySelectorAll('.labour-btn')].some(b=>b.dataset.role.toLowerCase().includes(q));
-      row.style.display = (textMatch||roleMatch)?'':'none';
+      const roleMatch = [...row.querySelectorAll('.labour-btn')]
+                         .some(b => b.dataset.role.toLowerCase().includes(q));
+      row.style.display = (textMatch || roleMatch) ? '' : 'none';
     });
   };
 }
 
-/* ------------------------------------------------------------------
- *  PERSONAL “EXCLUDE LINES” FILTER
- * ------------------------------------------------------------------ */
-function initPersonalFilter(){
-  const icon        = $('#target-lines-icon');
-  const modal       = new bootstrap.Modal($('#excludeLinesModal'));
-  const body        = $('#exclude-lines-body');
-  const save        = $('#exclude-lines-save');
-  const selLinesBtn = $('#exclude-lines-select-all');
-  const deselLinesBtn = $('#exclude-lines-deselect-all');
+/* ==================================================================
+ *  PERSONAL “EXCLUDE LINES / ROLES” FILTER
+ * ================================================================== */
+function initPersonalFilter () {
+  const icon = $('#target-lines-icon');      if (!icon) return;
 
-  /* ---------- helpers ------------------------------------------------ */
-  const BLANK = {lines:[], roles:[], hideBusy:false};
+  const modal   = bootstrap.Modal.getOrCreateInstance($('#excludeLinesModal'));
+  const body    = $('#exclude-lines-body');
+  const save    = $('#exclude-lines-save');
+  const selAll  = $('#exclude-lines-select-all');
+  const deselAll= $('#exclude-lines-deselect-all');
+
+  const BLANK = {lines: [], roles: [], hideBusy: false};
 
   const getPrefs = () => {
     const m = document.cookie.match(/(?:^|; )filter_prefs=([^;]+)/);
-    if(!m) return {...BLANK};
+    if (!m) return {...BLANK};
     try {
       const parsed = JSON.parse(decodeURIComponent(m[1]));
-      /* allow for legacy plain-array cookie */
       return Array.isArray(parsed)
-                ? {lines:parsed, roles:[], hideBusy:false}
-                : {...BLANK, ...parsed};
+        ? {lines: parsed, roles: [], hideBusy: false}
+        : {...BLANK, ...parsed};
     } catch { return {...BLANK}; }
   };
 
   const setPrefs = p => {
-    document.cookie = `filter_prefs=${encodeURIComponent(JSON.stringify(p))};path=/;max-age=${60*60*24*30}`;
+    document.cookie =
+      `filter_prefs=${encodeURIComponent(JSON.stringify(p))};path=/;max-age=${60*60*24*30}`;
   };
 
   const applyPrefs = () => {
     const {lines, roles, hideBusy} = getPrefs();
-    $$('.editable-row').forEach(tr=>{
+    $$('.editable-row').forEach(tr => {
       const hideLine   = lines.includes(tr.dataset.line);
-      const jobRoles   = (tr.dataset.roles||'').toLowerCase().split(/[, ]+/).filter(Boolean);
-      const hideRole   = roles.some(r=>jobRoles.includes(r));
-      const hideActive = hideBusy && tr.dataset.busy==='1';
+      const jobRoles   = (tr.dataset.roles || '')
+                           .toLowerCase().split(/[, ]+/).filter(Boolean);
+      const hideRole   = roles.some(r => jobRoles.includes(r));
+      const hideActive = hideBusy && tr.dataset.busy === '1';
       tr.style.display = (hideLine || hideRole || hideActive) ? 'none' : '';
     });
   };
 
-  /* ---------- build modal each time it opens ------------------------ */
   icon.onclick = () => {
     const prefs = getPrefs();
 
-    jsonFetch(URLS.targetLines).then(d=>{
-      const mkChk = ({id,label,checked,kind}) =>
-        `<div class="form-check">
-           <input class="form-check-input" data-kind="${kind}" type="checkbox" id="${id}" value="${label}" ${checked?'checked':''}>
-           <label class="form-check-label" for="${id}">${label}</label>
-         </div>`;
+    jsonFetch(URLS.targetLines)
+      .then(d => {
+        const mkChk = ({id, label, checked, kind}) => `
+          <div class="form-check">
+            <input class="form-check-input" data-kind="${kind}" type="checkbox"
+                   id="${id}" value="${label}" ${checked ? 'checked' : ''}>
+            <label class="form-check-label" for="${id}">${label}</label>
+          </div>`;
 
-      /* lines */
-      const linesHTML = d.lines.map(l=>mkChk({
-        id:`ex_line_${l}`, label:l,
-        checked:prefs.lines.includes(l), kind:'line'
-      })).join('');
+        /* lines */
+        const linesHTML = d.lines.map(l => mkChk({
+          id:`ex_line_${l}`, label:l,
+          checked:prefs.lines.includes(l), kind:'line'
+        })).join('');
 
-      /* job roles */
-      const ROLE_MAP = ['tech','electrician','millwright'];
-      const rolesHTML = ROLE_MAP.map(r=>mkChk({
-        id:`ex_role_${r}`, label:r.charAt(0).toUpperCase()+r.slice(1),
-        checked:prefs.roles.includes(r), kind:'role'
-      })).join('');
+        /* job roles */
+        const ROLE_MAP = ['tech', 'electrician', 'millwright'];
+        const rolesHTML = ROLE_MAP.map(r => mkChk({
+          id:`ex_role_${r}`, label:r.charAt(0).toUpperCase() + r.slice(1),
+          checked:prefs.roles.includes(r), kind:'role'
+        })).join('');
 
-      /* busy flag */
-      const busyHTML = `
-        <div class="form-check mt-2">
-          <input class="form-check-input" type="checkbox" id="ex_hidebusy" ${prefs.hideBusy?'checked':''}>
-          <label class="form-check-label" for="ex_hidebusy">
-            Exclude jobs already being worked on
-          </label>
-        </div>`;
+        /* busy */
+        const busyHTML = `
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="ex_hidebusy"
+                   ${prefs.hideBusy ? 'checked' : ''}>
+            <label class="form-check-label" for="ex_hidebusy">
+              Exclude jobs already being worked on
+            </label>
+          </div>`;
 
-      body.innerHTML = `
-        <p class="fw-semibold mb-1">Exclude Lines</p>${linesHTML}
-        <hr class="my-2">
-        <p class="fw-semibold mb-1">Exclude Job Types</p>${rolesHTML}
-        ${busyHTML}`;
-      modal.show();
-    })
-    .catch(()=>{body.innerHTML='<div class="alert alert-danger">Could not load</div>';modal.show();});
+        body.innerHTML = `
+          <p class="fw-semibold mb-1">Exclude Lines</p>${linesHTML}
+          <hr class="my-2">
+          <p class="fw-semibold mb-1">Exclude Job Types</p>${rolesHTML}
+          ${busyHTML}`;
+        modal.show();
+      })
+      .catch(() => {
+        body.innerHTML = '<div class="alert alert-danger">Could not load</div>';
+        modal.show();
+      });
   };
 
-  /* ---------- line select/deselect buttons -------------------------- */
-  const toggleLineChecks = wantChecked => {
-    body.querySelectorAll('input[data-kind="line"]').forEach(cb=>cb.checked=wantChecked);
-  };
-  selLinesBtn.onclick    = () => toggleLineChecks(true);
-  deselLinesBtn.onclick  = () => toggleLineChecks(false);
+  const toggleLines = want =>
+    body.querySelectorAll('input[data-kind="line"]')
+        .forEach(cb => cb.checked = want);
+  selAll.onclick   = () => toggleLines(true);
+  deselAll.onclick = () => toggleLines(false);
 
-  /* ---------- save --------------------------------------------------- */
   save.onclick = () => {
-    const lines = [...body.querySelectorAll('input[data-kind="line"]:checked')].map(cb=>cb.value);
-    const roles = [...body.querySelectorAll('input[data-kind="role"]:checked')].map(cb=>cb.value.toLowerCase());
+    const lines = [...body.querySelectorAll('input[data-kind="line"]:checked')]
+                   .map(cb => cb.value);
+    const roles = [...body.querySelectorAll('input[data-kind="role"]:checked')]
+                   .map(cb => cb.value.toLowerCase());
     const hideBusy = $('#ex_hidebusy').checked;
+
     setPrefs({lines, roles, hideBusy});
     applyPrefs();
     modal.hide();
   };
 
-  /* ---------- run once on page-load ---------------------------------- */
-  applyPrefs();
+  applyPrefs();          // run once on page-load
 }
 
+/* ==================================================================
+ *  AUTO-RELOAD AFTER 2 MIN OF IDLE (pauses if a modal is open)
+ * ================================================================== */
+function initAutoReload () {
+  const DELAY = 2 * 60 * 1000;     // 2 min
+  let timerId = null;
+  let openModals = 0;
 
-/* ------------------------------------------------------------------
- *  2-minute inactivity reload
- * ------------------------------------------------------------------ */
-/* ------------------------------------------------------------------
- *  2-minute inactivity reload –  (v2: pauses when a modal is open)
- * ------------------------------------------------------------------ */
-function initAutoReload(){
-  const DELAY   = 1 * 60 * 1000;      // 2 minutes
-  let   timerId = null;
-  let   openModals = 0;               // reference-count
-
-  /* ------------ helpers ---------------- */
   const stop  = () => { if (timerId) { clearTimeout(timerId); timerId = null; } };
-  const start = () => { timerId = setTimeout(()=>location.reload(), DELAY); };
+  const start = () => { timerId = setTimeout(() => location.reload(), DELAY); };
   const reset = () => { stop(); if (openModals === 0) start(); };
 
-  /* ------------ count modal opens/closes */
   window.addEventListener('shown.bs.modal',  () => { openModals++; stop(); });
   window.addEventListener('hidden.bs.modal', () => {
     if (--openModals <= 0) { openModals = 0; reset(); }
   });
 
-  /* ------------ user interaction (ignore clicks **inside** open modals) */
   document.addEventListener('click', e => {
-    if (e.target.closest('.modal.show')) return;   // modal click → don’t reset
+    if (e.target.closest('.modal.show')) return;   // clicks inside modal → ignore
     reset();
   });
 
-  /* ------------ first start */
-  start();
+  start();         // initial start
 }
 
-
-/* ------------------------------------------------------------------
- *  BOOTSTRAP
- * ------------------------------------------------------------------ */
-document.addEventListener('DOMContentLoaded',()=>{
+/* ==================================================================
+ *  ONE-LINER BOOTSTRAP ENTRY
+ * ================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
   initCloseoutModal();
   initLabourHistory();
   initRowShortcut();
@@ -1423,11 +1484,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   initActiveBulkToggle();
   initMachineHistory();
   initJobFilter();
-  initPersonalFilter();   // ← replaces initLineExclusion()
+  initPersonalFilter();
   initAutoReload();
 });
+}  /*  ← end guard */
 </script>
 <!----------------- END new maintenance.js ----------------->
+
 
 
 
