@@ -874,12 +874,23 @@ const $         = sel => document.querySelector(sel);
 const $$        = sel => document.querySelectorAll(sel);
 const jsonFetch = (url, opts={}) =>
   fetch(url, opts).then(r => r.ok ? r.json() : Promise.reject(r));
-const nowISODate = () => new Date().toISOString().slice(0,10);
-const pad2       = n => String(n).padStart(2,'0');
+
+// helper to zero-pad numbers
+const pad2 = n => String(n).padStart(2,'0');
+
+// returns YYYY-MM-DD based on your local clock
+const nowISODate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+};
+
+// returns HH:MM (24-hour) based on your local clock
 const nowISOTime = () => {
   const d = new Date();
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 };
+
+// combined local date+time for datetime-local inputs
 const nowLocalDT = () => `${nowISODate()}T${nowISOTime()}`;
 
 /* ------------------------------------------------------------------
