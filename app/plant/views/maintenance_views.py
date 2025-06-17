@@ -1195,6 +1195,9 @@ def list_all_downtime_entries(request):
                     active_roles.add(role)
         e.current_worker_roles = active_roles
 
+        # ── NEW ── record the usernames who are currently joined
+        e.current_usernames = [p.user.username for p in open_parts]
+
     # 4) Collect all maintenance‐role users
     User            = get_user_model()
     maint_groups    = list(ROLE_TO_GROUP.values())

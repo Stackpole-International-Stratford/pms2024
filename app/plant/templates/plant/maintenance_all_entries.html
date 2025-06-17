@@ -275,6 +275,10 @@ Add New or Update Employee
                           {% if e.comment %}
                       – {{ e.comment|slice:":40" }}{% if e.comment|length > 40 %}…{% endif %}
                     {% endif %}
+                    {% if e.current_usernames %}
+                      – <small>{{ e.current_usernames|join:", " }}</small>
+                    {% endif %}
+
                   </span>
                 </div>
       
