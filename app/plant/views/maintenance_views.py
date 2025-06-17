@@ -486,6 +486,12 @@ lines_untracked = [
         "scrap_line": "NA",
         "operations": [
             {
+                "op": "Assembler",
+                "machines": [
+                    {"number": "743", "target": 27496,},
+                ],
+            },
+            {
                 "op": "Machining",
                 "machines": [
                     {"number": "786", "target": 27496,},
@@ -545,6 +551,7 @@ lines_untracked = [
                     {"number": "441", "target": 27496,},
                     {"number": "331", "target": 27496,},
                     {"number": "314", "target": 27496,},
+                    {"number": "316", "target": 27496,},
 
 
                 ],
