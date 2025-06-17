@@ -42,7 +42,6 @@ class MachineDowntimeEvent(models.Model):
 
     # new:
     LABOUR_CHOICES = [
-        ('OPERATOR',    'Operator can fix'),
         ('ELECTRICIAN', 'Need Electrician'),
         ('TECH',        'Need Tech'),
         ('MILLWRIGHT',  'Need Millwright'),
