@@ -153,7 +153,7 @@ lines_untracked = [
                     {"number": "658", "target": 27496,},
                     {"number": "661", "target": 27496,},
                     {"number": "622", "target": 27496,},
-
+                    {"number": "633", "target": 27496,},
                 ],
             },
             {
@@ -342,6 +342,7 @@ lines_untracked = [
                     {"number": "582", "target": 27496,},
                     {"number": "627", "target": 27496,},
                     {"number": "574", "target": 27496,},
+                    {"number": "576", "target": 27496,},
                 ],
             },
              {
@@ -486,12 +487,6 @@ lines_untracked = [
         "scrap_line": "NA",
         "operations": [
             {
-                "op": "Assembler",
-                "machines": [
-                    {"number": "743", "target": 27496,},
-                ],
-            },
-            {
                 "op": "Machining",
                 "machines": [
                     {"number": "786", "target": 27496,},
@@ -543,6 +538,7 @@ lines_untracked = [
                     {"number": "859", "target": 27496,},
                     {"number": "341", "target": 27496,},
                     {"number": "697", "target": 27496,},
+                    {"number": "698", "target": 27496,},
                     {"number": "678", "target": 27496,},
                     {"number": "743", "target": 27496,},
                     {"number": "342", "target": 27496,},
@@ -552,8 +548,7 @@ lines_untracked = [
                     {"number": "331", "target": 27496,},
                     {"number": "314", "target": 27496,},
                     {"number": "316", "target": 27496,},
-
-
+                    {"number": "743", "target": 27496,},
                 ],
             },
 
@@ -562,16 +557,6 @@ lines_untracked = [
                 "machines": [
                     {"number": "262", "target": 27496,},
                     {"number": "263", "target": 27496,},
-                ],
-            },
-             {
-                "op": "Assembler",
-                "machines": [
-                    {"number": "859", "target": 27496,},
-                   
-
-
-
                 ],
             },
              {
