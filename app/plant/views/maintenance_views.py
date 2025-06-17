@@ -289,12 +289,6 @@ lines_untracked = [
         "scrap_line": "NA",
         "operations": [
             {
-                "op": "autogauge",
-                "machines": [
-                    {"number": "1760", "target": 27496,},
-                ],
-            },
-            {
                 "op": "10",
                 "machines": [
                     {"number": "654", "target": 27496,},
@@ -556,6 +550,8 @@ lines_untracked = [
                     {"number": "316", "target": 27496,},
                     {"number": "743", "target": 27496,},
                     {"number": "347", "target": 27496,},
+                    {"number": "1760", "target": 27496,},
+
                 ],
             },
 
