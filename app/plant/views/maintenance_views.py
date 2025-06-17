@@ -549,6 +549,7 @@ lines_untracked = [
                     {"number": "314", "target": 27496,},
                     {"number": "316", "target": 27496,},
                     {"number": "743", "target": 27496,},
+                    {"number": "347", "target": 27496,},
                 ],
             },
 
@@ -565,6 +566,14 @@ lines_untracked = [
                     {"number": "954", "target": 27496,},
                     {"number": "992", "target": 27496,},
 
+                ],
+            },
+             {
+                "op": "Endothermic generators",
+                "machines": [
+                    {"number": "925", "target": 27496,},
+                    {"number": "903", "target": 27496,},
+                    {"number": "934", "target": 27496,},
                 ],
             },
         ],
@@ -630,10 +639,16 @@ lines_untracked = [
                     {"number": "649", "target": 27496,},
                 ],
             },
-                         {
+            {
                 "op": "Slurry",
                 "machines": [
                     {"number": "742", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Oil and Pack",
+                "machines": [
+                    {"number": "699", "target": 27496,},
                 ],
             },
         ],
