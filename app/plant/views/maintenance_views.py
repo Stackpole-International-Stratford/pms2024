@@ -1161,29 +1161,42 @@ def list_all_downtime_entries(request):
     qs = filter_out_operator_only_events(qs)
 
     # 3) Paginate + format “entries” for the table
-    PAGE_SIZE = 500
-    entries   = list(qs[:PAGE_SIZE])
-    today     = timezone.localdate()
-    tz        = get_default_timezone()
+    entries = list(qs[:PAGE_SIZE])
+    today   = timezone.localdate()
+    tz      = get_default_timezone()
+
     for e in entries:
+        # — display timestamp as “HH:MM” if today, else “MM/DD”
         dt = e.start_at
         if is_naive(dt):
             dt = make_aware(dt, tz)
-        local_dt      = localtime(dt)
+        local_dt = localtime(dt)
         e.start_display = (
             local_dt.strftime("%H:%M")
             if local_dt.date() == today
             else local_dt.strftime("%m/%d")
         )
+
+        # — flag if *this user* is currently on the job
         e.user_has_open = e.participants.filter(
             user=request.user,
             leave_epoch__isnull=True
         ).exists()
 
+        # ── NEW ── determine exactly which maintenance-roles are active on this event
+        open_parts   = [p for p in e.participants.all() if p.leave_epoch is None]
+        active_roles = set()
+        for p in open_parts:
+            user_groups = set(p.user.groups.values_list("name", flat=True))
+            for role, grp_name in ROLE_TO_GROUP.items():
+                if grp_name in user_groups:
+                    active_roles.add(role)
+        e.current_worker_roles = active_roles
+
     # 4) Collect all maintenance‐role users
-    User               = get_user_model()
-    maint_groups       = list(ROLE_TO_GROUP.values())
-    all_maint_users    = (
+    User            = get_user_model()
+    maint_groups    = list(ROLE_TO_GROUP.values())
+    all_maint_users = (
         User.objects
         .filter(groups__name__in=maint_groups, is_active=True)
         .distinct()
@@ -1198,9 +1211,9 @@ def list_all_downtime_entries(request):
     def build_worker_list(user_qs):
         lst = []
         for u in user_qs:
-            name         = u.get_full_name() or u.username
-            user_groups  = set(u.groups.values_list("name", flat=True))
-            roles        = [
+            name        = u.get_full_name() or u.username
+            user_groups = set(u.groups.values_list("name", flat=True))
+            roles       = [
                 r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
             ]
             parts = DowntimeParticipation.objects.filter(
@@ -1238,8 +1251,6 @@ def list_all_downtime_entries(request):
 
     # 8) Build the labour_choices list
     full_choices = MachineDowntimeEvent.LABOUR_CHOICES
-
-    # Allow electricians, millwrights, supervisors, or managers to see PLCTECH & IMT
     allowed_groups = {
         ROLE_TO_GROUP["electrician"],
         ROLE_TO_GROUP["millwright"],
@@ -1247,7 +1258,6 @@ def list_all_downtime_entries(request):
         "maintenance_managers",
         "maintenance_tech",
     }
-
     if user_grps & allowed_groups:
         labour_choices = list(full_choices)
     else:
@@ -1258,13 +1268,15 @@ def list_all_downtime_entries(request):
         ]
 
     # 9) Downtime‐codes JSON for the modal
-    downtime_codes = DowntimeCode.objects.all().order_by("category","subcategory","code")
-    structured     = {}
+    downtime_codes = DowntimeCode.objects.all().order_by(
+        "category", "subcategory", "code"
+    )
+    structured = {}
     for c in downtime_codes:
-        cat = c.code.split("-",1)[0]
+        cat = c.code.split("-", 1)[0]
         structured.setdefault(cat, {
-            "name": cat,
-            "code": cat,
+            "name":          cat,
+            "code":          cat,
             "subcategories": []
         })["subcategories"].append({
             "code": c.code,
@@ -1273,16 +1285,16 @@ def list_all_downtime_entries(request):
 
     # 10) Final render
     return render(request, "plant/maintenance_all_entries.html", {
-        "entries":                    entries,
-        "page_size":                  PAGE_SIZE,
-        "line_priorities":            LinePriority.objects.all(),
-        "is_manager":                 is_manager,
-        "is_supervisor":              is_supervisor,
-        "labour_choices":             labour_choices,
-        "active_workers_by_role":     active_by_role,
-        "inactive_workers_by_role":   inactive_by_role,
-        "downtime_codes_json":        mark_safe(json.dumps(list(structured.values()))),
-        "lines_json":                 mark_safe(json.dumps(prod_lines)),
+        "entries":                  entries,
+        "page_size":                PAGE_SIZE,
+        "line_priorities":          LinePriority.objects.all(),
+        "is_manager":               is_manager,
+        "is_supervisor":            is_supervisor,
+        "labour_choices":           labour_choices,
+        "active_workers_by_role":   active_by_role,
+        "inactive_workers_by_role": inactive_by_role,
+        "downtime_codes_json":      mark_safe(json.dumps(list(structured.values()))),
+        "lines_json":               mark_safe(json.dumps(prod_lines)),
     })
 
 @login_required

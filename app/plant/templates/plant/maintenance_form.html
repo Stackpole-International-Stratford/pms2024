@@ -223,18 +223,19 @@
           <div id="labour-error" class="text-danger mb-2" style="display:none;">Please select at least one.</div>
           {% if user.is_anonymous %}
             <div class="form-check">
-              <input class="form-check-input labour-checkbox" type="checkbox" id="labourOperator" value="OPERATOR">
-              <label class="form-check-label" for="labourOperator">Operator can fix</label>
-            </div>
-            <div class="form-check">
               <input class="form-check-input labour-checkbox" type="checkbox" id="labourTech" value="TECH">
               <label class="form-check-label" for="labourTech">Need Tech</label>
             </div>
-          {% else %}
             <div class="form-check">
-              <input class="form-check-input labour-checkbox" type="checkbox" id="labourOperator"    value="OPERATOR">
-              <label class="form-check-label" for="labourOperator">Operator can fix</label>
+              <input class="form-check-input labour-checkbox"
+                      type="checkbox"
+                      id="labourNA"
+                      value="NA">
+              <label class="form-check-label" for="labourNA">
+                N/A
+              </label>
             </div>
+          {% else %}
             <div class="form-check">
               <input class="form-check-input labour-checkbox" type="checkbox" id="labourElectrician" value="ELECTRICIAN">
               <label class="form-check-label" for="labourElectrician">Need Electrician</label>

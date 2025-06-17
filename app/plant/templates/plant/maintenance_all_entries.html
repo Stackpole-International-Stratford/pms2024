@@ -259,14 +259,14 @@ Add New or Update Employee
                     {{ e.start_display }} – {{ e.machine }} – 
                     {% if e.labour_types %}
                       {% for code in e.labour_types %}
-                        {% with code|title as role %}
-                          <button
-                            type="button"
-                            class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
-                            data-event-id="{{ e.id }}"
-                            data-role="{{ role }}"
-                          >{{ role|slice:":1" }}</button>
-                        {% endwith %}
+                        {% with code|lower as rolekey %}
+                            <button
+                              type="button"
+                              class="btn {% if rolekey in e.current_worker_roles %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
+                              data-event-id="{{ e.id }}"
+                              data-role="{{ rolekey }}"
+                            >{{ rolekey|slice:":1"|upper }}</button>
+                          {% endwith %}
                       {% endfor %}
                     {% else %}
                       <span class="text-muted ms-2">–</span>
