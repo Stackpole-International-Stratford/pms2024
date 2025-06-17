@@ -10,7 +10,7 @@ urlpatterns = [
 
     # path('cell_track_9341/', views.cell_track_9341, {'target': 'desk'}, name='track9341'),
     # path('cell_track_9341_TV/', views.cell_track_9341, {'target': 'tv'}, name='track9341_TV'),
-    path('cell_track_9341_mobile/', views.cell_track_9341, {'target': 'mobile'}, name='track9341_mobile'),
+    # path('cell_track_9341_mobile/', views.cell_track_9341, {'target': 'mobile'}, name='track9341_mobile'),
     # path('9341/', views.cell_track_9341, {'target': 'desk'}, name='9341'),
     
 
