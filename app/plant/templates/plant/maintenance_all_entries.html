@@ -1429,15 +1429,31 @@ function initPersonalFilter(){
     document.cookie = `filter_prefs=${encodeURIComponent(JSON.stringify(p))};path=/;max-age=${60*60*24*30}`;
   }
   function applyPrefs(){
-    const { lines, roles, hideBusy } = getPrefs();
+    const { lines, roles: excludedRoles, hideBusy } = getPrefs();
+
     $$('.editable-row').forEach(tr=>{
+      // hide if the line is excluded
       const hideLine   = lines.includes(tr.dataset.line);
-      const jobRoles   = (tr.dataset.roles||'').toLowerCase().split(/[, ]+/).filter(Boolean);
-      const hideRole   = roles.some(r=>jobRoles.includes(r));
+
+      // parse the roles on that job
+      const jobRoles   = (tr.dataset.roles||'')
+                          .toLowerCase()
+                          .split(/[, ]+/)
+                          .filter(Boolean);
+
+      // ONLY hide if every one of its roles has been excluded
+      const hideRole   = jobRoles.length > 0
+                        && jobRoles.every(r=> excludedRoles.includes(r));
+
+      // hide if we're excluding busy jobs and this one is busy
       const hideActive = hideBusy && tr.dataset.busy==='1';
-      tr.style.display = (hideLine || hideRole || hideActive) ? 'none' : '';
+
+      tr.style.display = (hideLine || hideRole || hideActive)
+                        ? 'none'
+                        : '';
     });
   }
+
 
   icon.onclick = ()=>{
     const prefs = getPrefs();
