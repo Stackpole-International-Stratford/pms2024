@@ -3,10 +3,9 @@
 {% block content %}
 <div class="container mt-4">
   {% csrf_token %}
-  {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
+  {{ user_roles|json_script:"user-roles-json" }}   {# ←  place it here #}
 
   <h1 class="mb-4 text-center">Open Downtime Events</h1>
-  
 
 <style>
 
@@ -23,23 +22,18 @@
     cursor: pointer;
   }
 
-
-
   /* in your custom CSS */
-.table-responsive {
-  overflow-x: auto;
-  overflow-y: auto;           /* allow vertical scroll too */
-  -webkit-overflow-scrolling: touch;
-}
-
+  .table-responsive {
+    overflow-x: auto;
+    overflow-y: auto;           /* allow vertical scroll too */
+    -webkit-overflow-scrolling: touch;
+  }
 
 </style>
 
-  {% if is_manager %}
+{% if is_manager %}
 
-    {# ───────────────────── New‑employee button + modal ───────────────────── #}
-
-
+    {# ───────────────────── New-employee button + modal ───────────────────── #}
 
   <!-- Modal (place it once per page, usually near bottom) -->
   <div class="modal fade" id="newEmployeeModal" tabindex="-1" aria-hidden="true">
@@ -47,17 +41,17 @@
       <form method="post" action="{% url 'add_employee' %}" class="modal-content">
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title">Add New or Update Employee</h5>
+          <h5 class="modal-title">Add New or Update Employee</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
           <div class="mb-3">
-            <label for="empFirst" class="form-label">First name</label>
+            <label for="empFirst" class="form-label">First name</label>
             <input id="empFirst" name="first_name" class="form-control" required>
           </div>
           <div class="mb-3">
-            <label for="empLast" class="form-label">Last name</label>
+            <label for="empLast" class="form-label">Last name</label>
             <input id="empLast" name="last_name" class="form-control" required>
           </div>
 
@@ -168,15 +162,12 @@
     </div>
     {# ───────────────────────── end accordion ────────────────────────────────────── #}
 
-
-
-
     <!-- Button -->
     <button type="button"
     class="btn btn-dark mb-3"
     data-bs-toggle="modal"
     data-bs-target="#newEmployeeModal">
-Add New or Update Employee
+Add New or Update Employee
 </button>
 
 <div class="manage-downtime-codes">
@@ -186,15 +177,7 @@ Add New or Update Employee
   </a>
 </div>
 
-
-
-
-  {% endif %}
-
-
-
-
-
+{% endif %}
 
 {# ───────────────────────── downtime events table ────────────────── #}
 <div class="row mt-4{% if not is_manager %} justify-content-center{% endif %}">
@@ -441,22 +424,7 @@ Add New or Update Employee
 
 </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  {# ─────────────── CLOSE‑OUT MODAL + SCRIPT (self‑contained) ─────────────── #}
+{# ─────────────── CLOSE-OUT MODAL + SCRIPT (self-contained) ─────────────── #}
 
  {# ───────── CLOSE-OUT / EDIT MODAL ───────── #}
 <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
@@ -657,6 +625,20 @@ Add New or Update Employee
 
       <div class="modal-body">
 
+        <!-- ✨ NEW lookup bar inside the results modal -->
+        <div class="input-group input-group-sm mb-3">
+          <input type="text"
+                 id="mh-new-machine-input"
+                 class="form-control"
+                 placeholder="Enter machine #"
+                 aria-label="Machine number">
+          <button type="button"
+                  id="mh-new-search-btn"
+                  class="btn btn-warning">
+            Search
+          </button>
+        </div>
+
         <!-- status messages -->
         <div id="mh-status" class="mb-2"></div>
 
@@ -691,8 +673,6 @@ Add New or Update Employee
 
     
 
-<!-- -------------------------------------------------------------------------------------->
-  
 <!-- 1. History Modal -->
 <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
   <!-- fullscreen-sm-down makes it modal-lg on md+ but fullscreen on sm and xs -->
@@ -1201,6 +1181,120 @@ function initLabourHistory(){
 }
 
 /* ------------------------------------------------------------------
+ *  MACHINE HISTORY (lookup + results) – UPDATED
+ * ------------------------------------------------------------------ */
+function initMachineHistory(){
+  const lookupModal  = new bootstrap.Modal($('#machineHistoryModal'));
+  const resultsModal = new bootstrap.Modal($('#machineHistoryResultsModal'));
+  const form         = document.getElementById('machineHistoryForm');
+  const statusBox    = document.getElementById('mh-status');
+  const tbody        = document.getElementById('mh-tbody');
+  const machineEl    = document.getElementById('mh-machine-num');
+  const url          = URLS.machineHistory;
+
+  const dateTimeOpts = {
+    year:   'numeric',
+    month:  'short',
+    day:    'numeric',
+    hour:   'numeric',
+    minute: 'numeric',
+    hour12: true
+  };
+
+  /* reusable fetch routine ------------------------------- */
+  function fetchMachineHistory(machine){
+    if(!machine) return;
+    statusBox.innerHTML   = '<p>Loading…</p>';
+    tbody.innerHTML       = '';
+    machineEl.textContent = machine;
+
+    // make sure form carries the new machine value (for CSRF + server)
+    form.machine.value = machine;
+
+    fetch(url, {
+      method:      'POST',
+      credentials: 'same-origin',
+      body:        new FormData(form)
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      statusBox.innerHTML = '';
+      if (data.error){
+        statusBox.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+        return;
+      }
+      if (!data.events.length){
+        statusBox.innerHTML = '<p class="text-muted">No downtime history found.</p>';
+        return;
+      }
+      data.events.forEach(ev=>{
+        const tr = tbody.insertRow();
+        tr.insertCell().textContent = ev.start_display;
+        tr.insertCell().textContent = ev.category;
+        tr.insertCell().textContent = ev.comment  ?? '';
+        tr.insertCell().textContent = ev.closeout_display ?? '';
+        tr.insertCell().textContent = ev.closeout_comment ?? '';
+
+        const partCell = tr.insertCell();
+        const innerTbl = document.createElement('table');
+        innerTbl.className = 'table table-borderless table-sm mb-0';
+
+        const innerHead = innerTbl.createTHead();
+        innerHead.className = 'table-light';
+        const headRow = innerHead.insertRow();
+        ['User','Joined','Left','Join Comment','Leave Comment','Minutes Down']
+          .forEach(txt=>{
+            const th = document.createElement('th');
+            th.textContent = txt;
+            headRow.appendChild(th);
+          });
+
+        const innerBody = document.createElement('tbody');
+        ev.participations.forEach(p=>{
+          const r = innerBody.insertRow();
+          r.insertCell().textContent = p.user;
+          r.insertCell().textContent = new Date(p.join_epoch * 1000)
+                                         .toLocaleString(undefined, dateTimeOpts);
+          r.insertCell().textContent = p.leave_epoch
+                                         ? new Date(p.leave_epoch * 1000)
+                                             .toLocaleString(undefined, dateTimeOpts)
+                                         : '';
+          r.insertCell().textContent = p.join_comment  ?? '';
+          r.insertCell().textContent = p.leave_comment ?? '';
+          r.insertCell().textContent = p.total_minutes ?? '';
+        });
+        innerTbl.appendChild(innerBody);
+        partCell.appendChild(innerTbl);
+      });
+
+      lookupModal.hide();
+      resultsModal.show();
+    })
+    .catch(()=> {
+      statusBox.innerHTML = '<div class="alert alert-danger">Error loading history.</div>';
+    });
+  }
+
+  /* original lookup modal -------------------------------- */
+  form.addEventListener('submit', e=>{
+    e.preventDefault();
+    fetchMachineHistory(form.machine.value.trim());
+  });
+
+  /* new search controls inside results modal ------------- */
+  const newInput = document.getElementById('mh-new-machine-input');
+  const newBtn   = document.getElementById('mh-new-search-btn');
+
+  newBtn.addEventListener('click', ()=>{
+    fetchMachineHistory(newInput.value.trim());
+  });
+
+  newInput.addEventListener('keyup', e=>{
+    if(e.key === 'Enter') newBtn.click();
+  });
+}
+
+/* ------------------------------------------------------------------
  *  ROW CLICK (to open close-out)
  * ------------------------------------------------------------------ */
 function initRowShortcut(){
@@ -1295,98 +1389,8 @@ function initActiveBulkToggle(){
 }
 
 /* ------------------------------------------------------------------
- *  MACHINE HISTORY (lookup + results)
+ *  MACHINE HISTORY (lookup already handled above)
  * ------------------------------------------------------------------ */
-function initMachineHistory(){
-  const lookupModal  = new bootstrap.Modal($('#machineHistoryModal'));
-  const resultsModal = new bootstrap.Modal($('#machineHistoryResultsModal'));
-  const form         = document.getElementById('machineHistoryForm');
-  const statusBox    = document.getElementById('mh-status');
-  const tbody        = document.getElementById('mh-tbody');
-  const machineEl    = document.getElementById('mh-machine-num');
-  const url          = URLS.machineHistory;
-
-  const dateTimeOpts = {
-    year:   'numeric',
-    month:  'short',
-    day:    'numeric',
-    hour:   'numeric',
-    minute: 'numeric',
-    hour12: true
-  };
-
-  form.addEventListener('submit', e=>{
-    e.preventDefault();
-    const machine = form.machine.value.trim();
-    if (!machine) return;
-    statusBox.innerHTML   = '<p>Loading…</p>';
-    tbody.innerHTML       = '';
-    machineEl.textContent = machine;
-
-    fetch(url, {
-      method:      'POST',
-      credentials: 'same-origin',
-      body:        new FormData(form)
-    })
-    .then(r=>r.json())
-    .then(data=>{
-      statusBox.innerHTML = '';
-      if (data.error) {
-        statusBox.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-        return;
-      }
-      if (!data.events.length) {
-        statusBox.innerHTML = '<p class="text-muted">No downtime history found.</p>';
-        return;
-      }
-      data.events.forEach(ev=>{
-        const tr = tbody.insertRow();
-        tr.insertCell().textContent = ev.start_display;
-        tr.insertCell().textContent = ev.category;
-        tr.insertCell().textContent = ev.comment  ?? '';
-        tr.insertCell().textContent = ev.closeout_display ?? '';
-        tr.insertCell().textContent = ev.closeout_comment ?? '';
-
-        const partCell = tr.insertCell();
-        const innerTbl = document.createElement('table');
-        innerTbl.className = 'table table-borderless table-sm mb-0';
-
-        const innerHead = innerTbl.createTHead();
-        innerHead.className = 'table-light';
-        const headRow = innerHead.insertRow();
-        ['User','Joined','Left','Join Comment','Leave Comment','Minutes Down']
-          .forEach(txt=>{
-            const th = document.createElement('th');
-            th.textContent = txt;
-            headRow.appendChild(th);
-          });
-
-        const innerBody = document.createElement('tbody');
-        ev.participations.forEach(p=>{
-          const r = innerBody.insertRow();
-          r.insertCell().textContent = p.user;
-          r.insertCell().textContent = new Date(p.join_epoch * 1000)
-                                         .toLocaleString(undefined, dateTimeOpts);
-          r.insertCell().textContent = p.leave_epoch
-                                         ? new Date(p.leave_epoch * 1000)
-                                             .toLocaleString(undefined, dateTimeOpts)
-                                         : '';
-          r.insertCell().textContent = p.join_comment  ?? '';
-          r.insertCell().textContent = p.leave_comment ?? '';
-          r.insertCell().textContent = p.total_minutes ?? '';
-        });
-        innerTbl.appendChild(innerBody);
-        partCell.appendChild(innerTbl);
-      });
-      lookupModal.hide();
-      resultsModal.show();
-    })
-    .catch(err=>{
-      console.error(err);
-      statusBox.innerHTML = '<div class="alert alert-danger">Error loading history.</div>';
-    });
-  });
-}
 
 /* ------------------------------------------------------------------
  *  JOB FILTER
@@ -1457,7 +1461,6 @@ function initPersonalFilter(){
                         : '';
     });
   }
-
 
   icon.onclick = ()=>{
     const prefs = getPrefs();
@@ -1564,16 +1567,5 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 </script>
 <!-- END maintenance.js -->
-
-
-
-
-
-
-
-
-
-
-
 </div>
 {% endblock %}
