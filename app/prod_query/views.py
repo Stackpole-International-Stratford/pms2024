@@ -5,7 +5,8 @@ import mysql.connector
 # import mysql.connector
 from django.template.loader import render_to_string
 from django.contrib import messages
-
+from django.db.models import Q
+import re
 
 
 from collections import defaultdict
