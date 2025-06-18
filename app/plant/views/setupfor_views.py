@@ -14,6 +14,7 @@ from datetime import datetime
 import pytz
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_datetime
+from django.contrib.auth.decorators import login_required
 
 
 
@@ -27,7 +28,7 @@ def natural_sort_key(s):
     return [int(part) if part.isdigit() else part for part in parts]
 
 
-
+@login_required(login_url="login")
 def display_assets(request):
     # Get the search query
     search_query = request.GET.get('q', '')
@@ -96,6 +97,8 @@ def delete_asset(request, id):
         return redirect('display_assets')
     return render(request, 'setupfor/delete_asset.html', {'asset': asset})
 
+
+@login_required(login_url="login")
 def display_parts(request):
     # Get the search query
     search_query = request.GET.get('q', '')
@@ -331,7 +334,7 @@ def update_part_for_asset(request):
 # =======================================================
 
 
-
+@login_required(login_url="login")
 def display_setups(request):
     # Retrieve all SetupFor records ordered by descending changeover datetime (since)
     setups = SetupFor.objects.all().order_by('-since')

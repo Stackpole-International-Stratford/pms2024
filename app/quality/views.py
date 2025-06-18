@@ -258,6 +258,8 @@ def forms_page(request):
 
 from .models import PartMessage
 
+
+@login_required(login_url="login")
 def new_manager(request, part_number=None):
     if part_number is None:
         return redirect('forms_page')
@@ -435,6 +437,8 @@ def pdf_upload(request):
         form = PDFUploadForm()
     return render(request, 'quality/pdf_upload.html', {'form': form})
 
+
+@login_required(login_url="login")
 def pdf_list(request):
     pdfs = QualityPDFDocument.objects.all()
     return render(request, 'quality/pdf_list.html', {'pdfs': pdfs})
@@ -707,6 +711,7 @@ from .models import RedRabbitType
 from .forms import RedRabbitTypeForm
 from plant.models.setupfor_models import Part
 
+@login_required(login_url="login")
 def manage_red_rabbit_types(request):
     # Fetch all parts to populate the dropdown
     parts = Part.objects.all()

@@ -6,7 +6,7 @@ from importlib import import_module
 import json
 from datetime import datetime, timedelta
 from django.http import Http404
-
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 import MySQLdb
 from prod_query.models import OAMachineTargets
@@ -1120,6 +1120,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Max, F
 from .models import ShiftPoint
 
+@login_required(login_url="login")
 def list_and_update_shift_points(request):
     selected_tv_number = request.GET.get('tv_number')
     shift_points = ShiftPoint.objects.all()
