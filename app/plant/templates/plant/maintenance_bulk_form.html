@@ -154,13 +154,11 @@ document.addEventListener('DOMContentLoaded', () => {
     lineSelect.add(opt);
   });
 
-  // 2) When a line is selected → render its machines (at least one required)
+  // 2) When a line is selected → render its machines
   lineSelect.addEventListener('change', () => {
     machinesDiv.innerHTML = '';
-    const ops = (prodLines.find(pl => pl.line === lineSelect.value)?.operations) || [];
-    let firstCheckbox = true;
-
-    ops.forEach(op => {
+    const operations = (prodLines.find(pl => pl.line === lineSelect.value)?.operations) || [];
+    operations.forEach(op => {
       op.machines.forEach(m => {
         const id = `machine_${m.number}`;
         const wrapper = document.createElement('div');
@@ -172,10 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cb.name = 'machines';
         cb.id = id;
         cb.value = m.number;
-        if (firstCheckbox) {
-          cb.required = true;
-          firstCheckbox = false;
-        }
 
         const lbl = document.createElement('label');
         lbl.className = 'form-check-label';
@@ -183,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lbl.textContent = m.number;
 
         wrapper.append(cb, lbl);
-        machinesDiv.append(wrapper);
+        machinesDiv.appendChild(wrapper);
       });
     });
   });
@@ -197,19 +191,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // 4) When a category is selected → render its subcategories
   catSel.addEventListener('change', () => {
     subSel.innerHTML = '<option value="">Select Subcategory</option>';
-    const catObj = downtimeCodes.find(dc => dc.code === catSel.value);
-    (catObj?.subcategories || []).forEach(({ code, name }) => {
+    const category = downtimeCodes.find(dc => dc.code === catSel.value);
+    (category?.subcategories || []).forEach(({ code, name }) => {
       const opt = new Option(name, code);
       subSel.add(opt);
     });
   });
 
-  // 5) On form submit → serialize selected labour types
-  bulkForm.addEventListener('submit', () => {
-    const picked = Array.from(
+  // 5) On form submit → validate machines, serialize labour types
+  bulkForm.addEventListener('submit', e => {
+    // at least one machine must be checked
+    const machinesChecked = bulkForm.querySelectorAll('input[name="machines"]:checked').length;
+    if (machinesChecked === 0) {
+      e.preventDefault();
+      alert('Please select at least one machine.');
+      return;
+    }
+
+    // serialize selected labour types
+    const labourPicked = Array.from(
       bulkForm.querySelectorAll('input[name="labour_checkbox"]:checked')
     ).map(cb => cb.value);
-    labourHidden.value = JSON.stringify(picked);
+    labourHidden.value = JSON.stringify(labourPicked);
   });
 
   // 6) Initialize date & time inputs to “now”
@@ -218,4 +221,5 @@ document.addEventListener('DOMContentLoaded', () => {
   startTime.value = now.toTimeString().slice(0, 5);
 });
 </script>
+
 {% endblock %}
