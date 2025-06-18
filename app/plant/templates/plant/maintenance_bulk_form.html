@@ -1,0 +1,215 @@
+{# plant/templates/plant/maintenance_bulk_form.html #}
+{% extends "parent.html" %}
+{% block content %}
+<div class="container py-5">
+  <h2>Bulk Add Downtime Entries</h2>
+  <form method="POST" id="bulk-form">
+    {% csrf_token %}
+
+    <div class="row mb-3">
+      <!-- Date -->
+      <div class="col-md-3">
+        <label for="start-date" class="form-label">Date</label>
+        <input type="date" id="start-date" name="start_date"
+               class="form-control" required>
+      </div>
+      <!-- Time -->
+      <div class="col-md-3">
+        <label for="start-time" class="form-label">Time</label>
+        <input type="time" id="start-time" name="start_time"
+               class="form-control" required>
+      </div>
+      <!-- Production Line -->
+      <div class="col-md-3">
+        <label for="line-select" class="form-label">Production Line</label>
+        <select id="line-select" name="line"
+                class="form-select" required>
+          <option value="">Select Line</option>
+          {# populated by JS #}
+        </select>
+      </div>
+      <!-- Machines -->
+      <div class="col-md-3">
+        <label class="form-label">Machines</label>
+        <div id="machines-checkboxes"
+             class="border rounded p-2"
+             style="max-height:200px; overflow:auto;">
+          <!-- checkboxes inserted by JS -->
+        </div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <!-- Category -->
+      <div class="col-md-4">
+        <label for="category-select" class="form-label">Category</label>
+        <select id="category-select" name="category"
+                class="form-select" required>
+          <option value="">Select Category</option>
+          {# populated by JS #}
+        </select>
+      </div>
+      <!-- Sub-category -->
+      <div class="col-md-4">
+        <label for="subcategory-select" class="form-label">Sub-category</label>
+        <select id="subcategory-select" name="subcategory"
+                class="form-select">
+          <option value="">Select Subcategory</option>
+        </select>
+      </div>
+      <!-- Comment -->
+      <div class="col-md-4">
+        <label for="description" class="form-label">Comment</label>
+        <textarea id="description" name="description"
+                  class="form-control" rows="2"></textarea>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <!-- Employee ID -->
+      <div class="col-md-3">
+        <label for="employee_id" class="form-label">Employee ID</label>
+        <input type="text" id="employee_id" name="employee_id"
+               class="form-control" required
+               {% if not user.is_anonymous %}
+               value="{{ request.user.username }}" readonly
+               {% endif %}>
+      </div>
+      <!-- Labour Types -->
+      <div class="col-md-9">
+        <label class="form-label">Labour Types</label><br>
+        {% if user.is_anonymous %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox"
+                   name="labour_checkbox" id="labourTech"
+                   value="TECH">
+            <label class="form-check-label" for="labourTech">
+              Need Tech
+            </label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox"
+                   name="labour_checkbox" id="labourNA"
+                   value="NA">
+            <label class="form-check-label" for="labourNA">
+              N/A
+            </label>
+          </div>
+        {% else %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox"
+                   name="labour_checkbox" id="labourElectrician"
+                   value="ELECTRICIAN">
+            <label class="form-check-label" for="labourElectrician">
+              Electrician
+            </label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox"
+                   name="labour_checkbox" id="labourTech"
+                   value="TECH">
+            <label class="form-check-label" for="labourTech">
+              Tech
+            </label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox"
+                   name="labour_checkbox" id="labourMillwright"
+                   value="MILLWRIGHT">
+            <label class="form-check-label" for="labourMillwright">
+              Millwright
+            </label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox"
+                   name="labour_checkbox" id="labourNA"
+                   value="NA">
+            <label class="form-check-label" for="labourNA">
+              N/A
+            </label>
+          </div>
+        {% endif %}
+        <input type="hidden" name="labour_types"
+               id="labour_types_input" value="[]">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      Add Entries
+    </button>
+  </form>
+</div>
+
+<script>
+;(function(){
+  const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
+  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+
+  // 1) Populate Line <select>
+  const lineSelect = document.getElementById('line-select');
+  prodLines.forEach(l => {
+    lineSelect.insertAdjacentHTML('beforeend',
+      `<option value="${l.line}">${l.line}</option>`);
+  });
+
+  // 2) When line changes → render machine checkboxes
+  const machinesDiv = document.getElementById('machines-checkboxes');
+  lineSelect.addEventListener('change', () => {
+    machinesDiv.innerHTML = '';
+    const ops = (
+      prodLines.find(x => x.line === lineSelect.value)
+      ?.operations || []
+    );
+    ops.forEach(op => {
+      op.machines.forEach(m => {
+        const id = `machine_${m.number}`;
+        machinesDiv.insertAdjacentHTML('beforeend', `
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox"
+                   name="machines" id="${id}"
+                   value="${m.number}">
+            <label class="form-check-label" for="${id}">
+              ${m.number}
+            </label>
+          </div>`);
+      });
+    });
+  });
+
+  // 3) Populate Category <select>
+  const catSel = document.getElementById('category-select');
+  const subSel = document.getElementById('subcategory-select');
+  downtimeCodes.forEach(c => {
+    catSel.insertAdjacentHTML('beforeend',
+      `<option value="${c.code}">${c.name}</option>`);
+  });
+
+  // 4) When category changes → render subcategories
+  catSel.addEventListener('change', () => {
+    subSel.innerHTML = '<option value="">Select Subcategory</option>';
+    const catObj = downtimeCodes.find(x => x.code === catSel.value);
+    (catObj?.subcategories || []).forEach(s => {
+      subSel.insertAdjacentHTML('beforeend',
+        `<option value="${s.code}">${s.name}</option>`);
+    });
+  });
+
+  // 5) On submit → gather labour checkboxes into hidden field
+  document.getElementById('bulk-form')
+    .addEventListener('submit', () => {
+      const picked = Array.from(
+        document.querySelectorAll('input[name="labour_checkbox"]:checked')
+      ).map(i => i.value);
+      document.getElementById('labour_types_input').value =
+        JSON.stringify(picked);
+    });
+
+  // 6) Initialize date/time to now
+  const now = new Date();
+  document.getElementById('start-date').value =
+    now.toISOString().slice(0,10);
+  document.getElementById('start-time').value =
+    now.toTimeString().slice(0,5);
+})();
+</script>
+{% endblock %}
