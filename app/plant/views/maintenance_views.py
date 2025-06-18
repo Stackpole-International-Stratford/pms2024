@@ -2260,10 +2260,6 @@ def maintenance_bulk_form(request):
     Bulk‐add downtime entries: pick one line, one or more machines,
     same category/subcategory/comment for all, plus labour.
     """
-
-    # DEBUG: on every request, dump prod_lines into the console
-    print(">>> BACKEND: prod_lines =", prod_lines)
-
     if request.method == "POST":
         line        = request.POST.get('line', '').strip()
         machines    = request.POST.getlist('machines')
@@ -2275,28 +2271,13 @@ def maintenance_bulk_form(request):
         emp_id      = request.POST.get('employee_id', '').strip()
         raw_labour  = request.POST.get('labour_types', '[]')
 
-        # DEBUG: dump everything we just got from the form
-        print(">>> POST payload:")
-        print("    line       =", line)
-        print("    machines   =", machines)
-        print("    raw_cat    =", raw_cat)
-        print("    raw_sub    =", raw_sub)
-        print("    start_date =", start_date)
-        print("    start_time =", start_time)
-        print("    comment    =", comment)
-        print("    emp_id     =", emp_id)
-        print("    raw_labour =", raw_labour)
-
         # --- validations ---
         if not machines:
-            print(">>> ERROR: no machines selected")
             return HttpResponseBadRequest("You must select at least one machine.")
         if not raw_cat:
-            print(">>> ERROR: no category selected")
             return HttpResponseBadRequest("You must choose a category.")
         cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
         if not cat_obj:
-            print(">>> ERROR: invalid category code:", raw_cat)
             return HttpResponseBadRequest("Invalid category code.")
         category_name = cat_obj.category
 
@@ -2304,7 +2285,6 @@ def maintenance_bulk_form(request):
             try:
                 sub_obj = DowntimeCode.objects.get(code=raw_sub)
             except DowntimeCode.DoesNotExist:
-                print(">>> ERROR: invalid subcategory code:", raw_sub)
                 return HttpResponseBadRequest("Invalid subcategory code.")
             subcategory_name = sub_obj.subcategory
             code_value       = raw_sub
@@ -2319,22 +2299,21 @@ def maintenance_bulk_form(request):
                 labour_list = []
         except json.JSONDecodeError:
             labour_list = []
-        print(">>> Parsed labour_list =", labour_list)
+
 
         # parse & localize datetime
         try:
             dt_naive    = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         except ValueError:
-            print(">>> ERROR: bad datetime format:", start_date, start_time)
+
             return HttpResponseBadRequest("Bad date/time format.")
         local_tz    = timezone.get_current_timezone()  # America/Toronto
         aware_local = timezone.make_aware(dt_naive, local_tz)
         epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
-        print(">>> Computed epoch_ts =", epoch_ts)
+
 
         # create one event per machine
         for machine in machines:
-            print(f">>> Creating event for machine: {machine}")
             MachineDowntimeEvent.objects.create(
                 line         = line,
                 machine      = machine,
@@ -2360,9 +2339,6 @@ def maintenance_bulk_form(request):
             'subcategories': []
         })['subcategories'].append({'code': c.code, 'name': c.subcategory})
     downtime_codes_list = list(structured.values())
-
-    # DEBUG: dump downtime_codes_list
-    print(">>> BACKEND: downtime_codes_list =", downtime_codes_list)
 
     return render(request, 'plant/maintenance_bulk_form.html', {
         'lines_json':           json.dumps(prod_lines),
