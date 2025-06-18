@@ -34,7 +34,7 @@ from django.views.decorators.http import require_GET
 from django.utils.dateparse import parse_datetime
 from django.http import JsonResponse
 from plant.models.setupfor_models import SetupFor, AssetCycleTimes
-
+from plant.models.maintenance_models import MachineDowntimeEvent
 
 from .forms import ShiftTotalsForm
 import time
