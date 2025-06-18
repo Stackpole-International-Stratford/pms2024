@@ -744,43 +744,42 @@ def closeout_downtime_entry(request):
         "closeout_comment": <string>
       }
     """
-    # 1) payload -----------------------------------------------------------
+    # 1) payload
     try:
-        p               = json.loads(request.body)
-        entry_id        = p["entry_id"]
-        close_dt        = datetime.strptime(p["closeout"], "%Y-%m-%d %H:%M")
-        close_comment   = p["closeout_comment"].strip()
+        p             = json.loads(request.body)
+        entry_id      = p["entry_id"]
+        naive_dt      = datetime.strptime(p["closeout"], "%Y-%m-%d %H:%M")
+        close_comment = p["closeout_comment"].strip()
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    # 2) event -------------------------------------------------------------
-    event = get_object_or_404(MachineDowntimeEvent,
-                              pk=entry_id,
-                              is_deleted=False)
-
-    # 3) open participations ----------------------------------------------
-    open_parts_qs = DowntimeParticipation.objects.filter(
-        event=event,
-        leave_epoch__isnull=True
+    # 2) fetch event
+    event = get_object_or_404(
+        MachineDowntimeEvent,
+        pk=entry_id,
+        is_deleted=False,
+        closeout_epoch__isnull=True
     )
 
-    # 4) hard stop if anyone is still joined ------------------------------
-    if open_parts_qs.exists():
-        return HttpResponseForbidden(
-            "Cannot close out until all participants have left."
-        )
+    # 3) ensure no open participants
+    if DowntimeParticipation.objects.filter(event=event, leave_epoch__isnull=True).exists():
+        return HttpResponseForbidden("Cannot close out until all participants have left.")
 
-    # 5) epoch -------------------------------------------------------------
-    epoch_ts = int(close_dt.timestamp())
+    # 4) localize and convert to UTC epoch
+    local_tz    = timezone.get_current_timezone()  # America/Toronto
+    aware_local = timezone.make_aware(naive_dt, local_tz)
+    epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
-    # 6) close event (no open parts, so nothing else to touch) ------------
+    # 5) sanity check: must be after the start
+    if epoch_ts <= event.start_epoch:
+        return HttpResponseBadRequest("Close-out time must be after the start time.")
+
+    # 6) save
     event.closeout_epoch   = epoch_ts
     event.closeout_comment = close_comment
     event.save(update_fields=["closeout_epoch", "closeout_comment"])
 
-    # 7) response ----------------------------------------------------------
     return JsonResponse({"status": "ok", "closed_at_epoch": epoch_ts})
-
 
 
 
@@ -846,29 +845,27 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 # ==================================================================================
 
 
-
-def maintenance_form(request: HttpRequest) -> HttpResponse:
+def maintenance_form(request):
     """
     Downtime‐entry form: CATEGORY is required; SUBCATEGORY + code are optional.
     """
-    #── Paging params ─────────────────────────────────────────────────
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
 
     if request.method == "POST":
-        #── Pull form data ─────────────────────────────────────────────
-        entry_id     = request.POST.get('entry_id')   # None for new
-        line         = request.POST.get('line', '').strip()
-        machine      = request.POST.get('machine', '').strip()
-        raw_cat      = request.POST.get('category', '').strip()
-        raw_sub      = request.POST.get('subcategory', '').strip()
-        start_date   = request.POST.get('start_date', '')   # "YYYY-MM-DD"
-        start_time   = request.POST.get('start_time', '')   # "HH:MM"
-        comment      = request.POST.get('description', '').strip()
-        emp_id       = request.POST.get('employee_id', '').strip()
-        raw_labour   = request.POST.get('labour_types', '[]')
+        # Pull form data
+        entry_id   = request.POST.get('entry_id')   # None for new
+        line       = request.POST.get('line', '').strip()
+        machine    = request.POST.get('machine', '').strip()
+        raw_cat    = request.POST.get('category', '').strip()
+        raw_sub    = request.POST.get('subcategory', '').strip()
+        start_date = request.POST.get('start_date', '')   # "YYYY-MM-DD"
+        start_time = request.POST.get('start_time', '')   # "HH:MM"
+        comment    = request.POST.get('description', '').strip()
+        emp_id     = request.POST.get('employee_id', '').strip()
+        raw_labour = request.POST.get('labour_types', '[]')
 
-        #── Parse labour JSON ──────────────────────────────────────────
+        # Parse labour JSON
         try:
             labour_list = json.loads(raw_labour)
             if not isinstance(labour_list, list):
@@ -876,16 +873,15 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         except json.JSONDecodeError:
             labour_list = []
 
-        #── Validate & look up CATEGORY ───────────────────────────────
+        # Validate category
         if not raw_cat:
             return HttpResponseBadRequest("You must choose a category.")
-        # find any DowntimeCode that starts with "raw_cat-"
         cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
         if not cat_obj:
             return HttpResponseBadRequest("Invalid category code.")
         category_name = cat_obj.category
 
-        #── Validate & look up SUBCATEGORY (optional) ─────────────────
+        # Validate subcategory
         if raw_sub:
             try:
                 sub_obj = DowntimeCode.objects.get(code=raw_sub)
@@ -897,27 +893,27 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             subcategory_name = "NOTSELECTED"
             code_value       = "NOTSELECTED"
 
-        #── Build epoch timestamp ─────────────────────────────────────
+        # Build epoch timestamp (localize to America/Toronto then UTC)
         try:
-            dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
-            if timezone.is_naive(dt):
-                dt = timezone.make_aware(dt, timezone.get_default_timezone())
+            dt_naive = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         except ValueError:
             return HttpResponseBadRequest("Bad date/time format.")
-        epoch_ts = int(dt.timestamp())
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
-        #── Create or update the event ───────────────────────────────
+        # Create or update
         if entry_id:
             e = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
-            e.line        = line
-            e.machine     = machine
-            e.category    = category_name
-            e.subcategory = subcategory_name
-            e.code        = code_value
-            e.start_epoch = epoch_ts
-            e.comment     = comment
-            e.labour_types= labour_list
-            e.employee_id = emp_id or None
+            e.line         = line
+            e.machine      = machine
+            e.category     = category_name
+            e.subcategory  = subcategory_name
+            e.code         = code_value
+            e.start_epoch  = epoch_ts
+            e.comment      = comment
+            e.labour_types = labour_list
+            e.employee_id  = emp_id or None
             e.save(update_fields=[
                 'line','machine','category','subcategory',
                 'code','start_epoch','comment',
@@ -936,10 +932,10 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
                 employee_id  = emp_id or None,
             )
 
-        #── Redirect back, preserving ?offset=… ───────────────────────
+        # Redirect back, preserving offset
         return redirect(request.get_full_path())
 
-    #── GET: list open events + render form ─────────────────────────
+    # GET: render form
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
@@ -970,14 +966,14 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
             default=Value(False),
             output_field=BooleanField(),
         ),
-                has_plctech = Exists(
+        has_plctech=Exists(
             DowntimeParticipation.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_plctech'
             )
         ),
-        has_imt = Exists(
+        has_imt=Exists(
             DowntimeParticipation.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
@@ -986,18 +982,20 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         ),
     ).order_by('-start_epoch')
 
-    total     = qs.count()
-    entries   = list(qs[offset: offset + page_size])
-    has_more  = (offset + page_size) < total
+    total    = qs.count()
+    entries  = list(qs[offset: offset + page_size])
+    has_more = (offset + page_size) < total
 
-    # rebuild your JSON blobs for the selects just like before…
+    # Build downtime_codes_list and prod_lines JSON...
     downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
-    structured     = {}
+    structured = {}
     for c in downtime_codes:
         cat = c.code.split('-',1)[0]
-        if cat not in structured:
-            structured[cat] = {'name': c.category, 'code': cat, 'subcategories': []}
-        structured[cat]['subcategories'].append({'code': c.code, 'name': c.subcategory})
+        structured.setdefault(cat, {
+            'name': c.category,
+            'code': cat,
+            'subcategories': []
+        })['subcategories'].append({'code': c.code, 'name': c.subcategory})
     downtime_codes_list = list(structured.values())
 
     return render(request, 'plant/maintenance_form.html', {
@@ -1005,8 +1003,8 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         'offset':              offset,
         'page_size':           page_size,
         'has_more':            has_more,
-        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
-        'lines_json':          mark_safe(json.dumps(prod_lines)),
+        'downtime_codes_json': json.dumps(downtime_codes_list),
+        'lines_json':          json.dumps(prod_lines),
     })
 
 
