@@ -2254,7 +2254,7 @@ def force_leave_participation(request, pk):
 # ========================================================================
 # ========================================================================
 
-
+@login_required(login_url="login")
 def maintenance_bulk_form(request):
     """
     Bulk‐add downtime entries: pick one line, one or more machines,

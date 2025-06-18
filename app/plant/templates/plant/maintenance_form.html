@@ -13,9 +13,23 @@
         <thead>
           <tr>
             <th style="min-width:140px">
+                {% if user.is_authenticated %}
+                  <a href="{% url 'maintenance_bulk_form' %}"
+                    class="btn btn-sm btn-link mb-1">
+                    Bulk entry
+                  </a><br>
+                {% endif %}
               Started at<br>
-              <input type="hidden" id="start-date" name="start_date" class="form-control form-control-sm" required>
-              <input type="time"   id="start-time" name="start_time" class="form-control form-control-sm mt-1" required>
+              <input type="hidden"
+                    id="start-date"
+                    name="start_date"
+                    class="form-control form-control-sm"
+                    required>
+              <input type="time"
+                    id="start-time"
+                    name="start_time"
+                    class="form-control form-control-sm mt-1"
+                    required>
             </th>
             <th style="min-width:100px">
               Line<br>
