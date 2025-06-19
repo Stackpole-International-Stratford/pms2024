@@ -203,14 +203,19 @@ Add New or Update Employee
         Machine History
       </button>
 
-        <button
-          id="quick-add-btn"
-          class="btn btn-dark btn-sm ms-2"
-          data-url="{% url 'quick_add' %}"
-          type="button"
-        >
-          Quick Add
-        </button>
+      <button
+        id="quick-add-btn"
+        class="btn btn-dark btn-sm ms-2"
+        data-url="{% url 'quick_add' %}"
+        type="button"
+      >Quick Add</button>
+
+      <script>
+        document.getElementById('quick-add-btn')
+          .addEventListener('click', function() {
+            window.open(this.dataset.url, '_blank');
+          });
+      </script>
 
 
 

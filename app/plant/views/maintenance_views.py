@@ -2355,8 +2355,11 @@ def maintenance_bulk_form(request):
 
 
 def quick_add(request):
-    # This will appear in your runserver (or gunicorn/uwsgi) console
+    # prints to your console
     print("hello world")
-    # Return something so the AJAX call doesn’t hang
-    return JsonResponse({"status": "ok"})
+
+    # render an actual HTML page
+    return render(request, 'plant/quick_add.html')
+    # —or, if you really just want a one-liner without a template:
+    # return HttpResponse("<h1>Hello World</h1>")
 
