@@ -2438,4 +2438,5 @@ def quick_add(request):
     return render(request, 'plant/quick_add.html', {
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
+        'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
     })

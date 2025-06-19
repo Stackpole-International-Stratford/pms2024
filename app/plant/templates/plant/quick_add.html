@@ -82,39 +82,17 @@
         <div class="col-md-9">
           <label class="form-label d-block">Labour Types</label>
           <div class="btn-group" role="group" aria-label="Labour types">
-            {% if user.is_anonymous %}
-              <input type="checkbox" class="btn-check" name="labour_checkbox"
-                     id="labourTech" value="TECH" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="labourTech">
-                Need Tech
+            {% for code, label in labour_choices %}
+              <input type="checkbox" class="btn-check"
+                     name="labour_checkbox"
+                     id="labour_{{ code }}"
+                     value="{{ code }}"
+                     autocomplete="off">
+              <label class="btn btn-outline-secondary"
+                     for="labour_{{ code }}">
+                {{ label }}
               </label>
-              <input type="checkbox" class="btn-check" name="labour_checkbox"
-                     id="labourNA" value="NA" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="labourNA">
-                N/A
-              </label>
-            {% else %}
-              <input type="checkbox" class="btn-check" name="labour_checkbox"
-                     id="labourElectrician" value="ELECTRICIAN" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="labourElectrician">
-                Electrician
-              </label>
-              <input type="checkbox" class="btn-check" name="labour_checkbox"
-                     id="labourTech" value="TECH" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="labourTech">
-                Tech
-              </label>
-              <input type="checkbox" class="btn-check" name="labour_checkbox"
-                     id="labourMillwright" value="MILLWRIGHT" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="labourMillwright">
-                Millwright
-              </label>
-              <input type="checkbox" class="btn-check" name="labour_checkbox"
-                     id="labourNA" value="NA" autocomplete="off">
-              <label class="btn btn-outline-secondary" for="labourNA">
-                N/A
-              </label>
-            {% endif %}
+            {% endfor %}
           </div>
           <input type="hidden" name="labour_types"
                  id="labour_types_input" value="[]">
