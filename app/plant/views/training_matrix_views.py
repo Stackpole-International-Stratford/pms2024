@@ -42,3 +42,10 @@ def manage_employees(request):
         'columns': columns,
         'rows':    rows,
     })
+
+
+def training_jobs(request):
+    """
+    Temporary view to render the manage_jobs template.
+    """
+    return render(request, 'plant/manage_jobs.html')

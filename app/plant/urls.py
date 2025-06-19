@@ -109,4 +109,7 @@ urlpatterns = [
     path('training-matrix/', training_matrix, name='training_matrix'),
 
     path('training-matrix/manage-employees', manage_employees, name='manage_employees'),
+
+
+    path('training-matrix/manage-jobs', training_jobs, name='manage_jobs'),
 ]
