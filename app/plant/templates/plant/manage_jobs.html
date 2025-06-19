@@ -3,30 +3,32 @@
   <h1>Manage Training Jobs</h1>
 
   {% if jobs %}
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Area</th>
-          <th>Line</th>
-          <th>Operation</th>
-          <th>Description</th>
-          <th>Created</th>
-          <th>Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for job in jobs %}
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead>
           <tr>
-            <td>{{ job.get_area_display }}</td>
-            <td>{{ job.line }}</td>
-            <td>{{ job.operation }}</td>
-            <td>{{ job.description }}</td>
-            <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <th>Area</th>
+            <th>Line</th>
+            <th>Operation</th>
+            <th>Description</th>
+            <th>Created</th>
+            <th>Updated</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td>{{ job.get_area_display }}</td>
+              <td>{{ job.line }}</td>
+              <td>{{ job.operation }}</td>
+              <td>{{ job.description }}</td>
+              <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
+              <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
     <p>No training jobs found.</p>
   {% endif %}
