@@ -107,4 +107,6 @@ urlpatterns = [
     path('quick-add/', quick_add, name='quick_add'),
 
     path('training-matrix/', training_matrix, name='training_matrix'),
+
+    path('training-matrix/manage-employees', manage_employees, name='manage_employees'),
 ]

@@ -5,3 +5,11 @@ def training_matrix(request):
     Temporary view to render the training_matrix template.
     """
     return render(request, 'plant/training_matrix.html')
+
+
+
+def manage_employees(request):
+    """
+    Temporary view to render the training_matrix template.
+    """
+    return render(request, 'plant/manage_employees.html')
