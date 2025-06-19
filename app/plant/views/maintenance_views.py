@@ -2325,7 +2325,7 @@ def maintenance_bulk_form(request):
                 employee_id  = emp_id or None,
             )
 
-        return redirect('maintenance_bulk_form')
+        return redirect('maintenance_all')
 
     # GET → build JSON for selects
     downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
