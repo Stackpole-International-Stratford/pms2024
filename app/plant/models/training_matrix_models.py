@@ -5,9 +5,9 @@ class TrainingJob(models.Model):
     AREA_2 = 2
     AREA_3 = 3
     AREA_CHOICES = [
-        (AREA_1, "Area 1"),
-        (AREA_2, "Area 2"),
-        (AREA_3, "Area 3"),
+        (AREA_1, "1"),
+        (AREA_2, "2"),
+        (AREA_3, "3"),
     ]
 
     area        = models.IntegerField(choices=AREA_CHOICES)

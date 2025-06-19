@@ -1,6 +1,7 @@
 
 from django.shortcuts import render, redirect
 import pandas as pd
+from django.shortcuts import get_object_or_404
 from ..models.training_matrix_models import *
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
@@ -94,6 +95,39 @@ def add_job(request):
             "operation":     job.operation,
             "description":   job.description,
             "created_at":    job.created_at.strftime("%Y-%m-%d %H:%M"),
+            "updated_at":    job.updated_at.strftime("%Y-%m-%d %H:%M"),
+        }
+    })
+
+
+
+
+@require_POST
+def edit_job(request, job_id):
+    job = get_object_or_404(TrainingJob, id=job_id)
+    # grab fields
+    area        = request.POST.get("area")
+    line        = request.POST.get("line")
+    operation   = request.POST.get("operation")
+    description = request.POST.get("description")
+    # simple validation (you can expand this)
+    if not all([area, line, operation, description]):
+        return JsonResponse({"success": False, "errors": "All fields required."}, status=400)
+    # update + save
+    job.area        = area
+    job.line        = line
+    job.operation   = operation
+    job.description = description
+    job.save()
+    # return updated row data
+    return JsonResponse({
+        "success": True,
+        "job": {
+            "id":            job.id,
+            "area_display":  job.get_area_display(),
+            "line":          job.line,
+            "operation":     job.operation,
+            "description":   job.description,
             "updated_at":    job.updated_at.strftime("%Y-%m-%d %H:%M"),
         }
     })

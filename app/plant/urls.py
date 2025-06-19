@@ -114,4 +114,7 @@ urlpatterns = [
     path('training-matrix/manage-jobs', training_jobs, name='manage_jobs'),
 
     path("training-matrix/add-job/", add_job, name="add_job"),
+
+    path("training-matrix/edit-job/<int:job_id>/", edit_job, name="edit_job"),
+
 ]

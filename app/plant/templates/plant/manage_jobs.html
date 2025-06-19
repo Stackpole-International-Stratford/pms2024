@@ -2,7 +2,7 @@
 {% block content %}
   <h1>Manage Training Jobs</h1>
 
-  {# Add-Job button always visible #}
+  {# always-visible add button #}
   <button
     type="button"
     class="btn btn-sm btn-primary mb-3"
@@ -25,13 +25,25 @@
         </thead>
         <tbody>
           {% for job in jobs %}
-            <tr>
-              <td>{{ job.get_area_display }}</td>
-              <td>{{ job.line }}</td>
-              <td>{{ job.operation }}</td>
-              <td>{{ job.description }}</td>
+            <tr data-job-id="{{ job.id }}">
+              <td class="col-area">{{ job.get_area_display }}</td>
+              <td class="col-line">{{ job.line }}</td>
+              <td class="col-operation">{{ job.operation }}</td>
+              <td class="col-description">{{ job.description }}</td>
               <td>
-                {# per-row controls go here, e.g. Edit/Delete buttons #}
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary edit-btn"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editJobModal"
+                  data-id="{{ job.id }}"
+                  data-area="{{ job.area }}"
+                  data-line="{{ job.line }}"
+                  data-operation="{{ job.operation }}"
+                  data-description="{{ job.description }}"
+                >
+                  Edit
+                </button>
               </td>
             </tr>
           {% endfor %}
@@ -42,7 +54,8 @@
     <p>No training jobs found.</p>
   {% endif %}
 
-  {# Add Job Modal (always present) #}
+  {# —————————————————————————— #}
+  {# Add Job Modal (unchanged)     #}
   <div class="modal fade" id="addJobModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -86,8 +99,56 @@
       </div>
     </div>
   </div>
+  {# —————————————————————————— #}
 
-  {# AJAX script (always present) #}
+  {# Edit Job Modal — one shared modal #}
+  <div class="modal fade" id="editJobModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="editJobForm" method="post">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Training Job</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="id" id="edit_id">
+
+            <div class="mb-3">
+              <label for="edit_area" class="form-label">Area</label>
+              <select name="area" id="edit_area" class="form-select">
+                {% for val, label in area_choices %}
+                  <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="edit_line" class="form-label">Line</label>
+              <input type="text" name="line" id="edit_line" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label for="edit_operation" class="form-label">Operation</label>
+              <input type="text" name="operation" id="edit_operation" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label for="edit_description" class="form-label">Description</label>
+              <textarea name="description" id="edit_description" class="form-control"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              Close
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# AJAX script for both add & edit #}
   <script>
     function getCookie(name) {
       let cookieValue = null;
@@ -103,46 +164,112 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      const form = document.getElementById("addJobForm");
-      form.addEventListener("submit", e => {
-        e.preventDefault();
-        const url = form.action;
-        const data = new FormData(form);
+      const csrfToken = getCookie("csrftoken");
 
-        fetch(url, {
+      // 1) Populate Edit modal
+      document.querySelectorAll(".edit-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const { id, area, line, operation, description } = btn.dataset;
+          document.getElementById("edit_id").value          = id;
+          document.getElementById("edit_area").value        = area;
+          document.getElementById("edit_line").value        = line;
+          document.getElementById("edit_operation").value   = operation;
+          document.getElementById("edit_description").value = description;
+          document.getElementById("editJobForm").action =
+            `{% url 'edit_job' 0 %}`.replace("/0/", `/${id}/`);
+        });
+      });
+
+      // 2) Submit Edit form
+      document.getElementById("editJobForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const form = e.target;
+        fetch(form.action, {
           method: "POST",
           headers: {
-            "X-CSRFToken": getCookie("csrftoken"),
+            "X-CSRFToken": csrfToken,
             "X-Requested-With": "XMLHttpRequest"
           },
-          body: data
+          body: new FormData(form)
         })
-        .then(res => res.json())
+        .then(r => r.json())
         .then(json => {
-          if (json.success) {
-            const tbody = document.querySelector("table tbody");
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>Area ${json.job.area_display}</td>
-              <td>${json.job.line}</td>
-              <td>${json.job.operation}</td>
-              <td>${json.job.description}</td>
-              <td></td>
-            `;
-            // If table already exists, prepend to it; otherwise, reload to show new table
-            if (tbody) {
-              tbody.prepend(row);
-            } else {
-              location.reload();
-            }
-
-            // hide and reset
-            const modalEl = document.getElementById("addJobModal");
-            bootstrap.Modal.getInstance(modalEl).hide();
-            form.reset();
-          } else {
-            alert("Error: " + (json.errors || "Unknown error"));
+          if (!json.success) {
+            return alert("Error: " + (json.errors||"Unknown error"));
           }
+          const info = json.job;
+          const row  = document.querySelector(`tr[data-job-id='${info.id}']`);
+          row.querySelector(".col-area").textContent        = info.area_display;
+          row.querySelector(".col-line").textContent        = info.line;
+          row.querySelector(".col-operation").textContent   = info.operation;
+          row.querySelector(".col-description").textContent = info.description;
+          bootstrap.Modal.getInstance(
+            document.getElementById("editJobModal")
+          ).hide();
+        })
+        .catch(err => console.error("Edit-job AJAX error:", err));
+      });
+
+      // 3) Submit Add form
+      document.getElementById("addJobForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const form = e.target;
+        fetch(form.action, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          body: new FormData(form)
+        })
+        .then(r => r.json())
+        .then(json => {
+          if (!json.success) {
+            return alert("Error: " + (json.errors||"Unknown error"));
+          }
+          const tbody = document.querySelector("table tbody");
+          const job   = json.job;
+          const row   = document.createElement("tr");
+          row.setAttribute("data-job-id", job.id);
+          row.innerHTML = `
+            <td class="col-area">${job.area_display}</td>
+            <td class="col-line">${job.line}</td>
+            <td class="col-operation">${job.operation}</td>
+            <td class="col-description">${job.description}</td>
+            <td>
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary edit-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#editJobModal"
+                data-id="${job.id}"
+                data-area="${job.area}"
+                data-line="${job.line}"
+                data-operation="${job.operation}"
+                data-description="${job.description}"
+              >Edit</button>
+            </td>
+          `;
+          if (tbody) {
+            tbody.prepend(row);
+            // re-bind its edit handler
+            row.querySelector(".edit-btn").addEventListener("click", () => {
+              const btnData = row.querySelector(".edit-btn").dataset;
+              document.getElementById("edit_id").value          = btnData.id;
+              document.getElementById("edit_area").value        = btnData.area;
+              document.getElementById("edit_line").value        = btnData.line;
+              document.getElementById("edit_operation").value   = btnData.operation;
+              document.getElementById("edit_description").value = btnData.description;
+              document.getElementById("editJobForm").action =
+                `{% url 'edit_job' 0 %}`.replace("/0/", `/${btnData.id}/`);
+            });
+          } else {
+            location.reload();
+          }
+          bootstrap.Modal.getInstance(
+            document.getElementById("addJobModal")
+          ).hide();
+          form.reset();
         })
         .catch(err => console.error("Add-job AJAX error:", err));
       });
