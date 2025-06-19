@@ -1,91 +1,34 @@
 {% extends "parent.html" %}
-
 {% block content %}
-<div class="container my-4">
-  <h1 class="mb-4">Manage Training Jobs</h1>
+  <h1>Manage Training Jobs</h1>
 
-  <!-- Add Job Card -->
-  <div class="card mb-5">
-    <div class="card-header">
-      Add Job
-    </div>
-    <div class="card-body">
-      <form method="post" novalidate>
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-
-        <div class="mb-3">
-          <label for="{{ form.area.id_for_label }}" class="form-label">
-            {{ form.area.label }}
-          </label>
-          {{ form.area }}
-          {% for err in form.area.errors %}
-            <div class="invalid-feedback d-block">{{ err }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="mb-3">
-          <label for="{{ form.line.id_for_label }}" class="form-label">
-            {{ form.line.label }}
-          </label>
-          {{ form.line }}
-          {% for err in form.line.errors %}
-            <div class="invalid-feedback d-block">{{ err }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="mb-3">
-          <label for="{{ form.operation.id_for_label }}" class="form-label">
-            {{ form.operation.label }}
-          </label>
-          {{ form.operation }}
-          {% for err in form.operation.errors %}
-            <div class="invalid-feedback d-block">{{ err }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="mb-3">
-          <label for="{{ form.description.id_for_label }}" class="form-label">
-            {{ form.description.label }}
-          </label>
-          {{ form.description }}
-          {% for err in form.description.errors %}
-            <div class="invalid-feedback d-block">{{ err }}</div>
-          {% endfor %}
-        </div>
-
-        <button type="submit" class="btn btn-primary">Add Job</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Existing Jobs -->
-  <h2 class="mb-3">Existing Jobs</h2>
   {% if jobs %}
-    <table class="table table-striped table-bordered">
-      <thead class="table-light">
+    <table class="table table-striped">
+      <thead>
         <tr>
-          <th scope="col">Created</th>
-          <th scope="col">Area</th>
-          <th scope="col">Line</th>
-          <th scope="col">Operation</th>
+          <th>Area</th>
+          <th>Line</th>
+          <th>Operation</th>
+          <th>Description</th>
+          <th>Created</th>
+          <th>Updated</th>
         </tr>
       </thead>
       <tbody>
         {% for job in jobs %}
-        <tr>
-          <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
-          <td>{{ job.get_area_display }}</td>
-          <td>{{ job.line }}</td>
-          <td>{{ job.operation }}</td>
-        </tr>
+          <tr>
+            <td>{{ job.get_area_display }}</td>
+            <td>{{ job.line }}</td>
+            <td>{{ job.operation }}</td>
+            <td>{{ job.description }}</td>
+            <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <div class="alert alert-info">
-      No jobs have been added yet.
-    </div>
+    <p>No training jobs found.</p>
   {% endif %}
-</div>
+
 {% endblock %}

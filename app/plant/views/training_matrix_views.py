@@ -1,7 +1,6 @@
 
 from django.shortcuts import render, redirect
 import pandas as pd
-from ..forms.training_matrix_forms import *
 from ..models.training_matrix_models import *
 
 def training_matrix(request):
@@ -49,18 +48,8 @@ def manage_employees(request):
 
 
 
-
 def training_jobs(request):
-    if request.method == 'POST':
-        form = TrainingJobForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('manage_jobs')  # POST‐redirect‐GET to clear the form
-    else:
-        form = TrainingJobForm()
-
-    jobs = TrainingJob.objects.order_by('-created_at')
+    jobs = TrainingJob.objects.all().order_by('area', 'line', 'operation')
     return render(request, 'plant/manage_jobs.html', {
-        'form': form,
         'jobs': jobs,
     })
