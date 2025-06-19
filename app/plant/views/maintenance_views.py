@@ -2354,16 +2354,6 @@ def maintenance_bulk_form(request):
 # ========================================================================
 
 
-
-def is_supervisor_or_manager(user):
-    if not user.is_authenticated:
-        return False
-    # allow either supervisors or managers
-    return user.groups.filter(
-        name__in=["maintenance_supervisors", "maintenance_managers"]
-    ).exists()
-
-@user_passes_test(is_supervisor_or_manager)
 def quick_add(request):
     # This will appear in your runserver (or gunicorn/uwsgi) console
     print("hello world")
