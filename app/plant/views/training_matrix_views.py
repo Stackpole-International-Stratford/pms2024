@@ -44,6 +44,10 @@ def manage_employees(request):
     })
 
 
+
+
+
+
 def training_jobs(request):
     """
     Temporary view to render the manage_jobs template.
