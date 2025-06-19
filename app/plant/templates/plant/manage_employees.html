@@ -1,14 +1,46 @@
 {% extends "parent.html" %}
 
-{% block title %}Employees{% endblock %}
+{% block title %}Manage Employees{% endblock %}
 
 {% block content %}
-  <div class="row mt-5">
-    <div class="col">
-      <h1 class="display-4">Hello, world!</h1>
-      <p class="lead">
-        This is your employee list manager for the training_matrix.
-      </p>
+  <h1 class="mt-4">Manage Employees</h1>
+
+  <form method="post" enctype="multipart/form-data" class="mb-4">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="file" class="form-label">Upload Excel file</label>
+      <input
+        type="file"
+        name="file"
+        id="file"
+        class="form-control"
+        accept=".xlsx,.xls"
+        required
+      >
     </div>
-  </div>
+    <button type="submit" class="btn btn-primary">Upload &amp; Preview</button>
+  </form>
+
+  {% if rows %}
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead class="table-light">
+          <tr>
+            {% for col in columns %}
+              <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              {% for cell in row %}
+                <td>{{ cell }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 {% endblock %}
