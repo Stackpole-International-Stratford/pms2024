@@ -202,7 +202,7 @@ Add New or Update Employee
         data-bs-target="#machineHistoryModal">
         Machine History
       </button>
-
+      
       <button
         id="quick-add-btn"
         class="btn btn-dark btn-sm ms-2"
@@ -213,9 +213,11 @@ Add New or Update Employee
       <script>
         document.getElementById('quick-add-btn')
           .addEventListener('click', function() {
-            window.open(this.dataset.url, '_blank');
+            // Redirect in the same tab instead of opening a new one
+            window.location.href = this.dataset.url;
           });
       </script>
+
 
 
 

@@ -2421,7 +2421,8 @@ def quick_add(request):
             employee_id  = emp_id or None,
         )
 
-        return redirect('quick_add')
+        # just redirect to your “all downtime entries” page:
+        return redirect('maintenance_all')
 
     # GET → build JSON for selects (unchanged)
     downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
