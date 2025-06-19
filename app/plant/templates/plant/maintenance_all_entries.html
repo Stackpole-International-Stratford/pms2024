@@ -1584,7 +1584,58 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 
+<script>
+  (function() {
+    // Helper to get CSRF token cookie
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        document.cookie.split(';').forEach(function(cookie) {
+          const cookieTrimmed = cookie.trim();
+          // Does this cookie string begin with the name we want?
+          if (cookieTrimmed.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(cookieTrimmed.slice(name.length + 1));
+          }
+        });
+      }
+      return cookieValue;
+    }
 
+    // Only run if the button is present
+    const btn = document.getElementById('quick-add-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', function(event) {
+      event.preventDefault();
+      const url = btn.getAttribute('data-url');
+
+      fetch(url, {
+        method: 'GET',               // or 'POST' if your view expects POST
+        credentials: 'same-origin',  // include cookies
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCookie('csrftoken')
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok (' + response.status + ')');
+        }
+        // adjust depending on what your view returns:
+        // return response.json();
+        return response.text();
+      })
+      .then(data => {
+        // Do something with the response:
+        console.log('Server response:', data);
+        // e.g. show a toast, append new row to a table, etc.
+      })
+      .catch(err => {
+        console.error('Fetch error:', err);
+      });
+    });
+  })();
+</script>
 
 
 
