@@ -202,7 +202,7 @@ Add New or Update Employee
         data-bs-target="#machineHistoryModal">
         Machine History
       </button>
-      
+
       <button
         id="quick-add-btn"
         class="btn btn-dark btn-sm ms-2"
@@ -1061,7 +1061,7 @@ function initCloseoutModal(){
     .then(()=>{ location.reload(); })
     .catch(e=>{
       if (e.status === 403) alert('All participants must leave first');
-      else                     alert('Save / close-out failed. Did you choose a subcategory?');
+      else                     alert('Save / close-out failed. Did you choose a subcategory? Is the closeout time at least 1 minute past the entry time?');
     });
   }
 }
