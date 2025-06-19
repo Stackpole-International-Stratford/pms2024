@@ -2,6 +2,8 @@
 from django.shortcuts import render, redirect
 import pandas as pd
 from ..models.training_matrix_models import *
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 
 def training_matrix(request):
     """
@@ -50,6 +52,48 @@ def manage_employees(request):
 
 def training_jobs(request):
     jobs = TrainingJob.objects.all().order_by('area', 'line', 'operation')
+    # pull the AREA_CHOICES into context
+    area_choices = TrainingJob.AREA_CHOICES
     return render(request, 'plant/manage_jobs.html', {
         'jobs': jobs,
+        'area_choices': area_choices,
+    })
+
+
+
+@require_POST
+def add_job(request):
+    # grab fields manually from POST
+    area        = request.POST.get("area")
+    line        = request.POST.get("line")
+    operation   = request.POST.get("operation")
+    description = request.POST.get("description")
+
+    # basic validation
+    if not all([area, line, operation, description]):
+        return JsonResponse({
+            "success": False,
+            "errors": "All fields (area, line, operation, description) are required."
+        }, status=400)
+
+    # create the job
+    job = TrainingJob.objects.create(
+        area=area,
+        line=line,
+        operation=operation,
+        description=description,
+    )
+
+    # return the minimal data we need to render a new row
+    return JsonResponse({
+        "success": True,
+        "job": {
+            "id":            job.id,
+            "area_display":  job.get_area_display(),
+            "line":          job.line,
+            "operation":     job.operation,
+            "description":   job.description,
+            "created_at":    job.created_at.strftime("%Y-%m-%d %H:%M"),
+            "updated_at":    job.updated_at.strftime("%Y-%m-%d %H:%M"),
+        }
     })
