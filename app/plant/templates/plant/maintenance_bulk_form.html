@@ -127,10 +127,15 @@
     </form>
 
     <div class="card-footer text-end bg-light">
-      <button type="submit" form="bulk-form" class="btn btn-dark px-4">
+      <a href="{% url 'maintenance_form' %}"
+        class="btn btn-dark me-2">
+        Back
+      </a>
+      <button type="submit" form="bulk-form" class="btn btn-warning px-4">
         Add Entries
       </button>
     </div>
+
   </div>
 </div>
 
