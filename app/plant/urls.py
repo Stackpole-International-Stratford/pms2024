@@ -103,5 +103,5 @@ urlpatterns = [
 
     path('maintenance/bulk_add/', maintenance_bulk_form, name='maintenance_bulk_form'),
 
-
+    path('quick-add/', quick_add, name='quick_add'),
 ]

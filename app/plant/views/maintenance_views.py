@@ -2343,3 +2343,30 @@ def maintenance_bulk_form(request):
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
     })
+
+
+
+
+# ========================================================================
+# ========================================================================
+# ================ Quickadd Feature for supervisors  =====================
+# ========================================================================
+# ========================================================================
+
+
+
+def is_supervisor_or_manager(user):
+    if not user.is_authenticated:
+        return False
+    # allow either supervisors or managers
+    return user.groups.filter(
+        name__in=["maintenance_supervisors", "maintenance_managers"]
+    ).exists()
+
+@user_passes_test(is_supervisor_or_manager)
+def quick_add(request):
+    # This will appear in your runserver (or gunicorn/uwsgi) console
+    print("hello world")
+    # Return something so the AJAX call doesn’t hang
+    return JsonResponse({"status": "ok"})
+
