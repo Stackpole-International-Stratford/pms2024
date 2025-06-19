@@ -212,7 +212,9 @@ Add New or Update Employee
         >
           Quick Add
         </button>
-      {% endif %}
+        {% endif %}
+
+
 
 
       <!-- New filter input -->
@@ -805,6 +807,7 @@ Add New or Update Employee
     </div>
   </div>
 </div>
+
 
 <!-- Force-Leave (manager) Modal -->
 <div class="modal fade" id="forceLeaveModal" tabindex="-1" aria-hidden="true">
@@ -1580,51 +1583,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
 </script>
 
 
-<script>
-;(function() {
-  // Helper to get the CSRF token cookie (in case you switch to POST later)
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      document.cookie.split(';').forEach(function(cookie) {
-        const pair = cookie.trim().split('=');
-        if (pair[0] === name) {
-          cookieValue = decodeURIComponent(pair[1]);
-        }
-      });
-    }
-    return cookieValue;
-  }
 
-  const btn = document.getElementById('quick-add-btn');
-  if (!btn) return;
 
-  btn.addEventListener('click', function(event) {
-    // prevent any default action, just in case
-    event.preventDefault();
 
-    fetch(btn.dataset.url, {
-      method: 'GET',                     // or 'POST' if you need to send data
-      credentials: 'same-origin',        // include cookies
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': getCookie('csrftoken')
-      }
-    })
-    .then(function(response) {
-      if (!response.ok) throw new Error('Network response was not OK');
-      return response.json();
-    })
-    .then(function(data) {
-      console.log('Server replied:', data);
-      // → you’ll see {status: "ok"} (or whatever your view returns)
-    })
-    .catch(function(err) {
-      console.error('Error calling quick_add:', err);
-    });
-  });
-})();
-</script>
+
 
 <!-- END maintenance.js -->
 </div>
