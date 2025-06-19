@@ -2,6 +2,15 @@
 {% block content %}
   <h1>Manage Training Jobs</h1>
 
+  {# Add-Job button always visible #}
+  <button
+    type="button"
+    class="btn btn-sm btn-primary mb-3"
+    data-bs-toggle="modal"
+    data-bs-target="#addJobModal">
+    Add Job
+  </button>
+
   {% if jobs %}
     <div class="table-responsive">
       <table class="table table-striped table-hover">
@@ -11,18 +20,7 @@
             <th>Line</th>
             <th>Operation</th>
             <th>Description</th>
-            <th>Created</th>
-            <th>Updated</th>
-            <th>
-              Actions
-              <button
-                type="button"
-                class="btn btn-sm btn-primary float-end"
-                data-bs-toggle="modal"
-                data-bs-target="#addJobModal">
-                Add Job
-              </button>
-            </th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -32,124 +30,122 @@
               <td>{{ job.line }}</td>
               <td>{{ job.operation }}</td>
               <td>{{ job.description }}</td>
-              <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
-              <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-              <td><!-- per-row controls --></td>
+              <td>
+                {# per-row controls go here, e.g. Edit/Delete buttons #}
+              </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-
-
-    <!-- Add Job Modal -->
-    <div class="modal fade" id="addJobModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <form id="addJobForm" method="post" action="{% url 'add_job' %}">
-            {% csrf_token %}
-            <div class="modal-header">
-              <h5 class="modal-title">Add Training Job</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              <div class="mb-3">
-                <label for="id_area" class="form-label">Area</label>
-                <select name="area" id="id_area" class="form-select">
-                  {% for val, label in area_choices %}
-                    <option value="{{ val }}">{{ label }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="mb-3">
-                <label for="id_line" class="form-label">Line</label>
-                <input type="text" name="line" id="id_line" class="form-control">
-              </div>
-              <div class="mb-3">
-                <label for="id_operation" class="form-label">Operation</label>
-                <input type="text" name="operation" id="id_operation" class="form-control">
-              </div>
-              <div class="mb-3">
-                <label for="id_description" class="form-label">Description</label>
-                <textarea name="description" id="id_description" class="form-control"></textarea>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                Close
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Save Job
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- AJAX submission script -->
-    <script>
-      // Grab CSRF token from cookie
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-          document.cookie.split(";").forEach(c => {
-            c = c.trim();
-            if (c.startsWith(name + "=")) {
-              cookieValue = decodeURIComponent(c.substring(name.length + 1));
-            }
-          });
-        }
-        return cookieValue;
-      }
-
-      document.addEventListener("DOMContentLoaded", () => {
-        const form = document.getElementById("addJobForm");
-        form.addEventListener("submit", e => {
-          e.preventDefault();
-          const url = form.action;
-          const data = new FormData(form);
-
-          fetch(url, {
-            method: "POST",
-            headers: {
-              "X-CSRFToken": getCookie("csrftoken"),
-              "X-Requested-With": "XMLHttpRequest"
-            },
-            body: data
-          })
-            .then(res => res.json())
-            .then(json => {
-              if (json.success) {
-                // build a new <tr>
-                const tbody = document.querySelector("table tbody");
-                const r = document.createElement("tr");
-                r.innerHTML = `
-                  <td>${json.job.area_display}</td>
-                  <td>${json.job.line}</td>
-                  <td>${json.job.operation}</td>
-                  <td>${json.job.description}</td>
-                  <td>${json.job.created_at}</td>
-                  <td>${json.job.updated_at}</td>
-                  <td></td>
-                `;
-                tbody.prepend(r);
-
-                // hide and reset
-                const modalEl = document.getElementById("addJobModal");
-                bootstrap.Modal.getInstance(modalEl).hide();
-                form.reset();
-              } else {
-                alert("Error: " + (json.errors||"Unknown error"));
-              }
-            })
-            .catch(err => console.error("Add-job AJAX error:", err));
-        });
-      });
-    </script>
-
   {% else %}
     <p>No training jobs found.</p>
   {% endif %}
+
+  {# Add Job Modal (always present) #}
+  <div class="modal fade" id="addJobModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="addJobForm" method="post" action="{% url 'add_job' %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Add Training Job</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="id_area" class="form-label">Area</label>
+              <select name="area" id="id_area" class="form-select">
+                {% for val, label in area_choices %}
+                  <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="id_line" class="form-label">Line</label>
+              <input type="text" name="line" id="id_line" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label for="id_operation" class="form-label">Operation</label>
+              <input type="text" name="operation" id="id_operation" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label for="id_description" class="form-label">Description</label>
+              <textarea name="description" id="id_description" class="form-control"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+              Close
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Save Job
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# AJAX script (always present) #}
+  <script>
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        document.cookie.split(";").forEach(c => {
+          c = c.trim();
+          if (c.startsWith(name + "=")) {
+            cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          }
+        });
+      }
+      return cookieValue;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("addJobForm");
+      form.addEventListener("submit", e => {
+        e.preventDefault();
+        const url = form.action;
+        const data = new FormData(form);
+
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          body: data
+        })
+        .then(res => res.json())
+        .then(json => {
+          if (json.success) {
+            const tbody = document.querySelector("table tbody");
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>Area ${json.job.area_display}</td>
+              <td>${json.job.line}</td>
+              <td>${json.job.operation}</td>
+              <td>${json.job.description}</td>
+              <td></td>
+            `;
+            // If table already exists, prepend to it; otherwise, reload to show new table
+            if (tbody) {
+              tbody.prepend(row);
+            } else {
+              location.reload();
+            }
+
+            // hide and reset
+            const modalEl = document.getElementById("addJobModal");
+            bootstrap.Modal.getInstance(modalEl).hide();
+            form.reset();
+          } else {
+            alert("Error: " + (json.errors || "Unknown error"));
+          }
+        })
+        .catch(err => console.error("Add-job AJAX error:", err));
+      });
+    });
+  </script>
 {% endblock %}
