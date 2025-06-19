@@ -1,4 +1,4 @@
-{# plant/templates/plant/maintenance_bulk_form.html #}
+{# plant/templates/plant/quick_add.html #}
 {% extends "parent.html" %}
 {% block content %}
 <div class="container py-5">
@@ -30,14 +30,14 @@
             {# populated by JS #}
           </select>
         </div>
-        <!-- Machines -->
+        <!-- Single Machine -->
         <div class="col-md-3">
-          <label class="form-label">Machines</label>
-          <div id="machines-checkboxes"
-               class="border rounded p-2 overflow-auto"
-               style="max-height:200px;">
-            <!-- checkboxes inserted by JS -->
-          </div>
+          <label for="machine-select" class="form-label">Machine</label>
+          <select id="machine-select" name="machine"
+                  class="form-select" required>
+            <option value="">Select Machine</option>
+            {# populated by JS #}
+          </select>
         </div>
       </div>
 
@@ -88,7 +88,6 @@
               <label class="btn btn-outline-secondary" for="labourTech">
                 Need Tech
               </label>
-
               <input type="checkbox" class="btn-check" name="labour_checkbox"
                      id="labourNA" value="NA" autocomplete="off">
               <label class="btn btn-outline-secondary" for="labourNA">
@@ -100,19 +99,16 @@
               <label class="btn btn-outline-secondary" for="labourElectrician">
                 Electrician
               </label>
-
               <input type="checkbox" class="btn-check" name="labour_checkbox"
                      id="labourTech" value="TECH" autocomplete="off">
               <label class="btn btn-outline-secondary" for="labourTech">
                 Tech
               </label>
-
               <input type="checkbox" class="btn-check" name="labour_checkbox"
                      id="labourMillwright" value="MILLWRIGHT" autocomplete="off">
               <label class="btn btn-outline-secondary" for="labourMillwright">
                 Millwright
               </label>
-
               <input type="checkbox" class="btn-check" name="labour_checkbox"
                      id="labourNA" value="NA" autocomplete="off">
               <label class="btn btn-outline-secondary" for="labourNA">
@@ -128,7 +124,7 @@
 
     <div class="card-footer text-end bg-light">
       <button type="submit" form="bulk-form" class="btn btn-dark px-4">
-        Add Entries
+        Add Entry
       </button>
     </div>
   </div>
@@ -139,53 +135,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
   const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
 
-  const lineSelect   = document.getElementById('line-select');
-  const machinesDiv  = document.getElementById('machines-checkboxes');
-  const catSel       = document.getElementById('category-select');
-  const subSel       = document.getElementById('subcategory-select');
-  const bulkForm     = document.getElementById('bulk-form');
-  const labourHidden = document.getElementById('labour_types_input');
-  const startDate    = document.getElementById('start-date');
-  const startTime    = document.getElementById('start-time');
+  const lineSelect    = document.getElementById('line-select');
+  const machineSelect = document.getElementById('machine-select');
+  const catSel        = document.getElementById('category-select');
+  const subSel        = document.getElementById('subcategory-select');
+  const bulkForm      = document.getElementById('bulk-form');
+  const labourHidden  = document.getElementById('labour_types_input');
+  const startDate     = document.getElementById('start-date');
+  const startTime     = document.getElementById('start-time');
 
   // 1) Populate Production Line dropdown
   prodLines.forEach(({ line }) => {
-    const opt = new Option(line, line);
-    lineSelect.add(opt);
+    lineSelect.add(new Option(line, line));
   });
 
-  // 2) When a line is selected → render its machines
+  // 2) When a line is selected → populate machines dropdown
   lineSelect.addEventListener('change', () => {
-    machinesDiv.innerHTML = '';
-    const operations = (prodLines.find(pl => pl.line === lineSelect.value)?.operations) || [];
-    operations.forEach(op => {
+    machineSelect.innerHTML = '<option value="">Select Machine</option>';
+    const ops = (prodLines.find(pl => pl.line === lineSelect.value)?.operations) || [];
+    ops.forEach(op => {
       op.machines.forEach(m => {
-        const id = `machine_${m.number}`;
-        const wrapper = document.createElement('div');
-        wrapper.className = 'form-check';
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'form-check-input';
-        cb.name = 'machines';
-        cb.id = id;
-        cb.value = m.number;
-
-        const lbl = document.createElement('label');
-        lbl.className = 'form-check-label';
-        lbl.htmlFor = id;
-        lbl.textContent = m.number;
-
-        wrapper.append(cb, lbl);
-        machinesDiv.appendChild(wrapper);
+        machineSelect.add(new Option(m.number, m.number));
       });
     });
   });
 
   // 3) Populate Category dropdown
   downtimeCodes.forEach(({ code, name }) => {
-    const opt = new Option(name, code);
-    catSel.add(opt);
+    catSel.add(new Option(name, code));
   });
 
   // 4) When a category is selected → render its subcategories
@@ -193,22 +170,17 @@ document.addEventListener('DOMContentLoaded', () => {
     subSel.innerHTML = '<option value="">Select Subcategory</option>';
     const category = downtimeCodes.find(dc => dc.code === catSel.value);
     (category?.subcategories || []).forEach(({ code, name }) => {
-      const opt = new Option(name, code);
-      subSel.add(opt);
+      subSel.add(new Option(name, code));
     });
   });
 
-  // 5) On form submit → validate machines, serialize labour types
+  // 5) On form submit → validate machine, serialize labour types
   bulkForm.addEventListener('submit', e => {
-    // at least one machine must be checked
-    const machinesChecked = bulkForm.querySelectorAll('input[name="machines"]:checked').length;
-    if (machinesChecked === 0) {
+    if (!machineSelect.value) {
       e.preventDefault();
-      alert('Please select at least one machine.');
+      alert('Please select a machine.');
       return;
     }
-
-    // serialize selected labour types
     const labourPicked = Array.from(
       bulkForm.querySelectorAll('input[name="labour_checkbox"]:checked')
     ).map(cb => cb.value);

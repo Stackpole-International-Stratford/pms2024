@@ -2353,16 +2353,15 @@ def maintenance_bulk_form(request):
 # ========================================================================
 # ========================================================================
 
-
 @login_required(login_url="login")
 def quick_add(request):
     """
-    Bulk‐add downtime entries: pick one line, one or more machines,
-    same category/subcategory/comment for all, plus labour.
+    Add a single downtime entry: pick one line, one machine,
+    same category/subcategory/comment, plus labour.
     """
     if request.method == "POST":
         line        = request.POST.get('line', '').strip()
-        machines    = request.POST.getlist('machines')
+        machine     = request.POST.get('machine', '').strip()
         raw_cat     = request.POST.get('category', '').strip()
         raw_sub     = request.POST.get('subcategory', '').strip()
         start_date  = request.POST.get('start_date', '')
@@ -2372,8 +2371,8 @@ def quick_add(request):
         raw_labour  = request.POST.get('labour_types', '[]')
 
         # --- validations ---
-        if not machines:
-            return HttpResponseBadRequest("You must select at least one machine.")
+        if not machine:
+            return HttpResponseBadRequest("You must select a machine.")
         if not raw_cat:
             return HttpResponseBadRequest("You must choose a category.")
         cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
@@ -2384,10 +2383,10 @@ def quick_add(request):
         if raw_sub:
             try:
                 sub_obj = DowntimeCode.objects.get(code=raw_sub)
+                subcategory_name = sub_obj.subcategory
+                code_value       = raw_sub
             except DowntimeCode.DoesNotExist:
                 return HttpResponseBadRequest("Invalid subcategory code.")
-            subcategory_name = sub_obj.subcategory
-            code_value       = raw_sub
         else:
             subcategory_name = "NOTSELECTED"
             code_value       = "NOTSELECTED"
@@ -2400,35 +2399,31 @@ def quick_add(request):
         except json.JSONDecodeError:
             labour_list = []
 
-
         # parse & localize datetime
         try:
             dt_naive    = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         except ValueError:
-
             return HttpResponseBadRequest("Bad date/time format.")
         local_tz    = timezone.get_current_timezone()  # America/Toronto
         aware_local = timezone.make_aware(dt_naive, local_tz)
         epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
-
-        # create one event per machine
-        for machine in machines:
-            MachineDowntimeEvent.objects.create(
-                line         = line,
-                machine      = machine,
-                category     = category_name,
-                subcategory  = subcategory_name,
-                code         = code_value,
-                start_epoch  = epoch_ts,
-                comment      = comment,
-                labour_types = labour_list,
-                employee_id  = emp_id or None,
-            )
+        # --- single event create ---
+        MachineDowntimeEvent.objects.create(
+            line         = line,
+            machine      = machine,
+            category     = category_name,
+            subcategory  = subcategory_name,
+            code         = code_value,
+            start_epoch  = epoch_ts,
+            comment      = comment,
+            labour_types = labour_list,
+            employee_id  = emp_id or None,
+        )
 
         return redirect('quick_add')
 
-    # GET → build JSON for selects
+    # GET → build JSON for selects (unchanged)
     downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
     structured = {}
     for c in downtime_codes:
@@ -2444,4 +2439,3 @@ def quick_add(request):
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
     })
-
