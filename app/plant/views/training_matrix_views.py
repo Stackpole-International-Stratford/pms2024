@@ -125,9 +125,18 @@ def edit_job(request, job_id):
         "job": {
             "id":            job.id,
             "area_display":  job.get_area_display(),
+            "area":         job.area,
             "line":          job.line,
             "operation":     job.operation,
             "description":   job.description,
             "updated_at":    job.updated_at.strftime("%Y-%m-%d %H:%M"),
         }
     })
+
+
+
+@require_POST
+def delete_job(request, job_id):
+    job = get_object_or_404(TrainingJob, id=job_id)
+    job.delete()
+    return JsonResponse({"success": True})

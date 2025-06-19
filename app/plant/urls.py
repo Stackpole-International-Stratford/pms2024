@@ -117,4 +117,6 @@ urlpatterns = [
 
     path("training-matrix/edit-job/<int:job_id>/", edit_job, name="edit_job"),
 
+    path("training-matrix/delete-job/<int:job_id>/", delete_job, name="delete_job"),
+
 ]
