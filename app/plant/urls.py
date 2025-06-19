@@ -8,6 +8,7 @@ from .views.prodmon_views import *
 from .views.maintenance_views import *
 from .views.cycle_crud_views import *
 from .views.temp_sensor_views import *
+from .views.training_matrix_views import *
 
 urlpatterns = [
     path('', index, name='index'),  # New index page URL
@@ -104,4 +105,6 @@ urlpatterns = [
     path('maintenance/bulk_add/', maintenance_bulk_form, name='maintenance_bulk_form'),
 
     path('quick-add/', quick_add, name='quick_add'),
+
+    path('training-matrix/', training_matrix, name='training_matrix'),
 ]
