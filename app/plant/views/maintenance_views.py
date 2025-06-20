@@ -46,41 +46,41 @@ You may wonder what this is. It's fetching all the lines and operations and mach
 can use it. Before we had this, we had it in 2 separate json objects, which was not sustainable so now in a table we can CRUD machines from the admin panel no problem.
 '''
 
-# build a map by line name, mirroring the JSON shape exactly
-_by_name2 = {}
+def get_prod_lines():
+    """
+    Return a list of { line, scrap_line, operations:[ { op, machines:[{number,target}] } ] }
+    built fresh from the DowntimeMachine table.
+    """
+    _by_name = {}
 
-for dm in DowntimeMachine.objects.all():
-    # 1) create the line‐block if missing
-    if dm.line not in _by_name2:
-        _by_name2[dm.line] = {
-            'line':       dm.line,
-            'scrap_line': dm.line,       # or dm.line if you don’t have a separate scrap_line field
-            'operations': []
+    for dm in DowntimeMachine.objects.all():
+        # 1) ensure the line‐block
+        blk = _by_name.setdefault(
+            dm.line,
+            {
+                'line':       dm.line,
+                'scrap_line': dm.line,
+                'operations': []
+            }
+        )
+
+        # 2) find or create this op
+        ops = blk['operations']
+        op_entry = next((o for o in ops if o['op'] == dm.operation), None)
+        machine_dict = {
+            'number': dm.machine_number,
+            'target': None    # or dm.target if you’ve extended the model
         }
 
-    line_block = _by_name2[dm.line]
-    ops        = line_block['operations']
+        if op_entry:
+            op_entry['machines'].append(machine_dict)
+        else:
+            ops.append({
+                'op':       dm.operation,
+                'machines': [machine_dict]
+            })
 
-    # 2) look for an existing operation entry
-    op_entry = next((o for o in ops if o['op'] == dm.operation), None)
-
-    # 3) assemble the same machine‐dict that your JSON uses
-    machine_dict = {
-        'number': dm.machine_number,
-        'target': None   # or dm.target if you’ve added that field to the model
-    }
-
-    if op_entry:
-        op_entry['machines'].append(machine_dict)
-    else:
-        ops.append({
-            'op':       dm.operation,
-            'machines': [ machine_dict ]
-        })
-
-# 4) final list
-prod_lines = list(_by_name2.values())
-
+    return list(_by_name.values())
 
 
 # ============================================================================
@@ -227,6 +227,9 @@ def maintenance_form(request):
     """
     Downtime‐entry form: CATEGORY is required; SUBCATEGORY + code are optional.
     """
+
+    prod_lines = get_prod_lines()
+
     offset    = int(request.GET.get('offset', 0))
     page_size = 300
 
@@ -512,6 +515,8 @@ def group_by_role(workers):
 
 @login_required(login_url="login")
 def list_all_downtime_entries(request):
+
+    prod_lines = get_prod_lines()
     # 1) Access control
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
@@ -898,6 +903,7 @@ def leave_downtime_event(request):
 
 
 def get_machine_priority_map():
+    prod_lines = get_prod_lines()
     """
     Returns a dict: { machine_number (str) → priority (int) } by
     walking prod_lines and the LinePriority table.
@@ -1084,6 +1090,7 @@ def add_employee(request):
 
 @require_POST
 def maintenance_edit(request):
+    prod_lines = get_prod_lines()
     """
     Return a JSON blob with:
       - entry_id, line, machine, category_code, subcategory_code,
@@ -1529,6 +1536,7 @@ def employee_login_status(request):
 
 
 def target_lines(request):
+    prod_lines = get_prod_lines()
     if request.method == 'GET':
         # extract just the line names
         line_names = [blk['line'] for blk in prod_lines]
@@ -1625,6 +1633,7 @@ def force_leave_participation(request, pk):
 
 @login_required(login_url="login")
 def maintenance_bulk_form(request):
+    prod_lines = get_prod_lines()
     """
     Bulk‐add downtime entries: pick one line, one or more machines,
     same category/subcategory/comment for all, plus labour.
@@ -1725,6 +1734,7 @@ def maintenance_bulk_form(request):
 
 @login_required(login_url="login")
 def quick_add(request):
+    prod_lines = get_prod_lines()
     """
     Add a single downtime entry: pick one line, one machine,
     same category/subcategory/comment, plus labour.
