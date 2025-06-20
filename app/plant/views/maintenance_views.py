@@ -679,6 +679,18 @@ lines_untracked = [
             },
         ],
     },
+         {
+        "line": "Maintenance Projects",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "Machine",
+                "machines": [
+                    {"number": "machineInComments", "target": 27496,},
+                ],
+            },
+        ],
+    },
 
 ]
 
