@@ -418,3 +418,13 @@ AUTHENTICATION_BACKENDS = [
     'pms.backends.CustomLDAPBackend',  # Secondary Custom LDAP Backend
     'django.contrib.auth.backends.ModelBackend',  # Default database authentication
 ]
+
+
+
+JAZZMIN_SETTINGS = {
+    # … your other Jazzmin settings …
+    "welcome_sign": "Welcome back! Please sign in to manage the site.",
+
+    "login_logo": None,
+    "login_logo_dark": None,
+}
