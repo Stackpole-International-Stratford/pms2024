@@ -49,6 +49,7 @@ INTERNAL_IPS = ['pmdsdata12', '10.4.1.234', '127.0.0.1',
 
 INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
+    'jazzmin',    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
