@@ -273,6 +273,7 @@
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
               {% if user.is_authenticated %}
                 <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin:index' %}">Settings</a></li>
               {% else %}
                 <li><a class="dropdown-item" href="{% url 'login' %}">Login</a></li>
               {% endif %}
