@@ -5,9 +5,7 @@
 {% get_jazzmin_ui_tweaks as jazzmin_ui %}
 
 {% block content %}
-    <p class="text-muted">
-        Please use your JE credentials to sign in.
-    </p>
+    <p class="login-box-msg">Please enter your JE credentials to login</p>
     <form action="{{ app_path }}" method="post">
         {% csrf_token %}
         {% if user.is_authenticated %}
