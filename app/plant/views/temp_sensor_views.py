@@ -10,10 +10,11 @@ from django.contrib.auth.models import Group
 import json
 from django.http           import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
-from ..models.tempsensor_models import TempSensorEmailList
+from ..models.tempsensor_models import *
 import time
 from django.db.models import Max
-
+from django.utils import timezone
+import pytz
 
 
 
@@ -293,5 +294,33 @@ def temp_display(request):
 
 
 def heat_break(request):
-    # Renders plant/heatbreak.html
-    return render(request, 'plant/heatbreak.html')
+    error = None
+
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name  = request.POST.get('last_name',  '').strip()
+        area       = request.POST.get('area',       '').strip()
+
+        # SERVER-SIDE VALIDATION
+        if not (first_name and last_name and area):
+            error = "All fields are required."
+        else:
+            # convert to Eastern Time
+            eastern = pytz.timezone('America/New_York')
+            ts_est  = timezone.now().astimezone(eastern)
+
+            entry = HeatBreakEntry.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                area=area,
+                timestamp=ts_est
+            )
+
+            return render(request, 'plant/heatbreak.html', {
+                'submitted': True,
+                'entry': entry,
+            })
+
+    return render(request, 'plant/heatbreak.html', {
+        'error': error,
+    })

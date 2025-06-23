@@ -1,4 +1,6 @@
 from django.db import models
+import pytz
+from django.utils import timezone
 
 class TempSensorEmailList(models.Model):
     email = models.EmailField(
@@ -19,3 +21,19 @@ class TempSensorEmailList(models.Model):
     class Meta:
         verbose_name = "Temp Sensor Email"
         verbose_name_plural = "Temp Sensor Email List"
+
+
+class HeatBreakEntry(models.Model):
+    AREA_CHOICES = [
+        ('1', 'Area 1'),
+        ('2', 'Area 2'),
+        ('3', 'Area 3'),
+    ]
+
+    first_name = models.CharField(max_length=50)
+    last_name  = models.CharField(max_length=50)
+    area       = models.CharField(max_length=1, choices=AREA_CHOICES)
+    timestamp  = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} – Area {self.area}"
