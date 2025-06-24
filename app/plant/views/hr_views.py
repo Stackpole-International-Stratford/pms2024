@@ -1,12 +1,12 @@
 # views.py
-import pandas as pd
+
 from datetime import datetime, timedelta, time
 from django.shortcuts import render
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models.functions import TruncDate
-
+import pandas as pd
 from ..models.absentee_models import AbsenteeReport
 
 @login_required(login_url='/login/')
