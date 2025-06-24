@@ -344,3 +344,18 @@ def public_heat_break(request):
         'return_entry': return_entry,
         'active_entries': active_entries,
     })
+
+
+def heat_break_status(request):
+    """
+    Shows the 500 most-recent heat break entries,
+    with returned vs. still-out status.
+    """
+    entries = (
+        HeatBreakEntry.objects
+        .order_by('-timestamp')  # most recent first
+        [:500]
+    )
+    return render(request, 'plant/heat_break_status.html', {
+        'entries': entries,
+    })

@@ -1,0 +1,140 @@
+{# plant/templates/plant/heat_break_status.html #}
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4">Heat Break Status</h2>
+
+  <div class="table-responsive">
+    <table id="status-table" class="table table-hover">
+      <thead class="thead-light">
+        <tr>
+          <th>Name</th>
+          <th>Area</th>
+          <th>Zone</th>
+          <th>Humidex</th>
+          <th>Left At</th>
+          <th>Status</th>
+          <th>Returned At</th>
+        </tr>
+        <tr>
+          <th>
+            <input id="filter-name" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Name">
+          </th>
+          <th>
+            <input id="filter-area" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Area">
+          </th>
+          <th>
+            <input id="filter-zone" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Zone">
+          </th>
+          <th>
+            <input id="filter-humidex" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Humidex">
+          </th>
+          <th>
+            <input id="filter-leftAt" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Left At">
+          </th>
+          <th>
+            <input id="filter-status" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Status">
+          </th>
+          <th>
+            <input id="filter-returnedAt" type="text"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Returned At">
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          <tr class="{% if e.returned %}table-success{% else %}table-warning{% endif %}">
+            <td>{{ e.first_name }} {{ e.last_name }}</td>
+            <td>{{ e.get_area_display }}</td>
+            <td>{{ e.zone }}</td>
+            <td>{{ e.humidex }}</td>
+            <td>{{ e.timestamp|date:"SHORT_DATETIME_FORMAT" }}</td>
+            <td>
+              {% if e.returned %}
+                <span class="badge bg-success">Returned</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">On Break</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if e.returned %}
+                {{ e.return_timestamp|date:"SHORT_DATETIME_FORMAT" }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center">No entries found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const filters = {
+    name:       document.getElementById('filter-name'),
+    area:       document.getElementById('filter-area'),
+    zone:       document.getElementById('filter-zone'),
+    humidex:    document.getElementById('filter-humidex'),
+    leftAt:     document.getElementById('filter-leftAt'),
+    status:     document.getElementById('filter-status'),
+    returnedAt: document.getElementById('filter-returnedAt'),
+  };
+  const table = document.getElementById('status-table');
+  if (!table) return;
+  const rows = table.tBodies[0].rows;
+
+  function filterTable() {
+    const vals = {};
+    for (let key in filters) {
+      vals[key] = filters[key].value.trim().toLowerCase();
+    }
+
+    for (let row of rows) {
+      const cells = row.cells;
+      const texts = {
+        name:       cells[0].textContent.toLowerCase(),
+        area:       cells[1].textContent.toLowerCase(),
+        zone:       cells[2].textContent.toLowerCase(),
+        humidex:    cells[3].textContent.toLowerCase(),
+        leftAt:     cells[4].textContent.toLowerCase(),
+        status:     cells[5].textContent.toLowerCase(),
+        returnedAt: cells[6].textContent.toLowerCase(),
+      };
+
+      let visible = true;
+      for (let key in vals) {
+        if (vals[key] && !texts[key].includes(vals[key])) {
+          visible = false;
+          break;
+        }
+      }
+      row.style.display = visible ? '' : 'none';
+    }
+  }
+
+  Object.values(filters).forEach(input =>
+    input.addEventListener('input', filterTable)
+  );
+});
+</script>
+{% endblock %}
