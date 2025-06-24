@@ -4,7 +4,6 @@
 {% block userlinks %}
   {% if user.is_authenticated %}
     <div id="user-tools">
-      <strong>{{ user.get_username }}</strong>.
       {# only show change-password if they actually have a DB password #}
       {% if password_change_url and user.has_usable_password %}
         <a href="{{ password_change_url }}">{% trans "Change password" %}</a>.
