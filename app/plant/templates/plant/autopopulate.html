@@ -4,6 +4,7 @@
 <div class="container mt-4">
   <h1>Autopopulate Downtime Check</h1>
   <p class="text-muted">Run at: {{ run_at|date:"Y-m-d H:i:s" }}</p>
+  <p><strong>New events needed:</strong> {{ missing_count }}</p>
 
   <ul class="list-group">
     {% for line in messages %}
