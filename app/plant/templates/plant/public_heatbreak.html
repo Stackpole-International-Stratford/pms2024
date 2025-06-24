@@ -1,0 +1,89 @@
+{# plant/templates/plant/public_heatbreak.html #}
+{% extends "parent.html" %}
+
+{% block content %}
+  <div class="container mt-5">
+
+    {# Card for logging a break #}
+    <div class="card mx-auto" style="max-width: 600px;">
+      <div class="card-header bg-dark text-white">
+        <h4 class="mb-0">Log Your Heat Break</h4>
+      </div>
+      <div class="card-body">
+        {% if submitted %}
+          <div class="alert alert-success" role="alert">
+            ✅ Thanks! Your break has been logged.
+          </div>
+        {% endif %}
+        {% if return_success %}
+          <div class="alert alert-info" role="alert">
+            ✅ Welcome back, {{ return_entry.first_name }}! You returned at
+            {{ return_entry.return_timestamp|date:"SHORT_DATETIME_FORMAT" }}.
+          </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" class="btn btn-warning">Log Heat Break</button>
+        </form>
+      </div>
+    </div>
+
+    {# Table of active breaks #}
+    {% if active_entries %}
+      <div class="card mt-4">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0">Currently on Break</h5>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-striped mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>Name</th>
+                <th>Area</th>
+                <th>Zone</th>
+                <th>Left At</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in active_entries %}
+                <tr>
+                  <td>{{ e.first_name }} {{ e.last_name }}</td>
+                  <td>{{ e.get_area_display }}</td>
+                  <td>{{ e.zone }}</td>
+                  <td>{{ e.timestamp|date:"SHORT_DATETIME_FORMAT" }}</td>
+                  <td>
+                    <form
+                      method="post"
+                      style="display:inline;"
+                      onsubmit="return confirm('Are you sure you want to mark {{ e.first_name }} {{ e.last_name }} as returned?');"
+                    >
+                      {% csrf_token %}
+                      <input type="hidden" name="return_id" value="{{ e.id }}">
+                      <button type="submit" class="btn btn-sm btn-success">
+                        I’m back
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+
+  {# JS alert on successful return #}
+  {% if return_success and return_entry %}
+    <script>
+      alert(
+        "Welcome back, {{ return_entry.first_name }} {{ return_entry.last_name }}!\n" +
+        "Return time recorded at {{ return_entry.return_timestamp|date:'SHORT_DATETIME_FORMAT' }}."
+      );
+    </script>
+  {% endif %}
+{% endblock %}

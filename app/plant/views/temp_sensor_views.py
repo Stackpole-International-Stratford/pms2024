@@ -19,7 +19,6 @@ import MySQLdb
 
 
 
-
 # =========================================================================
 # =========================================================================
 # ======================= Helper Functions ================================
@@ -298,68 +297,50 @@ def temp_display(request):
 # ======================= Heat Break ======================================
 # =========================================================================
 # =========================================================================
+from ..forms.temp_sensor_forms import PublicHeatBreakEntryForm
+
+from ..utils import get_zones
 
 
 
-def get_zones():
+
+def public_heat_break(request):
     """
-    Connects to the DB, retrieves the unique zones and their humidex
-    (divided by 10) from temp_monitors, and returns a list of dicts:
-      [ { 'zone': 0, 'humidex': 44.2 }, … ]
+    Public form: anyone can GET to see it, POST to add one record.
+    Also handles "I'm back" clicks via a return_id POST.
     """
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT zone, humidex
-                  FROM temp_monitors
-              ORDER BY zone
-            """)
-            return [
-                {
-                    'zone': row[0],
-                    # assume humidex stored as int*10, so convert to real float
-                    'humidex': row[1] / 10.0
-                }
-                for row in cur.fetchall()
-            ]
-    except MySQLdb.Error as e:
-        print(f"Error fetching zones: {e}")
-        return []
-    finally:
-        conn.close()
+    form = PublicHeatBreakEntryForm()
+    submitted = False
+    return_success = False
+    return_entry = None
 
-
-def heat_break(request):
-    # get the zones+humidex once at entry to the view
-    zones = get_zones()
-    # if you still want to see it in your server console:
-    print("zones+humidex:", zones)
-
-    error = None
     if request.method == 'POST':
-        first_name = request.POST.get('first_name', '').strip()
-        last_name  = request.POST.get('last_name',  '').strip()
-        area       = request.POST.get('area',       '').strip()
-
-        if not (first_name and last_name and area):
-            error = "All fields are required."
+        # "I'm back" action?
+        if 'return_id' in request.POST:
+            entry_id = request.POST.get('return_id')
+            try:
+                entry = HeatBreakEntry.objects.get(pk=entry_id, returned=False)
+                entry.returned = True
+                entry.save()  # your model.save() will stamp return_timestamp
+                return_success = True
+                return_entry = entry
+            except HeatBreakEntry.DoesNotExist:
+                pass
         else:
-            eastern = pytz.timezone('America/New_York')
-            ts_est  = timezone.now().astimezone(eastern)
-            entry = HeatBreakEntry.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                area=area,
-                timestamp=ts_est
-            )
-            return render(request, 'plant/heatbreak.html', {
-                'submitted': True,
-                'entry': entry,
-                'zones': zones,
-            })
+            # New break submission
+            form = PublicHeatBreakEntryForm(request.POST)
+            if form.is_valid():
+                form.save()
+                submitted = True
+                form = PublicHeatBreakEntryForm()  # reset form
 
-    return render(request, 'plant/heatbreak.html', {
-        'error': error,
-        'zones': zones,
+    # Fetch all still-on-break entries
+    active_entries = HeatBreakEntry.objects.filter(returned=False)
+
+    return render(request, 'plant/public_heatbreak.html', {
+        'form': form,
+        'submitted': submitted,
+        'return_success': return_success,
+        'return_entry': return_entry,
+        'active_entries': active_entries,
     })
