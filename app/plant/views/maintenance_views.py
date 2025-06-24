@@ -34,8 +34,16 @@ from django.utils.encoding import smart_str
 from collections import OrderedDict
 from django.contrib.auth.decorators import user_passes_test
 from django.utils.dateparse import parse_datetime
+import MySQLdb
+from django.conf import settings
 
-
+def get_db_connection():
+    return MySQLdb.connect(
+        host=settings.NEW_HOST,
+        user=settings.DAVE_USER,
+        passwd=settings.DAVE_PASSWORD,
+        db=settings.DAVE_DB
+    )
 
 # ============================================================================
 # ============================================================================
@@ -1821,3 +1829,181 @@ def quick_add(request):
         'downtime_codes_json':  json.dumps(downtime_codes_list),
         'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
     })
+
+
+
+
+
+
+
+# ========================================================================
+# ========================================================================
+# ================ Quickadd Feature for supervisors  =====================
+# ========================================================================
+# ========================================================================
+
+
+def autopopulate_downtime_event_check_cron(request):
+    start_time = time.time()
+    DOWN_THRESHOLD = 30  # minutes
+    now_ts = time.time()
+    recent_threshold_ts = now_ts - DOWN_THRESHOLD * 60
+
+    messages = []
+    # helper to log & store
+    def log(line):
+        print(line)
+        messages.append(line)
+
+    log("🕑 Starting autopopulate check…")
+
+    machines = list(DowntimeMachine.objects
+                    .values_list('machine_number', flat=True))
+
+    try:
+        conn = get_db_connection()
+        info = f"✅ Connected to GFxPRoduction as {conn.get_host_info()}"
+        log(info)
+        cursor = conn.cursor()
+
+        for m in machines:
+            cursor.execute(
+                "SELECT MAX(`TimeStamp`) FROM `GFxPRoduction` WHERE `Machine` = %s",
+                (m,)
+            )
+            row = cursor.fetchone()
+            last_ts = row[0]
+
+            if last_ts is None:
+                log(f"→ Skipping {m}: no production entries.")
+                continue
+
+            last_dt = datetime.utcfromtimestamp(last_ts)
+            minutes_ago = (now_ts - last_ts) / 60.0
+
+            if minutes_ago <= DOWN_THRESHOLD:
+                log(f"✓ {m} up; last entry {minutes_ago:.1f} min ago ({last_dt}).")
+                continue
+
+            log(f"⚠️ {m} DOWN; last entry {minutes_ago:.1f} min ago ({last_dt}).")
+
+            # check downtime events
+            num_open = MachineDowntimeEvent.objects.filter(
+                machine=m, is_deleted=False, closeout_epoch__isnull=True
+            ).count()
+            num_recent = MachineDowntimeEvent.objects.filter(
+                machine=m, is_deleted=False,
+                closeout_epoch__gte=int(recent_threshold_ts)
+            ).count()
+
+            if num_open:
+                log(f"    ▶ {num_open} open event(s) tracking {m}.")
+            elif num_recent:
+                log(f"    ▶ {num_recent} closed event(s) in last {DOWN_THRESHOLD} min.")
+            else:
+                log(f"    ▶ NO downtime event in last {DOWN_THRESHOLD} min! 🚨")
+
+    except MySQLdb.Error as e:
+        log(f"❌ DB error: {e}")
+
+    finally:
+        try: cursor.close()
+        except: pass
+
+        try:
+            conn.close()
+            log("🗙 DB connection closed.")
+        except:
+            pass
+
+        total_secs = time.time() - start_time
+        log(f"⏱ Total run: {total_secs:.3f}s")
+
+    return render(request, 'plant/autopopulate.html', {
+        'messages': messages,
+        'run_at':   timezone.localtime(),
+    })
+
+
+
+
+
+
+def autopopulate_downtime_event_check():
+    start_time = time.time()
+    DOWN_THRESHOLD = 30  # minutes
+    now_ts = time.time()
+    recent_threshold_ts = now_ts - DOWN_THRESHOLD * 60
+
+    # 1) fetch all machines we care about
+    machines = list(DowntimeMachine.objects
+                    .values_list('machine_number', flat=True))
+
+    try:
+        conn = get_db_connection()
+        print("✅ Database connection successful:", conn)
+        cursor = conn.cursor()
+
+        for m in machines:
+            # 2) get the latest production timestamp
+            cursor.execute(
+                "SELECT MAX(`TimeStamp`) FROM `GFxPRoduction` WHERE `Machine` = %s",
+                (m,)
+            )
+            row = cursor.fetchone()
+            last_ts = row[0]   # float seconds since epoch, or None
+
+            if last_ts is None:
+                print(f"→ Skipping machine {m}: no production entries.")
+                continue
+
+            last_dt = datetime.utcfromtimestamp(last_ts)
+            minutes_ago = (now_ts - last_ts) / 60.0
+
+            if minutes_ago <= DOWN_THRESHOLD:
+                print(f"✓ Machine {m} is up; last entry {minutes_ago:.1f} min ago (at {last_dt}).")
+                continue
+
+            # Machine is down
+            print(f"⚠️ Machine {m} is DOWN! Last entry was {minutes_ago:.1f} min ago (at {last_dt}).")
+
+            # 3) check downtime‐events for this machine
+            open_qs = MachineDowntimeEvent.objects.filter(
+                machine=m,
+                is_deleted=False,
+                closeout_epoch__isnull=True
+            )
+            num_open = open_qs.count()
+
+            recent_qs = MachineDowntimeEvent.objects.filter(
+                machine=m,
+                is_deleted=False,
+                closeout_epoch__isnull=False,
+                closeout_epoch__gte=int(recent_threshold_ts)
+            )
+            num_recent = recent_qs.count()
+
+            if num_open > 0:
+                print(f"    ▶ There are {num_open} open event(s) for {m}—so it’s already being tracked.")
+            elif num_recent > 0:
+                print(f"    ▶ There were {num_recent} event(s) closed in the last {DOWN_THRESHOLD} min for {m}.")
+            else:
+                print(f"    ▶ No downtime event found for {m} in the last {DOWN_THRESHOLD} min! 🚨")
+
+    except MySQLdb.Error as e:
+        print("❌ Error connecting or querying GFxPRoduction:", e)
+
+    finally:
+        # 4) clean up & timer
+        try:
+            cursor.close()
+        except:
+            pass
+        try:
+            conn.close()
+            print("🗙 Connection closed.")
+        except:
+            pass
+
+        total_secs = time.time() - start_time
+        print(f"⏱ Total execution time: {total_secs:.3f} seconds.")

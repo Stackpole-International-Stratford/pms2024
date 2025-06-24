@@ -1,0 +1,20 @@
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>Autopopulate Downtime Check</h1>
+  <p class="text-muted">Run at: {{ run_at|date:"Y-m-d H:i:s" }}</p>
+
+  <ul class="list-group">
+    {% for line in messages %}
+      <li class="list-group-item
+                 {% if '⚠️' in line %}list-group-item-danger
+                 {% elif '❌' in line %}list-group-item-warning
+                 {% else %}list-group-item-light
+                 {% endif %}">
+        {{ line }}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
