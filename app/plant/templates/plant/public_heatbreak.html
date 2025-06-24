@@ -2,88 +2,163 @@
 {% extends "parent.html" %}
 
 {% block content %}
-  <div class="container mt-5">
+<div class="container mt-5">
 
-    {# Card for logging a break #}
-    <div class="card mx-auto" style="max-width: 600px;">
-      <div class="card-header bg-dark text-white">
-        <h4 class="mb-0">Log Your Heat Break</h4>
-      </div>
-      <div class="card-body">
-        {% if submitted %}
-          <div class="alert alert-success" role="alert">
-            ✅ Thanks! Your break has been logged.
-          </div>
-        {% endif %}
-        {% if return_success %}
-          <div class="alert alert-info" role="alert">
-            ✅ Welcome back, {{ return_entry.first_name }}! You returned at
-            {{ return_entry.return_timestamp|date:"SHORT_DATETIME_FORMAT" }}.
-          </div>
-        {% endif %}
-
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {{ form.as_p }}
-          <button type="submit" class="btn btn-warning">Log Heat Break</button>
-        </form>
-      </div>
+  {# Card for logging a break #}
+  <div class="card mx-auto" style="max-width: 600px;">
+    <div class="card-header bg-dark text-white">
+      <h4 class="mb-0">Log Your Heat Break</h4>
     </div>
-
-    {# Table of active breaks #}
-    {% if active_entries %}
-      <div class="card mt-4">
-        <div class="card-header bg-secondary text-white">
-          <h5 class="mb-0">Currently on Break</h5>
+    <div class="card-body">
+      {% if submitted %}
+        <div class="alert alert-success" role="alert">
+          ✅ Thanks! Your break has been logged.
         </div>
-        <div class="card-body p-0">
-          <table class="table table-striped mb-0">
-            <thead class="thead-light">
-              <tr>
-                <th>Name</th>
-                <th>Area</th>
-                <th>Zone</th>
-                <th>Left At</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for e in active_entries %}
-                <tr>
-                  <td>{{ e.first_name }} {{ e.last_name }}</td>
-                  <td>{{ e.get_area_display }}</td>
-                  <td>{{ e.zone }}</td>
-                  <td>{{ e.timestamp|date:"SHORT_DATETIME_FORMAT" }}</td>
-                  <td>
-                    <form
-                      method="post"
-                      style="display:inline;"
-                      onsubmit="return confirm('Are you sure you want to mark {{ e.first_name }} {{ e.last_name }} as returned?');"
-                    >
-                      {% csrf_token %}
-                      <input type="hidden" name="return_id" value="{{ e.id }}">
-                      <button type="submit" class="btn btn-sm btn-success">
-                        I’m back
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      {% endif %}
+      {% if return_success %}
+        <div class="alert alert-info" role="alert">
+          ✅ Welcome back, {{ return_entry.first_name }}! You returned at
+          {{ return_entry.return_timestamp|date:"SHORT_DATETIME_FORMAT" }}.
         </div>
-      </div>
-    {% endif %}
+      {% endif %}
 
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-warning">Log Heat Break</button>
+      </form>
+    </div>
   </div>
 
-  {# JS alert on successful return #}
-  {% if return_success and return_entry %}
-    <script>
-      alert(
-        "Welcome back, {{ return_entry.first_name }} {{ return_entry.last_name }}!\n" +
-        "Return time recorded at {{ return_entry.return_timestamp|date:'SHORT_DATETIME_FORMAT' }}."
-      );
-    </script>
+  {# Table of active breaks with live column filters #}
+  {% if active_entries %}
+    <div class="card mt-4">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">Currently on Break</h5>
+      </div>
+      <div class="card-body p-0">
+        <table id="active-table" class="table table-striped mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Name</th>
+              <th>Area</th>
+              <th>Zone</th>
+              <th>Left At</th>
+              <th>Humidex</th>
+              <th>Action</th>
+            </tr>
+            <tr>
+              <th>
+                <input id="filter-name" type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Search Name">
+              </th>
+              <th>
+                <input id="filter-area" type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Search Area">
+              </th>
+              <th>
+                <input id="filter-zone" type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Search Zone">
+              </th>
+              <th>
+                <input id="filter-leftAt" type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Search Left At">
+              </th>
+              <th>
+                <input id="filter-humidex" type="text"
+                       class="form-control form-control-sm"
+                       placeholder="Search Humidex">
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in active_entries %}
+              <tr>
+                <td>{{ e.first_name }} {{ e.last_name }}</td>
+                <td>{{ e.get_area_display }}</td>
+                <td>{{ e.zone }}</td>
+                <td>{{ e.timestamp|date:"SHORT_DATETIME_FORMAT" }}</td>
+                <td>{{ e.humidex }}</td>
+                <td>
+                  <form
+                    method="post"
+                    style="display:inline;"
+                    onsubmit="return confirm(
+                      'Are you sure you want to mark {{ e.first_name }} {{ e.last_name }} as returned?'
+                    );"
+                  >
+                    {% csrf_token %}
+                    <input type="hidden" name="return_id" value="{{ e.id }}">
+                    <button type="submit" class="btn btn-sm btn-success">
+                      I’m back
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   {% endif %}
+
+</div>
+
+{# JS alert on successful return #}
+{% if return_success and return_entry %}
+  <script>
+    alert(
+      "Welcome back, {{ return_entry.first_name }} {{ return_entry.last_name }}!\n" +
+      "Return time recorded at {{ return_entry.return_timestamp|date:'SHORT_DATETIME_FORMAT' }}."
+    );
+  </script>
+{% endif %}
+
+{# Live‐filtering script #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const nameInput   = document.getElementById('filter-name');
+  const areaInput   = document.getElementById('filter-area');
+  const zoneInput   = document.getElementById('filter-zone');
+  const leftAtInput = document.getElementById('filter-leftAt');
+  const humidexInput= document.getElementById('filter-humidex');
+  const table       = document.getElementById('active-table');
+  if (!table) return;
+  const rows = table.tBodies[0].rows;
+
+  function filterTable() {
+    const nameVal   = nameInput.value.trim().toLowerCase();
+    const areaVal   = areaInput.value.trim().toLowerCase();
+    const zoneVal   = zoneInput.value.trim().toLowerCase();
+    const leftVal   = leftAtInput.value.trim().toLowerCase();
+    const humVal    = humidexInput.value.trim().toLowerCase();
+
+    for (let row of rows) {
+      const cells      = row.cells;
+      const nameText   = cells[0].textContent.toLowerCase();
+      const areaText   = cells[1].textContent.toLowerCase();
+      const zoneText   = cells[2].textContent.toLowerCase();
+      const leftText   = cells[3].textContent.toLowerCase();
+      const humText    = cells[4].textContent.toLowerCase();
+
+      const visible =
+        nameText.includes(nameVal)   &&
+        areaText.includes(areaVal)   &&
+        zoneText.includes(zoneVal)   &&
+        leftText.includes(leftVal)   &&
+        humText.includes(humVal);
+
+      row.style.display = visible ? '' : 'none';
+    }
+  }
+
+  [nameInput, areaInput, zoneInput, leftAtInput, humidexInput]
+    .forEach(input => input.addEventListener('input', filterTable));
+});
+</script>
 {% endblock %}
