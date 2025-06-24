@@ -33,7 +33,7 @@
   {# Table of active breaks with live column filters #}
   {% if active_entries %}
     <div class="card mt-4">
-      <div class="card-header bg-secondary text-white">
+      <div class="card-header bg-dark text-white">
         <h5 class="mb-0">Currently on Break</h5>
       </div>
       <div class="card-body p-0">
@@ -94,7 +94,7 @@
                   >
                     {% csrf_token %}
                     <input type="hidden" name="return_id" value="{{ e.id }}">
-                    <button type="submit" class="btn btn-sm btn-success">
+                    <button type="submit" class="btn btn-sm btn-warning">
                       I’m back
                     </button>
                   </form>
