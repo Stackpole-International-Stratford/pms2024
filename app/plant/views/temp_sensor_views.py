@@ -303,47 +303,53 @@ def temp_display(request):
 
 def get_zones():
     """
-    Connects to the DB, retrieves the unique zones from temp_monitors,
-    and returns them as a sorted list of ints.
+    Connects to the DB, retrieves the unique zones and their humidex
+    from temp_monitors, and returns a list of dicts:
+      [ { 'zone': 0, 'humidex': 422 }, … ]
     """
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT DISTINCT zone FROM temp_monitors ORDER BY zone")
-            return [row[0] for row in cur.fetchall()]
+            # grab zone + humidex; assumes one row per zone (or latest)
+            cur.execute("""
+                SELECT zone, humidex
+                  FROM temp_monitors
+              ORDER BY zone
+            """)
+            return [
+                {'zone': row[0], 'humidex': row[1]}
+                for row in cur.fetchall()
+            ]
     except MySQLdb.Error as e:
-        # You could choose to log this instead of printing
+        # optionally log.error(e) instead
         print(f"Error fetching zones: {e}")
         return []
     finally:
         conn.close()
 
 def heat_break(request):
-    # get the zones once at entry to the view
+    # get the zones+humidex once at entry to the view
     zones = get_zones()
-    print(f"{zones}")
-    error = None
+    # if you still want to see it in your server console:
+    print("zones+humidex:", zones)
 
+    error = None
     if request.method == 'POST':
         first_name = request.POST.get('first_name', '').strip()
         last_name  = request.POST.get('last_name',  '').strip()
         area       = request.POST.get('area',       '').strip()
 
-        # SERVER-SIDE VALIDATION
         if not (first_name and last_name and area):
             error = "All fields are required."
         else:
-            # convert to Eastern Time
             eastern = pytz.timezone('America/New_York')
             ts_est  = timezone.now().astimezone(eastern)
-
             entry = HeatBreakEntry.objects.create(
                 first_name=first_name,
                 last_name=last_name,
                 area=area,
                 timestamp=ts_est
             )
-
             return render(request, 'plant/heatbreak.html', {
                 'submitted': True,
                 'entry': entry,
