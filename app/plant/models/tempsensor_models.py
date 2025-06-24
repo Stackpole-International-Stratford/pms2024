@@ -23,6 +23,9 @@ class TempSensorEmailList(models.Model):
         verbose_name_plural = "Temp Sensor Email List"
 
 
+
+
+
 class HeatBreakEntry(models.Model):
     AREA_CHOICES = [
         ('1', 'Area 1'),

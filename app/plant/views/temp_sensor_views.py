@@ -15,7 +15,7 @@ import time
 from django.db.models import Max
 from django.utils import timezone
 import pytz
-
+import MySQLdb
 
 
 
@@ -26,6 +26,14 @@ import pytz
 # =========================================================================
 # =========================================================================
 
+
+def get_db_connection():
+    return MySQLdb.connect(
+        host=settings.DAVE_HOST,
+        user=settings.DAVE_USER,
+        passwd=settings.DAVE_PASSWORD,
+        db=settings.DAVE_DB
+    )
 
 # zones located by furnaces need a +1 humidex adjustment
 FURNACE_ZONES = [1, 2, 5, 6, 18, 19, 20, 21, 24]  
@@ -293,7 +301,27 @@ def temp_display(request):
 
 
 
+def get_zones():
+    """
+    Connects to the DB, retrieves the unique zones from temp_monitors,
+    and returns them as a sorted list of ints.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT DISTINCT zone FROM temp_monitors ORDER BY zone")
+            return [row[0] for row in cur.fetchall()]
+    except MySQLdb.Error as e:
+        # You could choose to log this instead of printing
+        print(f"Error fetching zones: {e}")
+        return []
+    finally:
+        conn.close()
+
 def heat_break(request):
+    # get the zones once at entry to the view
+    zones = get_zones()
+    print(f"{zones}")
     error = None
 
     if request.method == 'POST':
@@ -319,8 +347,10 @@ def heat_break(request):
             return render(request, 'plant/heatbreak.html', {
                 'submitted': True,
                 'entry': entry,
+                'zones': zones,
             })
 
     return render(request, 'plant/heatbreak.html', {
         'error': error,
+        'zones': zones,
     })
