@@ -212,29 +212,22 @@ def delete_temp_sensor_email(request):
 # =========================================================================
 
 def get_humidex_color(hx: float) -> str:
-    """
-    Return a hex color for the given humidex:
-      • <36   → no highlight (empty string)
-      • 36–39 → light yellow
-      • 40–42 → darker yellow
-      • 43–44 → orange
-      • 45–46 → dark orange
-      • 47–49 → dark pink
-      • 50+   → red
-    """
-    if hx < 36:
-        return ""
+    if hx < 32:
+        return "#B6FF99"     # pale green
+    if 32 <= hx <= 35.999:
+        return "#FFFFFF"     # white
     if 36 <= hx <= 39.999:
-        return "#FFFF99"
+        return "#FFFF99"     # pale yellow
     if 40 <= hx <= 42.999:
-        return "#FFCC00"
+        return "#FDD835"     # darker yellow
     if 43 <= hx <= 44.999:
-        return "#FFA500"
+        return "#FFC107"     # amber
     if 45 <= hx <= 46.999:
-        return "#FF8C00"
+        return "#FF9800"     # orange
     if 47 <= hx <= 49.999:
-        return "#FF1493"
-    return "#FF0000"
+        return "#FF5722"     # deep orange
+    return "#FF0000"         # red
+
 
 def temp_display(request):
     # 1) fetch raw data
