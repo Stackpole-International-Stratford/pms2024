@@ -8,6 +8,7 @@ from .views.prodmon_views import *
 from .views.maintenance_views import *
 from .views.cycle_crud_views import *
 from .views.temp_sensor_views import *
+from .views.hr_views import *
 
 urlpatterns = [
     path('', index, name='index'),  # New index page URL
@@ -78,6 +79,8 @@ urlpatterns = [
     path("temp-display/emails/add/", add_temp_sensor_email,   name="add-temp-sensor-email"),
     path("temp-display/emails/delete/", delete_temp_sensor_email, name="delete-temp-sensor-email"),
 
+
+    path('absentee/', absentee_forms, name='absentee_forms'),
 
 
     path('downtime-codes/', downtime_codes_list, name='downtime_codes_list'),
