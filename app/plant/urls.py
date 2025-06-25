@@ -109,5 +109,8 @@ urlpatterns = [
     path('quick-add/', quick_add, name='quick_add'),
 
 
+    path('heat-break/', heat_break, name='heat_break'),
+    path('heat-break/mark/', mark_heat_break, name='mark_heat_break'),
+
 
 ]

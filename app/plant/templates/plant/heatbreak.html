@@ -1,0 +1,123 @@
+{% extends 'parent.html' %}
+{% load static %}
+
+{% block title %}Heat Break Management{% endblock %}
+
+{% block extra_head %}
+  <!-- if you need per-page CSS, add it here -->
+  <link href="{% static 'css/heatbreak.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>Pending Heat-Break Entries</h1>
+
+  {% if entries %}
+    <table class="table table-bordered table-hover">
+      <thead class="thead-light">
+        <tr>
+          <th>Zone</th>
+          <th>Humidex</th>
+          <th>Recommendation</th>
+          <th>Recorded At</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td>{{ entry.zone }}</td>
+          <td>{{ entry.humidex }}</td>
+          <td>{{ entry.recommendation|safe }}</td>
+          <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+          <td>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#markSentModal"
+              data-entry-id="{{ entry.id }}">
+              Sent
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="alert alert-info">
+      No heat-breaks awaiting confirmation.
+    </div>
+  {% endif %}
+</div>
+
+<!-- Mark-Sent Modal -->
+<div class="modal fade" id="markSentModal" tabindex="-1" aria-labelledby="markSentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'mark_heat_break' %}">
+      {% csrf_token %}
+      <input type="hidden" name="entry_id" id="modal-entry-id">
+
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="markSentModalLabel">Confirm Heat-Break Sent</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="sent-on-break" class="form-label">Sent On</label>
+            <input
+              type="datetime-local"
+              class="form-control"
+              id="sent-on-break"
+              name="sent_on_break"
+              required>
+          </div>
+          <div class="mb-3">
+            <label for="supervisor-id" class="form-label">Supervisor ID</label>
+            <input
+              type="text"
+              class="form-control"
+              id="supervisor-id"
+              name="supervisor_id"
+              required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Ensure this runs *after* bootstrap.bundle.js is loaded (parent.html includes it)
+document.addEventListener('DOMContentLoaded', function() {
+  var markModal = document.getElementById('markSentModal');
+  markModal.addEventListener('show.bs.modal', function(event) {
+    // the button that triggered the modal
+    var button   = event.relatedTarget;
+    var entryId  = button.getAttribute('data-entry-id');
+
+    // populate hidden field
+    markModal.querySelector('#modal-entry-id').value = entryId;
+
+    // prefill datetime-local with now
+    var now = new Date();
+    function two(n) { return n < 10 ? '0' + n : n; }
+    var local = now.getFullYear() + '-' +
+                two(now.getMonth()+1) + '-' +
+                two(now.getDate()) + 'T' +
+                two(now.getHours()) + ':' +
+                two(now.getMinutes());
+    markModal.querySelector('#sent-on-break').value = local;
+  });
+});
+</script>
+{% endblock %}

@@ -3,12 +3,11 @@ import pytz
 from datetime import datetime
 from django.conf import settings
 from django.core.mail import send_mail
-from django.shortcuts import render
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import format_html
 from django.contrib.auth.models import Group
 import json
-from django.http           import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from ..models.tempsensor_models import *
 import time
@@ -16,6 +15,9 @@ from django.db.models import Max
 from django.utils import timezone
 import pytz
 import MySQLdb
+from django.shortcuts import render, redirect
+from django.urls import reverse
+
 
 
 
@@ -172,17 +174,17 @@ def send_alert_email(zones):
     SentHeatBreakEntry.objects.bulk_create(entries)
 
 
-def is_healthsafety_manager(user):
+def is_supervisor(user):
     return (
         user.is_authenticated
-        and user.groups.filter(name="healthsafety_managers").exists()
+        and user.groups.filter(name="maintenance_supervisors").exists()
     )
 
 
 
 @require_POST
 def add_temp_sensor_email(request):
-    if not is_healthsafety_manager(request.user):
+    if not is_supervisor(request.user):
         return HttpResponseForbidden()
     email = request.POST.get("email", "").strip()
     if not email:
@@ -194,7 +196,7 @@ def add_temp_sensor_email(request):
 
 @require_POST
 def delete_temp_sensor_email(request):
-    if not is_healthsafety_manager(request.user):
+    if not is_supervisor(request.user):
         return HttpResponseForbidden()
     pk = request.POST.get("id")
     if not pk:
@@ -276,7 +278,7 @@ def temp_display(request):
     columns = [processed[:half], processed[half:]]
 
     # <-- new bit, works for anonymous or logged-in users
-    is_manager = is_healthsafety_manager(request.user)
+    is_manager = is_supervisor(request.user)
 
      # load the current list only for managers
     email_list = TempSensorEmailList.objects.all() if is_manager else []
@@ -290,7 +292,91 @@ def temp_display(request):
 
 
 
+# =========================================================================
+# =========================================================================
+# ================== Heat Break Acknowledgement ===========================
+# =========================================================================
+# =========================================================================
 
+
+
+def heat_break(request):
+    # only managers may access
+    if not is_supervisor(request.user):
+        return HttpResponseForbidden()
+
+    # show only the entries that still need to be marked “sent”
+    entries = SentHeatBreakEntry.objects.filter(
+        sent_on_break_epoch__isnull=True,
+        supervisor_id       =None
+    ).order_by('created_at')
+
+    return render(request, 'plant/heatbreak.html', {
+        'entries': entries,
+    })
+
+
+@require_POST
+def mark_heat_break(request):
+    # 0) Check permissions
+    if not is_supervisor(request.user):
+        print("[mark_heat_break] Forbidden: user not supervisor:", request.user)
+        return HttpResponseForbidden()
+
+    # 1) Log incoming POST data
+    print("[mark_heat_break] POST data:", dict(request.POST))
+
+    entry_id      = request.POST.get('entry_id')
+    sent_on_break = request.POST.get('sent_on_break')   # expected like "2025-06-25T13:45"
+    supervisor_id = request.POST.get('supervisor_id')
+
+    print(f"[mark_heat_break] raw values -> entry_id={entry_id}, sent_on_break={sent_on_break}, supervisor_id={supervisor_id}")
+
+    # 2) Parse the datetime-local
+    try:
+        dt_naive = datetime.strptime(sent_on_break, '%Y-%m-%dT%H:%M')
+        print("[mark_heat_break] parsed dt_naive:", dt_naive)
+    except Exception as e:
+        print("[mark_heat_break] ERROR parsing sent_on_break:", e)
+        return redirect(reverse('heat_break'))
+
+    # 3) Make it timezone-aware and to epoch
+    try:
+        local_tz = timezone.get_current_timezone()
+        dt_aware = timezone.make_aware(dt_naive, local_tz)
+        epoch    = int(dt_aware.timestamp())
+        print("[mark_heat_break] dt_aware:", dt_aware, "epoch:", epoch)
+    except Exception as e:
+        print("[mark_heat_break] ERROR localizing or epoching:", e)
+        return redirect(reverse('heat_break'))
+
+    # 4) Fetch & save the model
+    try:
+        entry = SentHeatBreakEntry.objects.get(pk=entry_id)
+        print("[mark_heat_break] fetched entry before change:", entry, 
+              "sent_on_break_epoch=", entry.sent_on_break_epoch,
+              "supervisor_id=", entry.supervisor_id)
+
+        entry.sent_on_break_epoch = epoch
+        entry.supervisor_id       = int(supervisor_id)
+        print("[mark_heat_break] about to save entry with sent_on_break_epoch=", 
+              entry.sent_on_break_epoch, "supervisor_id=", entry.supervisor_id)
+
+        entry.save()
+
+        # re-fetch to verify
+        saved = SentHeatBreakEntry.objects.get(pk=entry_id)
+        print("[mark_heat_break] after save, entry:", saved, 
+              "sent_on_break_epoch=", saved.sent_on_break_epoch,
+              "supervisor_id=", saved.supervisor_id)
+    except SentHeatBreakEntry.DoesNotExist:
+        print("[mark_heat_break] ENTRY NOT FOUND for id:", entry_id)
+    except ValueError as e:
+        print("[mark_heat_break] VALUE ERROR converting supervisor_id:", e)
+    except Exception as e:
+        print("[mark_heat_break] UNEXPECTED ERROR:", e)
+
+    return redirect(reverse('heat_break'))
 
 
 
