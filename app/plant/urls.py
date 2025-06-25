@@ -108,8 +108,6 @@ urlpatterns = [
 
     path('quick-add/', quick_add, name='quick_add'),
 
-    path('heat-break-log/', public_heat_break, name='public_heat_break'),
 
-    path('heat-break-status/', heat_break_status, name='heat_break_status'),
 
 ]

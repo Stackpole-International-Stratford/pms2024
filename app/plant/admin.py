@@ -4,7 +4,6 @@ from .models.maintenance_models import *
 # admin.py (or in forms.py and imported here)
 from django import forms
 from django.contrib import admin
-from .models.tempsensor_models import HeatBreakEntry
 from .utils import get_zones    # or wherever you put that util
 
 @admin.register(DowntimeMachine)
