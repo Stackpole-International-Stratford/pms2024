@@ -174,17 +174,30 @@ def send_alert_email(zones):
     SentHeatBreakEntry.objects.bulk_create(entries)
 
 
-def is_supervisor(user):
+
+def is_healthsafety_manager(user):
     return (
         user.is_authenticated
-        and user.groups.filter(name="maintenance_supervisors").exists()
+        and user.groups.filter(name="healthsafety_managers").exists()
     )
+
+def is_supervisor(user):
+    """
+    Allow access if the user is in either
+    the maintenance_supervisors or maintenance_managers group.
+    """
+    if not user.is_authenticated:
+        return False
+
+    return user.groups.filter(
+        name__in=["maintenance_supervisors", "maintenance_managers"]
+    ).exists()
 
 
 
 @require_POST
 def add_temp_sensor_email(request):
-    if not is_supervisor(request.user):
+    if not is_healthsafety_manager(request.user):
         return HttpResponseForbidden()
     email = request.POST.get("email", "").strip()
     if not email:
@@ -196,7 +209,7 @@ def add_temp_sensor_email(request):
 
 @require_POST
 def delete_temp_sensor_email(request):
-    if not is_supervisor(request.user):
+    if not is_healthsafety_manager(request.user):
         return HttpResponseForbidden()
     pk = request.POST.get("id")
     if not pk:
@@ -278,7 +291,7 @@ def temp_display(request):
     columns = [processed[:half], processed[half:]]
 
     # <-- new bit, works for anonymous or logged-in users
-    is_manager = is_supervisor(request.user)
+    is_manager = is_healthsafety_manager(request.user)
 
      # load the current list only for managers
     email_list = TempSensorEmailList.objects.all() if is_manager else []
