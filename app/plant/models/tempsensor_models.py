@@ -23,29 +23,3 @@ class TempSensorEmailList(models.Model):
         verbose_name_plural = "Temp Sensor Email List"
 
 
-
-
-class HeatBreakEntry(models.Model):
-    AREA_CHOICES = [
-        ('1', 'Area 1'),
-        ('2', 'Area 2'),
-        ('3', 'Area 3'),
-    ]
-
-    first_name        = models.CharField(max_length=50)
-    last_name         = models.CharField(max_length=50)
-    area              = models.CharField(max_length=1, choices=AREA_CHOICES)
-    zone              = models.IntegerField(null=True, blank=True)
-    humidex           = models.FloatField(null=True, blank=True)
-    timestamp         = models.DateTimeField()  # when they left
-    returned          = models.BooleanField(default=False)
-    return_timestamp  = models.DateTimeField(null=True, blank=True)
-
-    def save(self, *args, **kwargs):
-        # stamp return_timestamp if returned=True
-        if self.returned and self.return_timestamp is None:
-            self.return_timestamp = timezone.now()
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.first_name} {self.last_name} – Area {self.area} – Zone {self.zone}"
