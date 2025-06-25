@@ -58,14 +58,13 @@ def humanize_delta(delta):
     return f"{days // 30} months"
 
 
-
-
-
 def send_alert_email(zones):
     """
     Send a multipart email (plain text + HTML) listing every zone
     whose humidex ≥ 43, with clear heat-break recommendations.
     Throttles to once every 29 minutes by checking and pre-logging email_sent.
+    Also logs each sent alert into SentHeatBreakEntry (with sent_on_break_epoch
+    and supervisor_id left null for now).
     """
     # 1) Collect only zones needing alerts
     alerts = []
@@ -93,7 +92,7 @@ def send_alert_email(zones):
         return  # nothing to report
 
     # 2) Throttle: only once every 29 minutes
-    now_ts = int(time.time())
+    now_ts = int(time.time())                # ← use time.time() instead of time()
     last_sent = (
         TempSensorEmailList.objects
         .aggregate(latest=Max("email_sent"))["latest"]
@@ -113,7 +112,6 @@ def send_alert_email(zones):
 
     # 5) Build subject + plain-text body
     subject = "🔴 Heat Alert Notification: Humidex Safety Advisory"
-
     text_lines = [
         "The following zones have recorded a humidex of 43 or higher:",
         ""
@@ -171,7 +169,16 @@ def send_alert_email(zones):
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
 
-
+    # 8) Log each alert in our new table (sent_on_break_epoch & supervisor_id remain NULL)
+    entries = [
+        SentHeatBreakEntry(
+            zone             = int(a["zone"]),
+            humidex          = float(a["humidex"]),
+            recommendation   = a["rec"],
+        )
+        for a in alerts
+    ]
+    SentHeatBreakEntry.objects.bulk_create(entries)
 
 
 def is_healthsafety_manager(user):
