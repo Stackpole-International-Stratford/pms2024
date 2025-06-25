@@ -56,6 +56,17 @@
             </div>
           </div>
           <button type="submit" class="btn btn-warning w-100">Upload</button>
+
+            <!-- New “info” button linking to your dashboard -->
+            <a
+              href="http://pmdsdata8.stackpole.ca:6176/dashboard/607-absentee-report?all_options=thisday"
+              class="btn btn-info w-100 mt-2"
+              role="button"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Dashboard
+            </a>
         </form>
       </div>
     </div>
@@ -77,7 +88,7 @@
                       name="delete_time"
                       value="{{ ut|date:"Y-m-d" }}"
                     />
-                    <button type="submit" class="btn btn-sm btn-danger">
+                    <button type="submit" class="btn btn-sm btn-dark">
                       Delete
                     </button>
                   </form>
