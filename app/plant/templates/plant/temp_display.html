@@ -5,21 +5,16 @@
   <meta charset="UTF-8">
   <title>Temperature Monitoring</title>
   <meta http-equiv="refresh" content="1800">
-
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
   <style>
-    .humidex-alert {
-      background-color: #b71c1c !important;
-      color: #fff !important;
+    body {
+      background: #e2e6ea;
     }
     .table-container {
       background: #fff;
       padding: 0.5rem;
       box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
       border-radius: 0.25rem;
-    }
-    body {
-      background: #e2e6ea;
     }
   </style>
 </head>
@@ -31,127 +26,125 @@
       </h2>
     </div>
 
-{# plant/templates/plant/temp_display.html #}
-{% if is_manager %}
-  <div class="accordion mb-4" id="emailListAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="headingEmails">
-        <button
-          class="accordion-button collapsed"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#collapseEmails"
-          aria-expanded="false"
-          aria-controls="collapseEmails"
-        >
-          Emailing List
-        </button>
-      </h2>
-      <div
-        id="collapseEmails"
-        class="accordion-collapse collapse"
-        aria-labelledby="headingEmails"
-        data-bs-parent="#emailListAccordion"
-      >
-        <div class="accordion-body">
-          <form id="addEmailForm" class="mb-3 d-flex">
-            {% csrf_token %}
-            <input
-              type="email"
-              id="newEmail"
-              name="email"
-              class="form-control me-2"
-              placeholder="Enter new alert email"
-              required
+    {% if is_manager %}
+      <div class="accordion mb-4" id="emailListAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingEmails">
+            <button
+              class="accordion-button collapsed"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#collapseEmails"
+              aria-expanded="false"
+              aria-controls="collapseEmails"
             >
-            <button class="btn btn-warning" type="submit">Add</button>
-          </form>
+              Emailing List
+            </button>
+          </h2>
+          <div
+            id="collapseEmails"
+            class="accordion-collapse collapse"
+            aria-labelledby="headingEmails"
+            data-bs-parent="#emailListAccordion"
+          >
+            <div class="accordion-body">
+              <form id="addEmailForm" class="mb-3 d-flex">
+                {% csrf_token %}
+                <input
+                  type="email"
+                  id="newEmail"
+                  name="email"
+                  class="form-control me-2"
+                  placeholder="Enter new alert email"
+                  required
+                >
+                <button class="btn btn-warning" type="submit">Add</button>
+              </form>
 
-          <ul class="list-group" id="emailList">
-            {% for entry in email_list %}
-              <li
-                class="list-group-item d-flex justify-content-between align-items-center"
-                data-id="{{ entry.id }}"
-              >
-                {{ entry.email }}
-                <button class="btn btn-sm btn-outline-dark delete-email-btn">
-                  Delete
-                </button>
-              </li>
-            {% empty %}
-              <li class="list-group-item text-muted">No emails yet.</li>
-            {% endfor %}
-          </ul>
+              <ul class="list-group" id="emailList">
+                {% for entry in email_list %}
+                  <li
+                    class="list-group-item d-flex justify-content-between align-items-center"
+                    data-id="{{ entry.id }}"
+                  >
+                    {{ entry.email }}
+                    <button class="btn btn-sm btn-outline-dark delete-email-btn">
+                      Delete
+                    </button>
+                  </li>
+                {% empty %}
+                  <li class="list-group-item text-muted">No emails yet.</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <script>
-  (function(){
-    // grab CSRF token from cookie
-    function getCookie(name) {
-      let cookie = document.cookie.split(';').find(c => c.trim().startsWith(name + '='));
-      return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
-    }
-    const csrftoken = getCookie('csrftoken');
+      <script>
+      (function(){
+        function getCookie(name) {
+          let cookie = document.cookie.split(';')
+                      .find(c => c.trim().startsWith(name + '='));
+          return cookie
+            ? decodeURIComponent(cookie.split('=')[1])
+            : null;
+        }
+        const csrftoken = getCookie('csrftoken');
+        function postData(url, data) {
+          return fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrftoken,
+              'Accept': 'application/json'
+            },
+            body: new URLSearchParams(data)
+          }).then(r => r.json());
+        }
 
-    function postData(url, data) {
-      return fetch(url, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': csrftoken,
-          'Accept': 'application/json'
-        },
-        body: new URLSearchParams(data)
-      })
-      .then(r => r.json());
-    }
+        // Add email
+        document.getElementById('addEmailForm')
+          .addEventListener('submit', function(e){
+            e.preventDefault();
+            const email = document.getElementById('newEmail').value.trim();
+            if (!email) return;
+            postData("{% url 'add-temp-sensor-email' %}", { email })
+              .then(json => {
+                if (json.error) {
+                  alert(json.error);
+                } else {
+                  const li = document.createElement('li');
+                  li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                  li.dataset.id = json.id;
+                  li.innerHTML = `
+                    ${json.email}
+                    <button class="btn btn-sm btn-outline-dark delete-email-btn">
+                      Delete
+                    </button>
+                  `;
+                  document.getElementById('emailList').append(li);
+                  document.getElementById('newEmail').value = '';
+                }
+              });
+          });
 
-    // Add email
-    document.getElementById('addEmailForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      const email = document.getElementById('newEmail').value.trim();
-      if (!email) return;
-      postData("{% url 'add-temp-sensor-email' %}", { email })
-        .then(json => {
-          if (json.error) {
-            alert(json.error);
-          } else {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.dataset.id = json.id;
-            li.innerHTML = `
-              ${json.email}
-              <button class="btn btn-sm btn-outline-dark delete-email-btn">
-                Delete
-              </button>
-            `;
-            document.getElementById('emailList').append(li);
-            document.getElementById('newEmail').value = '';
-          }
+        // Delete email
+        document.getElementById('emailList').addEventListener('click', function(e){
+          if (!e.target.classList.contains('delete-email-btn')) return;
+          const li = e.target.closest('li');
+          const id = li.dataset.id;
+          postData("{% url 'delete-temp-sensor-email' %}", { id })
+            .then(json => {
+              if (json.error) {
+                alert(json.error);
+              } else {
+                li.remove();
+              }
+            });
         });
-    });
-
-    // Delete email (event delegation)
-    document.getElementById('emailList').addEventListener('click', function(e){
-      if (!e.target.classList.contains('delete-email-btn')) return;
-      const li = e.target.closest('li');
-      const id = li.dataset.id;
-      postData("{% url 'delete-temp-sensor-email' %}", { id })
-        .then(json => {
-          if (json.error) {
-            alert(json.error);
-          } else {
-            li.remove();
-          }
-        });
-    });
-  })();
-  </script>
-{% endif %}
-
-  
+      })();
+      </script>
+    {% endif %}
 
     <div class="row">
       {% for rows in columns %}
@@ -172,7 +165,12 @@
                   <tr>
                     <td>{{ item.temp|floatformat:1 }}</td>
                     <td>{{ item.humidity|floatformat:1 }}</td>
-                    <td class="{% if item.alert %}humidex-alert{% endif %}">
+                    <td
+                      style="
+                        text-align: center;
+                        {% if item.color %}background-color: {{ item.color }};{% endif %}
+                      "
+                    >
                       {{ item.humidex|floatformat:1 }}
                     </td>
                     <td>{{ item.zone }}</td>
@@ -189,7 +187,74 @@
         </div>
       {% endfor %}
     </div>
-  </div>
+
+    <div class="mt-1 p-3 bg-white rounded shadow-sm">
+      <ul class="list-inline mb-0">
+        <li class="list-inline-item me-4">
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Post Heat Stress Alert Notice: encourage employees to drink extra water"
+            style="display:inline-block;width:1rem;height:1rem;
+                  background:#FFFF99;border:1px solid #ccc;vertical-align:middle;"
+          ></span>
+          <small class="ms-1 align-middle">36 – 39</small>
+        </li>
+        <li class="list-inline-item me-4">
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Post Heat Stress Warning Notice; notify employees that they need to drink extra water"
+            style="display:inline-block;width:1rem;height:1rem;
+                  background:#FFCC00;border:1px solid #ccc;vertical-align:middle;"
+          ></span>
+          <small class="ms-1 align-middle">40 – 42</small>
+        </li>
+        <li class="list-inline-item me-4">
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Provide 15 minutes relief per hour; provide cool (10–15 °C) water; at least 1 cup (240 mL) every 20 minutes"
+            style="display:inline-block;width:1rem;height:1rem;
+                  background:#FFA500;border:1px solid #ccc;vertical-align:middle;"
+          ></span>
+          <small class="ms-1 align-middle">43 – 44</small>
+        </li>
+        <li class="list-inline-item me-4">
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Provide 30 minutes relief per hour in addition to the provisions listed previously"
+            style="display:inline-block;width:1rem;height:1rem;
+                  background:#FF8C00;border:1px solid #ccc;vertical-align:middle;"
+          ></span>
+          <small class="ms-1 align-middle">45 – 46</small>
+        </li>
+        <li class="list-inline-item me-4">
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="If feasible, provide 45 minutes relief per hour in addition to the provisions listed above"
+            style="display:inline-block;width:1rem;height:1rem;
+                  background:#FF1493;border:1px solid #ccc;vertical-align:middle;"
+          ></span>
+          <small class="ms-1 align-middle">47 – 49</small>
+        </li>
+        <li class="list-inline-item">
+          <span
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Only medically supervised work can continue"
+            style="display:inline-block;width:1rem;height:1rem;
+                  background:#FF0000;border:1px solid #ccc;vertical-align:middle;"
+          ></span>
+          <small class="ms-1 align-middle">50 +</small>
+        </li>
+      </ul>
+    </div>
+
+
+  </div>  {# .container #}
 
   <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 </body>

@@ -211,7 +211,33 @@ def delete_temp_sensor_email(request):
 # =========================================================================
 # =========================================================================
 
+def get_humidex_color(hx: float) -> str:
+    """
+    Return a hex color for the given humidex:
+      • <36   → no highlight (empty string)
+      • 36–39 → light yellow
+      • 40–42 → darker yellow
+      • 43–44 → orange
+      • 45–46 → dark orange
+      • 47–49 → dark pink
+      • 50+   → red
+    """
+    if hx < 36:
+        return ""
+    if 36 <= hx <= 39.999:
+        return "#FFFF99"
+    if 40 <= hx <= 42.999:
+        return "#FFCC00"
+    if 43 <= hx <= 44.999:
+        return "#FFA500"
+    if 45 <= hx <= 46.999:
+        return "#FF8C00"
+    if 47 <= hx <= 49.999:
+        return "#FF1493"
+    return "#FF0000"
+
 def temp_display(request):
+    # 1) fetch raw data
     raw_rows = []
     try:
         conn = mysql.connector.connect(
@@ -235,16 +261,15 @@ def temp_display(request):
 
     now_utc = datetime.now(pytz.utc)
     processed = []
+
     for temp_raw, hum_raw, hex_raw, zone, ts_raw in raw_rows:
         temp     = temp_raw   / 10.0
         humidity = hum_raw    / 10.0
-        # base humidex
-        humidex = hex_raw / 10.0
-
-        # adjust for furnace zones
+        humidex  = hex_raw    / 10.0
         if zone in FURNACE_ZONES:
             humidex += 1.0
 
+        # humanize timestamp
         if ts_raw is None:
             updated = "n/a"
         else:
@@ -254,6 +279,9 @@ def temp_display(request):
                 ts_aware = ts_raw if ts_raw.tzinfo else pytz.utc.localize(ts_raw)
             updated = humanize_delta(now_utc - ts_aware)
 
+        # decide highlight color
+        color = get_humidex_color(humidex)
+
         processed.append({
             "temp":     temp,
             "humidity": humidity,
@@ -261,18 +289,19 @@ def temp_display(request):
             "zone":     zone,
             "updated":  updated,
             "alert":    humidex >= 43.0,
+            "color":    color,
         })
 
+    # sort & email
     processed.sort(key=lambda x: x["humidex"], reverse=True)
     send_alert_email(processed)
 
+    # split into two columns
     half    = (len(processed) + 1) // 2
     columns = [processed[:half], processed[half:]]
 
-    # <-- new bit, works for anonymous or logged-in users
+    # manager-only email list controls
     is_manager = is_healthsafety_manager(request.user)
-
-     # load the current list only for managers
     email_list = TempSensorEmailList.objects.all() if is_manager else []
 
     return render(request, "plant/temp_display.html", {
@@ -280,4 +309,3 @@ def temp_display(request):
         "is_manager": is_manager,
         "email_list": email_list,
     })
-
