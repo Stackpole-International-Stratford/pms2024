@@ -60,11 +60,10 @@ def humanize_delta(delta):
 
 def send_alert_email(zones):
     """
-    Send a multipart email (plain text + HTML) listing every zone
-    whose humidex ≥ 43, with clear heat-break recommendations.
-    Throttles to once every 29 minutes by checking and pre-logging email_sent.
-    Also logs each sent alert into SentHeatBreakEntry (with sent_on_break_epoch
-    and supervisor_id left null for now).
+    Production-ready:
+    - Throttles to once every 29 minutes by inspecting email_sent.
+    - Sends to every address in TempSensorEmailList.
+    - Logs each alert in SentHeatBreakEntry (with sent_on_break_epoch & supervisor_id left null).
     """
     # 1) Collect only zones needing alerts
     alerts = []
@@ -72,7 +71,6 @@ def send_alert_email(zones):
         hx = entry["humidex"]
         if hx < 43.0:
             continue
-
         if hx < 45.0:
             rec = "15-minute heat break"
         elif hx < 47.0:
@@ -81,18 +79,16 @@ def send_alert_email(zones):
             rec = "45-minute heat break"
         else:
             rec = "<strong style='color:#c00;'>HAZARDOUS to continue physical activity!</strong>"
-
         alerts.append({
             "zone":    entry["zone"],
             "humidex": f"{hx:.1f}",
             "rec":     rec,
         })
-
     if not alerts:
         return  # nothing to report
 
     # 2) Throttle: only once every 29 minutes
-    now_ts = int(time.time())                # ← use time.time() instead of time()
+    now_ts = int(time.time())
     last_sent = (
         TempSensorEmailList.objects
         .aggregate(latest=Max("email_sent"))["latest"]
@@ -112,10 +108,7 @@ def send_alert_email(zones):
 
     # 5) Build subject + plain-text body
     subject = "🔴 Heat Alert Notification: Humidex Safety Advisory"
-    text_lines = [
-        "The following zones have recorded a humidex of 43 or higher:",
-        ""
-    ]
+    text_lines = ["The following zones have recorded a humidex of 43 or higher:", ""]
     for a in alerts:
         rec_text = a["rec"].replace("<strong>", "").replace("</strong>", "")
         text_lines.append(f"- Zone {a['zone']}: humidex = {a['humidex']} → {rec_text}")
@@ -148,9 +141,7 @@ def send_alert_email(zones):
              <th style="padding:8px;border:1px solid #ddd;text-align:left;">Recommendation</th>
             </tr>
            </thead>
-           <tbody>
-             {rows}
-           </tbody>
+           <tbody>{rows}</tbody>
           </table>
           <p style="font-size:0.9em;color:#666;">Stay safe!</p>
          </body>
@@ -169,12 +160,12 @@ def send_alert_email(zones):
     msg.attach_alternative(html_body, "text/html")
     msg.send(fail_silently=False)
 
-    # 8) Log each alert in our new table (sent_on_break_epoch & supervisor_id remain NULL)
+    # 8) Log each alert in our new table
     entries = [
         SentHeatBreakEntry(
-            zone             = int(a["zone"]),
-            humidex          = float(a["humidex"]),
-            recommendation   = a["rec"],
+            zone           = int(a["zone"]),
+            humidex        = float(a["humidex"]),
+            recommendation = a["rec"],
         )
         for a in alerts
     ]
@@ -298,3 +289,111 @@ def temp_display(request):
 
 
 
+
+
+
+
+
+# Test Emailer 
+# def send_alert_email(zones):
+#     """
+#     Test-only:
+#     - No throttle: sends every call.
+#     - Sends exclusively to tyler.careless@johnsonelectric.com.
+#     - Still logs into SentHeatBreakEntry for you to inspect.
+#     """
+#     # 1) Collect only zones needing alerts
+#     alerts = []
+#     for entry in zones:
+#         hx = entry["humidex"]
+#         if hx < 43.0:
+#             continue
+#         if hx < 45.0:
+#             rec = "15-minute heat break"
+#         elif hx < 47.0:
+#             rec = "30-minute heat break"
+#         elif hx < 50.0:
+#             rec = "45-minute heat break"
+#         else:
+#             rec = "<strong style='color:#c00;'>HAZARDOUS to continue physical activity!</strong>"
+#         alerts.append({
+#             "zone":    entry["zone"],
+#             "humidex": f"{hx:.1f}",
+#             "rec":     rec,
+#         })
+#     if not alerts:
+#         return
+
+#     # —no throttle here—
+
+#     # 2) Force recipient to yourself only
+#     recipient_qs   = TempSensorEmailList.objects.filter(
+#         email="tyler.careless@johnsonelectric.com"
+#     )
+#     recipient_list = list(recipient_qs.values_list("email", flat=True))
+#     if not recipient_list:
+#         return
+
+#     # (we do NOT update email_sent in test mode)
+
+#     # 3) Build subject + plain-text body
+#     subject = "[TEST] 🔴 Heat Alert Notification"
+#     text_lines = ["(test) The following zones have humidex ≥ 43:", ""]
+#     for a in alerts:
+#         rec_text = a["rec"].replace("<strong>", "").replace("</strong>", "")
+#         text_lines.append(f"- Zone {a['zone']}: {a['humidex']} → {rec_text}")
+#     text_body = "\n".join(text_lines)
+
+#     # 4) Build HTML body (same as prod)
+#     html_rows = "".join([
+#         format_html(
+#             "<tr>"
+#             "  <td style='padding:8px;border:1px solid #ddd;'>Zone {zone}</td>"
+#             "  <td style='padding:8px;border:1px solid #ddd;text-align:center;'>{humidex}</td>"
+#             "  <td style='padding:8px;border:1px solid #ddd;'>{rec}</td>"
+#             "</tr>",
+#             zone=a["zone"], humidex=a["humidex"], rec=format_html(a["rec"])
+#         )
+#         for a in alerts
+#     ])
+#     html_body = format_html(
+#         """
+#         <html>
+#          <body style="font-family:Arial,sans-serif;color:#333;">
+#           <h2 style="color:#c00;">[TEST] Heat Alert</h2>
+#           <table style="border-collapse:collapse;width:100%;max-width:600px;">
+#            <thead>
+#             <tr style="background:#f5f5f5;">
+#              <th style="padding:8px;border:1px solid #ddd;">Zone</th>
+#              <th style="padding:8px;border:1px solid #ddd;text-align:center;">Humidex</th>
+#              <th style="padding:8px;border:1px solid #ddd;">Recommendation</th>
+#             </tr>
+#            </thead>
+#            <tbody>{rows}</tbody>
+#           </table>
+#          </body>
+#         </html>
+#         """,
+#         rows=format_html(html_rows)
+#     )
+
+#     # 5) Send
+#     msg = EmailMultiAlternatives(
+#         subject=subject,
+#         body=text_body,
+#         from_email=settings.DEFAULT_FROM_EMAIL,
+#         to=recipient_list,
+#     )
+#     msg.attach_alternative(html_body, "text/html")
+#     msg.send(fail_silently=False)
+
+#     # 6) Still log entries so you can review them
+#     entries = [
+#         SentHeatBreakEntry(
+#             zone           = int(a["zone"]),
+#             humidex        = float(a["humidex"]),
+#             recommendation = a["rec"],
+#         )
+#         for a in alerts
+#     ]
+#     SentHeatBreakEntry.objects.bulk_create(entries)
