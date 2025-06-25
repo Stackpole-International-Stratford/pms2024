@@ -42,13 +42,18 @@
         <hr>
         <ul class="list-group">
             <li class="list-group-item card-hover">
-                <a href="{% url 'dashboards:ab1v' %}" class="text-decoration-none text-dark">
-                    <h5 class="mb-1">8670</h5>
-                    <p class="mb-1">AB1V, 10R140</p>
-                </a>
+            <a href="/dashboard/8670/" class="text-decoration-none text-dark">
+                <h5 class="mb-1">8670</h5>
+                <p class="mb-1">AB1V, 10R140</p>
+            </a>
+            <li class="list-group-item card-hover">
+            <a href="/dashboard/Area1&Area2/" class="text-decoration-none text-dark">
+                <h5 class="mb-1">Compact &amp; Sinter</h5>
+                <p class="mb-1">Area 1 &amp; Area 2</p>
+            </a>
             </li>
             <li class="list-group-item card-hover">
-                <a href="{% url 'dashboards:trilobe' %}" class="text-decoration-none text-dark">
+                <a href="/dashboard/trilobe" class="text-decoration-none text-dark">
                     <h5 class="mb-1">Trilobe</h5>
                     <p class="mb-1">Includes 1467</p>
                 </a>
@@ -59,29 +64,13 @@
                 <hr>
                 <div class="nested">
                     <div class="item nested">
-                        <a href="{% url 'dashboards:9341' %}" class="text-decoration-none text-dark">
+                        <a href="/dashboard/9341" class="text-decoration-none text-dark">
                             <h6 class="mb-1">
-                                <span style="color: #007bff; text-decoration: underline;">Desk</span>
+                                <span style="color: #007bff; text-decoration: underline;">Desk/TV</span>
                             </h6>
-                            <p class="mb-1">For desk</p>
+                            <p class="mb-1">For desk/TV</p>
                         </a>
-                    </div>
-                    <div class="item nested">
-                        <a href="{% url 'dashboards:track9341_TV' %}" class="text-decoration-none text-dark">
-                            <h6 class="mb-1">
-                                <span style="color: #007bff; text-decoration: underline;">TV</span>
-                            </h6>
-                            <p class="mb-1">For desk</p>
-                        </a>
-                    </div>
-                    <div class="item nested">
-                        <a href="{% url 'dashboards:track9341_mobile' %}" class="text-decoration-none text-dark">
-                            <h6 class="mb-1">
-                                <span style="color: #007bff; text-decoration: underline;">Mobile</span>
-                            </h6>
-                            <p class="mb-1">For mobile</p>
-                        </a>
-                    </div>                        
+                    </div> 
                 </div>
             </li>
             <!-- New list item -->

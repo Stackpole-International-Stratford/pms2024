@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from datetime import datetime
-from ..models.maintenance_models import MachineDowntimeEvent, LinePriority, DowntimeParticipation, DowntimeCode
+from ..models.maintenance_models import MachineDowntimeEvent, LinePriority, DowntimeParticipation, DowntimeCode, DowntimeMachine
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -31,469 +31,57 @@ from django.db.models import Exists, OuterRef, Case, When, Value, BooleanField
 import copy
 import csv
 from django.utils.encoding import smart_str
+from collections import OrderedDict
+from django.contrib.auth.decorators import user_passes_test
+from django.utils.dateparse import parse_datetime
 
 
-lines_untracked = [
-     {
-        "line": "10R80",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "30",
-                "machines": [
-                    {"number": "1826", "target": 27496,},
-                    {"number": "1555", "target": 27496,},
-                    {"number": "1546", "target": 27496,},
-                ],
-            },
-            {
-                "op": "40",
-                "machines": [
-                    {"number": "1547", "target": 27496,},
-                ],
-            },
-            {
-                "op": "50",
-                "machines": [
-                    {"number": "1548", "target": 27496,},
-                ],
-            },
-            {
-                "op": "60",
-                "machines": [
-                    {"number": "1549", "target": 27496,},
-                ],
-            },
-            {
-                "op": "70",
-                "machines": [
-                    {"number": "594", "target": 27496,},
-                ],
-            },
-            {
-                "op": "80",
-                "machines": [
-                    {"number": "1551", "target": 27496,},
-                ],
-            },
-            {
-                "op": "90",
-                "machines": [
-                    {"number": "1552", "target": 27496,},
-                ],
-            },
-            {
-                "op": "100",
-                "machines": [
-                    {"number": "751", "target": 27496,},
-                ],
-            },
-                        {
-                "op": "110",
-                "machines": [
-                    {"number": "1554", "target": 27496,},
-                ],
-            },
-                        {
-                "op": "120",
-                "machines": [
-                    {"number": "1557", "target": 27496,},
-                ],
-            },
-        ],
-    },
-    {
-        "line": "AB1V Reaction",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "120",
-                "machines": [
-                    {"number": "1724", "target": 27496,},
-                    {"number": "1725", "target": 27496,},
-                    {"number": "1750", "target": 27496,},
-                ],
-            },
-            {
-                "op": "Final",
-                "machines": [
-                    {"number": "1730", "target": 27496,},
-                ],
-            },
-        ],
-    },
-        {
-        "line": "AB1V Input",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "20",
-                "machines": [
-                    {"number": "662", "target": 27496,},
-                ],
-            },
-            {
-                "op": "Final",
-                "machines": [
-                    {"number": "1730", "target": 27496,},
-                ],
-            },
-        ],
-    },
-        {
-        "line": "AB1V Overdrive",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "100",
-                "machines": [
-                    {"number": "1724", "target": 27496,},
-                    {"number": "1725", "target": 27496,},
-                    {"number": "1750", "target": 27496,},
-                ],
-            },
-            {
-                "op": "Final",
-                "machines": [
-                    {"number": "1730", "target": 27496,},
-                ],
-            },
-        ],
-    },
-     {
-        "line": "Presses",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "compact",
-                "machines": [
-                    {"number": "271", "target": 27496,},
-                ],
-            },
-              {
-                "op": "pellet / wafers",
-                "machines": [
-                    {"number": "227", "target": 27496,},
-                    {"number": "238", "target": 27496,},
-                    {"number": "218", "target": 27496,},
-                    {"number": "215", "target": 27496,},
-                    {"number": "274", "target": 27496,},
-                    {"number": "244", "target": 27496,},
-                    {"number": "216", "target": 27496,},
-                    {"number": "275", "target": 27496,},
-                    {"number": "204", "target": 27496,},
-                    {"number": "265", "target": 27496,},
-                    {"number": "205", "target": 27496,},
-                ],
-            },
-        ],
-    },
-    {
-        "line": "10R140",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "autogauge",
-                "machines": [
-                    {"number": "1760", "target": 27496,},
-                ],
-            },
-            {
-                "op": "op10",
-                "machines": [
-                    {"number": "654", "target": 27496,},
-                    {"number": "686", "target": 27496,},
-                    {"number": "655", "target": 27496,},
-                ],
-            },
-             {
-                "op": "op20",
-                "machines": [
-                    {"number": "611", "target": 27496,},
-                ],
-            },
-        ],
-    },
-     {
-        "line": "GF6",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "10",
-                "machines": [
-                    {"number": "583", "target": 27496,},
-                    {"number": "582", "target": 27496,},
-                    {"number": "627", "target": 27496,},
-                    {"number": "574", "target": 27496,},
-                ],
-            },
-             {
-                "op": "20",
-                "machines": [
-                    {"number": "731", "target": 27496,},
-                    {"number": "628", "target": 27496,},
-                    {"number": "635", "target": 27496,},
-                    {"number": "564", "target": 27496,},
-                    {"number": "620", "target": 27496,},
-                ],
-            },
-            {
-                "op": "30",
-                "machines": [
-                    {"number": "692", "target": 27496,},
-                    {"number": "749", "target": 27496,},
-                    {"number": "750", "target": 27496,},
-                ],
-            },
-            {
-                "op": "40",
-                "machines": [
-                    {"number": "672", "target": 27496,},
-                    {"number": "673", "target": 27496,},
-                    {"number": "676", "target": 27496,},
-                ],
-            },
-            {
-                "op": "50",
-                "machines": [
-                    {"number": "667", "target": 27496,},
-                    {"number": "745", "target": 27496,},
-                ],
-            },
-            {
-                "op": "slurry",
-                "machines": [
-                    {"number": "596", "target": 27496,},
-                    {"number": "577", "target": 27496,},
-                ],
-            },
-            {
-                "op": "hpwash",
-                "machines": [
-                    {"number": "782", "target": 27496,},
-                    {"number": "783", "target": 27496,},
-                ],
-            },
-                        {
-                "op": "Wash/Dryer",
-                "machines": [
-                    {"number": "696", "target": 27496,},
-                    {"number": "781", "target": 27496,},
-                ],
-            },
-                                    {
-                "op": "Media Detection",
-                "machines": [
-                    {"number": "883", "target": 27496,},
-                    {"number": "882", "target": 27496,},
-                ],
-            },
-        ],
-    },
-     {
-        "line": "9HP/ZF",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "Machining",
-                "machines": [
-                    {"number": "786", "target": 27496,},
-                    {"number": "787", "target": 27496,},
-                    {"number": "789", "target": 27496,},
-                    {"number": "791", "target": 27496,},
-                    {"number": "792", "target": 27496,},
-                    {"number": "793", "target": 27496,},
-                    {"number": "794", "target": 27496,},
-                ],
-            },
-             {
-                "op": "Balancers",
-                "machines": [
-                    {"number": "798", "target": 27496,},
-                    {"number": "746", "target": 27496,},
-                    {"number": "953", "target": 27496,},
-                ],
-            },
-             {
-                "op": "Slurries",
-                "machines": [
-                    {"number": "630", "target": 27496,},
-                    {"number": "634", "target": 27496,},
-                ],
-            },
-            {
-                "op": "Washer/Dryer",
-                "machines": [
-                    {"number": "612", "target": 27496,},
-                ],
-            },
-                        {
-                "op": "Autogauge",
-                "machines": [
-                    {"number": "797", "target": 27496,},
-                ],
-            },
-        ],
-    },
-    {
-        "line": "Furnaces",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "furnaces",
-                "machines": [
-                    {"number": "1516", "target": 27496,},
-                    {"number": "859", "target": 27496,},
-                    {"number": "341", "target": 27496,},
-                    {"number": "342", "target": 27496,},
-                    {"number": "343", "target": 27496,},
-                    {"number": "346", "target": 27496,},
-                    {"number": "441", "target": 27496,},
-                ],
-            },
-
-            {
-                "op": "Compact",
-                "machines": [
-                    {"number": "262", "target": 27496,},
-                    {"number": "263", "target": 27496,},
-                ],
-            },
-             {
-                "op": "Assembler",
-                "machines": [
-                    {"number": "859", "target": 27496,},
-
-                ],
-            },
-             {
-                "op": "Unload",
-                "machines": [
-                    {"number": "954", "target": 27496,},
-                    {"number": "992", "target": 27496,},
-
-                ],
-            },
-        ],
-    },
-    {
-        "line": "Optimized",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "Broach",
-                "machines": [
-                    {"number": "784", "target": 27496,},
-                ],
-            },
-             {
-                "op": "Heat",
-                "machines": [
-                    {"number": "770", "target": 27496,},
-
-                ],
-            },
-             {
-                "op": "Machine",
-                "machines": [
-                    {"number": "618", "target": 27496,},
-                    {"number": "575", "target": 27496,},
-                    {"number": "624", "target": 27496,},
-                    {"number": "619", "target": 27496,},
-                ],
-            },
-                         {
-                "op": "Slurry",
-                "machines": [
-                    {"number": "769", "target": 27496,},
-                ],
-            },
-        ],
-    },
-     {
-        "line": "Trilobe",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "Broach",
-                "machines": [
-                    {"number": "573", "target": 27496,},
-                ],
-            },
-             {
-                "op": "Heat",
-                "machines": [
-                    {"number": "728", "target": 27496,},
-
-                ],
-            },
-             {
-                "op": "Machine",
-                "machines": [
-                    {"number": "644", "target": 27496,},
-                    {"number": "645", "target": 27496,},
-                    {"number": "646", "target": 27496,},
-                    {"number": "647", "target": 27496,},
-                    {"number": "649", "target": 27496,},
-                ],
-            },
-                         {
-                "op": "Slurry",
-                "machines": [
-                    {"number": "742", "target": 27496,},
-                ],
-            },
-        ],
-    },
-     {
-        "line": "Offline",
-        "scrap_line": "NA",
-        "operations": [
-            {
-                "op": "Machine",
-                "machines": [
-                    {"number": "636", "target": 27496,},
-                    {"number": "625", "target": 27496,},
-                    {"number": "595", "target": 27496,},
-                    {"number": "637", "target": 27496,},
-                    {"number": "638", "target": 27496,},
-                ],
-            },
-        ],
-    },
-
-]
 
 # ============================================================================
 # ============================================================================
 # ============================================================================
 # ============================================================================
 '''
-You may wonder what this is. I did this to silently merge the untracked lines object into the lines object so it doesn't affect any OEE calculations 
-but reflects the needs of the maintenance app that still has machines that go down even machines that are not being tracked
+You may wonder what this is. It's fetching all the lines and operations and machines from the table and stuffing it into prod_lines so the rest of the code views/functions
+can use it. Before we had this, we had it in 2 separate json objects, which was not sustainable so now in a table we can CRUD machines from the admin panel no problem.
 '''
-# build a map by line name
-_by_name = { L['line']: copy.deepcopy(L) for L in prod_lines_initial }
 
-for un in lines_untracked:
-    name = un['line']
-    if name in _by_name:
-        # for each op in the untracked block, try to find the same op code
-        for un_op in un['operations']:
-            # look for a matching op in the tracked block
-            match = next((op for op in _by_name[name]['operations']
-                          if op['op'] == un_op['op']), None)
-            if match:
-                match['machines'].extend(un_op['machines'])
-            else:
-                # if it’s a brand-new op, just append it
-                _by_name[name]['operations'].append(un_op)
-    else:
-        # brand-new line entirely
-        _by_name[name] = un
+def get_prod_lines():
+    """
+    Return a list of { line, scrap_line, operations:[ { op, machines:[{number,target}] } ] }
+    built fresh from the DowntimeMachine table.
+    """
+    _by_name = {}
 
-# finally, your merged list:
-prod_lines = list(_by_name.values())
+    for dm in DowntimeMachine.objects.all():
+        # 1) ensure the line‐block
+        blk = _by_name.setdefault(
+            dm.line,
+            {
+                'line':       dm.line,
+                'scrap_line': dm.line,
+                'operations': []
+            }
+        )
+
+        # 2) find or create this op
+        ops = blk['operations']
+        op_entry = next((o for o in ops if o['op'] == dm.operation), None)
+        machine_dict = {
+            'number': dm.machine_number,
+            'target': None    # or dm.target if you’ve extended the model
+        }
+
+        if op_entry:
+            op_entry['machines'].append(machine_dict)
+        else:
+            ops.append({
+                'op':       dm.operation,
+                'machines': [machine_dict]
+            })
+
+    return list(_by_name.values())
+
 
 # ============================================================================
 # ============================================================================
@@ -526,75 +114,50 @@ def delete_downtime_entry(request):
 @require_POST
 def closeout_downtime_entry(request):
     """
-    Close out a downtime event and auto-leave all participants.
+    Close out a downtime event *only* when every participant has already left.
     Expects JSON body:
       {
-        "entry_id":           <int>,
-        "closeout":           "YYYY-MM-DD HH:MM",
-        "closeout_comment":   <string>
+        "entry_id":         <int>,
+        "closeout":         "YYYY-MM-DD HH:MM",
+        "closeout_comment": <string>
       }
     """
-    # ── 1) parse payload ───────────────────────────────────────────────────────
+    # 1) payload
     try:
-        payload          = json.loads(request.body)
-        entry_id         = payload['entry_id']
-        close_str        = payload['closeout']            # e.g. "2025-05-01 18:08"
-        closeout_comment = payload['closeout_comment']
-        close_dt         = datetime.strptime(close_str, "%Y-%m-%d %H:%M")
+        p             = json.loads(request.body)
+        entry_id      = p["entry_id"]
+        naive_dt      = datetime.strptime(p["closeout"], "%Y-%m-%d %H:%M")
+        close_comment = p["closeout_comment"].strip()
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
-    # ── 2) fetch event ─────────────────────────────────────────────────────────
-    try:
-        event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
-        return HttpResponseBadRequest("Entry not found")
-
-    # ── 3) gather any still-open participations ───────────────────────────────
-    open_parts_qs = DowntimeParticipation.objects.filter(
-        event=event,
-        leave_epoch__isnull=True
+    # 2) fetch event
+    event = get_object_or_404(
+        MachineDowntimeEvent,
+        pk=entry_id,
+        is_deleted=False,
+        closeout_epoch__isnull=True
     )
 
-    # ── 4) enforce “everyone must leave” for non-supervisors ─────────────────
-    if open_parts_qs.exists():
-        # 4a) anonymous users can never close out if people are still joined
-        if not request.user.is_authenticated:
-            return HttpResponseForbidden(
-                "Authentication required to close out until all participants have left."
-            )
+    # 3) ensure no open participants
+    if DowntimeParticipation.objects.filter(event=event, leave_epoch__isnull=True).exists():
+        return HttpResponseForbidden("Cannot close out until all participants have left.")
 
-        # 4b) only maintenance_supervisors OR maintenance_managers may override
-        allowed = request.user.groups.filter(
-            name__in=["maintenance_supervisors", "maintenance_managers"]
-        ).exists()
-        if not allowed:
-            return HttpResponseForbidden(
-                "Cannot close out until all participants have left."
-            )
+    # 4) localize and convert to UTC epoch
+    local_tz    = timezone.get_current_timezone()  # America/Toronto
+    aware_local = timezone.make_aware(naive_dt, local_tz)
+    epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
-    # ── 5) compute epoch ───────────────────────────────────────────────────────
-    epoch_ts = int(close_dt.timestamp())
+    # 5) sanity check: must be after the start
+    if epoch_ts <= event.start_epoch:
+        return HttpResponseBadRequest("Close-out time must be after the start time.")
 
-    # ── 6) perform updates atomically ─────────────────────────────────────────
-    with transaction.atomic():
-        # 6a) close out the event itself
-        event.closeout_epoch   = epoch_ts
-        event.closeout_comment = closeout_comment
-        event.save(update_fields=['closeout_epoch', 'closeout_comment'])
+    # 6) save
+    event.closeout_epoch   = epoch_ts
+    event.closeout_comment = close_comment
+    event.save(update_fields=["closeout_epoch", "closeout_comment"])
 
-        # 6b) mark each still‐joined participation as left now
-        for part in open_parts_qs:
-            part.leave_epoch   = epoch_ts
-            part.leave_comment = f"Job is finished: {closeout_comment}"
-            part.total_minutes = math.ceil((epoch_ts - part.join_epoch) / 60)
-            part.save(update_fields=['leave_epoch', 'leave_comment', 'total_minutes'])
-
-    # ── 7) respond to caller ───────────────────────────────────────────────────
-    return JsonResponse({
-        'status':          'ok',
-        'closed_at_epoch': epoch_ts,
-    })
+    return JsonResponse({"status": "ok", "closed_at_epoch": epoch_ts})
 
 
 
@@ -660,24 +223,30 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 # ==================================================================================
 
 
+def maintenance_form(request):
+    """
+    Downtime‐entry form: CATEGORY is required; SUBCATEGORY + code are optional.
+    """
 
+    prod_lines = get_prod_lines()
 
+    offset    = int(request.GET.get('offset', 0))
+    page_size = 300
 
-def maintenance_form(request: HttpRequest) -> HttpResponse:
-    if request.method == 'POST':
-        # ——— Pull Form Data ———
-        entry_id    = request.POST.get('entry_id')      # None for “Add”
-        line        = request.POST.get('line', '').strip()
-        machine     = request.POST.get('machine', '').strip()
-        cat_code    = request.POST.get('category', '').strip()
-        sub_code    = request.POST.get('subcategory', '').strip()
-        start_date  = request.POST.get('start_date', '') # "YYYY-MM-DD"
-        start_time  = request.POST.get('start_time', '') # "HH:MM"
-        description = request.POST.get('description', '').strip()
-        employee_id = request.POST.get('employee_id', '').strip()  # Pull the employee_id from the form
-
-        # ——— Parse Out the List of Labour Codes ———
+    if request.method == "POST":
+        # Pull form data
+        entry_id   = request.POST.get('entry_id')   # None for new
+        line       = request.POST.get('line', '').strip()
+        machine    = request.POST.get('machine', '').strip()
+        raw_cat    = request.POST.get('category', '').strip()
+        raw_sub    = request.POST.get('subcategory', '').strip()
+        start_date = request.POST.get('start_date', '')   # "YYYY-MM-DD"
+        start_time = request.POST.get('start_time', '')   # "HH:MM"
+        comment    = request.POST.get('description', '').strip()
+        emp_id     = request.POST.get('employee_id', '').strip()
         raw_labour = request.POST.get('labour_types', '[]')
+
+        # Parse labour JSON
         try:
             labour_list = json.loads(raw_labour)
             if not isinstance(labour_list, list):
@@ -685,62 +254,69 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
         except json.JSONDecodeError:
             labour_list = []
 
-        # ——— Lookup Display Names from DowntimeCode Model ———
-        try:
-            # Fetch the subcategory DowntimeCode instance
-            sub_code_obj = DowntimeCode.objects.get(code=sub_code)
-            category_name = sub_code_obj.category
-            subcategory_name = sub_code_obj.subcategory
-        except DowntimeCode.DoesNotExist:
-            return HttpResponseBadRequest("Invalid category or subcategory code")
+        # Validate category
+        if not raw_cat:
+            return HttpResponseBadRequest("You must choose a category.")
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        if not cat_obj:
+            return HttpResponseBadRequest("Invalid category code.")
+        category_name = cat_obj.category
 
-        # ——— Build Epoch Timestamp ———
+        # Validate subcategory
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest("Invalid subcategory code.")
+            subcategory_name = sub_obj.subcategory
+            code_value       = raw_sub
+        else:
+            subcategory_name = "NOTSELECTED"
+            code_value       = "NOTSELECTED"
+
+        # Build epoch timestamp (localize to America/Toronto then UTC)
         try:
-            dt = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
-            # Make timezone-aware based on your project's settings
-            if timezone.is_naive(dt):
-                dt = timezone.make_aware(dt, timezone.get_default_timezone())
+            dt_naive = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
         except ValueError:
-            return HttpResponseBadRequest("Invalid date/time format")
-        epoch_ts = int(dt.timestamp())
+            return HttpResponseBadRequest("Bad date/time format.")
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
-        # ——— Create or Update Maintenance Downtime Event ———
+        # Create or update
         if entry_id:
-            # Update Existing
             e = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
-            e.line           = line
-            e.machine        = machine
-            e.category       = category_name
-            e.subcategory    = subcategory_name
-            e.code           = sub_code
-            e.start_epoch    = epoch_ts
-            e.comment        = description
-            e.labour_types_json = json.dumps(e.labour_types)
-            e.employee_id    = employee_id     # Set employee_id
+            e.line         = line
+            e.machine      = machine
+            e.category     = category_name
+            e.subcategory  = subcategory_name
+            e.code         = code_value
+            e.start_epoch  = epoch_ts
+            e.comment      = comment
+            e.labour_types = labour_list
+            e.employee_id  = emp_id or None
             e.save(update_fields=[
-                'line', 'machine', 'category', 'subcategory',
-                'code', 'start_epoch', 'comment', 'labour_types', 'employee_id'
+                'line','machine','category','subcategory',
+                'code','start_epoch','comment',
+                'labour_types','employee_id'
             ])
         else:
-            # Create New
             MachineDowntimeEvent.objects.create(
-                line           = line,
-                machine        = machine,
-                category       = category_name,
-                subcategory    = subcategory_name,
-                code           = sub_code,
-                start_epoch    = epoch_ts,
-                comment        = description,
-                labour_types   = labour_list,
-                employee_id    = employee_id      # Set employee_id
+                line         = line,
+                machine      = machine,
+                category     = category_name,
+                subcategory  = subcategory_name,
+                code         = code_value,
+                start_epoch  = epoch_ts,
+                comment      = comment,
+                labour_types = labour_list,
+                employee_id  = emp_id or None,
             )
 
-        # ——— Redirect to Same Page (Preserve ?offset=…) ———
+        # Redirect back, preserving offset
         return redirect(request.get_full_path())
 
-    # ——— GET: Render Form + List of Open Entries ———
-    offset    = int(request.GET.get('offset', 0))
-    page_size = 300
+    # GET: render form
     qs = MachineDowntimeEvent.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
@@ -766,56 +342,51 @@ def maintenance_form(request: HttpRequest) -> HttpResponse:
                 user__groups__name='maintenance_tech'
             )
         ),
-
-        # True if the JSONField `labour_types` contains the string "OPERATOR"
         has_operator=Case(
             When(labour_types__contains=['OPERATOR'], then=Value(True)),
             default=Value(False),
             output_field=BooleanField(),
-        )
+        ),
+        has_plctech=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_plctech'
+            )
+        ),
+        has_imt=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_imt'
+            )
+        ),
     ).order_by('-start_epoch')
 
-    total     = qs.count()
-    page_objs = list(qs[offset: offset + page_size])
-    has_more  = (offset + page_size) < total
+    total    = qs.count()
+    entries  = list(qs[offset: offset + page_size])
+    has_more = (offset + page_size) < total
 
-    # ——— Fetch All Downtime Codes and Structure Them ———
-    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
-    structured_codes = {}
-    for code_obj in downtime_codes:
-        cat_code = code_obj.code.split('-', 1)[0]  # Assumes category code is the prefix before '-'
-        if cat_code not in structured_codes:
-            structured_codes[cat_code] = {
-                'name': code_obj.category,
-                'code': cat_code,
-                'subcategories': []
-            }
-        structured_codes[cat_code]['subcategories'].append({
-            'name': code_obj.subcategory,
-            'code': code_obj.code
-        })
+    # Build downtime_codes_list and prod_lines JSON...
+    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split('-',1)[0]
+        structured.setdefault(cat, {
+            'name': c.category,
+            'code': cat,
+            'subcategories': []
+        })['subcategories'].append({'code': c.code, 'name': c.subcategory})
+    downtime_codes_list = list(structured.values())
 
-    # Convert the structured dictionary to a list
-    downtime_codes_list = list(structured_codes.values())
-
-    # ——— Prepare Context ———
-    context = {
-        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
-        'lines_json':          mark_safe(json.dumps(prod_lines)),
-        'entries':             page_objs,
+    return render(request, 'plant/maintenance_form.html', {
+        'entries':             entries,
         'offset':              offset,
         'page_size':           page_size,
         'has_more':            has_more,
-        # You can also pass your labour-choices to the template if needed:
-        # 'labour_choices': MachineDowntimeEvent.LABOUR_CHOICES,
-    }
-
-    return render(request, 'plant/maintenance_form.html', context)
-
-
-
-
-
+        'downtime_codes_json': json.dumps(downtime_codes_list),
+        'lines_json':          json.dumps(prod_lines),
+    })
 
 
 
@@ -839,6 +410,9 @@ MAINT_GROUPS = {
     "maintenance_millwright",
     "maintenance_tech",
     "maintenance_supervisors",
+
+    "maintenance_plctech",
+    "maintenance_imt",
 }
 
 def user_has_maintenance_access(user) -> bool:
@@ -869,63 +443,85 @@ def annotate_being_worked_on(qs):
 
 @login_required
 @require_POST
-def toggle_active(request):
-    # only managers may do this
+def bulk_toggle_active(request):
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized")
 
-    # use FormData in JS so request.POST is populated
-    username = request.POST.get("username")
-    action   = request.POST.get("action")  # "activate" or "deactivate"
-    if not username or action not in ("activate", "deactivate"):
-        return HttpResponseBadRequest("Invalid parameters")
+    try:
+        data       = json.loads(request.body)
+        activate   = set(data.get("activate", []))
+        deactivate = set(data.get("deactivate", []))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest("Bad JSON payload")
+
+    # avoid dupes
+    deactivate -= activate
 
     User = get_user_model()
-    user = get_object_or_404(User, username=username)
     grp, _ = Group.objects.get_or_create(name="maintenance_active")
 
-    if action == "activate":
-        user.groups.add(grp)
-    else:
-        user.groups.remove(grp)
+    # Activate
+    for u in User.objects.filter(username__in=activate):
+        u.groups.add(grp)
 
-    return JsonResponse({"status": "ok", "action": action, "username": username})
+    # Deactivate
+    for u in User.objects.filter(username__in=deactivate):
+        u.groups.remove(grp)
+
+    return JsonResponse({
+        "status": "ok",
+        "activated"  : list(activate),
+        "deactivated": list(deactivate),
+    })
 
 
 
 
 
-
-
+from django.db.models import Q
 
 # --------------------------- rewritten view ---------------------------------- #
 
 def filter_out_operator_only_events(qs):
     """
     Given a MachineDowntimeEvent queryset, return a new queryset
-    with all events whose labour_types == ["OPERATOR"] removed.
+    with all events whose labour_types == ["OPERATOR"] OR ["NA"] removed.
     """
-    # Find IDs of operator‑only events
-    operator_only_ids = list(
-        qs
-        .filter(labour_types=["OPERATOR"])   # If your JSONField supports direct list lookups
-        .values_list("id", flat=True)
+    # Exclude any event whose labour_types exactly equals ["OPERATOR"] or ["NA"]
+    return qs.exclude(
+        Q(labour_types=["OPERATOR"])
     )
-    # if operator_only_ids:
-    #     print(f"Excluding operator‑only event IDs: {operator_only_ids}")
-    # Return qs without those IDs
-    return qs.exclude(id__in=operator_only_ids)
 
 
+# Define the order in which roles should appear
+ROLE_ORDER = ["electrician", "millwright", "tech", "plctech", "imt"]
 
 
-@login_required(login_url='login')
+def group_by_role(workers):
+    """
+    Given a list of worker-dicts (with 'roles' and 'username', 'name', etc.),
+    bucket them by their first-listed role, in the order of ROLE_ORDER.
+    """
+    buckets = OrderedDict((r, []) for r in ROLE_ORDER)
+    buckets["other"] = []
+    for w in workers:
+        primary = w["roles"][0].lower() if w["roles"] else "other"
+        if primary in buckets:
+            buckets[primary].append(w)
+        else:
+            buckets["other"].append(w)
+    return buckets
+
+
+@login_required(login_url="login")
 def list_all_downtime_entries(request):
-    # ── 1) Access Control ───────────────────────────────────────────────
+
+    prod_lines = get_prod_lines()
+    # 1) Access control
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
 
-    # ── 2) Build & Annotate Open-Events Queryset ─────────────────────────
+    # 2) Fetch & annotate live events
     priority_sq = (
         LinePriority.objects
         .filter(line=OuterRef("line"))
@@ -938,146 +534,154 @@ def list_all_downtime_entries(request):
             line_priority=Coalesce(
                 Subquery(priority_sq, output_field=IntegerField()),
                 Value(999),
-                output_field=IntegerField(),
+                output_field=IntegerField()
             )
         )
         .order_by("line_priority", "-start_epoch")
         .prefetch_related("participants__user")
     )
     qs = annotate_being_worked_on(base_qs)
-
-    # ── 2b) Strip Out Operator-Only Events ─────────────────────────────
     qs = filter_out_operator_only_events(qs)
 
-    # ── 3) Format First PAGE_SIZE Entries for Left Table ────────────────
+    # 3) Paginate + format “entries” for the table
     entries = list(qs[:PAGE_SIZE])
     today   = timezone.localdate()
     tz      = get_default_timezone()
+
     for e in entries:
+        # — display timestamp as “HH:MM” if today, else “MM/DD”
         dt = e.start_at
         if is_naive(dt):
             dt = make_aware(dt, tz)
         local_dt = localtime(dt)
         e.start_display = (
-            local_dt.strftime('%H:%M')
+            local_dt.strftime("%H:%M")
             if local_dt.date() == today
-            else local_dt.strftime('%m/%d')
+            else local_dt.strftime("%m/%d")
         )
+
+        # — flag if *this user* is currently on the job
         e.user_has_open = e.participants.filter(
-            user=request.user, leave_epoch__isnull=True
+            user=request.user,
+            leave_epoch__isnull=True
         ).exists()
 
-    # ── 4) Gather All Maintenance-Role Users ────────────────────────────
-    User = get_user_model()
-    maintenance_group_names = set(ROLE_TO_GROUP.values())
-    users = (
+        # ── NEW ── determine exactly which maintenance-roles are active on this event
+        open_parts   = [p for p in e.participants.all() if p.leave_epoch is None]
+        active_roles = set()
+        for p in open_parts:
+            user_groups = set(p.user.groups.values_list("name", flat=True))
+            for role, grp_name in ROLE_TO_GROUP.items():
+                if grp_name in user_groups:
+                    active_roles.add(role)
+        e.current_worker_roles = active_roles
+
+        # ── NEW ── record the usernames who are currently joined
+        e.current_usernames = [p.user.username for p in open_parts]
+
+    # 4) Collect all maintenance‐role users
+    User            = get_user_model()
+    maint_groups    = list(ROLE_TO_GROUP.values())
+    all_maint_users = (
         User.objects
-        .filter(groups__name__in=maintenance_group_names, is_active=True)
+        .filter(groups__name__in=maint_groups, is_active=True)
         .distinct()
-        .order_by('username')
+        .order_by("username")
     )
+    active_group, _    = Group.objects.get_or_create(name="maintenance_active")
+    active_users       = all_maint_users.filter(groups=active_group)
+    inactive_users     = all_maint_users.exclude(groups=active_group)
 
-    # ── 5) Partition into Active vs Inactive Based on maintenance_active Group ─
-    active_grp, _   = Group.objects.get_or_create(name="maintenance_active")
-    active_qs       = users.filter(groups=active_grp)
-    inactive_qs     = users.exclude(groups=active_grp)
-
-   # then, in your view:
+    # 5) Build per‐user dicts (with their open jobs)
     machine_priority_map = get_machine_priority_map()
-
-    def build_worker_list(qs):
-        """
-        Turn a queryset of User into a list of dicts:
-        { username, name, roles, jobs:[{machine, subcategory, priority}, …] }
-        """
+    def build_worker_list(user_qs):
         lst = []
-        for u in qs:
-            # display name
-            name = u.get_full_name() or u.username
-
-            # pull their maintenance roles
+        for u in user_qs:
+            name        = u.get_full_name() or u.username
             user_groups = set(u.groups.values_list("name", flat=True))
-            roles = [
-                role for role, grp in ROLE_TO_GROUP.items()
-                if grp in user_groups
+            roles       = [
+                r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
             ]
-
-            # fetch all still‐open participations
             parts = DowntimeParticipation.objects.filter(
                 user=u,
                 leave_epoch__isnull=True,
                 event__closeout_epoch__isnull=True
-            ).select_related('event')
-
-            # build their job list, injecting priority
-            jobs = []
-            for p in parts:
-                mn = p.event.machine
-                jobs.append({
-                    "machine":     mn,
+            ).select_related("event")
+            jobs = [
+                {
+                    "machine":     p.event.machine,
                     "subcategory": p.event.subcategory,
-                    "priority":    machine_priority_map.get(mn, "—"),
-                })
-
+                    "priority":    machine_priority_map.get(p.event.machine, "—"),
+                }
+                for p in parts
+            ]
             lst.append({
                 "username": u.username,
                 "name":     name,
                 "roles":    roles,
                 "jobs":     jobs,
             })
-
-        # sort alphabetically by display name
         return sorted(lst, key=lambda w: w["name"])
 
+    active_workers   = build_worker_list(active_users)
+    inactive_workers = build_worker_list(inactive_users)
 
+    # 6) Bucket by role
+    active_by_role   = group_by_role(active_workers)
+    inactive_by_role = group_by_role(inactive_workers)
 
-    active_workers   = build_worker_list(active_qs)
-    inactive_workers = build_worker_list(inactive_qs)
+    # 7) Determine current‐user flags
+    user_grps     = set(request.user.groups.values_list("name", flat=True))
+    is_manager    = "maintenance_managers" in user_grps
+    is_supervisor = "maintenance_supervisors" in user_grps
 
-    # ── 6) Determine Manager Flag & Roles for Current User ───────────────
-    user_groups   = set(request.user.groups.values_list("name", flat=True))
-    is_manager    = "maintenance_managers" in user_groups
-    is_supervisor = "maintenance_supervisors" in user_groups
-    user_roles    = [
-        r for r, grp in ROLE_TO_GROUP.items()
-        if grp in user_groups
-    ]
+    # 8) Build the labour_choices list
+    full_choices = MachineDowntimeEvent.LABOUR_CHOICES
+    allowed_groups = {
+        ROLE_TO_GROUP["electrician"],
+        ROLE_TO_GROUP["millwright"],
+        "maintenance_supervisors",
+        "maintenance_managers",
+        "maintenance_tech",
+    }
+    if user_grps & allowed_groups:
+        labour_choices = list(full_choices)
+    else:
+        labour_choices = [
+            (code, label)
+            for code, label in full_choices
+            if code not in ("PLCTECH", "IMT")
+        ]
 
-    # ── 7) Fetch and Structure Downtime Codes from Database ──────────────
-    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
-    structured_codes = {}
-    for code_obj in downtime_codes:
-        # Extract the category code (assumes it's the prefix before the first '-')
-        cat_code = code_obj.code.split('-', 1)[0]  
-        if cat_code not in structured_codes:
-            structured_codes[cat_code] = {
-                'name': code_obj.category,
-                'code': cat_code,
-                'subcategories': []
-            }
-        structured_codes[cat_code]['subcategories'].append({
-            'name': code_obj.subcategory,
-            'code': code_obj.code
+    # 9) Downtime‐codes JSON for the modal
+    downtime_codes = DowntimeCode.objects.all().order_by(
+        "category", "subcategory", "code"
+    )
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split("-", 1)[0]
+        structured.setdefault(cat, {
+            "name":          cat,
+            "code":          cat,
+            "subcategories": []
+        })["subcategories"].append({
+            "code": c.code,
+            "name": c.subcategory
         })
 
-    # Convert the structured dictionary to a list for JSON serialization
-    downtime_codes_list = list(structured_codes.values())
-
-    # ── 8) Render ─────────────────────────────────────────────────────────
+    # 10) Final render
     return render(request, "plant/maintenance_all_entries.html", {
-        "entries":             entries,
-        "page_size":           PAGE_SIZE,
-        "line_priorities":     LinePriority.objects.all(),
-        "is_manager":          is_manager,
-        "is_supervisor":       is_supervisor,
-        "labour_choices":      MachineDowntimeEvent.LABOUR_CHOICES,
-        "user_roles":          user_roles,
-        "active_workers":      active_workers,
-        "inactive_workers":    inactive_workers,
-        'downtime_codes_json': mark_safe(json.dumps(downtime_codes_list)),
-        'lines_json':          mark_safe(json.dumps(prod_lines)),
+        "entries":                  entries,
+        "page_size":                PAGE_SIZE,
+        "line_priorities":          LinePriority.objects.all(),
+        "is_manager":               is_manager,
+        "is_supervisor":            is_supervisor,
+        "labour_choices":           labour_choices,
+        "active_workers_by_role":   active_by_role,
+        "inactive_workers_by_role": inactive_by_role,
+        "downtime_codes_json":      mark_safe(json.dumps(list(structured.values()))),
+        "lines_json":               mark_safe(json.dumps(prod_lines)),
     })
-
 
 @login_required
 def load_more_downtime_entries(request):
@@ -1148,14 +752,18 @@ def load_more_downtime_entries(request):
 
 @login_required
 def downtime_history(request, event_id):
-    # 1) ensure the event exists
+    """
+    Return the complete labour-history JSON for one downtime event,
+    PLUS the event’s own opening and close-out comments.
+    """
+    # 1) validate event
     event = get_object_or_404(
         MachineDowntimeEvent,
         pk=event_id,
         is_deleted=False
     )
 
-    # 2) pull all participations for that event, in chronological order
+    # 2) collect participations
     parts = (
         DowntimeParticipation.objects
         .filter(event=event)
@@ -1163,18 +771,18 @@ def downtime_history(request, event_id):
         .select_related('user')
     )
 
-    # 3) serialize them
-    tz = get_default_timezone()
-    history = []
+    # 3) serialise
+    tz       = get_default_timezone()
+    history  = []
     for p in parts:
-        # — join time
+        # join time
         jdt = datetime.fromtimestamp(p.join_epoch)
         if is_naive(jdt):
             jdt = make_aware(jdt, tz)
         jdt = localtime(jdt)
         join_at = jdt.strftime('%Y-%m-%d %H:%M')
 
-        # — leave time (may be null)
+        # leave time (may be null)
         if p.leave_epoch:
             ldt = datetime.fromtimestamp(p.leave_epoch)
             if is_naive(ldt):
@@ -1184,7 +792,7 @@ def downtime_history(request, event_id):
         else:
             leave_at = None
 
-        # — compute this user’s maintenance roles
+        # roles
         user_group_names = set(
             p.user.groups.values_list('name', flat=True)
         )
@@ -1195,17 +803,21 @@ def downtime_history(request, event_id):
         ]
 
         history.append({
-            'user'          : p.user.username,
-            'roles'         : roles,
-            'join_at'       : join_at,
-            'join_comment'  : p.join_comment,
-            'leave_at'      : leave_at or '',
-            'leave_comment' : p.leave_comment or '',
-            'total_minutes': p.total_minutes or 0,
+            "id"            : p.id,
+            "user"          : p.user.username,
+            "roles"         : roles,
+            "join_at"       : join_at,
+            "join_comment"  : p.join_comment,
+            "leave_at"      : leave_at or "",
+            "leave_comment" : p.leave_comment or "",
+            "total_minutes" : p.total_minutes or 0,
         })
 
-    return JsonResponse({'history': history})
-
+    return JsonResponse({
+        "history"         : history,
+        "event_comment"   : event.comment,
+        "closeout_comment": event.closeout_comment or "",
+    })
 
 @require_POST
 @login_required
@@ -1291,6 +903,7 @@ def leave_downtime_event(request):
 
 
 def get_machine_priority_map():
+    prod_lines = get_prod_lines()
     """
     Returns a dict: { machine_number (str) → priority (int) } by
     walking prod_lines and the LinePriority table.
@@ -1379,6 +992,9 @@ ROLE_TO_GROUP = {
     "electrician": "maintenance_electrician",
     "millwright":  "maintenance_millwright",
     "tech":        "maintenance_tech",
+
+    "plctech":      "maintenance_plctech",
+    "imt":          "maintenance_imt",
 }
 
 @require_POST
@@ -1474,6 +1090,7 @@ def add_employee(request):
 
 @require_POST
 def maintenance_edit(request):
+    prod_lines = get_prod_lines()
     """
     Return a JSON blob with:
       - entry_id, line, machine, category_code, subcategory_code,
@@ -1539,6 +1156,7 @@ def maintenance_edit(request):
         'line':             e.line,
         'machine':          e.machine,
         'category_code':    e.code.split('-', 1)[0],  # Assuming category code is prefix before '-'
+        'category_name':    e.category,         # ← the display name
         'subcategory_code': e.code,
         'start_date':       local.strftime('%Y-%m-%d'),
         'start_time':       local.strftime('%H:%M'),
@@ -1745,7 +1363,6 @@ def downtime_codes_delete(request, pk):
 
 
 
-
 # ====================================================================
 # ====================================================================
 # ====================== Downtime History ============================
@@ -1754,33 +1371,57 @@ def downtime_codes_delete(request, pk):
 
 
 
-
-
 @require_POST
 @csrf_exempt
 def machine_history(request):
-    """
-    AJAX endpoint: receives {"machine": "..."} and returns
-    a rendered HTML accordion of that machine’s last 5000 downtime events.
-    """
-    try:
-        payload = json.loads(request.body.decode())
-        machine = payload.get('machine')
-        # fetch up to 500 events, oldest first, excluding soft‐deleted
-        events = (MachineDowntimeEvent.objects
-                  .filter(machine=machine, is_deleted=False)
-                  .order_by('-start_epoch')[:500]
-                  .prefetch_related('participants__user'))
-        html = render_to_string(
-            'maintenance/snippets/machine_history.html',
-            {'events': events},
-            request=request
-        )
-        return JsonResponse({'status': 'ok', 'html': html})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    machine = request.POST.get("machine", "").strip()
+    if not machine:
+        return JsonResponse({"error": "Machine parameter is required."}, status=400)
 
+    events = (
+        MachineDowntimeEvent.objects
+        .filter(machine=machine, is_deleted=False)
+        .order_by("-start_epoch")[:500]
+    )
 
+    payload = []
+    for e in events:
+        parts = []
+        for p in e.participants.all().order_by("join_epoch"):
+            # build a python datetime (in local time) from your epoch seconds
+            join_dt = datetime.fromtimestamp(p.join_epoch, tz=timezone.get_current_timezone())
+            leave_dt = (
+                datetime.fromtimestamp(p.leave_epoch, tz=timezone.get_current_timezone())
+                if p.leave_epoch
+                else None
+            )
+
+            parts.append({
+                "user": p.user.get_full_name() or p.user.username,
+                "join_epoch": p.join_epoch,
+                "join_display": join_dt.strftime("%B %d, %Y %I:%M %p"),
+                "leave_epoch": p.leave_epoch,
+                "leave_display": leave_dt.strftime("%B %d, %Y %I:%M %p") if leave_dt else None,
+                "join_comment": p.join_comment,
+                "leave_comment": p.leave_comment,
+                "total_minutes": p.total_minutes,
+            })
+
+        payload.append({
+            "id": e.id,
+            "start_epoch": e.start_epoch,
+            "start_display": e.start_at.strftime("%Y-%m-%d %H:%M"),
+            "closeout_epoch": e.closeout_epoch,
+            "closeout_display": e.closeout_at.strftime("%Y-%m-%d %H:%M") if e.closeout_at else None,
+            "category": e.category,
+            "subcategory": e.subcategory,
+            "code": e.code,
+            "comment": e.comment,
+            "closeout_comment": e.closeout_comment,
+            "participations": parts,
+        })
+
+    return JsonResponse({"events": payload})
 
 
 @login_required
@@ -1877,4 +1518,306 @@ def employee_login_status(request):
     return render(request, 'plant/employee_login_status.html', {
         'users':   users_status,
         'summary': summary_list,
+    })
+
+
+
+
+
+
+
+# ========================================================================
+# ========================================================================
+# ==================== Phase 2 Maintenance App Updates ===================
+# ========================================================================
+# ========================================================================
+
+
+
+
+def target_lines(request):
+    prod_lines = get_prod_lines()
+    if request.method == 'GET':
+        # extract just the line names
+        line_names = [blk['line'] for blk in prod_lines]
+        return JsonResponse({'lines': line_names})
+    return HttpResponse(status=405)
+
+
+
+
+
+
+
+
+
+
+# ========================================================================
+# ========================================================================
+# =========== Forceleave Feature for Supervisors and Managers ============
+# ========================================================================
+# ========================================================================
+
+
+def user_is_supervisor_or_manager(user):
+    return user.groups.filter(
+        name__in={"maintenance_supervisors", "maintenance_managers"}
+    ).exists()
+
+@login_required
+@require_POST
+@user_passes_test(user_is_supervisor_or_manager)      # <--- permission gate
+def force_leave_participation(request, pk):
+    """
+    Managers/supervisors can finish someone else’s open participation,
+    supplying a mandatory comment and an optional leave_datetime.
+    """
+    try:
+        payload = json.loads(request.body)
+        comment = payload["leave_comment"].strip()
+        if not comment:
+            raise KeyError
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest("leave_comment is required")
+
+    # ---------- pull & parse leave_datetime -----------------
+    leave_dt_str = payload.get("leave_datetime")         # "2025-06-12T14:35"
+    tz           = get_default_timezone()                # America/Toronto
+    try:
+        if leave_dt_str:
+            naive = parse_datetime(leave_dt_str)         # → naive DT
+            if naive is None:
+                raise ValueError
+            aware_local = make_aware(naive, timezone=tz) # → aware local
+            aware_utc   = aware_local.astimezone(timezone.utc)
+            leave_ts    = int(aware_utc.timestamp())
+        else:
+            leave_ts = int(time.time())                  # fallback to “now”
+    except Exception:
+        return HttpResponseBadRequest("Bad leave_datetime")
+    # -------------------------------------------------------
+
+    part = get_object_or_404(
+        DowntimeParticipation,
+        pk=pk,
+        leave_epoch__isnull=True,
+        event__is_deleted=False,
+        event__closeout_epoch__isnull=True,
+    )
+
+    if leave_ts <= part.join_epoch:
+        return HttpResponseBadRequest("Leave time must be after join time.")
+
+    delta_s = leave_ts - part.join_epoch
+    part.leave_epoch   = leave_ts
+    part.leave_comment = comment
+    part.total_minutes = math.ceil(delta_s / 60)
+    part.save(update_fields=["leave_epoch", "leave_comment", "total_minutes"])
+
+    return JsonResponse({
+        "status"       : "ok",
+        "leave_epoch"  : leave_ts,
+        "total_minutes": part.total_minutes,
+    })
+
+
+
+
+
+
+# ========================================================================
+# ========================================================================
+# ================ Bulk Add Machine Downtime Events  =====================
+# ========================================================================
+# ========================================================================
+
+@login_required(login_url="login")
+def maintenance_bulk_form(request):
+    prod_lines = get_prod_lines()
+    """
+    Bulk‐add downtime entries: pick one line, one or more machines,
+    same category/subcategory/comment for all, plus labour.
+    """
+    if request.method == "POST":
+        line        = request.POST.get('line', '').strip()
+        machines    = request.POST.getlist('machines')
+        raw_cat     = request.POST.get('category', '').strip()
+        raw_sub     = request.POST.get('subcategory', '').strip()
+        start_date  = request.POST.get('start_date', '')
+        start_time  = request.POST.get('start_time', '')
+        comment     = request.POST.get('description', '').strip()
+        emp_id      = request.POST.get('employee_id', '').strip()
+        raw_labour  = request.POST.get('labour_types', '[]')
+
+        # --- validations ---
+        if not machines:
+            return HttpResponseBadRequest("You must select at least one machine.")
+        if not raw_cat:
+            return HttpResponseBadRequest("You must choose a category.")
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        if not cat_obj:
+            return HttpResponseBadRequest("Invalid category code.")
+        category_name = cat_obj.category
+
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest("Invalid subcategory code.")
+            subcategory_name = sub_obj.subcategory
+            code_value       = raw_sub
+        else:
+            subcategory_name = "NOTSELECTED"
+            code_value       = "NOTSELECTED"
+
+        # parse labour JSON
+        try:
+            labour_list = json.loads(raw_labour)
+            if not isinstance(labour_list, list):
+                labour_list = []
+        except json.JSONDecodeError:
+            labour_list = []
+
+
+        # parse & localize datetime
+        try:
+            dt_naive    = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+        except ValueError:
+
+            return HttpResponseBadRequest("Bad date/time format.")
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+
+
+        # create one event per machine
+        for machine in machines:
+            MachineDowntimeEvent.objects.create(
+                line         = line,
+                machine      = machine,
+                category     = category_name,
+                subcategory  = subcategory_name,
+                code         = code_value,
+                start_epoch  = epoch_ts,
+                comment      = comment,
+                labour_types = labour_list,
+                employee_id  = emp_id or None,
+            )
+
+        return redirect('maintenance_all')
+
+    # GET → build JSON for selects
+    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split('-',1)[0]
+        structured.setdefault(cat, {
+            'name': c.category,
+            'code': cat,
+            'subcategories': []
+        })['subcategories'].append({'code': c.code, 'name': c.subcategory})
+    downtime_codes_list = list(structured.values())
+
+    return render(request, 'plant/maintenance_bulk_form.html', {
+        'lines_json':           json.dumps(prod_lines),
+        'downtime_codes_json':  json.dumps(downtime_codes_list),
+    })
+
+
+
+
+# ========================================================================
+# ========================================================================
+# ================ Quickadd Feature for supervisors  =====================
+# ========================================================================
+# ========================================================================
+
+@login_required(login_url="login")
+def quick_add(request):
+    prod_lines = get_prod_lines()
+    """
+    Add a single downtime entry: pick one line, one machine,
+    same category/subcategory/comment, plus labour.
+    """
+    if request.method == "POST":
+        line        = request.POST.get('line', '').strip()
+        machine     = request.POST.get('machine', '').strip()
+        raw_cat     = request.POST.get('category', '').strip()
+        raw_sub     = request.POST.get('subcategory', '').strip()
+        start_date  = request.POST.get('start_date', '')
+        start_time  = request.POST.get('start_time', '')
+        comment     = request.POST.get('description', '').strip()
+        emp_id      = request.POST.get('employee_id', '').strip()
+        raw_labour  = request.POST.get('labour_types', '[]')
+
+        # --- validations ---
+        if not machine:
+            return HttpResponseBadRequest("You must select a machine.")
+        if not raw_cat:
+            return HttpResponseBadRequest("You must choose a category.")
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        if not cat_obj:
+            return HttpResponseBadRequest("Invalid category code.")
+        category_name = cat_obj.category
+
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+                subcategory_name = sub_obj.subcategory
+                code_value       = raw_sub
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest("Invalid subcategory code.")
+        else:
+            subcategory_name = "NOTSELECTED"
+            code_value       = "NOTSELECTED"
+
+        # parse labour JSON
+        try:
+            labour_list = json.loads(raw_labour)
+            if not isinstance(labour_list, list):
+                labour_list = []
+        except json.JSONDecodeError:
+            labour_list = []
+
+        # parse & localize datetime
+        try:
+            dt_naive    = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            return HttpResponseBadRequest("Bad date/time format.")
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+
+        # --- single event create ---
+        MachineDowntimeEvent.objects.create(
+            line         = line,
+            machine      = machine,
+            category     = category_name,
+            subcategory  = subcategory_name,
+            code         = code_value,
+            start_epoch  = epoch_ts,
+            comment      = comment,
+            labour_types = labour_list,
+            employee_id  = emp_id or None,
+        )
+
+        # just redirect to your “all downtime entries” page:
+        return redirect('maintenance_all')
+
+    # GET → build JSON for selects (unchanged)
+    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split('-',1)[0]
+        structured.setdefault(cat, {
+            'name': c.category,
+            'code': cat,
+            'subcategories': []
+        })['subcategories'].append({'code': c.code, 'name': c.subcategory})
+    downtime_codes_list = list(structured.values())
+
+    return render(request, 'plant/quick_add.html', {
+        'lines_json':           json.dumps(prod_lines),
+        'downtime_codes_json':  json.dumps(downtime_codes_list),
+        'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
     })

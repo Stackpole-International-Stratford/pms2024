@@ -68,7 +68,7 @@ urlpatterns = [
 
     path('downtime/<int:event_id>/history/', downtime_history, name='downtime_history'),
 
-    path("toggle_active/", toggle_active, name="toggle_active"),
+    path("bulk_toggle_active/", bulk_toggle_active, name="bulk_toggle_active"),
 
 
     path('maintenance/edit/', maintenance_edit, name='maintenance_edit'),
@@ -97,4 +97,14 @@ urlpatterns = [
 
 
     path('maintenance/employee-login-status/', employee_login_status, name='employee_login_status'),
+
+    path('maintenance/target_lines/', target_lines, name='target_lines'),
+
+
+    path("downtime/participation/<int:pk>/force-leave/", force_leave_participation, name="force_leave_participation",),
+
+
+    path('maintenance/bulk_add/', maintenance_bulk_form, name='maintenance_bulk_form'),
+
+    path('quick-add/', quick_add, name='quick_add'),
 ]

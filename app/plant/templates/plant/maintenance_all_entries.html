@@ -3,10 +3,9 @@
 {% block content %}
 <div class="container mt-4">
   {% csrf_token %}
-  {{ user_roles|json_script:"user‑roles-json" }}   {# ←  place it here #}
+  {{ user_roles|json_script:"user-roles-json" }}   {# ←  place it here #}
 
   <h1 class="mb-4 text-center">Open Downtime Events</h1>
-  
 
 <style>
 
@@ -23,22 +22,18 @@
     cursor: pointer;
   }
 
-
-
   /* in your custom CSS */
-.table-responsive {
-  overflow-x: auto;
-  overflow-y: auto;           /* allow vertical scroll too */
-  -webkit-overflow-scrolling: touch;
-}
+  .table-responsive {
+    overflow-x: auto;
+    overflow-y: auto;           /* allow vertical scroll too */
+    -webkit-overflow-scrolling: touch;
+  }
 
 </style>
 
-  {% if is_manager %}
+{% if is_manager %}
 
-    {# ───────────────────── New‑employee button + modal ───────────────────── #}
-
-
+    {# ───────────────────── New-employee button + modal ───────────────────── #}
 
   <!-- Modal (place it once per page, usually near bottom) -->
   <div class="modal fade" id="newEmployeeModal" tabindex="-1" aria-hidden="true">
@@ -46,17 +41,17 @@
       <form method="post" action="{% url 'add_employee' %}" class="modal-content">
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title">Add New or Update Employee</h5>
+          <h5 class="modal-title">Add New or Update Employee</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
           <div class="mb-3">
-            <label for="empFirst" class="form-label">First name</label>
+            <label for="empFirst" class="form-label">First name</label>
             <input id="empFirst" name="first_name" class="form-control" required>
           </div>
           <div class="mb-3">
-            <label for="empLast" class="form-label">Last name</label>
+            <label for="empLast" class="form-label">Last name</label>
             <input id="empLast" name="last_name" class="form-control" required>
           </div>
 
@@ -76,6 +71,16 @@
                    name="roles" value="tech" id="role_tech">
             <label class="form-check-label" for="role_tech">Tech</label>
           </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox"
+                   name="roles" value="plctech" id="role_plctech">
+            <label class="form-check-label" for="role_plctech">PLC Technician</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox"
+                   name="roles" value="imt" id="role_imt">
+            <label class="form-check-label" for="role_imt">IMT</label>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -86,93 +91,83 @@
       </form>
     </div>
   </div>
-  {# ───────────────────────── Line priorities accordion ────────────────────────── #}
-  <div class="accordion mt-5 mb-4" id="linesPriorityAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="linesPriorityHeading">
-        <button class="accordion-button d-flex justify-content-between"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#linesPriorityCollapse"
-                aria-expanded="false"
-                aria-controls="linesPriorityCollapse">
-          <span>Line Priorities</span>
-        </button>
-      </h2>
+    {# ───────────────────────── Line priorities accordion ────────────────────────── #}
+    <div class="accordion mt-5 mb-4" id="linesPriorityAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="linesPriorityHeading">
+          <button class="accordion-button d-flex justify-content-between"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#linesPriorityCollapse"
+                  aria-expanded="false"
+                  aria-controls="linesPriorityCollapse">
+            <span>Line Priorities</span>
+          </button>
+        </h2>
 
-      <div id="linesPriorityCollapse"
-           class="accordion-collapse collapse"
-           aria-labelledby="linesPriorityHeading"
-           data-bs-parent="#linesPriorityAccordion">
+        <div id="linesPriorityCollapse"
+            class="accordion-collapse collapse"
+            aria-labelledby="linesPriorityHeading"
+            data-bs-parent="#linesPriorityAccordion">
 
-        <div class="accordion-body p-0">
+          <div class="accordion-body p-0">
 
-          <ul class="list-group list-group-flush">
-            {% for lp in line_priorities %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
+            <ul class="list-group list-group-flush">
+              {% for lp in line_priorities %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
 
-                {# ►► left side: line name + arrow buttons                         #}
-                <div class="d-flex align-items-center gap-2">
-                  <strong>{{ lp.line }}</strong>
+                  <div class="d-flex align-items-center gap-2">
+                    <strong>{{ lp.line }}</strong>
 
-                  {# move‑up form — hidden if already top priority (#1)            #}
-                  {% if not forloop.first %}
-                  <form method="post"
-                        action="{% url 'move_line_priority' lp.id 'up' %}"
-                        class="d-inline">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
-                            title="Move up one">
-                      ▲
-                    </button>
-                  </form>
+                    {% if not forloop.first %}
+                      <form method="post"
+                            action="{% url 'move_line_priority' lp.id 'up' %}"
+                            class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                title="Move up one">▲</button>
+                      </form>
+                    {% endif %}
+
+                    {% if not forloop.last %}
+                      <form method="post"
+                            action="{% url 'move_line_priority' lp.id 'down' %}"
+                            class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                title="Move down one">▼</button>
+                      </form>
+                    {% endif %}
+                  </div>
+
+                  {% if lp.priority <= 3 %}
+                    <span class="badge bg-danger rounded-pill">{{ lp.priority }}</span>
+                  {% elif lp.priority <= 7 %}
+                    <span class="badge bg-warning text-dark rounded-pill">{{ lp.priority }}</span>
+                  {% else %}
+                    <span class="badge bg-success rounded-pill">{{ lp.priority }}</span>
                   {% endif %}
 
-                  {# move‑down form — hidden if last entry                         #}
-                  {% if not forloop.last %}
-                  <form method="post"
-                        action="{% url 'move_line_priority' lp.id 'down' %}"
-                        class="d-inline">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-secondary py-0 px-1"
-                            title="Move down one">
-                      ▼
-                    </button>
-                  </form>
-                  {% endif %}
-                </div>
+                </li>
+              {% empty %}
+                <li class="list-group-item text-muted">
+                  No line priorities defined.
+                </li>
+              {% endfor %}
+            </ul>
 
-                {# ►► right side: coloured priority badge                         #}
-                {% if lp.priority <= 3 %}
-                  <span class="badge bg-danger rounded-pill">{{ lp.priority }}</span>
-                {% elif lp.priority <= 7 %}
-                  <span class="badge bg-warning text-dark rounded-pill">{{ lp.priority }}</span>
-                {% else %}
-                  <span class="badge bg-success rounded-pill">{{ lp.priority }}</span>
-                {% endif %}
-
-              </li>
-            {% empty %}
-              <li class="list-group-item text-muted">
-                No line priorities defined.
-              </li>
-            {% endfor %}
-          </ul>
-
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  {# ───────────────────────── end accordion ────────────────────────────────────── #}
-
-
+    {# ───────────────────────── end accordion ────────────────────────────────────── #}
 
     <!-- Button -->
     <button type="button"
     class="btn btn-dark mb-3"
     data-bs-toggle="modal"
     data-bs-target="#newEmployeeModal">
-Add New or Update Employee
+Add New or Update Employee
 </button>
 
 <div class="manage-downtime-codes">
@@ -182,15 +177,7 @@ Add New or Update Employee
   </a>
 </div>
 
-
-
-
-  {% endif %}
-
-
-
-
-
+{% endif %}
 
 {# ───────────────────────── downtime events table ────────────────── #}
 <div class="row mt-4{% if not is_manager %} justify-content-center{% endif %}">
@@ -202,24 +189,69 @@ Add New or Update Employee
       <!-- 1) Table header with a warning‐style button -->
       <!-- Trigger button (in your <th> next to “Open Jobs”) -->
         <thead class="table-light">
-          <tr>
-            <th class="py-1 d-flex align-items-center">
-              <span>Open Jobs</span>
-              <button
-                id="machine-history-btn"
-                type="button"
-                class="btn btn-warning btn-sm ms-2"
-                aria-label="Machine History">
-                Machine History
-              </button>
-            </th>
-          </tr>
-        </thead>
+  <tr>
+    <th class="py-1 d-flex align-items-center">
+      <span>Open Jobs</span>
+
+      <button
+        id="machine-history-btn"
+        type="button"
+        class="btn btn-warning btn-sm ms-2"
+        aria-label="Machine History"
+        data-bs-toggle="modal"
+        data-bs-target="#machineHistoryModal">
+        Machine History
+      </button>
+
+      {% if is_manager or is_supervisor %}
+      <button
+        id="quick-add-btn"
+        class="btn btn-dark btn-sm ms-2"
+        data-url="{% url 'quick_add' %}"
+        type="button"
+      >Quick Add</button>
+
+      <script>
+        document.getElementById('quick-add-btn')
+          .addEventListener('click', function() {
+            // Redirect in the same tab instead of opening a new one
+            window.location.href = this.dataset.url;
+          });
+      </script>
+      {% endif %}
+
+
+
+
+      <!-- New filter input -->
+      <input
+        id="job-filter"
+        type="text"
+        class="form-control form-control-sm ms-2"
+        placeholder="Filter jobs…"
+        style="max-width: 150px;"
+      >
+
+      <!-- ► our new SVG button: -->
+      <span id="target-lines-icon" class="ms-2" style="cursor: pointer;" title="Show Target Lines">
+        <!-- ─── replace the contents of this <svg> with your actual icon ─── -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#CC0000" class="bi bi-crosshair2" viewBox="0 0 16 16">
+          <path d="M8 0a.5.5 0 0 1 .5.5v.518A7 7 0 0 1 14.982 7.5h.518a.5.5 0 0 1 0 1h-.518A7 7 0 0 1 8.5 14.982v.518a.5.5 0 0 1-1 0v-.518A7 7 0 0 1 1.018 8.5H.5a.5.5 0 0 1 0-1h.518A7 7 0 0 1 7.5 1.018V.5A.5.5 0 0 1 8 0m-.5 2.02A6 6 0 0 0 2.02 7.5h1.005A5 5 0 0 1 7.5 3.025zm1 1.005A5 5 0 0 1 12.975 7.5h1.005A6 6 0 0 0 8.5 2.02zM12.975 8.5A5 5 0 0 1 8.5 12.975v1.005a6 6 0 0 0 5.48-5.48zM7.5 12.975A5 5 0 0 1 3.025 8.5H2.02a6 6 0 0 0 5.48 5.48zM10 8a2 2 0 1 0-4 0 2 2 0 0 0 4 0"/>
+        </svg>
+      </span>
+
+    </th>
+  </tr>
+</thead>
+
       <tbody>
         {% for e in entries %}
           <tr
             class="editable-row {% if not e.closeout_epoch %}table-light{% endif %}"
             data-entry-id="{{ e.id }}"
+            data-line="{{ e.line }}"
+            data-roles="{{ e.labour_types|join:',' }}"        {#  ← NEW  #}
+            data-busy="{{ e.being_worked_on|yesno:'1,0' }}"   {#  ← NEW  #}
           >
             <td class="py-1">
               <div class="d-flex align-items-center">
@@ -230,19 +262,26 @@ Add New or Update Employee
                     {{ e.start_display }} – {{ e.machine }} – 
                     {% if e.labour_types %}
                       {% for code in e.labour_types %}
-                        {% with code|title as role %}
-                          <button
-                            type="button"
-                            class="btn {% if e.being_worked_on %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn btn-sm ms-2 py-0 px-1"
-                            data-event-id="{{ e.id }}"
-                            data-role="{{ role }}"
-                          >{{ role|slice:":1" }}</button>
-                        {% endwith %}
+                        {% with code|lower as rolekey %}
+                            <button
+                              type="button"
+                              class="btn {% if rolekey in e.current_worker_roles %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
+                              data-event-id="{{ e.id }}"
+                              data-role="{{ rolekey }}"
+                            >{{ rolekey|slice:":1"|upper }}</button>
+                          {% endwith %}
                       {% endfor %}
                     {% else %}
                       <span class="text-muted ms-2">–</span>
                     {% endif %}
-                     – {{ e.subcategory }}
+                     – {{ e.category }}
+                          {% if e.comment %}
+                      – {{ e.comment|slice:":40" }}{% if e.comment|length > 40 %}…{% endif %}
+                    {% endif %}
+                    {% if e.current_usernames %}
+                      – <small>{{ e.current_usernames|join:", " }}</small>
+                    {% endif %}
+
                   </span>
                 </div>
       
@@ -269,171 +308,143 @@ Add New or Update Employee
   </div>
 
 
- <!-- Machine History Modal (wide + scrollable) -->
- <div class="modal fade" id="machineHistoryModal"
- tabindex="-1"
- aria-labelledby="machineHistoryModalLabel"
- aria-hidden="true">
- <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-<div class="modal-content">
-  <form id="machineHistoryForm">
-    <div class="modal-header">
-      <h5 class="modal-title" id="machineHistoryModalLabel">
-        Machine History
-      </h5>
-      <button type="button" class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"></button>
-    </div>
-    <div class="modal-body">
-      {% csrf_token %}
-      <div class="mb-3">
-        <label for="machine-input" class="form-label">Machine #</label>
-        <input
-          type="text"
-          id="machine-input"
-          class="form-control"
-          placeholder="Enter machine number"
-          required
-        >
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button type="button"
-              class="btn btn-dark"
-              data-bs-dismiss="modal">
-        Cancel
-      </button>
-      <button type="submit"
-              class="btn btn-warning">
-        Submit
-      </button>
-    </div>
-  </form>
-</div>
-</div>
 </div>
 
 
-</div>
+{% if is_manager or is_supervisor %}
+  <!-- Right: Active List + Maintenance Staff Status -->
+  <div class="col-md-4">
 
+    <!-- Active List accordion -->
+    <div class="accordion mb-3" id="activeListAccordion">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="activeListHeading">
+          <button class="accordion-button collapsed"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#activeListCollapse"
+                  aria-expanded="false"
+                  aria-controls="activeListCollapse">
+            Active List (who’s working)
+          </button>
+        </h2>
 
-  {% if is_manager or is_supervisor %}
-    <!-- Right: Active List + Maintenance Staff Status -->
-    <div class="col-md-4">
+        <div id="activeListCollapse"
+             class="accordion-collapse collapse"
+             aria-labelledby="activeListHeading"
+             data-bs-parent="#activeListAccordion">
+          <div class="accordion-body p-0">
 
-      <!-- Active List accordion -->
-      <div class="accordion mb-3" id="activeListAccordion">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="activeListHeading">
-            <button class="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#activeListCollapse"
-                    aria-expanded="false"
-                    aria-controls="activeListCollapse">
-              Active List (who’s working)
-            </button>
-          </h2>
-          <div id="activeListCollapse"
-               class="accordion-collapse collapse"
-               aria-labelledby="activeListHeading"
-               data-bs-parent="#activeListAccordion">
-            <div class="accordion-body p-0">
-              <ul class="list-group list-group-flush">
-                {% for w in inactive_workers %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ w.name }} ({{ w.roles|join:", " }})
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger toggle-active-btn"
-                            data-username="{{ w.username }}"
-                            data-action="activate">
-                      Not Active
-                    </button>
+            <!-- ========================= -->
+            <!--  ACTIVE / INACTIVE LIST  -->
+            <!-- ========================= -->
+            <ul class="list-group list-group-flush">
+
+              {# ---------- Active FIRST ---------- #}
+              <li class="list-group-item text-muted"><em>Active</em></li>
+              {% for role, workers in active_workers_by_role.items %}
+                {% if workers %}
+                  <li class="list-group-item bg-light">
+                    <strong>{{ role|title }}</strong>
                   </li>
-                {% empty %}
-                  <li class="list-group-item text-muted">No inactive staff.</li>
-                {% endfor %}
-                {% for w in active_workers %}
-                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ w.name }} ({{ w.roles|join:", " }})
-                    <button type="button"
-                            class="btn btn-sm btn-outline-info toggle-active-btn"
-                            data-username="{{ w.username }}"
-                            data-action="deactivate">
-                      Active
-                    </button>
+                  {% for w in workers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      {{ w.name }} ({{ w.roles|join:", " }})
+                      <input  type="checkbox"
+                              class="form-check-input ms-2 active-checkbox"
+                              data-username="{{ w.username }}"
+                              checked>
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+
+              {# ---------- Inactive AFTER ---------- #}
+              <li class="list-group-item text-muted mt-2"><em>Inactive</em></li>
+              {% for role, workers in inactive_workers_by_role.items %}
+                {% if workers %}
+                  <li class="list-group-item bg-light">
+                    <strong>{{ role|title }}</strong>
                   </li>
-                {% endfor %}
-              </ul>
+                  {% for w in workers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      {{ w.name }} ({{ w.roles|join:", " }})
+                      <input  type="checkbox"
+                              class="form-check-input ms-2 active-checkbox"
+                              data-username="{{ w.username }}">
+                    </li>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+
+            </ul>
+
+
+            <!-- ---------- bulk-save button ---------- -->
+            <div class="d-grid p-2 border-top">
+              <button id="active-save-btn"
+                      class="btn btn-warning btn-sm">
+                Save changes
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Maintenance Staff Status table -->
-      <div class="table-responsive">
-        <table class="table table-sm table-striped table-bordered align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Name</th>
-              <th>Roles</th>
-              <th>Machine</th>
-              <th>Subcategory</th>
-              <th>Priority</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for w in active_workers %}
-              {% if w.jobs %}
-                {% for job in w.jobs %}
-                  <tr>
-                    {% if forloop.first %}
-                      <td rowspan="{{ w.jobs|length }}">{{ w.name }}</td>
-                      <td rowspan="{{ w.jobs|length }}">{{ w.roles|join:", " }}</td>
-                    {% endif %}
-                    <td>{{ job.machine }}</td>
-                    <td>{{ job.subcategory }}</td>
-                    <td>{{ job.priority }}</td>
-                  </tr>
-                {% endfor %}
-              {% else %}
-                <tr>
-                  <td>{{ w.name }}</td>
-                  <td>{{ w.roles|join:", " }}</td>
-                  <td colspan="2" class="text-center text-muted">Free</td>
-                </tr>
-              {% endif %}
-            {% empty %}
-              <tr>
-                <td colspan="4" class="text-center py-2">No active maintenance staff.</td>
+          </div><!-- /.accordion-body -->
+        </div><!-- /.collapse -->
+      </div><!-- /.accordion-item -->
+    </div><!-- /.accordion -->
+
+    <!-- Maintenance Staff Status table (unchanged) -->
+    <div class="table-responsive-sm">
+      <table class="table table-sm table-striped table-bordered align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Roles</th>
+            <th>Machine</th>
+            <th>Subcategory</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for role, workers in active_workers_by_role.items %}
+            {% if workers %}
+              <tr class="table-secondary">
+                <td colspan="5"><strong>{{ role|title }}</strong></td>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
+              {% for w in workers %}
+                {% if w.jobs %}
+                  {% for job in w.jobs %}
+                    <tr>
+                      {% if forloop.first %}
+                        <td rowspan="{{ w.jobs|length }}">{{ w.name }}</td>
+                        <td rowspan="{{ w.jobs|length }}">{{ w.roles|join:", " }}</td>
+                      {% endif %}
+                      <td>{{ job.machine }}</td>
+                      <td>{{ job.subcategory }}</td>
+                      <td>{{ job.priority }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td>{{ w.name }}</td>
+                    <td>{{ w.roles|join:", " }}</td>
+                    <td colspan="2" class="text-center text-muted">Free</td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  {% endif %}
+
+  </div><!-- /.col-md-4 -->
+{% endif %}
+
 
 </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  {# ─────────────── CLOSE‑OUT MODAL + SCRIPT (self‑contained) ─────────────── #}
+{# ─────────────── CLOSE-OUT MODAL + SCRIPT (self-contained) ─────────────── #}
 
  {# ───────── CLOSE-OUT / EDIT MODAL ───────── #}
 <div class="modal fade" id="closeoutModal" tabindex="-1" aria-hidden="true">
@@ -463,12 +474,17 @@ Add New or Update Employee
 
             <div class="mb-3">
               <label for="closeout-category" class="form-label">Category</label>
-              <select id="closeout-category" class="form-select"></select>
+              <select id="closeout-category" class="form-select" required>
+                <option value="" disabled selected>— Select category —</option>
+              </select>
             </div>
             <div class="mb-3">
               <label for="closeout-subcategory" class="form-label">Subcategory</label>
-              <select id="closeout-subcategory" class="form-select"></select>
+              <select id="closeout-subcategory" class="form-select" required>
+                <option value="" disabled selected>— Select subcategory —</option>
+              </select>
             </div>
+
 
             <div class="mb-3">
               <label class="form-label">Started At</label>
@@ -529,13 +545,15 @@ Add New or Update Employee
             </div>
             <div class="mb-3">
               <label for="closeout-comment" class="form-label">What was done?</label>
-              <textarea id="closeout-comment"
-                        class="form-control"
-                        rows="3"
-                        maxlength="2000"
-                        required></textarea>
-            </div>
-
+              <textarea
+                id="closeout-comment"
+                class="form-control"
+                rows="3"
+                maxlength="2000"
+                placeholder="Maintenance – enter EAM work order #&#10;Tech – description required"
+                required
+              ></textarea>
+                    </div>
             <div class="d-grid">
               <button type="button"
                       id="closeout-confirm"
@@ -559,11 +577,122 @@ Add New or Update Employee
 </div>
 
 
-  
+ <!-- Exclude Lines Modal -->
+  <div class="modal fade" id="excludeLinesModal" tabindex="-1" aria-labelledby="excludeLinesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="excludeLinesModalLabel">Exclude Lines (Personal Preference)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="exclude-lines-body">
+          <!-- checkboxes will be injected here -->
+        </div>
+          <div class="modal-footer">
+            <!-- new select controls -->
+            <button type="button"
+                    class="btn btn-sm btn-link me-auto"
+                    id="exclude-lines-select-all">
+              Select All
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-link"
+                    id="exclude-lines-deselect-all">
+              Deselect All
+            </button>
+
+            <!-- existing buttons -->
+            <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-warning" id="exclude-lines-save">Save</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+
+<!-- 1️⃣  Little lookup modal (unchanged name so existing button keeps working) -->
+<div class="modal fade" id="machineHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="machineHistoryForm" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">Machine History – lookup</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <label for="machine-input" class="form-label">Machine #</label>
+        <input id="machine-input" name="machine" class="form-control" required>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-warning">Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- 2️⃣  Results modal – **all structure lives here** -->
+<div class="modal fade" id="machineHistoryResultsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Machine #<span id="mh-machine-num"></span> – history</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- ✨ NEW lookup bar inside the results modal -->
+        <div class="input-group input-group-sm mb-3">
+          <input type="text"
+                 id="mh-new-machine-input"
+                 class="form-control"
+                 placeholder="Enter machine #"
+                 aria-label="Machine number">
+          <button type="button"
+                  id="mh-new-search-btn"
+                  class="btn btn-warning">
+            Search
+          </button>
+        </div>
+
+        <!-- status messages -->
+        <div id="mh-status" class="mb-2"></div>
+
+        <!-- full history table -->
+       <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Start</th>
+                  <th>Category</th>
+                  <th>Comment</th>
+                  <th>Closed</th>
+                  <th>Close Comment</th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="mh-tbody"></tbody>
+            </table>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
     
 
-<!-- -------------------------------------------------------------------------------------->
-  
 <!-- 1. History Modal -->
 <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
   <!-- fullscreen-sm-down makes it modal-lg on md+ but fullscreen on sm and xs -->
@@ -686,608 +815,785 @@ Add New or Update Employee
 </div>
 
 
+<!-- Force-Leave (manager) Modal -->
+<div class="modal fade" id="forceLeaveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Force Leave</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="force-participation-id">
 
+        <!-- NEW date/time control  ----------------------------->
+        <div class="mb-3">
+          <label class="form-label">Leave&nbsp;at&nbsp;(local)</label>
+          <input type="datetime-local"
+                 id="force-datetime"
+                 class="form-control">
+        </div>
+        <!-- /NEW ---------------------------------------------->
 
-<!-- -------------------------------------------------------------------------------------->
-
-
-  <!-- 2) Close-out modal logic -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Grab the modal element and instantiate it once
-      const modalEl       = document.getElementById('closeoutModal');
-      const closeoutModal = new bootstrap.Modal(modalEl);
-    
-      // URLs & CSRF token
-      const fetchUrl    = "{% url 'maintenance_edit' %}";
-      const updateUrl   = "{% url 'maintenance_update_event' %}";
-      const closeoutUrl = "{% url 'closeout_downtime_entry' %}";
-      const token       = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-      // Form fields
-      const idIn        = document.getElementById('closeout-entry-id');
-      const lineSel     = document.getElementById('closeout-line');
-      const machineSel  = document.getElementById('closeout-machine');
-      const catSel      = document.getElementById('closeout-category');
-      const subcatSel   = document.getElementById('closeout-subcategory');
-      const startDate   = document.getElementById('closeout-start-date');
-      const startTime   = document.getElementById('closeout-start-time');
-      const origComm    = document.getElementById('closeout-original-comment');
-      const closeDate   = document.getElementById('closeout-date');
-      const closeTime   = document.getElementById('closeout-time');
-      const closeComm   = document.getElementById('closeout-comment');
-    
-      const btnSave     = document.getElementById('closeout-save');
-      const btnConfirm  = document.getElementById('closeout-confirm');
-    
-      // Helper to fill a <select>
-      function populateSelect(sel, items, isSimple=false) {
-        sel.innerHTML = '';
-        items.forEach(i => {
-          const opt = document.createElement('option');
-          if (isSimple) {
-            opt.value = opt.text = i;
-          } else {
-            opt.value = i.code;
-            opt.text  = i.name;
-          }
-          sel.appendChild(opt);
-        });
-      }
-    
-      // Wire up each “Close” button to load and show the modal
-      document.querySelectorAll('.closeout-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const entryId = btn.dataset.entryId;
-          idIn.value = entryId;
-    
-          fetch(fetchUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken':  token
-            },
-            body: JSON.stringify({ entry_id: entryId })
-          })
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => {
-            const linesData  = data.lines_data;
-            const allSubcats = data.subcategories;
-    
-            // Top-level selects
-            populateSelect(lineSel,  data.lines,       true);
-            populateSelect(catSel,   data.categories);
-    
-            // Dependent: machines for the selected line
-            function updateMachines() {
-              const lineObj = linesData.find(l => l.line === lineSel.value);
-              const machinesForLine = lineObj
-                ? lineObj.operations.flatMap(op => op.machines.map(m => m.number))
-                : [];
-              populateSelect(machineSel, machinesForLine, true);
-            }
-    
-            // Dependent: subcats for the selected category
-            function updateSubcats() {
-              const subcatsForCat = allSubcats
-                .filter(s => s.parent === catSel.value)
-                .map(s => ({ code: s.code, name: s.name }));
-              populateSelect(subcatSel, subcatsForCat);
-            }
-    
-            // Initialize and hook change events
-            updateMachines();
-            updateSubcats();
-            lineSel.addEventListener('change', updateMachines);
-            catSel.addEventListener('change', updateSubcats);
-    
-            // Set current values
-            lineSel.value       = data.line;
-            updateMachines();
-            machineSel.value    = data.machine;
-    
-            catSel.value        = data.category_code;
-            updateSubcats();
-            subcatSel.value     = data.subcategory_code;
-    
-            // Start timestamp
-            startDate.value     = data.start_date;
-            startTime.value     = data.start_time;
-    
-            // Original comment
-            origComm.value      = data.comment;
-    
-
-            // 1) get all labour checkboxes
-            const labourCbs = Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'));
-            // 2) clear them
-            labourCbs.forEach(cb => cb.checked = false);
-            // 3) pre-check whatever the entry already has
-            if (Array.isArray(data.labour_types)) {
-              data.labour_types.forEach(code => {
-                const cb = labourCbs.find(c=>c.value===code);
-                if (cb) cb.checked = true;
-              });
-            }
-
-            // Preload close-out inputs
-            const now = new Date();
-            closeDate.value     = now.toISOString().slice(0,10);
-            closeTime.value     = now.toTimeString().slice(0,5);
-            closeComm.value     = '';
-    
-            // Finally show the modal
-            closeoutModal.show();
-          })
-          .catch(() => alert('Could not load event details.'));
-        });
-      });
-    
-      // Save edits
-      btnSave.addEventListener('click', () => {
-        const payload = {
-          entry_id:    idIn.value,
-          line:        lineSel.value,
-          machine:     machineSel.value,
-          category:    catSel.value,
-          subcategory: subcatSel.value,
-          start_at:    `${startDate.value} ${startTime.value}`,
-          comment:     origComm.value,
-          labour_types: Array.from(modalEl.querySelectorAll('.closeout-labour-checkbox'))
-                    .filter(cb=>cb.checked)
-                    .map(cb=>cb.value),
-        };
-        fetch(updateUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken':  token
-          },
-          body: JSON.stringify(payload)
-        })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(() => {
-          alert('Saved changes.');
-          closeoutModal.hide();
-          location.reload();
-        })
-        .catch(() => alert('Error saving changes.'));
-      });
-    
-      // Confirm Close
-      btnConfirm.addEventListener('click', () => {
-        const id   = idIn.value;
-        const date = closeDate.value;
-        const time = closeTime.value;
-        const note = closeComm.value.trim();
-        if (!date || !time || !note) {
-          return alert('All fields are required.');
-        }
-
-        fetch(closeoutUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken':  token
-          },
-          body: JSON.stringify({
-            entry_id:         id,
-            closeout:         `${date} ${time}`,
-            closeout_comment: note
-          })
-        })
-        .then(response => {
-          if (response.ok) {
-            return response.json();
-          }
-          // if it’s a 403, we know it’s “not everyone left”
-          if (response.status === 403) {
-            throw new Error('not_all_left');
-          }
-          // other errors
-          throw new Error('other_error');
-        })
-        .then(() => {
-          // success!
-          location.reload();
-        })
-        .catch(err => {
-          if (err.message === 'not_all_left') {
-            alert('Cannot close out job until all participants have left');
-          } else {
-            alert('Error closing out entry.');
-          }
-        });
-      });
-    });
-    </script>
-    
-    
-    
-    
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-    
-  
-
-
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // ── Helpers & Modals ─────────────────────────────────────────────────────
-      const currentUser = "{{ request.user.username }}";
-      const historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
-      const joinModal    = new bootstrap.Modal(document.getElementById('joinModal'));
-      const leaveModal   = new bootstrap.Modal(document.getElementById('leaveModal'));
-    
-      function getLocalDateTimeValue() {
-        const now = new Date();
-        const pad = n => String(n).padStart(2,'0');
-        return [
-          now.getFullYear(),
-          pad(now.getMonth()+1),
-          pad(now.getDate())
-        ].join('-') + 'T' +
-        pad(now.getHours()) + ':' + pad(now.getMinutes());
-      }
-    
-      // ── Render a single row (8 <td> to match your <thead>) ────────────────────
-      function renderRow(e) {
-        const isOpen  = !e.closeout_at;
-        const rowCls  = isOpen ? 'table-warning' : '';
-        const closeCell = isOpen
-          ? `<button class="btn btn-sm btn-info closeout-btn" data-entry-id="${e.id}">Close out</button>`
-          : e.closeout_at;
-    
-        // Labour-needed buttons
-        let labourHtml = '<span class="text-muted">—</span>';
-        if (e.labour_types && e.labour_types.length) {
-          labourHtml = e.labour_types.map(code => {
-            const style = e.being_worked_on ? 'btn-dark' : 'btn-outline-dark';
-            return `
-              <button
-                type="button"
-                class="btn ${style} btn-sm labour-btn me-1"
-                data-event-id="${e.id}"
-                data-role="${code}"
-              >${code}</button>`;
-          }).join('');
-        }
-    
-        // Comment cell: just the comment text now
-        const commentCell = e.comment;
-    
-        return `
-          <tr class="${rowCls}">
-            <td>${e.start_display}</td>
-            <td>${closeCell}</td>
-            <td>${e.line}</td>
-            <td>${e.machine}</td>
-            <td><span class="badge bg-dark">${e.category}</span></td>
-            <td><span class="badge bg-secondary">${e.subcategory}</span></td>
-            <td>${labourHtml}</td>
-            <td>${commentCell}</td>
-          </tr>`;
-      }
-    
-      // ── Labour-button → “History” modal hookup ────────────────────────────────
-      function attachLabourHandlers() {
-        document.querySelectorAll('.labour-btn').forEach(btn => {
-          if (btn.dataset.init) return;
-          btn.dataset.init = '1';
-          btn.addEventListener('click', () => {
-            const id = btn.dataset.eventId;
-            fetch(`/plant/downtime/${id}/history/`)
-              .then(r => r.ok ? r.json() : Promise.reject())
-              .then(data => {
-                const tbody = document.getElementById('history-body');
-                tbody.innerHTML = '';
-                let userHasOpen = false;
-                data.history.forEach(p => {
-
-                  // build a little badge list (or comma-list if you prefer)
-                  const rolesHtml = p.roles.length
-                  ? p.roles.map(r => `<span class="badge bg-secondary me-1">${r}</span>`).join('')
-                  : '<span class="text-muted">—</span>';
-                  
-                  if (p.user === currentUser && !p.leave_at) userHasOpen = true;
-                  tbody.insertAdjacentHTML('beforeend', `
-                    <tr>
-                      <td>${p.user}</td>
-                      <td>${rolesHtml}</td>           <!-- ← render roles here -->
-                      <td>${p.join_at}</td>
-                      <td>${p.join_comment}</td>
-                      <td>${p.leave_at || '—'}</td>
-                      <td>${p.leave_comment}</td>
-                      <td>${p.total_minutes}</td>
-                    </tr>`);
-                });
-                // toggle the history‐modal buttons
-                document.getElementById('history-join-btn').style.display  = userHasOpen ? 'none' : 'inline-block';
-                document.getElementById('history-leave-btn').style.display = userHasOpen ? 'inline-block' : 'none';
-                document.getElementById('history-join-btn').dataset.eventId  = id;
-                document.getElementById('history-leave-btn').dataset.eventId = id;
-                historyModal.show();
-              })
-              .catch(() => alert('Could not load history.'));
-          });
-        });
-      }
-      attachLabourHandlers();
-
-
-      // allow clicking the row (but not labour buttons) to open the edit/closeout modal
-      document.querySelectorAll('.editable-row').forEach(row => {
-        row.addEventListener('click', e => {
-          // ignore clicks on labour buttons
-          if (e.target.closest('.labour-btn')) return;
-          // forward to the hidden closeout-btn
-          const btn = row.querySelector('.closeout-btn');
-          if (btn) btn.click();
-        });
-      });
-
-
-
-    
-      // ── Load-More logic ───────────────────────────────────────────────────────
-      const loadMoreBtn = document.getElementById('load-more-btn');
-      let offset        = {{ page_size }};
-      const loadUrl     = "{% url 'load_more_downtime_entries' %}";
-    
-      loadMoreBtn?.addEventListener('click', () => {
-        loadMoreBtn.disabled = true;
-        fetch(`${loadUrl}?offset=${offset}`)
-          .then(r => r.ok ? r.json() : Promise.reject())
-          .then(data => {
-            const tbody = document.querySelector('table tbody');
-            data.entries.forEach(e => tbody.insertAdjacentHTML('beforeend', renderRow(e)));
-            offset += {{ page_size }};
-            if (!data.has_more) loadMoreBtn.remove();
-            else loadMoreBtn.disabled = false;
-            attachLabourHandlers();
-          })
-          .catch(() => {
-            alert('Error loading more entries');
-            loadMoreBtn.disabled = false;
-          });
-      });
-    
-      // ── Filters (unchanged) ────────────────────────────────────────────────────
-      // ... your labour‐type and participant‐filters code here ...
-    
-      // ── History→Join & Leave modals ──────────────────────────────────────────
-      document.getElementById('history-join-btn').addEventListener('click', e => {
-        const id = e.currentTarget.dataset.eventId;
-        document.getElementById('join-event-id').value     = id;
-        document.getElementById('join-datetime').value     = getLocalDateTimeValue();
-        document.getElementById('join-comment').value      = 'Assess the situation';
-        historyModal.hide();
-        joinModal.show();
-      });
-      document.getElementById('join-confirm-btn').addEventListener('click', () => {
-        const id   = document.getElementById('join-event-id').value;
-        const note = document.getElementById('join-comment').value.trim();
-        if (!note) return alert('Please say what you plan to do.');
-        fetch("{% url 'join_downtime_event' %}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
-          },
-          body: JSON.stringify({
-            event_id:     id,
-            join_comment: note,
-            join_datetime: document.getElementById('join-datetime').value
-          })
-        })
-        .then(r => r.ok ? location.reload() : Promise.reject())
-        .catch(() => alert('Could not join event.'));
-      });
-    
-      document.getElementById('history-leave-btn').addEventListener('click', e => {
-        const id = e.currentTarget.dataset.eventId;
-        document.getElementById('leave-event-id').value    = id;
-        document.getElementById('leave-datetime').value    = getLocalDateTimeValue();
-        document.getElementById('leave-comment').value     = '';
-        historyModal.hide();
-        leaveModal.show();
-      });
-      document.getElementById('leave-confirm-btn').addEventListener('click', () => {
-        const id   = document.getElementById('leave-event-id').value;
-        const note = document.getElementById('leave-comment').value.trim();
-        if (!note) return alert('Please describe what you did.');
-        fetch("{% url 'leave_downtime_event' %}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
-          },
-          body: JSON.stringify({
-            event_id:      id,
-            leave_comment: note,
-            leave_datetime: document.getElementById('leave-datetime').value
-          })
-        })
-        .then(r => r.ok ? location.reload() : Promise.reject())
-        .catch(() => alert('Could not leave event.'));
-      });
-    });
-
-
-
-
-
-
-
-    document.addEventListener('DOMContentLoaded', () => {
-      // 1) On load, check if we told it to reopen:
-      if (localStorage.getItem('activeListWasOpen') === 'true') {
-        const collapseEl = document.getElementById('activeListCollapse');
-        new bootstrap.Collapse(collapseEl, { toggle: false }).show();
-        localStorage.removeItem('activeListWasOpen');
-      }
-    
-      // 2) Wire up each toggle button
-      document.querySelectorAll('.toggle-active-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          // before we hit “fetch”, save the current open/closed state
-          const collapseEl = document.getElementById('activeListCollapse');
-          localStorage.setItem(
-            'activeListWasOpen',
-            collapseEl.classList.contains('show')
-          );
-    
-          // now fire off your existing toggle call
-          const username = btn.dataset.username;
-          const action   = btn.dataset.action;
-          const formData = new FormData();
-          formData.append('username', username);
-          formData.append('action', action);
-    
-          fetch("{% url 'toggle_active' %}", {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: formData
-          })
-          .then(r => {
-            if (!r.ok) throw new Error();
-            return r.json();
-          })
-          .then(() => {
-            // reload—and on next DOMContentLoaded we’ll re-open it
-            location.reload();
-          })
-          .catch(() => alert('Error updating active list.'));
-        });
-      });
-    });
-    
-    </script>
-    
-    
-    
-    <!-- 3) Self-contained script -->
-    <script>
-      (function(){
-        document.addEventListener('DOMContentLoaded', function(){
-          const modalEl             = document.getElementById('machineHistoryModal');
-          const modalDialog         = modalEl.querySelector('.modal-dialog');
-          const machineHistoryModal = new bootstrap.Modal(modalEl);
-          const form                = document.getElementById('machineHistoryForm');
-          const body                = modalEl.querySelector('.modal-body');
-      
-          const formHTML = `
-            {% csrf_token %}
-            <div class="mb-3">
-              <label for="machine-input" class="form-label">Machine #</label>
-              <input
-                type="text"
-                id="machine-input"
-                class="form-control"
-                placeholder="Enter machine number"
-                required
-              >
-            </div>`;
-      
-
-          // 1) Open narrow form
-          document
-            .getElementById('machine-history-btn')
-            .addEventListener('click', () => {
-              // remove any wide classes
-              modalDialog.classList.remove('modal-xl', 'modal-dialog-scrollable');
-              // reset to form
-              body.innerHTML = formHTML;
-              // make sure Submit is visible again
-              const submitBtn = modalEl.querySelector('button[type="submit"]');
-              if (submitBtn) submitBtn.classList.remove('d-none');
-              machineHistoryModal.show();
-            });
-
-      
-          // 2) On submit, widen & inject table
-          form.addEventListener('submit', function(e){
-            e.preventDefault();
-            const machine = body.querySelector('#machine-input').value.trim();
-            if (!machine) return;
-      
-            fetch("{% url 'machine_history' %}", {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-              },
-              body: JSON.stringify({ machine })
-            })
-            .then(r => r.json())
-            .then(data => {
-              if (data.status === 'ok') {
-                // make the dialog wide & scrollable
-                modalDialog.classList.add('modal-xl', 'modal-dialog-scrollable');
-                // inject the table inside a responsive wrapper
-                body.innerHTML = `
-                   <div class="overflow-auto" style="max-height:75vh; display:block; -webkit-overflow-scrolling:touch;">
-                     <div class="table-responsive" style="overflow-y:visible;">
-                       ${data.html}
-                     </div>
-                   </div>`;
-            
-                // hide the submit button (and optionally keep the Cancel so they can close)
-                const submitBtn = modalEl.querySelector('button[type="submit"]');
-                if (submitBtn) submitBtn.classList.add('d-none');
-              } else {
-                body.innerHTML = `<div class="alert alert-danger">Error: ${data.message}</div>`;
-              }
-            })
-            
-            .catch(err => {
-              body.innerHTML = `<div class="alert alert-danger">Request failed</div>`;
-              console.error(err);
-            });
-          });
-        });
-      })();
-      </script>
-      
-  
-      <script>
-          // ─── INACTIVITY-BASED RELOAD ───────────────────────────────────────
-          let inactivityTimer;
-          function resetInactivityTimer(){
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(()=>{
-              console.log('Reloading after 5 m inactivity');
-              location.reload();
-            }, 1*60*1000);
-          }
-          document.addEventListener('click', resetInactivityTimer);
-          resetInactivityTimer();
-      </script>
-        
-        
-
-
-
+        <div class="mb-3">
+          <label for="force-comment" class="form-label">Leave comment&nbsp;*</label>
+          <textarea id="force-comment" class="form-control" rows="2" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+        <button id="force-confirm-btn" class="btn btn-danger">Confirm Leave</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 
 
 
-      
-  
+<!-- BEGIN maintenance.js (2025-06-12) -->
+<script>
+/* ------------------------------------------------------------------
+ *  GLOBAL CONSTANTS
+ * ------------------------------------------------------------------ */
+const IS_MANAGER     = {{ is_manager|yesno:"true,false" }};
+const IS_SUPERVISOR  = {{ is_supervisor|yesno:"true,false" }};
+const CURRENT_USER   = "{{ request.user.username }}";
+const CSRF_TOKEN     = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+const URLS = {
+  edit             : "{% url 'maintenance_edit' %}",
+  update           : "{% url 'maintenance_update_event' %}",
+  closeout         : "{% url 'closeout_downtime_entry' %}",
+  loadMore         : "{% url 'load_more_downtime_entries' %}",
+  join             : "{% url 'join_downtime_event' %}",
+  leave            : "{% url 'leave_downtime_event' %}",
+  history          : id => `/plant/downtime/${id}/history/`,
+  forceLeave       : id => `/plant/downtime/participation/${id}/force-leave/`,
+  bulkToggleActive : "{% url 'bulk_toggle_active' %}",
+  machineHistory   : "{% url 'machine_history' %}",
+  targetLines      : "{% url 'target_lines' %}"
+};
+
+/* ------------------------------------------------------------------
+ *  UTILITIES
+ * ------------------------------------------------------------------ */
+const $         = sel => document.querySelector(sel);
+const $$        = sel => document.querySelectorAll(sel);
+const jsonFetch = (url, opts={}) =>
+  fetch(url, opts).then(r => r.ok ? r.json() : Promise.reject(r));
+
+// helper to zero-pad numbers
+const pad2 = n => String(n).padStart(2,'0');
+
+// returns YYYY-MM-DD based on your local clock
+const nowISODate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+};
+
+// returns HH:MM (24-hour) based on your local clock
+const nowISOTime = () => {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
+// combined local date+time for datetime-local inputs
+const nowLocalDT = () => `${nowISODate()}T${nowISOTime()}`;
+
+/* ------------------------------------------------------------------
+ *  CLOSE-OUT / EDIT MODAL
+ * ------------------------------------------------------------------ */
+function initCloseoutModal(){
+  const modalEl    = $('#closeoutModal');
+  const bsModal    = new bootstrap.Modal(modalEl);
+  const idIn       = $('#closeout-entry-id');
+  const lineSel    = $('#closeout-line');
+  const machineSel = $('#closeout-machine');
+  const catSel     = $('#closeout-category');
+  const subcatSel  = $('#closeout-subcategory');
+  const startDate  = $('#closeout-start-date');
+  const startTime  = $('#closeout-start-time');
+  const origComm   = $('#closeout-original-comment');
+  const closeDate  = $('#closeout-date');
+  const closeTime  = $('#closeout-time');
+  const closeComm  = $('#closeout-comment');
+  const btnSave    = $('#closeout-save');
+  const btnConfirm = $('#closeout-confirm');
+
+  const populate = (sel, list, simple=false, placeholder='— Select —') => {
+    sel.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+    list.forEach(item=>{
+      sel.insertAdjacentHTML('beforeend',
+        simple
+          ? `<option>${item}</option>`
+          : `<option value="${item.code}">${item.name}</option>`
+      );
+    });
+  };
+
+  $$('.closeout-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      idIn.value = btn.dataset.entryId;
+      jsonFetch(URLS.edit, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({ entry_id: idIn.value })
+      })
+      .then(data=>{
+        // lines & machines
+        populate(lineSel, data.lines, true, '— Select line —');
+        const setMachines = ()=>{
+          const blk = data.lines_data.find(l=>l.line===lineSel.value) || {operations:[]};
+          const machines = blk.operations.flatMap(op=>op.machines.map(m=>m.number));
+          populate(machineSel, machines, true, '— Select machine —');
+        };
+        lineSel.value = data.line;
+        setMachines();
+        machineSel.value = data.machine;
+        lineSel.onchange = ()=>{ setMachines(); machineSel.value = ''; };
+
+        // categories & subcategories
+        populate(catSel, data.categories, false, '— Select category —');
+        catSel.value = data.category_code ||
+          (data.categories.find(c=>c.name===data.category_name) || {}).code || '';
+        // fallback by label match
+        if (!catSel.value && data.category_name) {
+          [...catSel.options].forEach(opt=>{
+            if (opt.text.trim().toLowerCase() === data.category_name.trim().toLowerCase()) {
+              catSel.value = opt.value;
+            }
+          });
+        }
+        const setSubcats = ()=>{
+          const scs = data.subcategories
+            .filter(s=>s.parent===catSel.value)
+            .map(s=>({ code: s.code, name: s.name }));
+          if (data.subcategory_code === 'NOTSELECTED') {
+            scs.unshift({ code: 'NOTSELECTED', name: 'Not Selected' });
+          }
+          populate(subcatSel, scs, false, '— Select subcategory —');
+        };
+        setSubcats();
+        subcatSel.value = data.subcategory_code || '';
+        catSel.onchange = ()=>{ setSubcats(); subcatSel.value = ''; };
+
+        // start values
+        startDate.value = data.start_date;
+        startTime.value = data.start_time;
+        origComm.value  = data.comment;
+        // close defaults
+        closeDate.value = nowISODate();
+        closeTime.value = nowISOTime();
+        closeComm.value = '';
+
+        // labour checkboxes
+        $$('.closeout-labour-checkbox').forEach(cb=>cb.checked = false);
+        (data.labour_types || []).forEach(c=>{
+          const cb = $(`#closeout-labour-${c}`);
+          if (cb) cb.click();
+        });
+
+        bsModal.show();
+      })
+      .catch(()=>{
+        alert('Could not load event details.');
+      });
+    });
+  });
+
+  btnSave.onclick    = ()=> doUpdate(false);
+  btnConfirm.onclick = ()=> doUpdate(true);
+
+  function gatherPayload(){
+    return {
+      entry_id    : idIn.value,
+      line        : lineSel.value,
+      machine     : machineSel.value,
+      category    : catSel.value,
+      subcategory : subcatSel.value,
+      start_at    : `${startDate.value} ${startTime.value}`,
+      comment     : origComm.value.trim(),
+      labour_types: [...$$('.closeout-labour-checkbox')]
+                      .filter(cb=>cb.checked)
+                      .map(cb=>cb.value)
+    };
+  }
+
+  function doUpdate(andClose){
+    if (!catSel.value || !subcatSel.value) {
+      alert('Pick category & subcategory');
+      return;
+    }
+    if (andClose && !closeComm.value.trim()) {
+      alert('Close-out comment required');
+      return;
+    }
+
+    jsonFetch(URLS.update, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      body: JSON.stringify(gatherPayload())
+    })
+    .then(()=>{
+      if (!andClose) {
+        bsModal.hide();
+        location.reload();
+        return;
+      }
+      return jsonFetch(URLS.closeout, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+          entry_id          : idIn.value,
+          closeout          : `${closeDate.value} ${closeTime.value}`,
+          closeout_comment  : closeComm.value.trim()
+        })
+      });
+    })
+    .then(()=>{ location.reload(); })
+    .catch(e=>{
+      if (e.status === 403) alert('All participants must leave first');
+      else                     alert('Save / close-out failed. Did you choose a subcategory? Is the closeout time at least 1 minute past the entry time?');
+    });
+  }
+}
+
+/* ------------------------------------------------------------------
+ *  LABOUR HISTORY MODAL
+ * ------------------------------------------------------------------ */
+function initLabourHistory(){
+  const histModal  = new bootstrap.Modal($('#historyModal'));
+  const joinModal  = new bootstrap.Modal($('#joinModal'));
+  const leaveModal = new bootstrap.Modal($('#leaveModal'));
+  const forceModal = new bootstrap.Modal($('#forceLeaveModal'));
+
+  const tbody    = $('#history-body');
+  const joinBtn  = $('#history-join-btn');
+  const leaveBtn = $('#history-leave-btn');
+  const forceCmt = $('#force-comment');
+  const forcePid = $('#force-participation-id');
+
+  function rowHTML(p){
+    const roles = p.roles.length
+      ? p.roles.map(r=>`<span class="badge bg-secondary me-1">${r}</span>`).join('')
+      : '<span class="text-muted">—</span>';
+    const needForce = (IS_MANAGER || IS_SUPERVISOR) && !p.leave_at;
+    return `<tr>
+      <td>${p.user}</td>
+      <td>${roles}</td>
+      <td>${p.join_at}</td>
+      <td>${p.join_comment}</td>
+      <td>${p.leave_at || '—'}</td>
+      <td>${p.leave_comment}</td>
+      <td>${p.total_minutes}</td>
+      ${needForce
+        ? `<td><button class="btn btn-sm btn-outline-danger force-leave-btn" data-pid="${p.id}">Leave</button></td>`
+        : '<td></td>'}
+    </tr>`;
+  }
+
+  document.addEventListener('click', e=>{
+    const labBtn = e.target.closest('.labour-btn');
+    if (!labBtn) return;
+    const eventId = labBtn.dataset.eventId;
+
+    jsonFetch(URLS.history(eventId))
+      .then(data=>{
+        tbody.innerHTML = data.history.map(rowHTML).join('');
+        const meOpen = data.history.some(h=>h.user===CURRENT_USER && !h.leave_at);
+        joinBtn.style.display  = meOpen ? 'none'         : 'inline-block';
+        leaveBtn.style.display = meOpen ? 'inline-block' : 'none';
+        joinBtn.dataset.eid  = leaveBtn.dataset.eid = eventId;
+        histModal.show();
+      })
+      .catch(()=> alert('Could not load history'));
+  });
+
+  joinBtn.onclick = ()=>{
+    $('#join-event-id').value = joinBtn.dataset.eid;
+    $('#join-datetime').value  = nowLocalDT();
+    $('#join-comment').value   = 'Assess the situation';
+    histModal.hide();
+    joinModal.show();
+  };
+  leaveBtn.onclick = ()=>{
+    $('#leave-event-id').value  = leaveBtn.dataset.eid;
+    $('#leave-datetime').value  = nowLocalDT();
+    $('#leave-comment').value   = '';
+    histModal.hide();
+    leaveModal.show();
+  };
+
+  $('#join-confirm-btn').onclick = ()=>{
+    const note = $('#join-comment').value.trim();
+    if (!note) return alert('Please enter an action plan');
+    jsonFetch(URLS.join, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      body: JSON.stringify({
+        event_id      : $('#join-event-id').value,
+        join_comment  : note,
+        join_datetime : $('#join-datetime').value
+      })
+    })
+    .then(()=> location.reload())
+    .catch(()=> alert('Join failed'));
+  };
+
+  $('#leave-confirm-btn').onclick = ()=>{
+    const note = $('#leave-comment').value.trim();
+    if (!note) return alert('Describe what you did');
+    jsonFetch(URLS.leave, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      body: JSON.stringify({
+        event_id     : $('#leave-event-id').value,
+        leave_comment: note,
+        leave_datetime: $('#leave-datetime').value
+      })
+    })
+    .then(()=> location.reload())
+    .catch(()=> alert('Leave failed'));
+  };
+
+  document.addEventListener('click', e=>{
+    const fBtn = e.target.closest('.force-leave-btn');
+    if (!fBtn) return;
+    forcePid.value = fBtn.dataset.pid;
+    $('#force-comment').value  = '';
+    $('#force-datetime').value = nowLocalDT();
+    forceModal.show();
+  });
+
+  $('#force-confirm-btn').onclick = ()=>{
+    const note    = forceCmt.value.trim();
+    const whenVal = $('#force-datetime').value || nowLocalDT();
+    if (!note) return alert('Comment required');
+    jsonFetch(URLS.forceLeave(forcePid.value), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      body: JSON.stringify({
+        leave_comment : note,
+        leave_datetime: whenVal
+      })
+    })
+    .then(()=> location.reload())
+    .catch(()=> alert('Force leave failed'));
+  };
+}
+
+/* ------------------------------------------------------------------
+ *  MACHINE HISTORY (lookup + results) – UPDATED
+ * ------------------------------------------------------------------ */
+function initMachineHistory(){
+  const lookupModal  = new bootstrap.Modal($('#machineHistoryModal'));
+  const resultsModal = new bootstrap.Modal($('#machineHistoryResultsModal'));
+  const form         = document.getElementById('machineHistoryForm');
+  const statusBox    = document.getElementById('mh-status');
+  const tbody        = document.getElementById('mh-tbody');
+  const machineEl    = document.getElementById('mh-machine-num');
+  const url          = URLS.machineHistory;
+
+  const dateTimeOpts = {
+    year:   'numeric',
+    month:  'short',
+    day:    'numeric',
+    hour:   'numeric',
+    minute: 'numeric',
+    hour12: true
+  };
+
+  /* reusable fetch routine ------------------------------- */
+  function fetchMachineHistory(machine){
+    if(!machine) return;
+    statusBox.innerHTML   = '<p>Loading…</p>';
+    tbody.innerHTML       = '';
+    machineEl.textContent = machine;
+
+    // make sure form carries the new machine value (for CSRF + server)
+    form.machine.value = machine;
+
+    fetch(url, {
+      method:      'POST',
+      credentials: 'same-origin',
+      body:        new FormData(form)
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      statusBox.innerHTML = '';
+      if (data.error){
+        statusBox.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+        return;
+      }
+      if (!data.events.length){
+        statusBox.innerHTML = '<p class="text-muted">No downtime history found.</p>';
+        return;
+      }
+      data.events.forEach(ev=>{
+        const tr = tbody.insertRow();
+        tr.insertCell().textContent = ev.start_display;
+        tr.insertCell().textContent = ev.category;
+        tr.insertCell().textContent = ev.comment  ?? '';
+        tr.insertCell().textContent = ev.closeout_display ?? '';
+        tr.insertCell().textContent = ev.closeout_comment ?? '';
+
+        const partCell = tr.insertCell();
+        const innerTbl = document.createElement('table');
+        innerTbl.className = 'table table-borderless table-sm mb-0';
+
+        const innerHead = innerTbl.createTHead();
+        innerHead.className = 'table-light';
+        const headRow = innerHead.insertRow();
+        ['User','Joined','Left','Join Comment','Leave Comment','Minutes Down']
+          .forEach(txt=>{
+            const th = document.createElement('th');
+            th.textContent = txt;
+            headRow.appendChild(th);
+          });
+
+        const innerBody = document.createElement('tbody');
+        ev.participations.forEach(p=>{
+          const r = innerBody.insertRow();
+          r.insertCell().textContent = p.user;
+          r.insertCell().textContent = new Date(p.join_epoch * 1000)
+                                         .toLocaleString(undefined, dateTimeOpts);
+          r.insertCell().textContent = p.leave_epoch
+                                         ? new Date(p.leave_epoch * 1000)
+                                             .toLocaleString(undefined, dateTimeOpts)
+                                         : '';
+          r.insertCell().textContent = p.join_comment  ?? '';
+          r.insertCell().textContent = p.leave_comment ?? '';
+          r.insertCell().textContent = p.total_minutes ?? '';
+        });
+        innerTbl.appendChild(innerBody);
+        partCell.appendChild(innerTbl);
+      });
+
+      lookupModal.hide();
+      resultsModal.show();
+    })
+    .catch(()=> {
+      statusBox.innerHTML = '<div class="alert alert-danger">Error loading history.</div>';
+    });
+  }
+
+  /* original lookup modal -------------------------------- */
+  form.addEventListener('submit', e=>{
+    e.preventDefault();
+    fetchMachineHistory(form.machine.value.trim());
+  });
+
+  /* new search controls inside results modal ------------- */
+  const newInput = document.getElementById('mh-new-machine-input');
+  const newBtn   = document.getElementById('mh-new-search-btn');
+
+  newBtn.addEventListener('click', ()=>{
+    fetchMachineHistory(newInput.value.trim());
+  });
+
+  newInput.addEventListener('keyup', e=>{
+    if(e.key === 'Enter') newBtn.click();
+  });
+}
+
+/* ------------------------------------------------------------------
+ *  ROW CLICK (to open close-out)
+ * ------------------------------------------------------------------ */
+function initRowShortcut(){
+  $$('.editable-row').forEach(row=>{
+    row.addEventListener('click', e=>{
+      if (e.target.closest('.labour-btn')) return;
+      row.querySelector('.closeout-btn')?.click();
+    });
+  });
+}
+
+/* ------------------------------------------------------------------
+ *  LOAD-MORE BUTTON
+ * ------------------------------------------------------------------ */
+function initLoadMore(pageSize){
+  const btn = $('#load-more-btn');
+  if (!btn) return;
+  let offset = pageSize;
+
+  const rowHTML = e=>`
+    <tr class="${e.closeout_at?'':'table-warning'} editable-row" data-entry-id="${e.id}">
+      <td>${e.start_display}</td>
+      <td>${e.closeout_at || `<button class="btn btn-sm btn-info closeout-btn" data-entry-id="${e.id}">Close out</button>`}</td>
+      <td>${e.line}</td>
+      <td>${e.machine}</td>
+      <td><span class="badge bg-dark">${e.category}</span></td>
+      <td><span class="badge bg-secondary">${e.subcategory}</span></td>
+      <td>${
+        (e.labour_types||[]).length
+          ? e.labour_types
+              .map(c=>`<button class="btn ${e.being_worked_on?'btn-dark':'btn-outline-dark'} btn-sm labour-btn me-1" data-event-id="${e.id}" data-role="${c}">${c}</button>`)
+              .join('')
+          : '<span class="text-muted">—</span>'
+      }</td>
+      <td>${e.comment}</td>
+    </tr>`;
+
+  btn.onclick = ()=>{
+    btn.disabled = true;
+    jsonFetch(`${URLS.loadMore}?offset=${offset}`)
+      .then(data=>{
+        offset += pageSize;
+        const tbody = document.querySelector('table tbody');
+        tbody.insertAdjacentHTML('beforeend', data.entries.map(rowHTML).join(''));
+        if (!data.has_more) btn.remove();
+        else                btn.disabled = false;
+        initRowShortcut();
+      })
+      .catch(()=>{
+        alert('Load failed');
+        btn.disabled = false;
+      });
+  };
+}
+
+/* ------------------------------------------------------------------
+ *  ACTIVE-LIST BULK TOGGLE
+ * ------------------------------------------------------------------ */
+function initActiveBulkToggle(){
+  const saveBtn = $('#active-save-btn');
+  if (!saveBtn) return;
+
+  const cbs = [...$$('.active-checkbox')];
+  cbs.forEach(cb=>cb.dataset.orig = cb.checked ? '1' : '0');
+
+  const collapse = $('#activeListCollapse');
+  const rememberOpen = ()=> localStorage.setItem('activeListWasOpen', collapse.classList.contains('show'));
+
+  saveBtn.onclick = ()=>{
+    const activate   = [];
+    const deactivate = [];
+    cbs.forEach(cb=>{
+      const changed = (cb.checked?'1':'0') !== cb.dataset.orig;
+      if (!changed) return;
+      (cb.checked ? activate : deactivate).push(cb.dataset.username);
+    });
+    if (!activate.length && !deactivate.length) {
+      return alert('Nothing to save');
+    }
+    rememberOpen();
+    jsonFetch(URLS.bulkToggleActive, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      body: JSON.stringify({ activate, deactivate })
+    })
+    .then(()=> location.reload())
+    .catch(()=> alert('Update failed'));
+  };
+}
+
+/* ------------------------------------------------------------------
+ *  MACHINE HISTORY (lookup already handled above)
+ * ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------
+ *  JOB FILTER
+ * ------------------------------------------------------------------ */
+function initJobFilter(){
+  const input = $('#job-filter');
+  if (!input) return;
+  input.oninput = ()=>{
+    const q = input.value.trim().toLowerCase();
+    $$('.editable-row').forEach(row=>{
+      const textMatch = row.textContent.toLowerCase().includes(q);
+      const roleMatch = [...row.querySelectorAll('.labour-btn')]
+                          .some(b=>b.dataset.role.toLowerCase().includes(q));
+      row.style.display = (textMatch||roleMatch) ? '' : 'none';
+    });
+  };
+}
+
+/* ------------------------------------------------------------------
+ *  PERSONAL “EXCLUDE LINES” FILTER
+ * ------------------------------------------------------------------ */
+function initPersonalFilter(){
+  const icon          = $('#target-lines-icon');
+  const modal         = new bootstrap.Modal($('#excludeLinesModal'));
+  const body          = $('#exclude-lines-body');
+  const save          = $('#exclude-lines-save');
+  const selAllBtn     = $('#exclude-lines-select-all');
+  const deselAllBtn   = $('#exclude-lines-deselect-all');
+
+  const BLANK = { lines: [], roles: [], hideBusy: false };
+  function getPrefs(){
+    const m = document.cookie.match(/(?:^|; )filter_prefs=([^;]+)/);
+    if (!m) return { ...BLANK };
+    try {
+      const parsed = JSON.parse(decodeURIComponent(m[1]));
+      return Array.isArray(parsed)
+        ? { lines: parsed, roles: [], hideBusy: false }
+        : { ...BLANK, ...parsed };
+    } catch {
+      return { ...BLANK };
+    }
+  }
+  function setPrefs(p){
+    document.cookie = `filter_prefs=${encodeURIComponent(JSON.stringify(p))};path=/;max-age=${60*60*24*30}`;
+  }
+  function applyPrefs(){
+    const { lines, roles: excludedRoles, hideBusy } = getPrefs();
+
+    $$('.editable-row').forEach(tr=>{
+      // hide if the line is excluded
+      const hideLine   = lines.includes(tr.dataset.line);
+
+      // parse the roles on that job
+      const jobRoles   = (tr.dataset.roles||'')
+                          .toLowerCase()
+                          .split(/[, ]+/)
+                          .filter(Boolean);
+
+      // ONLY hide if every one of its roles has been excluded
+      const hideRole   = jobRoles.length > 0
+                        && jobRoles.every(r=> excludedRoles.includes(r));
+
+      // hide if we're excluding busy jobs and this one is busy
+      const hideActive = hideBusy && tr.dataset.busy==='1';
+
+      tr.style.display = (hideLine || hideRole || hideActive)
+                        ? 'none'
+                        : '';
+    });
+  }
+
+  icon.onclick = ()=>{
+    const prefs = getPrefs();
+    jsonFetch(URLS.targetLines)
+      .then(d=>{
+        const mkChk = ({id, label, checked, kind}) => `
+          <div class="form-check">
+            <input class="form-check-input" data-kind="${kind}" type="checkbox" id="${id}" value="${label}" ${checked?'checked':''}>
+            <label class="form-check-label" for="${id}">${label}</label>
+          </div>`;
+        const linesHTML = d.lines.map(l=> mkChk({
+          id:      `ex_line_${l}`,
+          label:   l,
+          checked: prefs.lines.includes(l),
+          kind:    'line'
+        })).join('');
+        const ROLE_MAP = ['tech','electrician','millwright'];
+        const rolesHTML = ROLE_MAP.map(r=> mkChk({
+          id:      `ex_role_${r}`,
+          label:   r.charAt(0).toUpperCase() + r.slice(1),
+          checked: prefs.roles.includes(r),
+          kind:    'role'
+        })).join('');
+        const busyHTML = `
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="ex_hidebusy" ${prefs.hideBusy?'checked':''}>
+            <label class="form-check-label" for="ex_hidebusy">
+              Exclude jobs already being worked on
+            </label>
+          </div>`;
+        body.innerHTML = `
+          <p class="fw-semibold mb-1">Exclude Lines</p>
+          ${linesHTML}
+          <hr class="my-2">
+          <p class="fw-semibold mb-1">Exclude Job Types</p>
+          ${rolesHTML}
+          ${busyHTML}`;
+        modal.show();
+      })
+      .catch(()=>{
+        body.innerHTML = '<div class="alert alert-danger">Could not load</div>';
+        modal.show();
+      });
+  };
+
+  const toggleLines = v=>
+    body.querySelectorAll('input[data-kind="line"]').forEach(cb=>cb.checked=v);
+  selAllBtn.onclick   = ()=> toggleLines(true);
+  deselAllBtn.onclick = ()=> toggleLines(false);
+
+  save.onclick = ()=>{
+    const lines    = [...body.querySelectorAll('input[data-kind="line"]:checked')].map(cb=>cb.value);
+    const roles    = [...body.querySelectorAll('input[data-kind="role"]:checked')].map(cb=>cb.value.toLowerCase());
+    const hideBusy = $('#ex_hidebusy').checked;
+    setPrefs({ lines, roles, hideBusy });
+    applyPrefs();
+    modal.hide();
+  };
+
+  // run on load
+  applyPrefs();
+}
+
+/* ------------------------------------------------------------------
+ *  AUTO-RELOAD (2min inactivity, pause in modals)
+ * ------------------------------------------------------------------ */
+function initAutoReload(){
+  const DELAY = 2 * 60 * 1000;
+  let timerId = null;
+  let openModals = 0;
+
+  const stop  = ()=>{ if(timerId){ clearTimeout(timerId); timerId = null; } };
+  const start = ()=>{ timerId = setTimeout(()=>location.reload(), DELAY); };
+  const reset = ()=>{ stop(); if(openModals===0) start(); };
+
+  window.addEventListener('shown.bs.modal', ()=>{ openModals++; stop(); });
+  window.addEventListener('hidden.bs.modal', ()=>{ 
+    openModals = Math.max(0, openModals-1);
+    if(openModals===0) reset();
+  });
+
+  document.addEventListener('click', e=>{
+    if (e.target.closest('.modal.show')) return;
+    reset();
+  });
+
+  // kick it off
+  start();
+}
+
+/* ------------------------------------------------------------------
+ *  INITIALIZATION
+ * ------------------------------------------------------------------ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  initCloseoutModal();
+  initLabourHistory();
+  initRowShortcut();
+  initLoadMore({{ page_size }});
+  initActiveBulkToggle();
+  initMachineHistory();
+  initJobFilter();
+  initPersonalFilter();
+  initAutoReload();
+});
+</script>
+
+
+
+
+
+
+
+<!-- END maintenance.js -->
+</div>
 {% endblock %}

@@ -6,15 +6,22 @@ from importlib import import_module
 import json
 from datetime import datetime, timedelta
 from django.http import Http404
-
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 import MySQLdb
 from prod_query.models import OAMachineTargets
 from collections import defaultdict
 
+import pytz
+from django.utils import timezone
 
+import json
+from typing import Dict, List, Set, Tuple, Optional, DefaultDict, Union
 
-
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.db import connections
+import copy
+import math
 
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
 from django import forms
@@ -720,222 +727,222 @@ def cell_track_trilobe(request, template):
     context['elapsed'] = time.time()-tic
     return render(request, f'dashboards/{template}', context)
 
-@cache_page(5)
-def cell_track_8670(request, template):
-    tic = time.time()  # track the execution time
-    context = {}  # data sent to template
+# @cache_page(5)
+# def cell_track_8670(request, template):
+#     tic = time.time()  # track the execution time
+#     context = {}  # data sent to template
 
-    target_production_AB1V_Rx = int(
-        request.site_variables.get('target_production_AB1V_Rx', 300))
-    target_production_AB1V_Input = int(
-        request.site_variables.get('target_production_AB1V_Input', 300))
-    target_production_AB1V_OD = int(
-        request.site_variables.get('target_production_AB1V_OD', 300))
-    target_production_10R140 = int(request.site_variables.get(
-        'target_production_10R140_Rear', 300))
+#     target_production_AB1V_Rx = int(
+#         request.site_variables.get('target_production_AB1V_Rx', 300))
+#     target_production_AB1V_Input = int(
+#         request.site_variables.get('target_production_AB1V_Input', 300))
+#     target_production_AB1V_OD = int(
+#         request.site_variables.get('target_production_AB1V_OD', 300))
+#     target_production_10R140 = int(request.site_variables.get(
+#         'target_production_10R140_Rear', 300))
 
-    # Get the Time Stamp info
-    shift_start, shift_time, shift_left, shift_end = stamp_shift_start_3()
-    context['t'] = shift_start + shift_time
-    request.session["shift_start"] = shift_start
+#     # Get the Time Stamp info
+#     shift_start, shift_time, shift_left, shift_end = stamp_shift_start_3()
+#     context['t'] = shift_start + shift_time
+#     request.session["shift_start"] = shift_start
 
-    line_spec_10R140 = [
-        # OP 10
-        ('1708L', ['1708L'], 2, 10),
-        ('1708R', ['1708R'], 2, 10),
-        # OP 20
-        ('1709', ['1708L', '1708R'], 1, 20),
-        # OP 30
-        ('1710', ['1710'], 1, 30),
-        # OP 40
-        ('1711', ['1711'], 1, 40),
-        # OP 50
-        ('1715', ['1715'], 1, 50),
-        # OP 60
-        ('1717R', ['1717R'], 1, 60),
-        # OP 70
-        ('1706', ['1706'], 1, 70),
-        # OP 80
-        ('1720', ['1720'], 1, 80),
-        # OP 90
-        ('677', ['677'], 1, 90),
-        ('748', ['748'], 1, 90),
-        # OP 100
-        ('1723', ['1723'], 1, 100),
-        # Laser
-        ('1725', ['1725'], 1, 130),
-    ]
-
-
-
-    machine_production_10R140, op_production_10R140 = get_line_prod(
-        line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
-
-    context['codes_10R140'] = machine_production_10R140
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
-    part_list = ["50-3214", "50-5214"]
-    context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op_10R140'] = op_production_10R140
+#     line_spec_10R140 = [
+#         # OP 10
+#         ('1708L', ['1708L'], 2, 10),
+#         ('1708R', ['1708R'], 2, 10),
+#         # OP 20
+#         ('1709', ['1708L', '1708R'], 1, 20),
+#         # OP 30
+#         ('1710', ['1710'], 1, 30),
+#         # OP 40
+#         ('1711', ['1711'], 1, 40),
+#         # OP 50
+#         ('1715', ['1715'], 1, 50),
+#         # OP 60
+#         ('1717R', ['1717R'], 1, 60),
+#         # OP 70
+#         ('1706', ['1706'], 1, 70),
+#         # OP 80
+#         ('1720', ['1720'], 1, 80),
+#         # OP 90
+#         ('677', ['677'], 1, 90),
+#         ('748', ['748'], 1, 90),
+#         # OP 100
+#         ('1723', ['1723'], 1, 100),
+#         # Laser
+#         ('1725', ['1725'], 1, 130),
+#     ]
 
 
-    # -- surgical insertion for 10R140 OEE stuff --
-    op_actual_10R140, op_oee_10R140 = compute_op_actual_and_oee(
-        line_spec_10R140,
-        machine_production_10R140,
-        shift_start,
-        shift_time,
-        part_list=["50-3214", "50-5214"]
-    )
-    context['op_actual_10R140'] = op_actual_10R140
-    context['op_oee_10R140']    = op_oee_10R140
 
-    context['wip_10R140'] = []
+#     machine_production_10R140, op_production_10R140 = get_line_prod(
+#         line_spec_10R140, target_production_10R140, '"50-3214","50-5214"', shift_start, shift_time)
 
-    line_spec_8670 = [
-        # OP 10
-        ('1703L', ['1703L'], 4, 10), ('1704L', ['1704L'], 4, 10),
-        ('658', ['658'], 4, 10), ('661', ['661'], 4, 10),
-        ('622', ['622'], 4, 10),
-        # OP 20/30
-        ('1703R', ['1703R'], 4, 30), ('1704R', ['1704R'], 4, 30),
-        ('616', ['616'], 4, 30), ('623', ['623'], 4, 30),
-        ('617', ['617'], 4, 30),
-        # OP 40
-        ('1727', ['1727'], 1, 40),
-        # OP 50
-        ('659', ['659'], 2, 50), ('626', ['626'], 2, 50),
-        # OP 60
-        ('1712', ['1712'], 1, 60),
-        ('1716L', ['1716L'], 1, 70),
-        ('1719', ['1719'], 1, 80),
-        ('1723', ['1723'], 1, 90),
-        ('1750', ['1750'], 1, 130),
-        ('1724', ['1724'], 1, 130),
-        ('1725', ['1725'], 1, 130),
-    ]
+#     context['codes_10R140'] = machine_production_10R140
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_10R140]
+#     part_list = ["50-3214", "50-5214"]
+#     context['actual_counts_10R140'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op_10R140'] = op_production_10R140
 
 
-    machine_production_8670, op_production_8670 = get_line_prod(
-        line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
+#     # -- surgical insertion for 10R140 OEE stuff --
+#     op_actual_10R140, op_oee_10R140 = compute_op_actual_and_oee(
+#         line_spec_10R140,
+#         machine_production_10R140,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-3214", "50-5214"]
+#     )
+#     context['op_actual_10R140'] = op_actual_10R140
+#     context['op_oee_10R140']    = op_oee_10R140
 
-    context['codes'] = machine_production_8670
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
-    part_list = ["50-8670", "50-0450"]
-    context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op'] = op_production_8670
+#     context['wip_10R140'] = []
 
-
-    # -- surgical insertion for 8670 OEE stuff --
-    op_actual_8670, op_oee_8670 = compute_op_actual_and_oee(
-        line_spec_8670,
-        machine_production_8670,
-        shift_start,
-        shift_time,
-        part_list=["50-8670", "50-0450"]
-    )
-    context['op_actual_8670'] = op_actual_8670
-    context['op_oee_8670']    = op_oee_8670
-
-
-    context['wip'] = []
-
-    line_spec_5401 = [
-        ('1740L', ['1740L'], 2, 10), ('1740R', ['1740R'], 2, 10),
-        ('1701L', ['1701L'], 2, 40), ('1701R', ['1701R'], 2, 40),
-        ('733', ['1701L', '1701R'], 1, 50),
-        ('775', ['775'], 2, 60), ('1702', ['1702'], 2, 60),
-        ('581', ['581'], 2, 70), ('788', ['788'], 2, 70),
-        ('1714', ['1714'], 1, 80),
-        ('1717L', ['1717L'], 1, 90),
-        ('1706', ['1706'], 1, 100),
-        ('1723', ['1723'], 1, 110),
-        ('1750', ['1750'], 1, 130),
-        ('1724', ['1724'], 1, 130),
-        ('1725', ['1725'], 1, 130),
-    ]
+#     line_spec_8670 = [
+#         # OP 10
+#         ('1703L', ['1703L'], 4, 10), ('1704L', ['1704L'], 4, 10),
+#         ('658', ['658'], 4, 10), ('661', ['661'], 4, 10),
+#         ('622', ['622'], 4, 10),
+#         # OP 20/30
+#         ('1703R', ['1703R'], 4, 30), ('1704R', ['1704R'], 4, 30),
+#         ('616', ['616'], 4, 30), ('623', ['623'], 4, 30),
+#         ('617', ['617'], 4, 30),
+#         # OP 40
+#         ('1727', ['1727'], 1, 40),
+#         # OP 50
+#         ('659', ['659'], 2, 50), ('626', ['626'], 2, 50),
+#         # OP 60
+#         ('1712', ['1712'], 1, 60),
+#         ('1716L', ['1716L'], 1, 70),
+#         ('1719', ['1719'], 1, 80),
+#         ('1723', ['1723'], 1, 90),
+#         ('1750', ['1750'], 1, 130),
+#         ('1724', ['1724'], 1, 130),
+#         ('1725', ['1725'], 1, 130),
+#     ]
 
 
-    machine_production_5401, op_production_5401 = get_line_prod(
-        line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
+#     machine_production_8670, op_production_8670 = get_line_prod(
+#         line_spec_8670, target_production_AB1V_Rx, '"50-8670","50-0450"', shift_start, shift_time)
 
-    context['codes_5401'] = machine_production_5401
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
-    part_list = ["50-5401", "50-0447"]
-    context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op_5401'] = op_production_5401
-
-
-    # -- surgical insertion for 5401 OEE stuff --
-    op_actual_5401, op_oee_5401 = compute_op_actual_and_oee(
-        line_spec_5401,
-        machine_production_5401,
-        shift_start,
-        shift_time,
-        part_list=["50-5401", "50-0447"]
-    )
-    context['op_actual_5401'] = op_actual_5401
-    context['op_oee_5401']    = op_oee_5401
+#     context['codes'] = machine_production_8670
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_8670]
+#     part_list = ["50-8670", "50-0450"]
+#     context['actual_counts'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op'] = op_production_8670
 
 
-    context['wip_5401'] = []
-
-    line_spec_5404 = [
-        ('1705', ['1705L'], 2, 20), ('1746', ['1746R'], 2, 20),
-        ('621', ['621'], 2, 25), ('629', ['629'], 2, 25),
-        ('785', ['785'], 3, 30), ('1748', ['1748'],
-                                  3, 30), ('1718', ['1718'], 3, 30),
-        ('669', ['669'], 1, 35),
-        ('1726', ['1726'], 1, 40),
-        ('1722', ['1722'], 1, 50),
-        ('1713', ['1713'], 1, 60),
-        ('1716R', ['1716R'], 1, 70),
-        ('1719', ['1719'], 1, 80),
-        ('1723', ['1723'], 1, 90),
-        ('1750', ['1750'], 1, 130),
-        ('1724', ['1724'], 1, 130),
-        ('1725', ['1725'], 1, 130),
-    ]
+#     # -- surgical insertion for 8670 OEE stuff --
+#     op_actual_8670, op_oee_8670 = compute_op_actual_and_oee(
+#         line_spec_8670,
+#         machine_production_8670,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-8670", "50-0450"]
+#     )
+#     context['op_actual_8670'] = op_actual_8670
+#     context['op_oee_8670']    = op_oee_8670
 
 
-    target_production = 300
-    machine_production_5404, op_production_5404 = get_line_prod(
-        line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
+#     context['wip'] = []
 
-    context['codes_5404'] = machine_production_5404
-    actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
-    part_list = ["50-5404", "50-0519"]
-    context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
-    context['op_5404'] = op_production_5404
-
-
-    # -- surgical insertion for 5404 OEE stuff --
-    op_actual_5404, op_oee_5404 = compute_op_actual_and_oee(
-        line_spec_5404,
-        machine_production_5404,
-        shift_start,
-        shift_time,
-        part_list=["50-5404", "50-0519"]
-    )
-    context['op_actual_5404'] = op_actual_5404
-    context['op_oee_5404']    = op_oee_5404
+#     line_spec_5401 = [
+#         ('1740L', ['1740L'], 2, 10), ('1740R', ['1740R'], 2, 10),
+#         ('1701L', ['1701L'], 2, 40), ('1701R', ['1701R'], 2, 40),
+#         ('733', ['1701L', '1701R'], 1, 50),
+#         ('775', ['775'], 2, 60), ('1702', ['1702'], 2, 60),
+#         ('581', ['581'], 2, 70), ('788', ['788'], 2, 70),
+#         ('1714', ['1714'], 1, 80),
+#         ('1717L', ['1717L'], 1, 90),
+#         ('1706', ['1706'], 1, 100),
+#         ('1723', ['1723'], 1, 110),
+#         ('1750', ['1750'], 1, 130),
+#         ('1724', ['1724'], 1, 130),
+#         ('1725', ['1725'], 1, 130),
+#     ]
 
 
-    context['wip_5404'] = []
+#     machine_production_5401, op_production_5401 = get_line_prod(
+#         line_spec_5401, target_production_AB1V_Input, '"50-5401","50-0447"', shift_start, shift_time)
 
-    # Date entry for History
-    if request.POST:
-        request.session["track_date"] = request.POST.get("date_st")
-        request.session["track_shift"] = request.POST.get("shift")
-        return render(request, 'redirect_cell_track_8670_history.html')
-    else:
-        form = sup_downForm()
-    args = {}
-    # args.update(csrf(request))
-    args['form'] = form
-    context['args'] = args
+#     context['codes_5401'] = machine_production_5401
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_5401]
+#     part_list = ["50-5401", "50-0447"]
+#     context['actual_counts_5401'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op_5401'] = op_production_5401
 
-    context['elapsed'] = time.time()-tic
-    return render(request, f'dashboards/{template}', context)
+
+#     # -- surgical insertion for 5401 OEE stuff --
+#     op_actual_5401, op_oee_5401 = compute_op_actual_and_oee(
+#         line_spec_5401,
+#         machine_production_5401,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-5401", "50-0447"]
+#     )
+#     context['op_actual_5401'] = op_actual_5401
+#     context['op_oee_5401']    = op_oee_5401
+
+
+#     context['wip_5401'] = []
+
+#     line_spec_5404 = [
+#         ('1705', ['1705L'], 2, 20), ('1746', ['1746R'], 2, 20),
+#         ('621', ['621'], 2, 25), ('629', ['629'], 2, 25),
+#         ('785', ['785'], 3, 30), ('1748', ['1748'],
+#                                   3, 30), ('1718', ['1718'], 3, 30),
+#         ('669', ['669'], 1, 35),
+#         ('1726', ['1726'], 1, 40),
+#         ('1722', ['1722'], 1, 50),
+#         ('1713', ['1713'], 1, 60),
+#         ('1716R', ['1716R'], 1, 70),
+#         ('1719', ['1719'], 1, 80),
+#         ('1723', ['1723'], 1, 90),
+#         ('1750', ['1750'], 1, 130),
+#         ('1724', ['1724'], 1, 130),
+#         ('1725', ['1725'], 1, 130),
+#     ]
+
+
+#     target_production = 300
+#     machine_production_5404, op_production_5404 = get_line_prod(
+#         line_spec_5404, target_production_AB1V_OD, '"50-5404","50-0519"', shift_start, shift_time)
+
+#     context['codes_5404'] = machine_production_5404
+#     actual_counts = [(mp[0], mp[1]) for mp in machine_production_5404]
+#     part_list = ["50-5404", "50-0519"]
+#     context['actual_counts_5404'] = log_shift_times(shift_start, shift_time, actual_counts, part_list)
+#     context['op_5404'] = op_production_5404
+
+
+#     # -- surgical insertion for 5404 OEE stuff --
+#     op_actual_5404, op_oee_5404 = compute_op_actual_and_oee(
+#         line_spec_5404,
+#         machine_production_5404,
+#         shift_start,
+#         shift_time,
+#         part_list=["50-5404", "50-0519"]
+#     )
+#     context['op_actual_5404'] = op_actual_5404
+#     context['op_oee_5404']    = op_oee_5404
+
+
+#     context['wip_5404'] = []
+
+#     # Date entry for History
+#     if request.POST:
+#         request.session["track_date"] = request.POST.get("date_st")
+#         request.session["track_shift"] = request.POST.get("shift")
+#         return render(request, 'redirect_cell_track_8670_history.html')
+#     else:
+#         form = sup_downForm()
+#     args = {}
+#     # args.update(csrf(request))
+#     args['form'] = form
+#     context['args'] = args
+
+#     context['elapsed'] = time.time()-tic
+#     return render(request, f'dashboards/{template}', context)
 
 
 def track_graph_track(request, index):
@@ -1113,6 +1120,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Max, F
 from .models import ShiftPoint
 
+@login_required(login_url="login")
 def list_and_update_shift_points(request):
     selected_tv_number = request.GET.get('tv_number')
     shift_points = ShiftPoint.objects.all()
@@ -1638,3 +1646,1582 @@ def compute_op_actual_and_oee(line_spec,
             op_oee_list[op] = "N/A"
 
     return op_actual_list, op_oee_list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =================================================================
+# =================================================================
+# =================== Testing New Display =========================
+# =================================================================
+# =================================================================
+
+
+
+PAGES = {
+    "9341": {
+        "dayshift_start": "06:00",
+        "programs": [
+            {
+            "program": "10R80",
+            "lines": [
+                {
+                    "line": "Mainline",
+                    "scrap_line": "Mainline",
+                    "operations": [
+                        {
+                            "op": "OP10",
+                            "machines": [
+                                {"number": "1504"},
+                                {"number": "1506"},
+                                {"number": "1519"},
+                                {"number": "1520"},
+                                {"number": "1518"},
+                                {"number": "1521"},
+                                {"number": "1522"},
+                                {"number": "1523"},
+                            ],
+                        },
+                        {
+                            "op": "OP30",
+                            "machines": [
+                                {"number": "1502"},
+                                {"number": "1507"},
+                                {"number": "1539"},
+                                {"number": "1540"},
+                                {
+                                "number": "1546",
+                                "parts": ["50-9341"]
+                                },
+                            ],
+                        },
+                        {
+                            "op": "OP40",
+                            "machines": [
+                                {"number": "1501"},
+                                {"number": "1515"},
+                                {"number": "1524"},
+                                {"number": "1525"},
+                                {
+                                "number": "1547",
+                                "parts": ["50-9341"]
+                                },
+                            ],
+                        },
+                        {
+                            "op": "OP50",
+                            "machines": [
+                                {"number": "1508"},
+                                {"number": "1532"},
+                                {"number": "1538"},
+                                {
+                                "number": "1548",
+                                "parts": ["50-9341"]
+                                },
+                            ],
+                        },
+                        {
+                            "op": "OP60",
+                            "machines": [
+                                {"number": "1509"},
+                                {"number": "1541"},
+                                {
+                                "number": "1549",
+                                "parts": ["50-9341"]
+                                }
+                            ],
+                        },
+                        {
+                            "op": "OP70",
+                            "machines": [
+                                {"number": "1514"},
+                                {"number": "1531"},
+                                {
+                                "number": "594",
+                                "parts": ["50-9341"]
+                                }
+
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1510"},
+                                {"number": "1527"},
+                                {
+                                "number": "1551",
+                                "parts": ["50-9341"]
+                                }
+
+                            ],
+                        },
+                        {
+                            "op": "OP90",
+                            "machines": [
+                                {"number": "1513"},
+                                {
+                                "number": "1552",
+                                "parts": ["50-9341"]
+                                }
+                            ],
+                        },
+                        {
+                            "op": "OP100",
+                            "machines": [
+                                {"number": "1503"},
+                                {"number": "1530"},
+                                {
+                                "number": "751",
+                                "parts": ["50-9341"]
+                                }
+                            ],
+                        },
+                        {
+                            "op": "OP110",
+                            "machines": [
+                                {"number": "1511"},
+                                {"number": "1528"},
+                                {
+                                "number": "1554",
+                                "parts": ["50-9341"]
+                                }
+                            ],
+                        },
+                        {
+                        "op": "Final",
+                        "machines": [
+                            {
+                            "number": "1533",
+                            "parts": ["50-9341"]
+                            }
+                        ]
+                        },
+                    ],
+                }
+            ],
+        },
+
+            {
+                "program": "10R60",
+                "lines": [
+                    {
+                        "line": "Mainline",
+                        "scrap_line": "Mainline",
+                        "operations": [
+                            {
+                                "op": "OP10",
+                                "machines": [
+                                    {"number": "1800"},
+                                    {"number": "1801"},
+                                    {"number": "1802"},
+                                ],
+                            },
+                            {
+                                "op": "OP30",
+                                "machines": [
+                                    {"number": "1529"},
+                                    {"number": "776"},
+                                    {"number": "1824"},
+                                    {"number": "1543"},
+                                ],
+                            },
+                            {
+                                "op": "OP40",
+                                "machines": [
+                                    {"number": "1804"},
+                                    {"number": "1805"},
+                                ],
+                            },
+                            {
+                                "op": "OP50",
+                                "machines": [
+                                    {"number": "1806"},
+                                ],
+                            },
+                            {
+                                "op": "OP60",
+                                "machines": [
+                                    {"number": "1808"},
+                                ],
+                            },
+                            {
+                                "op": "OP70",
+                                "machines": [
+                                    {"number": "1810"},
+                                ],
+                            },
+                            {
+                                "op": "OP80",
+                                "machines": [
+                                    {"number": "1815"},
+                                ],
+                            },
+                            {
+                                "op": "OP90",
+                                "machines": [
+                                    {"number": "1542"},
+                                ],
+                            },
+                            {
+                                "op": "OP100",
+                                "machines": [
+                                    {"number": "1812"},
+                                ],
+                            },
+                            {
+                                "op": "OP110",
+                                "machines": [
+                                    {"number": "1813"},
+                                ],
+                            },
+                             {
+                                "op": "Final",
+                                "machines": [
+                                    {"number": "1816"},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+        ],
+    },
+    "trilobe": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+                "program": "Sinter",
+                "lines": [
+                    {
+                        "line": "Sinter",
+                        "scrap_line": "Sinter",
+                        "operations": [
+                            {
+                            "op": "Compact",
+                            "machines": [
+                                {
+                                "number": "262"
+                                },
+                                {
+                                "number": "263",
+                                "parts": ["compact"]
+                                }
+                            ]
+                            },
+                            {
+                                "op": "Assemb",
+                                "machines": [
+                                    {"number": "859"},
+                                ],
+                            },
+                            {
+                                "op": "Unload",
+                                "machines": [
+                                    {"number": "992"},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "Optimized",
+                "lines": [
+                    {
+                        "line": "Optimized",
+                        "scrap_line": "Optimized",
+                        "operations": [
+                            {
+                                "op": "Broach",
+                                "machines": [
+                                    {"number": "784"},
+                                ],
+                            },
+                            {
+                                "op": "Heat",
+                                "machines": [
+                                    {"number": "770"},
+                                ],
+                            },
+                            {
+                                "op": "Machine",
+                                "machines": [
+                                    {"number": "618"},
+                                    {"number": "575"},
+                                    {"number": "624"},
+                                    {"number": "619"},
+                                ],
+                            },
+                            {
+                                "op": "Slurry",
+                                "machines": [
+                                    {"number": "769"},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "Trilobe",
+                "lines": [
+                    {
+                        "line": "Trilobe",
+                        "scrap_line": "Trilobe",
+                        "operations": [
+                            {
+                                "op": "Broach",
+                                "machines": [
+                                    {"number": "573"},
+                                ],
+                            },
+                            {
+                                "op": "Heat",
+                                "machines": [
+                                    {"number": "728"},
+                                ],
+                            },
+                            {
+                                "op": "Machine",
+                                "machines": [
+                                    {"number": "644"},
+                                    {"number": "645"},
+                                    {"number": "646"},
+                                    {"number": "647"},
+                                    {"number": "649"},
+                                ],
+                            },
+                            {
+                                "op": "Slurry",
+                                "machines": [
+                                    {"number": "742"},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "Offline",
+                "lines": [
+                    {
+                        "line": "Offline",
+                        "scrap_line": "Offline",
+                        "operations": [
+                            {
+                                "op": "Machine",
+                                "machines": [
+                                    {"number": "636"},
+                                ],
+                            },
+                            {
+                                "op": "Machine",
+                                "machines": [
+                                    {"number": "625"},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+        ],
+    },
+    "8670": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+                "program": "AB1V Rx",
+                "lines": [
+                    {
+                        "line": "AB1V Reaction",
+                        "scrap_line": "AB1V Reaction",
+                        "operations": [
+                           {
+                            "op": "OP10",
+                            "machines": [
+                                {
+                                "number": "1703L",
+                                "parts": ["50-8670", "50-0450"]
+                                },
+                                {
+                                "number": "1704L",
+                                "parts": ["50-8670", "50-0450"]
+                                },
+                                {
+                                "number": "658",
+                                "parts": ["50-8670", "50-0450"]
+                                },
+                                {
+                                "number": "661",
+                                "parts": ["50-8670", "50-0450"]
+                                },
+                                {
+                                "number": "622",
+                                "parts": ["50-8670", "50-0450"]
+                                }
+                            ]
+                            },
+                            {
+                                "op": "OP20/30",
+                                "machines": [
+                                    {"number": "1703R"},
+                                    {"number": "1704R"},
+                                    {"number": "616"},
+                                    {"number": "623"},
+                                    {"number": "617"},
+                                ],
+                            },
+                            {
+                                "op": "OP40",
+                                "machines": [
+                                    {"number": "1727"},
+                                ],
+                            },
+                            {
+                                "op": "OP50",
+                                "machines": [
+                                    {"number": "659"},
+                                    {"number": "626"},
+                                ],
+                            },
+                            {
+                                "op": "OP60",
+                                "machines": [
+                                    {"number": "1712"},
+                                ],
+                            },
+                            {
+                                "op": "OP70",
+                                "machines": [
+                                    {"number": "1716L"},
+                                ],
+                            },
+                            {
+                                "op": "OP80",
+                                "machines": [
+                                {
+                                "number": "1719",
+                                "parts": ["50-8670", "50-0450"]
+                                }
+                                ],
+                            },
+                            {
+                            "op": "OP90",
+                            "machines": [
+                                {
+                                "number": "1723",
+                                "parts": [
+                                    "50-0450",
+                                    "50-8670"
+                                ]
+                                }
+                            ]
+                            },
+                            {
+                                "op": "Laser",
+                                "machines": [
+                                {
+                                "number": "1724",
+                                "parts": [
+                                    "50-0450",
+                                    "50-8670"
+                                ]
+                                },
+                                {
+                                "number": "1750",
+                                "parts": [
+                                    "50-0450",
+                                    "50-8670"
+                                ]
+                                },
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "AB1V Overdrive",
+                "lines": [
+                    {
+                        "line": "AB1V Overdrive",
+                        "scrap_line": "AB1V Overdrive",
+                        "operations": [
+                            {
+                                "op": "OP20",
+                                "machines": [
+                                    {"number": "1705"},
+                                    {"number": "1746"},
+                                ],
+                            },
+                            {
+                                "op": "OP25",
+                                "machines": [
+                                    {"number": "621"},
+                                    {"number": "629"},
+                                ],
+                            },
+                            {
+                                "op": "OP30",
+                                "machines": [
+                                    {"number": "785"},
+                                    {"number": "1748"},
+                                    {"number": "1718"},
+                                ],
+                            },
+                            {
+                                "op": "OP35",
+                                "machines": [
+                                    {"number": "669"},
+                                ],
+                            },
+                            {
+                                "op": "OP40",
+                                "machines": [
+                                    {"number": "1726"},
+                                ],
+                            },
+                            {
+                                "op": "OP50",
+                                "machines": [
+                                    {"number": "1722"},
+                                ],
+                            },
+                            {
+                                "op": "OP60",
+                                "machines": [
+                                    {"number": "1713"},
+                                ],
+                            },
+                            {
+                                "op": "OP70",
+                                "machines": [
+                                    {"number": "1716R"},
+                                ],
+                            },
+                            {
+                                "op": "OP80",
+                                "machines": [
+                                      {
+                                "number": "1719",
+                                "parts": [
+                                    "50-0519",
+                                    "50-5404"
+                                ]
+                                }
+                                ],
+                            },
+                            {
+                            "op": "OP90",
+                            "machines": [
+                                {
+                                "number": "1723",
+                                "parts": [
+                                    "50-0519",
+                                    "50-5404"
+                                ]
+                                }
+                            ]
+                            },
+                            {
+                                "op": "Laser",
+                                "machines": [
+                                {
+                                "number": "1724",
+                                "parts": [
+                                    "50-0519",
+                                    "50-5404"
+                                ]
+                                },
+                                {
+                                "number": "1750",
+                                "parts": [
+                                    "50-0519",
+                                    "50-5404"
+                                ]
+                                },
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "AB1V Input",
+                "lines": [
+                    {
+                        "line": "AB1V Input",
+                        "scrap_line": "AB1V Input",
+                        "operations": [
+                            {
+                                "op": "OP10",
+                                "machines": [
+                                    {"number": "1740L"},
+                                    {"number": "1740R"},
+                                ],
+                            },
+                            {
+                                "op": "OP40",
+                                "machines": [
+                                    {"number": "1701L"},
+                                    {"number": "1701R"},
+                                ],
+                            },
+                            {
+                                "op": "OP50",
+                                "machines": [
+                                    {"number": "733"},
+                                ],
+                            },
+                            {
+                                "op": "OP60",
+                                "machines": [
+                                    {"number": "775"},
+                                    {"number": "1702"},
+                                ],
+                            },
+                            {
+                                "op": "OP70",
+                                "machines": [
+                                    {
+                                        "number": "581",
+                                        "parts": ["50-0447", "50-5401"]
+                                    },
+                                    {
+                                        "number": "788",
+                                        "parts": ["50-0447", "50-5401"]
+                                    },
+                                ],
+                            },
+                            {
+                                "op": "OP80",
+                                "machines": [
+                                    {"number": "1714"},
+                                ],
+                            },
+                            {
+                                "op": "OP90",
+                                "machines": [
+                                    {"number": "1717L"},
+                                ],
+                            },
+                            {
+                                "op": "OP100",
+                                "machines": [
+                                    {
+                                    "number": "1706",
+                                    "parts": [
+                                        "50-0447",
+                                        "50-5401"
+                                    ]
+                                    }
+                                ],
+                            },
+                            {
+                            "op": "OP110",
+                            "machines": [
+                                {
+                                "number": "1723",
+                                "parts": [
+                                    "50-0447",
+                                    "50-5401"
+                                ]
+                                }
+                            ]
+                            },
+                            {
+                                "op": "Laser",
+                                "machines": [
+                                    {
+                                        "number": "1724",
+                                        "parts": ["50-0447", "50-5401"]
+                                    },
+                                    {
+                                        "number": "1750",
+                                        "parts": ["50-0447", "50-5401"]
+                                    },
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            {
+                "program": "10R140 Rear",
+                "lines": [
+                    {
+                        "line": "10R140 Rear",
+                        "scrap_line": "10R140 Rear",
+                        "operations": [
+                            {
+                                "op": "OP10",
+                                "machines": [
+                                    {"number": "1708L"},
+                                    {"number": "1708R"},
+                                ],
+                            },
+                            {
+                                "op": "OP20",
+                                "machines": [
+                                    {"number": "1709"},
+                                ],
+                            },
+                            {
+                                "op": "OP30",
+                                "machines": [
+                                    {"number": "1710"},
+                                ],
+                            },
+                            {
+                                "op": "OP40",
+                                "machines": [
+                                    {"number": "1711"},
+                                ],
+                            },
+                            {
+                                "op": "OP50",
+                                "machines": [
+                                    {"number": "1715"},
+                                ],
+                            },
+                            {
+                                "op": "OP60",
+                                "machines": [
+                                    {"number": "1717R"},
+                                ],
+                            },
+                            {
+                                "op": "OP70",
+                                "machines": [
+                                    {
+                                "number": "1706",
+                                "parts": [
+                                    "50-5214",
+                                    "50-3214"
+                                    ]
+                                    }
+                                ],
+                            },
+                            {
+                                "op": "OP80",
+                                "machines": [
+                                    {"number": "1720"},
+                                ],
+                            },
+                            {
+                                "op": "OP90",
+                                "machines": [
+                                    {"number": "677"},
+                                    {"number": "748"},
+                                ],
+                            },
+                            {
+                            "op": "OP100",
+                            "machines": [
+                                {
+                                "number": "1723",
+                                "parts": [
+                                    "50-5214",
+                                    "50-3214"
+                                ]
+                                }
+                            ]
+                            },
+                            {
+                                "op": "Laser",
+                                "machines": [
+                                {
+                                "number": "1725",
+                                "parts": [
+                                    "50-5214",
+                                    "50-3214"
+                                ]
+                                }
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+        ],
+    },
+    "Area2": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+                "program": "Area 2",
+                "lines": [
+                    {
+                        "line": "Area 2 Presses",
+                        "scrap_line": "Presses",
+                        "operations": [
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "272" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "273" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "277" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "278" }
+                                ]
+                            },
+                        ],
+                    },
+                    {
+                        "line": "Area 2 Furnaces",
+                        "scrap_line": "Furances",
+                        "operations": [
+                            {
+                            "op": "sinter",
+                            "machines": [
+                                {
+                                "number": "344",
+                                "parts": [
+                                    "50-5404",
+                                    "50-3214",
+                                    "50-0447",
+                                    "50-5214",
+                                    "50-9341",
+                                    "50-0519",
+                                    "50-5401"
+                                ]
+                                },
+                                {
+                                "number": "345",
+                                "parts": [
+                                    "50-5404",
+                                    "50-3214",
+                                    "50-0447",
+                                    "50-5214",
+                                    "50-9341",
+                                    "50-0519",
+                                    "50-5401"
+                                ]
+                                }
+                            ]
+                            }
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    "Area1": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+                "program": "Area 1",
+                "lines": [
+                    {
+                        "line": "Area 1 Presses",
+                        "scrap_line": "Presses",
+                        "operations": [
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "262" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "240" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "280" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "242" }
+                                ]
+                            },
+                            {
+                                "op": "compact",
+                                "machines": [
+                                { "number": "245" }
+                                ]
+                            },
+                        ],
+                    },
+                    {
+                        "line": "Area 1 Assemblers",
+                        "scrap_line": "Assemblers",
+                        "operations": [
+                            {
+                            "op": "assemble",
+                            "machines": [
+                                {
+                                "number": "1516",
+                                },
+                            ]
+                            },
+                        ],
+                    },
+                    {
+                        "line": "Area 1 Furnaces",
+                        "scrap_line": "Furances",
+                        "operations": [
+                            {
+                            "op": "sinter",
+                            "machines": [
+                                {
+                                "number": "332",
+                                "parts": [
+                                    "50-3050",
+                                    "50-1467",
+                                ]
+                                },
+                                {
+                                "number": "333",
+                                "parts": [
+                                    "50-3050",
+                                    "50-1467",
+                                ]
+                                },
+                                {
+                                "number": "349",
+                                "parts": [
+                                    "50-9341",
+                                ]
+                                },
+                            ]
+                            }
+                        ],
+                    }
+                ],
+            },
+            
+        ],
+    },
+}
+
+
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# helpers
+# ───────────────────────────────────────────────────────────────────────────────
+
+_SECONDS_PER_WEEK_7200 = 7200 * 60  # 432 000
+
+
+def get_cycle_time_seconds(
+    machine_id: str,
+    part: Optional[Union[str, List[str]]] = None,
+    as_of_epoch: Optional[int] = None,
+) -> Optional[float]:
+    """
+    If `part` is a list of strings, return the *max* cycle time among those parts.
+    Otherwise, behave exactly as before. Adds debug prints when machine_id == "1703L".
+    """
+    if as_of_epoch is None:
+        as_of_epoch = int(timezone.now().timestamp())
+
+    # If part is a list, compute each individually and take max
+    if isinstance(part, list):
+
+        cts = []
+        for p in part:
+            single_ct = get_cycle_time_seconds(machine_id, p, as_of_epoch)
+            if single_ct is not None:
+                cts.append(single_ct)
+
+        if not cts:
+            # print(f"NA: {machine_id} /{','.join(part)}")
+            return None
+
+        chosen = max(cts)
+        return chosen
+
+    # Single-part (or no-part) logic
+    qs = (
+        OAMachineTargets.objects
+        .filter(machine_id=machine_id, isDeleted=False, effective_date_unix__lte=as_of_epoch)
+    )
+    if part:
+        qs = qs.filter(part=part)
+    else:
+        qs = qs.filter(part__isnull=True)
+
+
+    row = qs.order_by("-effective_date_unix").first()
+    tag = f"{machine_id}{' /' + part if part else ''}"
+
+
+    if not row or not row.target or row.target <= 0:
+        # print(f"NA: {tag}")
+        return None
+
+    seconds = _SECONDS_PER_WEEK_7200 / row.target
+
+
+    return seconds
+
+
+
+
+def compute_part_durations_for_machine(
+    machine_number: str,
+    shift_start_epoch: int,
+    shift_end_epoch: Optional[int] = None,
+) -> List[Dict]:
+    """
+    Return a list of contiguous part‐runs for `machine_number` between the
+    two epoch timestamps. Adds debug prints when machine_number == "1703L".
+    Each element:
+        {part, start_ts, end_ts, duration}
+    """
+    if shift_end_epoch is None:
+        shift_end_epoch = int(timezone.now().timestamp())
+
+
+    cursor = connections["prodrpt-md"].cursor()
+
+    # ── what was running at shift start? ───────────────────────────────
+    cursor.execute(
+        """
+        SELECT Part, TimeStamp
+        FROM   GFxPRoduction
+        WHERE  Machine   = %s
+          AND  TimeStamp < %s
+        ORDER  BY TimeStamp DESC
+        LIMIT  1
+        """,
+        [machine_number, shift_start_epoch],
+    )
+    row = cursor.fetchone()
+    initial_part, _ = row if row else (None, None)
+
+
+    # ── all records inside the window ──────────────────────────────────
+    cursor.execute(
+        """
+        SELECT Part, TimeStamp
+        FROM   GFxPRoduction
+        WHERE  Machine   = %s
+          AND  TimeStamp BETWEEN %s AND %s
+        ORDER  BY TimeStamp ASC
+        """,
+        [machine_number, shift_start_epoch, shift_end_epoch],
+    )
+    rows = cursor.fetchall()
+
+
+    # ── walk through and segment contiguous runs ───────────────────────
+    runs: List[Dict] = []
+    current_part = None
+    current_start = None
+
+    if initial_part is not None:
+        current_part, current_start = initial_part, shift_start_epoch
+
+    for part, ts in rows:
+        if current_part is None:
+            current_part, current_start = part, max(shift_start_epoch, ts)
+            continue
+
+        if part == current_part:
+            continue
+
+        # part changed → close previous run
+        duration = int(ts - current_start)
+        runs.append({
+            "part": current_part,
+            "start_ts": current_start,
+            "end_ts": ts,
+            "duration": duration,
+        })
+
+        current_part, current_start = part, ts
+
+    # whatever is still running at shift end
+    if current_part is not None:
+        final_duration = int(shift_end_epoch - current_start)
+        runs.append({
+            "part": current_part,
+            "start_ts": current_start,
+            "end_ts": shift_end_epoch,
+            "duration": final_duration,
+        })
+
+
+    return runs
+
+
+
+def efficiency_color(eff: int) -> str:
+    """
+    Given an efficiency percentage (0–100), return a hex color:
+      •  0% → pure red   (#ff0000)
+      • 50% → yellow     (#ffff00)
+      •100% → forest‐green (#228b22)
+
+    Below  0 or above 100 will be clamped.
+    """
+    # Clamp onto [0,100]
+    if eff < 0:
+        eff = 0
+    elif eff > 100:
+        eff = 100
+
+    if eff <= 50:
+        # Fade from red → yellow: keep R=255, increase G from 0→255
+        r = 255
+        g = int((eff / 50) * 255)
+        b = 0
+    else:
+        # Fade from yellow → forest‐green
+        #   At eff=50: (255,255,0)
+        #   At eff=100: ( 34,139,34)  ← “forest green”
+        proportion = (eff - 50) / 50.0
+        # Linearly interpolate each channel:
+        start_r, start_g, start_b = 255, 255, 0
+        target_r, target_g, target_b = 34, 139, 34
+        r = int(start_r + (target_r - start_r) * proportion)
+        g = int(start_g + (target_g - start_g) * proportion)
+        b = int(start_b + (target_b - start_b) * proportion)
+
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# view itself
+# ──────────────────────────────────────────────────────────────────────────────-
+
+
+# Define alias‐to‐sources mapping (so that “733” is computed from machines “1701L” & “1701R”)
+# Add more entries here in future if similar aliasing is needed.
+ALIASES: Dict[str, List[str]] = {
+    "733": ["1701L", "1701R"],
+    "1709": ["1708L", "1708R"],
+    "1516": ["1516C1", "1516C2"],
+    "1542": ["1812"],
+    "784": ["770"],
+    "573": ["728"],
+    "1705": ["1705L", "1705R"],
+    "1746": ["1746L", "1746R"],
+    "1516": ["1516C1", "1516C2"],
+    # e.g. "XYZ": ["A", "B", "C"], 
+}
+
+
+
+
+def dashboard_current_shift(request, pages: str):
+    """
+    pages: either "programA" or "programA&programB"
+    We split on "&", ensure 1 or 2 valid program names, run the annotation logic
+    for each machine, and—when computing per-op totals—exclude any machines
+    whose smart_target is None or zero so they don’t skew the efficiency.
+    Now also computes a 5-minute “recent efficiency” at the operation level and
+    colors the operation cell accordingly.  Machines like “733” can be aliased
+    to sum the data from multiple source machines (e.g. “1701L” & “1701R”).
+    """
+
+    # ── 1) Split on "&" and validate count ──────────────────────────────────
+    parts = [p.strip() for p in pages.split("&") if p.strip()]
+    if len(parts) == 0 or len(parts) > 2:
+        return HttpResponseBadRequest(
+            {"error": f"Invalid URL segment '{pages}'.  Use /dashboard/foo/ or /dashboard/foo&bar/.  At most two programs allowed."},
+            content_type="application/json",
+        )
+
+    # ── 2) Ensure each program name exists in PAGES ─────────────────────────
+    for prog_name in parts:
+        if prog_name not in PAGES:
+            return HttpResponseBadRequest(
+                {
+                    "error": f"Unknown program '{prog_name}'. "
+                             f"Valid programs are: {list(PAGES.keys())}"
+                },
+                content_type="application/json",
+            )
+
+    # ── Helper for deciding base hour per program ───────────────────────────
+    def get_base_hour_for(program: str) -> int:
+        return 7 if program in ("8670", "plant3", "trilobe", "Area2") else 6
+
+    # ── Compute “now” once, in EST ───────────────────────────────────────────
+    tz_est  = pytz.timezone("America/New_York")
+    now_est = timezone.now().astimezone(tz_est)
+
+    all_programs: List[Dict] = []
+
+    # ── Loop over each (one or two) requested program ────────────────────────
+    for prog_name in parts:
+        # 3) Compute base‐hour in EST for this program
+        base_hr = get_base_hour_for(prog_name)
+        base_est = tz_est.localize(
+            datetime(now_est.year, now_est.month, now_est.day, base_hr, 0, 0)
+        )
+        if now_est < base_est:
+            base_est -= timedelta(days=1)
+
+        # Define the three shift boundaries in EST
+        day_start  = base_est
+        aft_start  = base_est + timedelta(hours=8)
+        nite_start = base_est + timedelta(hours=16)
+
+        if day_start <= now_est < aft_start:
+            current_shift = "day"
+            shift_start   = day_start
+        elif aft_start <= now_est < nite_start:
+            current_shift = "afternoon"
+            shift_start   = aft_start
+        else:
+            current_shift = "night"
+            shift_start   = nite_start
+
+        shift_start_epoch = int(shift_start.astimezone(pytz.UTC).timestamp())
+        shift_end_epoch   = int(timezone.now().timestamp())
+        shift_length      = shift_end_epoch - shift_start_epoch
+
+        # “Last 5 minutes” cutoff
+        last5_start_epoch = shift_end_epoch - 300
+
+        # 4) Deep‐copy this program’s config so we can annotate in place
+        programs_copy = copy.deepcopy(PAGES[prog_name]["programs"])
+        machine_set: Set[str] = set()
+        # machine_occ maps (machine_id, frozenset_of_parts) → list of cell‐dicts
+        machine_occ: Dict[Tuple[str, Optional[FrozenSet[str]]], List[Dict]] = {}
+
+        # Build initial machine_set & machine_occ from PAGES
+        for prog_obj in programs_copy:
+            for line in prog_obj["lines"]:
+                for op in line["operations"]:
+                    for m in op["machines"]:
+                        mid = m["number"]
+                        machine_set.add(mid)
+                        if "parts" in m:
+                            pk = frozenset(m["parts"])
+                        else:
+                            pk = None
+                        machine_occ.setdefault((mid, pk), []).append(m)
+
+        # ── 5) Handle aliases: remove alias keys, add their source machines ────
+        # alias_occ will hold the original cell‐dict lists (for later annotation)
+        alias_occ: Dict[Tuple[str, Optional[FrozenSet[str]]], List[Dict]] = {}
+
+        for alias_mid, sources in ALIASES.items():
+            # For each parts_key under which this alias appears:
+            for (mid_key, pk_key) in list(machine_occ.keys()):
+                if mid_key == alias_mid:
+                    # extract that cell list
+                    alias_occ[(mid_key, pk_key)] = machine_occ.pop((mid_key, pk_key))
+            # If alias was in machine_set, remove it
+            if alias_mid in machine_set:
+                machine_set.remove(alias_mid)
+            # Add all sources into machine_set so we compute their metrics
+            for src in sources:
+                machine_set.add(src)
+
+        # ── 6) Query total pieces since shift start ────────────────────────────
+        placeholders = ",".join(["%s"] * len(machine_set))
+        params       = list(machine_set) + [shift_start_epoch]
+        sql = f"""
+            SELECT Machine, Part, SUM(`Count`) AS cnt
+            FROM   GFxPRoduction
+            WHERE  Machine IN ({placeholders})
+              AND  TimeStamp >= %s
+            GROUP  BY Machine, Part
+        """
+        cur = connections["prodrpt-md"].cursor()
+        cur.execute(sql, params)
+        counts_by_mp: Dict[Tuple[str, str], int] = {
+            (str(m), p): int(c) for m, p, c in cur.fetchall()
+        }
+
+        totals_by_machine: Dict[str, int] = defaultdict(int)
+        for (m, _p), c in counts_by_mp.items():
+            totals_by_machine[m] += c
+
+        # ── 7) Query total pieces in last 5 minutes ───────────────────────────
+        params5 = list(machine_set) + [last5_start_epoch]
+        sql5 = f"""
+            SELECT Machine, Part, SUM(`Count`) AS cnt
+            FROM   GFxPRoduction
+            WHERE  Machine IN ({placeholders})
+              AND  TimeStamp >= %s
+            GROUP  BY Machine, Part
+        """
+        cur.execute(sql5, params5)
+        counts5_by_mp: Dict[Tuple[str, str], int] = {
+            (str(m), p): int(c) for m, p, c in cur.fetchall()
+        }
+
+        totals5_by_machine: Dict[str, int] = defaultdict(int)
+        for (m, _p), c in counts5_by_mp.items():
+            totals5_by_machine[m] += c
+
+        # ── 8) Compute part_runs for entire shift & last 5 minutes ─────────────
+        part_runs: Dict[str, List[Dict]]      = {}
+        part_runs_5min: Dict[str, List[Dict]] = {}
+        for mid in machine_set:
+            runs  = compute_part_durations_for_machine(mid, shift_start_epoch, shift_end_epoch)
+            runs5 = compute_part_durations_for_machine(mid, last5_start_epoch, shift_end_epoch)
+            part_runs[mid]      = runs
+            part_runs_5min[mid] = runs5
+
+        # ── 9) Annotate each REAL “machine‐cell” with shift‐wide & 5min metrics ─
+        for (mid, parts_key), cells in list(machine_occ.items()):
+            # If this key was one of the alias keys, we removed it above, so skip
+            if mid in ALIASES:
+                continue
+
+            # (a) shift‐wide pieces made for this machine & part‐group
+            if parts_key is None:
+                pieces_made = totals_by_machine.get(mid, 0)
+            else:
+                pieces_made = sum(
+                    counts_by_mp.get((mid, p), 0) for p in parts_key
+                )
+
+            # (b) last 5min pieces for this machine & part‐group
+            if parts_key is None:
+                pieces5_made = totals5_by_machine.get(mid, 0)
+            else:
+                pieces5_made = sum(
+                    counts5_by_mp.get((mid, p), 0) for p in parts_key
+                )
+
+            # (c) cycle times & “smart targets”
+            if parts_key is None:
+                # No explicit part grouping → use single cycle time
+                ct_single = get_cycle_time_seconds(mid)  # part=None internally
+                cycle_by_part: Dict[str, Optional[float]] = {}
+                if ct_single is not None:
+                    for run in part_runs[mid]:
+                        cycle_by_part[run["part"]] = ct_single
+                rep_ct = ct_single
+
+                if ct_single:
+                    # shift‐long “smart target” = floor(sum(run_duration/ct_single))
+                    smart_pcs = sum(run["duration"] / ct_single for run in part_runs[mid])
+                    smart_target = int(math.floor(smart_pcs)) if smart_pcs > 0 else None
+                    # 5min “smart target”
+                    smart5_pcs = sum(
+                        run5["duration"] / ct_single for run5 in part_runs_5min[mid]
+                    )
+                    smart_target_5min = int(math.floor(smart5_pcs)) if smart5_pcs > 0 else None
+                else:
+                    smart_target = None
+                    smart_target_5min = None
+
+            else:
+                # Mixed‐part grouping → call cycle_time per part, take first non‐None
+                cycle_by_part = {p: get_cycle_time_seconds(mid, p) for p in parts_key}
+                rep_ct = next((v for v in cycle_by_part.values() if v is not None), None)
+                if rep_ct:
+                    smart_target      = int(math.floor(shift_length / rep_ct))
+                    smart_target_5min = int(math.floor(300 / rep_ct))
+                else:
+                    smart_target = None
+                    smart_target_5min = None
+
+            # (d) annotate each cell in this group (for this real machine)
+            for cell in cells:
+                cell["count"]            = pieces_made
+                cell["pieces5_made"]     = pieces5_made
+                cell["cycle_time"]       = rep_ct
+                cell["cycle_by_part"]    = cycle_by_part
+                cell["smart_target"]     = smart_target or 0
+                cell["smart_target_5min"]= smart_target_5min or 0
+
+                # compute cell‐level efficiency for shift‐long
+                if pieces_made <= 0 or not smart_target:
+                    cell["efficiency"] = None
+                    cell["color"]      = "#cccccc"
+                else:
+                    eff_pct = int((pieces_made / smart_target) * 100)
+                    eff_pct = max(0, min(eff_pct, 100))
+                    cell["efficiency"] = eff_pct
+
+                    # compute 5‐min efficiency for this machine
+                    if pieces5_made <= 0 or not smart_target_5min:
+                        eff_5min = 0 if pieces5_made == 0 else None
+                    else:
+                        eff_5min = int((pieces5_made / smart_target_5min) * 100)
+                        eff_5min = max(0, min(eff_5min, 100))
+
+                    # color according to 5‐min eff if available
+                    cell["color"] = (
+                        efficiency_color(eff_5min) if eff_5min is not None else "#cccccc"
+                    )
+
+        # ── 10) Build “alias” cells by summing their source machines ────────────
+        # At this point, machine_occ no longer contains alias entries; alias_occ
+        # holds the original cell‐dict lists from PAGES. We will compute each
+        # alias’s metrics from its sources (which we included in machine_set).
+        for (alias_mid, parts_key), cells in alias_occ.items():
+            sources = ALIASES.get(alias_mid, [])
+            # (a) Sum shift‐long pieces_made across sources
+            pieces_made_alias = sum(totals_by_machine.get(src, 0) for src in sources)
+            # (b) Sum 5min pieces across sources
+            pieces5_made_alias = sum(totals5_by_machine.get(src, 0) for src in sources)
+
+            # (c) Compute alias’s “smart” targets by summing each source’s smart_pcs
+            alias_smart_pcs     = 0.0
+            alias_smart_pcs_5   = 0.0
+            for src in sources:
+                ct_src = get_cycle_time_seconds(src)
+                if ct_src:
+                    # sum fractional “parts” from durations
+                    alias_smart_pcs   += sum(run["duration"] / ct_src for run in part_runs[src])
+                    alias_smart_pcs_5 += sum(run5["duration"] / ct_src for run5 in part_runs_5min[src])
+            smart_target_alias      = (
+                int(math.floor(alias_smart_pcs)) if alias_smart_pcs > 0 else None
+            )
+            smart_target_5min_alias = (
+                int(math.floor(alias_smart_pcs_5)) if alias_smart_pcs_5 > 0 else None
+            )
+
+            # (d) Determine alias’s shift‐long efficiency and 5min efficiency
+            if smart_target_alias and smart_target_alias > 0:
+                eff_alias = int((pieces_made_alias / smart_target_alias) * 100)
+                eff_alias = max(0, min(eff_alias, 100))
+            else:
+                eff_alias = None
+
+            if smart_target_5min_alias and smart_target_5min_alias > 0:
+                eff5_alias = int((pieces5_made_alias / smart_target_5min_alias) * 100)
+                eff5_alias = max(0, min(eff5_alias, 100))
+            else:
+                eff5_alias = None
+
+            # (e) Color the alias by its 5min efficiency (or gray if none)
+            alias_color = (
+                efficiency_color(eff5_alias) if eff5_alias is not None else "#808080"
+            )
+
+            # (f) Annotate each original “m” dict (from PAGES) in place
+            for cell in cells:
+                cell["number"]            = alias_mid
+                cell["count"]             = pieces_made_alias
+                cell["pieces5_made"]      = pieces5_made_alias
+                cell["cycle_time"]        = None
+                cell["cycle_by_part"]     = {}
+                cell["smart_target"]      = smart_target_alias or 0
+                cell["smart_target_5min"] = smart_target_5min_alias or 0
+                cell["efficiency"]        = eff_alias
+                cell["color"]             = alias_color
+
+            # (g) Re‐insert alias entry into machine_occ so that downstream logic runs
+            machine_occ[(alias_mid, parts_key)] = cells
+
+        # ── 11) “Padding” each line exactly as before ─────────────────────────
+        for prog_obj in programs_copy:
+            for line in prog_obj["lines"]:
+                max_m = max((len(op["machines"]) for op in line["operations"]), default=1)
+                line["max_machines"] = max_m
+                for op in line["operations"]:
+                    op["pad"] = [None] * (max_m - len(op["machines"]))
+
+        # ── 12) Filter part_runs for parts declared in config (no change) ─────
+        filtered_part_runs: Dict[str, List[Dict]] = {}
+        for mid, runs in part_runs.items():
+            declared_parts = {
+                p
+                for (m, pk) in machine_occ
+                if m == mid and pk is not None
+                for p in pk
+            }
+            if declared_parts:
+                runs = [r for r in runs if r["part"] in declared_parts]
+            filtered_part_runs[mid] = runs
+
+        # ── 13) Compute total_produced & efficiency at the OP level,
+        #          excluding any machine where smart_target <= 0,
+        #          then compute 5-minute op-level efficiency and set op["color"]. ─
+        for prog_obj in programs_copy:
+            for line in prog_obj["lines"]:
+                for op in line["operations"]:
+                    # consider only machines whose shift-long smart_target > 0
+                    valid_machines = [m for m in op["machines"] if m.get("smart_target", 0) > 0]
+
+                    # (a) shift‐long op totals
+                    total_produced = sum(m["count"] for m in valid_machines)
+                    total_smart    = sum(m["smart_target"] for m in valid_machines)
+
+                    if total_smart > 0:
+                        op_eff = int(math.floor((total_produced / total_smart) * 100))
+                        op_eff = max(0, min(op_eff, 100))
+                    else:
+                        op_eff = None
+
+                    op["total_produced"]     = total_produced
+                    op["total_smart_target"] = total_smart
+                    op["efficiency"]         = op_eff
+
+                    # (a) shift‐long op totals
+                    total_produced = sum(m["count"] for m in valid_machines)
+                    total_smart    = sum(m["smart_target"] for m in valid_machines)
+                    if total_smart > 0:
+                        op_eff = int(math.floor((total_produced / total_smart) * 100))
+                        op_eff = max(0, min(op_eff, 100))
+                    else:
+                        op_eff = None
+
+                    op["total_produced"]     = total_produced
+                    op["total_smart_target"] = total_smart
+                    op["efficiency"]         = op_eff
+
+                    # (b) last‐5‐minute op totals
+                    total5_produced = sum(m["pieces5_made"] for m in valid_machines)
+                    total5_smart    = sum(m["smart_target_5min"] for m in valid_machines)
+                    if total5_smart > 0:
+                        op_eff_5min = int(math.floor((total5_produced / total5_smart) * 100))
+                        op_eff_5min = max(0, min(op_eff_5min, 100))
+                    else:
+                        op_eff_5min = None
+
+                    op["recent_efficiency"] = op_eff_5min
+
+                    # (c) color the op cell by its shift‐to‐date efficiency (or gray if none)
+                    op["color"] = (
+                        efficiency_color(op_eff) if op_eff is not None else "#808080"
+                    )
+
+        # ── 14) Merge each prog_obj into all_programs ─────────────────────────
+        for prog_obj in programs_copy:
+            all_programs.append(prog_obj)
+
+    # ── 15) Render the template with updated efficiency & coloring logic ─────
+    context = {
+        "pages":    pages,
+        "programs": all_programs,
+    }
+    return render(request, "dashboards/dashboard_renewed.html", context)

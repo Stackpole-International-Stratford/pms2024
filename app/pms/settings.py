@@ -49,6 +49,7 @@ INTERNAL_IPS = ['pmdsdata12', '10.4.1.234', '127.0.0.1',
 
 INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
+    'jazzmin',    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -417,3 +418,13 @@ AUTHENTICATION_BACKENDS = [
     'pms.backends.CustomLDAPBackend',  # Secondary Custom LDAP Backend
     'django.contrib.auth.backends.ModelBackend',  # Default database authentication
 ]
+
+
+
+JAZZMIN_SETTINGS = {
+    # … your other Jazzmin settings …
+    "welcome_sign": "Welcome back! Please sign in to manage the site.",
+
+    "login_logo": None,
+    "login_logo_dark": None,
+}

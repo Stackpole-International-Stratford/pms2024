@@ -16,9 +16,19 @@ class MachineDowntimeEvent(models.Model):
     line               = models.CharField("Line",         max_length=50)
     machine            = models.CharField("Machine",      max_length=50)
     category           = models.TextField("Category")
-    subcategory        = models.TextField("Subcategory")
-    code               = models.CharField("Downtime Code",max_length=20,
-                                          help_text="Same as subcategory")
+    subcategory        = models.TextField(
+        "Subcategory",
+        blank=True,
+        default="",
+        help_text="Optional sub-category"
+    )
+    code               = models.CharField(
+        "Downtime Code",
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Optional, same as subcategory if provided"
+    )
     start_epoch        = models.BigIntegerField("Start (epoch)")
     closeout_epoch     = models.BigIntegerField("Closeout (epoch)", null=True, blank=True)
     comment            = models.TextField("Comment")
@@ -32,10 +42,12 @@ class MachineDowntimeEvent(models.Model):
 
     # new:
     LABOUR_CHOICES = [
-        ('OPERATOR',    'Operator can fix'),
         ('ELECTRICIAN', 'Need Electrician'),
         ('TECH',        'Need Tech'),
         ('MILLWRIGHT',  'Need Millwright'),
+        ('PLCTECH',    'Need PLC Technician'),
+        ('IMT',        'Need IMT'),
+        ('NA',          'N/A'),
     ]
     labour_types = models.JSONField(
         default=list,
@@ -164,3 +176,48 @@ class DowntimeCode(models.Model):
 
     def __str__(self):
         return f"{self.code}: {self.category} → {self.subcategory}"
+
+
+
+
+class DowntimeMachine(models.Model):
+    """
+    Master list of all machines you can track downtime against.
+    """
+    line           = models.CharField(
+        "Line",
+        max_length=50,
+        help_text="Production line this machine lives on",
+    )
+    operation      = models.CharField(
+        "Operation",
+        max_length=100,
+        help_text="Operation or process name",
+    )
+    machine_number = models.CharField(
+        "Machine #",
+        max_length=50,
+        help_text="Unique number or code for the machine",
+    )
+    is_tracked     = models.BooleanField(
+        "Tracked?",
+        default=True,
+        help_text="Whether downtime is being recorded for this machine",
+    )
+    created_at_UTC = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this machine record was created (UTC)",
+    )
+    updated_at_UTC = models.DateTimeField(
+        auto_now=True,
+        help_text="When this machine record was last updated (UTC)",
+    )
+
+    class Meta:
+        unique_together = ('line', 'operation', 'machine_number')
+        ordering = ['line', 'operation', 'machine_number']
+        verbose_name = "Downtime Machine"
+        verbose_name_plural = "Downtime Machines"
+
+    def __str__(self):
+        return f"{self.line} / {self.operation} / #{self.machine_number}"

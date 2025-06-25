@@ -160,7 +160,7 @@
         <ul class="navbar-nav me-auto">
           <!-- prod-query -->
           <li class="nav-item dropdown me-3">
-            <a class="nav-link" href="/prod-query/index">prod-query</a>
+            <a class="nav-link" href="/prod-query/index">production</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="{% url 'prod_query:prod-query' %}">Production Query</a></li>
               <li><a class="dropdown-item" href="{% url 'prod_query:rejects' %}">Rejects</a></li>
@@ -194,16 +194,18 @@
           <li class="nav-item dropdown me-3">
             <a class="nav-link" href="/dashboard/index">dashboard</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{% url 'dashboards:ab1v' %}">8670</a></li>
-              <li><a class="dropdown-item" href="{% url 'dashboards:trilobe' %}">Trilobe</a></li>
-              <li class="dropdown-item">
-                9341
-                <ul class="nested-dropdown">
-                  <li><a class="dropdown-item" href="{% url 'dashboards:9341' %}">Desk</a></li>
-                  <li><a class="dropdown-item" href="{% url 'dashboards:track9341_TV' %}">TV</a></li>
-                  <li><a class="dropdown-item" href="{% url 'dashboards:track9341_mobile' %}">Mobile</a></li>
-                </ul>
+                <li>
+                <a class="dropdown-item text-dark" href="/dashboard/8670/">
+                  8670
+                </a>
               </li>
+              <li>
+                <a class="dropdown-item text-dark" href="/dashboard/Area1&Area2/">
+                  Compact &amp; Sinter
+                </a>
+              </li>
+              <li><a class="dropdown-item" href="/dashboard/trilobe/">Trilobe</a></li>
+              <li><a class="dropdown-item" href="/dashboard/9341/">9341</a></li>
               <li><a class="dropdown-item" href="{% url 'dashboards:list_and_update_shift_points' %}">Shift Points Management</a></li>
               <li><a class="dropdown-item" href="{% url 'dashboards:rejects_dashboard' %}">Reject Dashboards</a></li>
             </ul>
@@ -272,6 +274,7 @@
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
               {% if user.is_authenticated %}
                 <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                <li><a class="dropdown-item" href="{% url 'admin:index' %}">Settings</a></li>
               {% else %}
                 <li><a class="dropdown-item" href="{% url 'login' %}">Login</a></li>
               {% endif %}

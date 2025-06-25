@@ -1,0 +1,184 @@
+{# plant/templates/plant/quick_add.html #}
+{% extends "parent.html" %}
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+      <h2 class="h5 mb-0">Quick Add a Downtime Entry</h2>
+    </div>
+    <form method="POST" id="bulk-form" class="card-body">
+      {% csrf_token %}
+      <div class="row g-3 mb-4">
+        <!-- Date -->
+        <div class="col-md-3">
+          <label for="start-date" class="form-label">Date</label>
+          <input type="date" id="start-date" name="start_date"
+                 class="form-control" required>
+        </div>
+        <!-- Time -->
+        <div class="col-md-3">
+          <label for="start-time" class="form-label">Time</label>
+          <input type="time" id="start-time" name="start_time"
+                 class="form-control" required>
+        </div>
+        <!-- Production Line -->
+        <div class="col-md-3">
+          <label for="line-select" class="form-label">Production Line</label>
+          <select id="line-select" name="line"
+                  class="form-select" required>
+            <option value="">Select Line</option>
+            {# populated by JS #}
+          </select>
+        </div>
+        <!-- Single Machine -->
+        <div class="col-md-3">
+          <label for="machine-select" class="form-label">Machine</label>
+          <select id="machine-select" name="machine"
+                  class="form-select" required>
+            <option value="">Select Machine</option>
+            {# populated by JS #}
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <!-- Category -->
+        <div class="col-md-4">
+          <label for="category-select" class="form-label">Category</label>
+          <select id="category-select" name="category"
+                  class="form-select" required>
+            <option value="">Select Category</option>
+            {# populated by JS #}
+          </select>
+        </div>
+        <!-- Sub-category -->
+        <div class="col-md-4">
+          <label for="subcategory-select" class="form-label">Sub-category</label>
+          <select id="subcategory-select" name="subcategory"
+                  class="form-select">
+            <option value="">Select Subcategory</option>
+          </select>
+        </div>
+        <!-- Comment -->
+        <div class="col-md-4">
+          <label for="description" class="form-label">Comment</label>
+          <textarea id="description" name="description"
+                    class="form-control" rows="2"
+                    placeholder="Enter any additional details..."></textarea>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4 align-items-end">
+        <!-- Employee ID -->
+        <div class="col-md-3">
+          <label for="employee_id" class="form-label">Employee ID</label>
+          <input type="text" id="employee_id" name="employee_id"
+                 class="form-control" required
+                 {% if not user.is_anonymous %}
+                   value="{{ request.user.username }}" readonly
+                 {% endif %}>
+        </div>
+        <!-- Labour Types -->
+        <div class="col-md-9">
+          <label class="form-label d-block">Labour Types</label>
+          <div class="btn-group" role="group" aria-label="Labour types">
+            {% for code, label in labour_choices %}
+              <input type="checkbox" class="btn-check"
+                     name="labour_checkbox"
+                     id="labour_{{ code }}"
+                     value="{{ code }}"
+                     autocomplete="off">
+              <label class="btn btn-outline-secondary"
+                     for="labour_{{ code }}">
+                {{ label }}
+              </label>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="labour_types"
+                 id="labour_types_input" value="[]">
+        </div>
+      </div>
+    </form>
+
+    <div class="card-footer text-end bg-light">
+  <a href="{% url 'maintenance_bulk_form' %}"
+     class="btn btn-sm btn-link me-2">
+    Bulk entry
+  </a>
+  <a href="{% url 'maintenance_all' %}"
+     class="btn btn-dark me-2">
+    Back
+  </a>
+  <button type="submit" form="bulk-form"
+          class="btn btn-warning px-4">
+    Add Entry
+  </button>
+</div>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const prodLines     = JSON.parse('{{ lines_json|escapejs }}');
+  const downtimeCodes = JSON.parse('{{ downtime_codes_json|escapejs }}');
+
+  const lineSelect    = document.getElementById('line-select');
+  const machineSelect = document.getElementById('machine-select');
+  const catSel        = document.getElementById('category-select');
+  const subSel        = document.getElementById('subcategory-select');
+  const bulkForm      = document.getElementById('bulk-form');
+  const labourHidden  = document.getElementById('labour_types_input');
+  const startDate     = document.getElementById('start-date');
+  const startTime     = document.getElementById('start-time');
+
+  // 1) Populate Production Line dropdown
+  prodLines.forEach(({ line }) => {
+    lineSelect.add(new Option(line, line));
+  });
+
+  // 2) When a line is selected → populate machines dropdown
+  lineSelect.addEventListener('change', () => {
+    machineSelect.innerHTML = '<option value="">Select Machine</option>';
+    const ops = (prodLines.find(pl => pl.line === lineSelect.value)?.operations) || [];
+    ops.forEach(op => {
+      op.machines.forEach(m => {
+        machineSelect.add(new Option(m.number, m.number));
+      });
+    });
+  });
+
+  // 3) Populate Category dropdown
+  downtimeCodes.forEach(({ code, name }) => {
+    catSel.add(new Option(name, code));
+  });
+
+  // 4) When a category is selected → render its subcategories
+  catSel.addEventListener('change', () => {
+    subSel.innerHTML = '<option value="">Select Subcategory</option>';
+    const category = downtimeCodes.find(dc => dc.code === catSel.value);
+    (category?.subcategories || []).forEach(({ code, name }) => {
+      subSel.add(new Option(name, code));
+    });
+  });
+
+  // 5) On form submit → validate machine, serialize labour types
+  bulkForm.addEventListener('submit', e => {
+    if (!machineSelect.value) {
+      e.preventDefault();
+      alert('Please select a machine.');
+      return;
+    }
+    const labourPicked = Array.from(
+      bulkForm.querySelectorAll('input[name="labour_checkbox"]:checked')
+    ).map(cb => cb.value);
+    labourHidden.value = JSON.stringify(labourPicked);
+  });
+
+  // 6) Initialize date & time inputs to “now”
+  const now = new Date();
+  startDate.value = now.toISOString().slice(0, 10);
+  startTime.value = now.toTimeString().slice(0, 5);
+});
+</script>
+{% endblock %}
