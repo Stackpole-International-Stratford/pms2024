@@ -4,51 +4,57 @@
 {% block title %}Heat Break Management{% endblock %}
 
 {% block extra_head %}
-  <!-- if you need per-page CSS, add it here -->
   <link href="{% static 'css/heatbreak.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-  <h1>Pending Heat-Break Entries</h1>
-
-  {% if entries %}
-    <table class="table table-bordered table-hover">
-      <thead class="thead-light">
-        <tr>
-          <th>Zone</th>
-          <th>Humidex</th>
-          <th>Recommendation</th>
-          <th>Recorded At</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in entries %}
-        <tr>
-          <td>{{ entry.zone }}</td>
-          <td>{{ entry.humidex }}</td>
-          <td>{{ entry.recommendation|safe }}</td>
-          <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
-          <td>
-            <button
-              type="button"
-              class="btn btn-sm btn-primary"
-              data-bs-toggle="modal"
-              data-bs-target="#markSentModal"
-              data-entry-id="{{ entry.id }}">
-              Sent
-            </button>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <div class="alert alert-info">
-      No heat-breaks awaiting confirmation.
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">Pending Heat-Break Entries</h5>
     </div>
-  {% endif %}
+    <div class="card-body p-0">
+      {% if entries %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Zone</th>
+                <th>Humidex</th>
+                <th>Recommendation</th>
+                <th>Recorded At</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in entries %}
+              <tr>
+                <td>{{ entry.zone }}</td>
+                <td>{{ entry.humidex }}</td>
+                <td>{{ entry.recommendation|safe }}</td>
+                <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-warning"
+                    data-bs-toggle="modal"
+                    data-bs-target="#markSentModal"
+                    data-entry-id="{{ entry.id }}">
+                    Sent
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="p-4 text-center">
+          <em>No heat-breaks awaiting confirmation.</em>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <!-- Mark-Sent Modal -->
@@ -86,8 +92,8 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Submit</button>
+          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">Submit</button>
         </div>
       </div>
     </form>
@@ -97,22 +103,21 @@
 
 {% block extra_scripts %}
 <script>
-// Ensure this runs *after* bootstrap.bundle.js is loaded (parent.html includes it)
 document.addEventListener('DOMContentLoaded', function() {
   var markModal = document.getElementById('markSentModal');
   markModal.addEventListener('show.bs.modal', function(event) {
-    // the button that triggered the modal
-    var button   = event.relatedTarget;
-    var entryId  = button.getAttribute('data-entry-id');
+    // which button triggered the modal
+    var button = event.relatedTarget;
+    var entryId = button.getAttribute('data-entry-id');
 
     // populate hidden field
     markModal.querySelector('#modal-entry-id').value = entryId;
 
-    // prefill datetime-local with now
+    // prefill datetime-local with current time
     var now = new Date();
     function two(n) { return n < 10 ? '0' + n : n; }
     var local = now.getFullYear() + '-' +
-                two(now.getMonth()+1) + '-' +
+                two(now.getMonth() + 1) + '-' +
                 two(now.getDate()) + 'T' +
                 two(now.getHours()) + ':' +
                 two(now.getMinutes());
