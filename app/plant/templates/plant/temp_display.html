@@ -16,6 +16,27 @@
       box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
       border-radius: 0.25rem;
     }
+
+
+    /* put these in your <head> or at top of your template */
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: flex-start;
+    }
+    .legend-color {
+      width: 1.3rem;
+      height: 1.3rem;
+      border: 1px solid #ccc;
+      margin-right: 0.5rem;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -188,70 +209,61 @@
       {% endfor %}
     </div>
 
-    <div class="mt-1 p-3 bg-white rounded shadow-sm">
-      <ul class="list-inline mb-0">
-        <li class="list-inline-item me-4">
-          <span
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="Post Heat Stress Alert Notice: encourage employees to drink extra water"
-            style="display:inline-block;width:1rem;height:1rem;
-                  background:#FFFF99;border:1px solid #ccc;vertical-align:middle;"
-          ></span>
-          <small class="ms-1 align-middle">36 – 39</small>
-        </li>
-        <li class="list-inline-item me-4">
-          <span
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="Post Heat Stress Warning Notice; notify employees that they need to drink extra water"
-            style="display:inline-block;width:1rem;height:1rem;
-                  background:#FFCC00;border:1px solid #ccc;vertical-align:middle;"
-          ></span>
-          <small class="ms-1 align-middle">40 – 42</small>
-        </li>
-        <li class="list-inline-item me-4">
-          <span
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="Provide 15 minutes relief per hour; provide cool (10–15 °C) water; at least 1 cup (240 mL) every 20 minutes"
-            style="display:inline-block;width:1rem;height:1rem;
-                  background:#FFA500;border:1px solid #ccc;vertical-align:middle;"
-          ></span>
-          <small class="ms-1 align-middle">43 – 44</small>
-        </li>
-        <li class="list-inline-item me-4">
-          <span
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="Provide 30 minutes relief per hour in addition to the provisions listed previously"
-            style="display:inline-block;width:1rem;height:1rem;
-                  background:#FF8C00;border:1px solid #ccc;vertical-align:middle;"
-          ></span>
-          <small class="ms-1 align-middle">45 – 46</small>
-        </li>
-        <li class="list-inline-item me-4">
-          <span
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="If feasible, provide 45 minutes relief per hour in addition to the provisions listed above"
-            style="display:inline-block;width:1rem;height:1rem;
-                  background:#FF1493;border:1px solid #ccc;vertical-align:middle;"
-          ></span>
-          <small class="ms-1 align-middle">47 – 49</small>
-        </li>
-        <li class="list-inline-item">
-          <span
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="Only medically supervised work can continue"
-            style="display:inline-block;width:1rem;height:1rem;
-                  background:#FF0000;border:1px solid #ccc;vertical-align:middle;"
-          ></span>
-          <small class="ms-1 align-middle">50 +</small>
-        </li>
-      </ul>
+  <div class="legend-grid bg-white p-3 rounded shadow-sm">
+    <!-- 36–39 -->
+    <div class="legend-item">
+      <div class="legend-color" style="background: #FFFF99;"></div>
+      <div>
+        <strong>36–39</strong><br>
+        Post Heat Stress Alert Notice: encourage employees to drink extra water
+      </div>
     </div>
+
+    <!-- 40–42 -->
+    <div class="legend-item">
+      <div class="legend-color" style="background: #FFCC00;"></div>
+      <div>
+        <strong>40–42</strong><br>
+        Post Heat Stress Warning Notice; notify employees that they need to drink extra water
+      </div>
+    </div>
+
+    <!-- 43–44 -->
+    <div class="legend-item">
+      <div class="legend-color" style="background: #FFA500;"></div>
+      <div>
+        <strong>43–44</strong><br>
+        Provide 15 min relief per hour; cool water (10–15 °C); ≥ 240 mL every 20 min
+      </div>
+    </div>
+
+    <!-- 45–46 -->
+    <div class="legend-item">
+      <div class="legend-color" style="background: #FF8C00;"></div>
+      <div>
+        <strong>45–46</strong><br>
+        Provide 30 min relief per hour in addition to the provisions listed previously
+      </div>
+    </div>
+
+    <!-- 47–49 -->
+    <div class="legend-item">
+      <div class="legend-color" style="background: #FF1493;"></div>
+      <div>
+        <strong>47–49</strong><br>
+        If feasible, provide 45 min relief per hour in addition to the provisions listed above
+      </div>
+    </div>
+
+    <!-- 50+ -->
+    <div class="legend-item">
+      <div class="legend-color" style="background: #FF0000;"></div>
+      <div>
+        <strong>50 +</strong><br>
+        Only medically supervised work can continue
+      </div>
+    </div>
+  </div>
 
 
   </div>  {# .container #}
