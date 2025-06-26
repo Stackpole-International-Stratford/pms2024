@@ -71,7 +71,33 @@ entering a new value sets the counter to zero.
 # Does not return processed barcode
 
 def verify_barcode(part_id, barcode):
+    """Verify a barcode against a part’s PUN regex, record it, and detect duplicates.
 
+    This will:
+    1. Look up the BarCodePUN record to get the expected regex (PUN) and part_number.
+    2. Check the barcode string against that regex, marking it "malformed" if it fails.
+    3. Get or create a LaserMark record for this barcode, marking "created" on first insert.
+    4. Check the LaserMark’s grade—if not A, B or C, mark "failed_grade".
+    5. Get or create a LaserMarkDuplicateScan; if it already exists, mark "duplicate" and
+       return the original scan timestamp.
+
+    Args:
+        part_id (int): Primary key of the BarCodePUN entry to fetch the expected regex.
+        barcode (str): The barcode value to verify and record.
+
+    Returns:
+        dict: {
+            'barcode': str,         # the original barcode string
+            'part_number': str,     # from the BarCodePUN record
+            'PUN': str,             # the regex pattern used
+            'grade': str,           # the grade on the LaserMark record ('' if new)
+            'status': str,          # one of 'malformed', 'created', 'failed_grade', 'duplicate'
+            'scanned_at': datetime, # only present when status == 'duplicate'
+        }
+
+    Raises:
+        BarCodePUN.DoesNotExist: if no BarCodePUN with the given id exists.
+    """
     current_part_PUN = BarCodePUN.objects.get(id=part_id)
     barcode_result = {
         'barcode': barcode,
@@ -117,7 +143,22 @@ def verify_barcode(part_id, barcode):
 
 
 def send_email_to_flask(code, barcode, scan_time):
+    """Send scan data to the Flask email service without blocking.
 
+    Posts a JSON payload containing the scan code, barcode value, and scan
+    timestamp to an external Flask microservice. Uses a very short timeout
+    so the Django view returns immediately; any request errors (including
+    timeouts) are caught and logged to stdout.
+
+    Args:
+        code (str): Identifier or status code to send to the email service.
+        barcode (str): The scanned barcode string.
+        scan_time (str): Timestamp of the scan, pre-formatted as a string.
+
+    Returns:
+        JsonResponse: Always returns `{'status': 'Email task sent to Flask service'}`.
+
+    """
     # url = 'http://localhost:5002/send-email' 
     url = 'http://10.4.1.234:5001/send-email' 
     
@@ -138,13 +179,43 @@ def send_email_to_flask(code, barcode, scan_time):
     # Return immediately
     return JsonResponse({'status': 'Email task sent to Flask service'})
 
+
+
 def generate_unlock_code():
     """
     Generates a random 3-digit unlock code.
     """
     return '{:03d}'.format(random.randint(0, 999))
 
+
 def generate_and_send_code(barcode, scan_time, part_number):
+    """Generate an unlock code, notify via email, and log a duplicate‐barcode event.
+
+    This function will:
+    1. Generate a one‐time unlock code using `generate_unlock_code()`.
+    2. Normalize `scan_time` (if given as an ISO‐8601 string) into a `datetime` and subtract 
+       4 hours to adjust for timezone.
+    3. Format the adjusted scan time as `YYYY-MM-DD HH:MM:SS` and send it, along with the 
+       unlock code and barcode, to the Flask email service via `send_email_to_flask()`.  
+       Any `'error'` key in the response will be printed to stdout.
+    4. Compute `event_time` as “now minus 4 hours” and create a `DuplicateBarcodeEvent` record
+       in the database, storing `barcode`, `part_number`, `scan_time`, `unlock_code`, and 
+       `event_time`.
+    5. Return the generated unlock code.
+
+    Args:
+        barcode (str): The scanned barcode string.
+        scan_time (datetime.datetime or str): The original scan timestamp, or an
+            ISO-8601 string (`'%Y-%m-%dT%H:%M:%S.%f%z'`).
+        part_number (str): The part number to associate with the barcode event.
+
+    Returns:
+        str: The newly generated unlock code.
+
+    Raises:
+        ValueError: If `scan_time` is a string that does not match the expected
+            `'%Y-%m-%dT%H:%M:%S.%f%z'` format.
+    """
     code = generate_unlock_code()
     
     # Convert scan_time to datetime object if it's in string format
@@ -177,7 +248,47 @@ def generate_and_send_code(barcode, scan_time, part_number):
     
     return code
 
+
+
+
 def duplicate_scan(request):
+    """Render and process the duplicate‐scan workflow for barcodes.
+
+    This view handles both GET and POST requests to scan barcodes, validate them
+    against a part’s PUN regex, check grades, detect duplicates, and route the
+    user accordingly:
+
+    - **GET**:  
+      Displays an empty scan form.
+
+    - **POST** with **'switch-mode'**:  
+      Preserves the current part selection and redirects to the duplicate-scan-check view.
+
+    - **POST** with **'set_count'**:  
+      Resets the running count to the submitted value and redisplays the scan form.
+
+    - **POST** with **'btnsubmit'**:  
+      1. Validates the barcode against `BarCodePUN.regex`; if malformed, renders  
+         `'barcode/malformed.html'`.  
+      2. Gets/creates a `LaserMark`; if `grade` not in `('A','B','C')`, renders  
+         `'barcode/failed_grade.html'`.  
+      3. Gets/creates a `LaserMarkDuplicateScan`:  
+         - If **already exists**, calls `generate_and_send_code()`, stores the  
+           unlock code and duplicate info in `request.session`, logs the event,  
+           and redirects to `'barcode:duplicate-found'`.  
+         - If **new**, saves the scan, increments the running count, and shows  
+           a success message.
+
+    After processing, updates `request.session['RunningCount']`, builds the context
+    (form, running_count, title, active_part, part_select_options, timer), and
+    returns `render(request, 'barcode/dup_scan.html', context)`.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request with session data and POST/GET parameters.
+
+    Returns:
+        HttpResponse: Either a redirect to another view or a rendered template response.
+    """
     context = {}
     tic = time.time()
     running_count = int(request.session.get('RunningCount', '0'))
@@ -264,6 +375,36 @@ def duplicate_scan(request):
 
 
 def duplicate_found_view(request):
+    """Process the unlock‐code submission after a duplicate scan is detected.
+
+    Handles both GET and POST requests for the “duplicate found” page:
+
+    - **GET**:  
+      Renders a blank `UnlockCodeForm` asking the user to enter their unlock code, employee ID, and a reason.
+
+    - **POST**:  
+      1. Validates the submitted `UnlockCodeForm`.  
+      2. Compares the submitted `unlock_code` against `request.session['unlock_code']`.  
+      3. Parses `request.session['duplicate_scan_at']` (format `%Y-%m-%d %H:%M:%S`), subtracts 4 hours, and uses that to locate the existing `DuplicateBarcodeEvent`.  
+      4. If the code matches, updates that event with `employee_id` and `user_reason`, clears the duplicate‐found flag, and redirects to the duplicate-scan page.  
+      5. If the code is incorrect or the timestamp is malformed, adds an error message and re-renders the form.
+
+    Args:
+        request (HttpRequest): The incoming request, which must include in `.session`:
+            - `'unlock_code'`: The expected unlock code to verify.
+            - `'duplicate_scan_at'`: Original scan timestamp as a string (`'%Y-%m-%d %H:%M:%S'`).
+            - `'duplicate_barcode'`: The barcode string that was duplicated.
+            - `'duplicate_part_number'`: The part number associated with that barcode.
+
+    Returns:
+        HttpResponse:  
+        - On successful verification: a redirect (`HttpResponseRedirect`) to the `'barcode:duplicate-scan'` view.  
+        - Otherwise: a rendered `'barcode/dup_found.html'` with context:
+          `{ 'scanned_barcode', 'part_number', 'duplicate_scan_at', 'unlock_code', 'form' }`.
+
+    Raises:
+        ValueError: If `'duplicate_scan_at'` is missing or not in the expected datetime format.
+    """
     if request.method == 'POST':
         form = UnlockCodeForm(request.POST)
 
@@ -316,7 +457,26 @@ def duplicate_found_view(request):
 
     return render(request, 'barcode/dup_found.html', context=context)
 
+
+
+
 def send_new_unlock_code(request):
+    """Generate and send a fresh unlock code for the current duplicate scan, then redirect.
+
+    Retrieves the `duplicate_barcode`, `duplicate_scan_at`, and `duplicate_part_number`
+    from the user’s session, calls `generate_and_send_code()` to issue a new code and
+    notify the email service, and resets the session flags for the duplicate‐found flow.
+    Logs the new code generation before redirecting back to the duplicate‐found page.
+
+    Args:
+        request (HttpRequest): The incoming request, expected to have in its `.session`:
+            - `'duplicate_barcode'`: The barcode string previously identified as a duplicate.
+            - `'duplicate_scan_at'`: The original scan timestamp string.
+            - `'duplicate_part_number'`: The part number associated with that barcode.
+
+    Returns:
+        HttpResponseRedirect: A redirect to the `'barcode:duplicate-found'` view.
+    """
     barcode = request.session.get('duplicate_barcode', '')
     scan_time = request.session.get('duplicate_scan_at', '')
     part_number = request.session.get('duplicate_part_number', '')
@@ -331,7 +491,40 @@ def send_new_unlock_code(request):
 
     return redirect('barcode:duplicate-found')
 
+
+
 def duplicate_scan_batch(request):
+    """Render and handle batch duplicate‐barcode scanning for multiple entries.
+
+    On GET:
+        Displays an empty `BatchBarcodeScanForm` for entering multiple barcodes.
+
+    On POST:
+        - Reads the raw `barcodes` textarea (newline‐separated).
+        - Splits into individual barcode strings.
+        - Verifies each against the part’s PUN via `verify_barcode()`.
+        - Collects results into a `processed_barcodes` list (for future handling).
+        - (Placeholder for per‐barcode rendering or result aggregation.)
+
+    The view also:
+        - Maintains `LastPartID` in `request.session` to remember the selected part.
+        - Builds a context with:
+          - `form`: the scan form instance.
+          - `title`: “Batch Duplicate Scan”.
+          - `active_part`: current part ID.
+          - `part_select_options`: available `BarCodePUN` entries.
+          - `active_part_prefix`: a slice of the regex for UI display.
+          - `active_PUN`: the regex pattern stripped of named‐group syntax.
+          - `parts_per_tray`: expected count from the PUN record.
+          - `timer`: elapsed request‐processing time.
+
+    Args:
+        request (HttpRequest): Incoming request; uses `.session['LastPartID']`
+            to persist the last‐selected part across requests.
+
+    Returns:
+        HttpResponse: Renders `'barcode/dup_scan_batch.html'` with the above context.
+    """
     context = {}
     tic = time.time()
     # get data from session
@@ -424,7 +617,37 @@ def duplicate_scan_batch(request):
 
     return render(request, 'barcode/dup_scan_batch.html', context=context)
 
+
 def duplicate_scan_check(request):
+    """Render and process a single‐scan duplicate check for barcodes.
+
+    - **GET**:  
+      Displays an empty `BarcodeScanForm` for scanning a barcode.
+
+    - **POST** with **'switch-mode'**:  
+      Preserves the current part selection and redirects back to the batch scan view.
+
+    - **POST** with **'btnsubmit'**:  
+      1. Validates the scanned barcode against the selected `BarCodePUN.regex`; if malformed, renders  
+         `'barcode/malformed.html'`.  
+      2. Gets or creates a `LaserMark`; if new, saves the part number, then creates a  
+         `LaserMarkDuplicateScan` and immediately deletes it with an error message  
+         (“Barcode Not Previously Scanned”).  
+      3. If the duplicate‐scan record already exists, shows a success message  
+         (“Previously Scanned at …”) and marks `scan_check=True` in context.
+
+    After handling, stores `LastPart` in the session, builds a context with:
+    `{ form, title, scan_check, active_part, part_select_options, timer }`,
+    and renders `'barcode/dup_scan.html'`.
+
+    Args:
+        request (HttpRequest): The incoming request, using:
+            - `request.session['LastPart']` to remember the selected part.
+            - POST fields `'barcode'`, `'part_select'`, and action flags.
+
+    Returns:
+        HttpResponse: A redirect or the rendered duplicate‐scan template with context.
+    """
     context = {}
     tic = time.time()
 
@@ -509,6 +732,53 @@ import random
 from .models import LockoutEvent  # Import the LockoutEvent model
 
 def lockout_view(request):
+    """Manage a lockout event when invalid barcodes are scanned, notify supervisors, and handle unlock.
+
+    This view supports two main workflows:
+    
+    1. **Initial lockout trigger** (POST with `lockout_trigger`):
+       - Reads newline‐separated barcodes from the form.
+       - Stores them in `request.session['lockout_barcodes']`.
+       - Generates and stores a one‐time `unlock_code` in session.
+       - Creates a `LockoutEvent` record (with `unlock_code` and location).
+       - Marks `request.session['lockout_active'] = True` and resets `unlock_code_submitted` & `email_sent`.
+    
+    2. **Supervisor unlock submission** (POST without `lockout_trigger`):
+       - Extracts `supervisor_id` and `unlock_code` from the form.
+       - If the code matches the session’s `unlock_code`:
+         - Sets `lockout_active = False`, `unlock_code_submitted = True`.
+         - Updates the corresponding `LockoutEvent` with `supervisor_id`, `unlocked_at`, and `is_unlocked=True`.
+         - Clears `lockout_barcodes` from session.
+         - Adds a success message and redirects to the batch scan page.
+       - If the code is incorrect:
+         - Regenerates a new unlock code, updates the `LockoutEvent` and session.
+         - Adds an error message.
+
+    After either POST path, if no email has been sent (`session['email_sent']=False`):
+    - Builds an HTML email with the scanned barcodes, affected stations, and unlock code.
+    - Sends it to the configured address via `send_mail()`.
+    - Sets `session['email_sent'] = True` to avoid duplicates.
+
+    Finally, renders `'barcode/lockout.html'`, with session flags determining
+    whether to show the lockout screen or the unlock form.
+
+    Args:
+        request (HttpRequest): Incoming HTTP request. Must have:
+            - `session['lockout_barcodes']`: list of scanned barcode strings.
+            - `session['unlock_code']`: current one‐time unlock code.
+            - `session['lockout_event_id']`: ID of the `LockoutEvent`.
+            - `session['lockout_active']`, `session['unlock_code_submitted']`, `session['email_sent']`.
+
+    Returns:
+        HttpResponse or HttpResponseRedirect:
+        - A redirect to `'barcode:duplicate_scan_batch'` after successful unlock.
+        - Otherwise, renders the lockout page (`barcode/lockout.html`).
+
+    Side Effects:
+        - Mutates `request.session` (stores codes, flags, barcodes).
+        - Sends an email notification on the first render after a lockout.
+        - Creates or updates `LockoutEvent` records in the database.
+    """
     print("DEBUG: Entered lockout_view")  # Track entry into the view
 
     # Define locations for all stations where lockout could occur
@@ -708,6 +978,29 @@ import time
 
 # Scan view - step 1: Barcode input form
 def barcode_scan_view(request):
+    """Handle barcode lookups by exact or partial match and route to results.
+
+    - **GET**:  
+      Renders the empty scan form (`barcode/barcode_scan.html`).
+
+    - **POST**:  
+      1. Retrieves `barcode` from `request.POST`; if missing, re-renders the form with an error.  
+      2. Queries `LaserMark` using `bar_code__icontains` to allow partial matches, ordered by creation time.  
+      3. If multiple matches are found:
+         - Builds `matching_barcodes_list` of dicts with `'barcode'` and formatted `'timestamp'`.  
+         - Renders `barcode/barcode_matches.html` with this list.  
+      4. If exactly one match is found:
+         - Redirects to the `barcode:barcode-result` view for that code.  
+      5. If no matches:
+         - Re-renders the form with an error message.
+
+    Args:
+        request (HttpRequest): The incoming request, expecting optional `POST['barcode']`.
+
+    Returns:
+        HttpResponse: Either a rendered template (`barcode_scan.html` or `barcode_matches.html`)
+                      or an `HttpResponseRedirect` to the single‐match results page.
+    """
     if request.method == 'POST':
         barcode_input = request.POST.get('barcode', None)
         if not barcode_input:
@@ -754,6 +1047,37 @@ import MySQLdb
 import time
 
 def barcode_result_view(request, barcode):
+    """Display detailed scan results for a barcode and support AJAX pagination.
+
+    On a normal request, looks up the given `barcode` in the `LaserMark` table and:
+    1. Retrieves its grade, asset, and creation timestamp.
+    2. Checks for a duplicate scan and records its timestamp (adjusted for timezone).
+    3. Fetches the 100 previous and next scans (by timestamp) for the same asset.
+    4. Queries an external GP12 database for any scrap timestamp.
+    5. Renders `'barcode/barcode_result.html'` with context:
+       `{ barcode, grade, asset, lasermark_time, lasermark_duplicate_time,
+         barcode_gp12_time, before_barcodes, after_barcodes }`.
+
+    If the request is AJAX (`X-Requested-With: XMLHTTPRequest`), expects POST params:
+    - `direction` (`'before'` or `'after'`)
+    - `offset` (int)
+    - `batch_size` (int)
+    Returns a `JsonResponse` with either `before_barcodes` or `after_barcodes`, each
+    a list of `{ 'barcode': str, 'timestamp': str }`.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request.
+        barcode (str): The barcode string to look up.
+
+    Returns:
+        HttpResponse or JsonResponse:
+        - **HttpResponse**: on standard loads, renders the result template.
+        - **JsonResponse**: on AJAX calls, returns paginated scan data.
+
+    Raises:
+        None: Missing barcodes on AJAX yield a 404 JSON error; missing barcodes on
+        standard loads render the scan form with an error message.
+    """
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         # Handle AJAX request for loading more barcodes (before or after)
         direction = request.POST.get('direction')
@@ -880,6 +1204,19 @@ def barcode_result_view(request, barcode):
 
 
 def get_grade_totals(asset, grade):
+    """Retrieve the count of a specific grade for an asset over the past 24 hours.
+
+    Args:
+        asset (str): Identifier of the asset to filter LaserMark records.
+        grade (str): Grade value to count (e.g., 'A', 'B', 'C').
+
+    Returns:
+        int or str:
+            If successful, returns the integer count of LaserMark records matching
+            the given `asset` and `grade` with `created_at` in the last 24 hours.
+            On error, returns a string with the error message.
+
+    """
     """
     Fetch the total count of a specific grade for a given asset in the last 24 hours.
     """
@@ -898,6 +1235,24 @@ def get_grade_totals(asset, grade):
 
 
 def fetch_pie_chart_data(asset):
+    """Gather grade distribution and failure summary for an asset over the last 24 hours.
+
+    This routine will call `get_grade_totals` for each of the possible grades A–F,
+    then compute:
+      - `total`: the sum of all grade counts
+      - `grades`: a dict mapping each grade to its 24-hour count
+      - `failures_total`: the combined count for grades D, E, and F
+
+    Args:
+        asset (str): Identifier of the asset whose LaserMark grades to aggregate.
+
+    Returns:
+        dict: {
+            "total" (int): total scans in the last 24 hours,
+            "grades" (dict[str, int]): per-grade counts,
+            "failures_total" (int): sum of counts for grades D, E, and F
+        }
+    """
     """
     Fetch overall raw grade totals for the last 24 hours to be used in a pie chart,
     including total count and total number of failures (grades not A/B/C).
@@ -921,6 +1276,34 @@ def fetch_pie_chart_data(asset):
 
 
 def fetch_grade_data_for_asset(asset, time_interval=60):
+    """Gather weekly and interval‐based grade statistics for a single asset.
+
+    This function computes:
+      1. Total scan counts per grade (A–F) over the last 7 full days plus today.
+      2. Percentage breakdown of each grade against the weekly total.
+      3. An 8-hour interval breakdown for each day in that period, including:
+         - Interval start/end timestamps
+         - Total scan count in the interval
+         - Grade counts and their percentages in that interval
+
+    Args:
+        asset (str): Identifier of the asset whose LaserMark data to aggregate.
+        time_interval (int): (Currently unused) Intended interval length in minutes
+            for finer granularity reporting.
+
+    Returns:
+        dict: {
+            "asset" (str): The asset identifier,
+            "total_count_last_7_days" (int): Sum of all grade counts over the week,
+            "grade_counts_last_7_days" (dict[str, str]): Each grade mapped to
+                a string `"count (percentage%)"`,
+            "breakdown_data" (list[dict]): Each entry contains:
+                - "interval_start" (str): e.g. "Jun-19 00:00"
+                - "interval_end"   (str): e.g. "Jun-19 08:00"
+                - "total_count"    (int)
+                - "grade_counts"   (dict[str, str]): per‐grade `"count (percentage%)"`
+        }
+    """
     """
     Fetch total grade counts and calculate percentage breakdown for a single asset,
     covering the last 7 full days + today, with 8-hour interval breakdowns.
@@ -1012,6 +1395,25 @@ def fetch_grade_data_for_asset(asset, time_interval=60):
 
 
 def remove_sharp_dips(breakdown_data, asset):
+    """Filter out time intervals with anomalously low or zero grade coverage.
+
+    From a list of interval statistics (each containing per‐grade `"count (pct%)"` strings),
+    removes any interval where:
+      1. The sum of all grade percentages is below 75%.
+      2. (Optional) All grades are zero (disabled by default).
+
+    Args:
+        breakdown_data (list[dict]): A list of interval dicts, each with keys:
+            - `"interval_start"` (str)
+            - `"interval_end"` (str)
+            - `"total_count"` (int)
+            - `"grade_counts"` (dict[str, str]): Mapping grades 'A'–'F' to `"count (pct%)"` strings.
+        asset (str): Identifier of the asset (used for logging or debugging).
+
+    Returns:
+        list[dict]: A filtered list containing only those intervals whose total
+        grade coverage meets or exceeds 75%.
+    """
     """
     Removes time intervals where:
     1. The sum of A, B, C, D, E, and F percentages is < 75%.
@@ -1052,6 +1454,32 @@ def remove_sharp_dips(breakdown_data, asset):
 
 
 def grades_dashboard(request, line=None):
+    """Render the grades dashboard for a given production line or show the line selector.
+
+    If `line` (e.g. '10R80') is provided and valid, this view:
+      1. Looks up the list of `assets` for that line.
+      2. Reads an optional `time_interval` (minutes) from `request.GET` (default 30).
+      3. For each asset, calls:
+         - `fetch_grade_data_for_asset()` to get weekly grade counts and interval breakdowns.
+         - `fetch_pie_chart_data()` to get overall grade totals and failure counts.
+      4. Filters each asset’s `breakdown_data` through `remove_sharp_dips()`.
+      5. Packs all of that into a JSON structure and renders `barcode/grades_dashboard.html`.
+
+    If `line` is `None`:
+      - **GET**: Renders `barcode/grades_dashboard_finder.html` with a simple line‐selection form.
+      - **POST**: Reads `selected_line` from `request.POST` and, if valid, redirects to 
+        `/barcode/grades-dashboard/<selected_line>/`.
+
+    Args:
+        request (HttpRequest): The incoming request, possibly containing GET or POST parameters.
+        line (str, optional): Identifier of the production line to display. Defaults to None.
+
+    Returns:
+        HttpResponse: Either a rendered dashboard template, a line‐selector template, or a redirect.
+
+    Raises:
+        Http404: If a non‐existent `line` is provided in the URL.
+    """
     """
     If a line (e.g., '10R80') is provided in the URL, render the dashboard for that line.
     If no line is provided, show the selection page.
@@ -1105,6 +1533,21 @@ def grades_dashboard(request, line=None):
 
 
 def grades_dashboard_finder(request):
+    """Render a line‐selection page for the grades dashboard and handle the redirect.
+
+    Displays a form where users can choose a production line (e.g. "10R80", "AB1V").
+    On POST, if the selected line is valid, redirects to the corresponding
+    grades dashboard URL `/barcode/grades-dashboard/<line>/`.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request. For POST, expects a form
+            field `"line"` with one of the valid line names.
+
+    Returns:
+        HttpResponse: On GET, renders `"barcode/grades_dashboard_finder.html"`.
+        HttpResponseRedirect: On valid POST, redirects to the grades dashboard for
+        the chosen line.
+    """
     """
     Renders a selection page where users choose a line (e.g., 10R80, AB1V).
     Redirects them to the dashboard URL using the line name.
