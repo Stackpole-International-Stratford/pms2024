@@ -33,6 +33,26 @@ FURNACE_ZONES = [1, 2, 5, 6, 18, 19, 20, 21, 24]
 
 
 def humanize_delta(delta):
+    """
+    Convert a datetime.timedelta into a human-readable string.
+
+    Formats the duration according to its length:
+      - Less than 1 hour:     "<M> mins"
+      - Less than 1 day:      "<H> hrs <M> mins"
+      - Less than 7 days:     "<D> days <M> mins"
+      - Less than 30 days:    "<W> weeks"
+      - 30 days or more:      "<M> months"  (where 1 month = 30 days)
+
+    Parameters
+    ----------
+    delta : datetime.timedelta
+        The time difference to humanize.
+
+    Returns
+    -------
+    str
+        A string representation of the time delta in the largest appropriate unit.
+    """
     total_secs = int(delta.total_seconds())
     mins = total_secs // 60
     hrs = total_secs // 3600
@@ -176,6 +196,27 @@ def is_healthsafety_manager(user):
 
 @require_POST
 def add_temp_sensor_email(request):
+    """
+    Add a new email address to the temperature sensor alert list.
+
+    Only users with health & safety manager privileges may add addresses.
+
+    Expects form-encoded POST data:
+      - email (str): The email address to subscribe.
+
+    Workflow:
+      1. Verify the requester is a health & safety manager; return HTTP 403 if not.
+      2. Read and trim the `email` parameter; return HTTP 400 JSON error if missing.
+      3. Attempt to get or create a `TempSensorEmailList` entry for the address.
+         - If it already exists, return HTTP 400 JSON error.
+         - If created, return JSON with the new record’s `id` and `email`.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success (new address): `{"id": <int>, "email": <str>}` (status 200).
+        On error: `{"error": <message>}` with status 400 or 403.
+    """
     if not is_healthsafety_manager(request.user):
         return HttpResponseForbidden()
     email = request.POST.get("email", "").strip()
@@ -188,6 +229,28 @@ def add_temp_sensor_email(request):
 
 @require_POST
 def delete_temp_sensor_email(request):
+    """
+    Remove an email address from the temperature sensor alert list.
+
+    Only users with health & safety manager privileges may perform this action.
+
+    Expects form-encoded POST data:
+      - id (str or int): The primary key of the TempSensorEmailList entry to delete.
+
+    Workflow:
+      1. Verify the requester is a health & safety manager; return HTTP 403 if not.
+      2. Read the `id` parameter; return HTTP 400 JSON error if missing.
+      3. Attempt to retrieve and delete the corresponding TempSensorEmailList record:
+         - On success, return JSON `{"deleted": <id>}`.
+         - If not found, return HTTP 404 JSON error.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{"deleted": <id>}` (status 200).
+        On missing id: `{"error": "No id provided."}` (status 400).
+        On non-existent record: `{"error": "Email not found."}` (status 404).
+    """
     if not is_healthsafety_manager(request.user):
         return HttpResponseForbidden()
     pk = request.POST.get("id")
@@ -212,6 +275,39 @@ def delete_temp_sensor_email(request):
 # =========================================================================
 
 def temp_display(request):
+    """
+    Retrieve, process, and display live temperature and humidity readings.
+
+    Workflow:
+      1. Connects to the MySQL database using credentials from settings and
+         fetches all rows from `temp_monitors` (fields: temp, humidity, humidex, zone, timestamp).
+      2. Safely closes the database cursor and connection, logging any errors.
+      3. For each raw row:
+         - Converts `temp`, `humidity`, and `humidex` (stored as tenths) to floats.
+         - Applies a +1 adjustment to humidex in furnace zones.
+         - Computes a human-readable “time since update” via `humanize_delta`, or “n/a” if missing.
+         - Flags an alert if humidex ≥ 43.0.
+      4. Sorts entries by descending humidex.
+      5. Calls `send_alert_email(processed)` to notify any configured recipients.
+      6. Splits the list into two columns for display.
+      7. Determines whether the current user is a health & safety manager, and if so,
+         loads the `TempSensorEmailList` for on-page management.
+
+    Context passed to 'plant/temp_display.html':
+      - `columns`:    A list `[col1, col2]` each containing half of the processed entries.
+      - `is_manager`: Boolean indicating health & safety manager status.
+      - `email_list`: QuerySet of TempSensorEmailList entries (empty for non-managers).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. Both anonymous and authenticated users may access.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the 'plant/temp_display.html' template with the processed sensor data.
+    """
     raw_rows = []
     try:
         conn = mysql.connector.connect(

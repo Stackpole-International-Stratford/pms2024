@@ -22,6 +22,29 @@ def index(request):
     return render(request, 'setupfor/index.html')
 
 def natural_sort_key(s):
+    """
+    Generate a key for natural sorting of strings containing numbers.
+
+    Splits the input string into alternating non-numeric and numeric segments,
+    converting any purely digit segments to integers so that comparisons treat
+    numbers by their numeric value rather than lexicographically.
+
+    Examples
+    --------
+    >>> sorted(['item2', 'item10', 'item1'], key=natural_sort_key)
+    ['item1', 'item2', 'item10']
+
+    Parameters
+    ----------
+    s : str
+        The string to generate a sort key for.
+
+    Returns
+    -------
+    list[Union[str, int]]
+        A list of segments where numeric substrings are integers and others are strings,
+        suitable for use as a sort key in Python’s sorted() or list.sort().
+    """
     # Split the string into numeric and non-numeric parts
     parts = re.split(r'(\d+)', s)
     # Convert numeric parts to integers
@@ -30,6 +53,41 @@ def natural_sort_key(s):
 
 @login_required(login_url="login")
 def display_assets(request):
+    """
+    Display a paginated list of assets, optionally filtered by a search query.
+
+    GET parameters
+    --------------
+    q : str, optional
+        Case-insensitive substring to filter assets by `asset_number` or `asset_name`.
+    show : int, optional
+        Number of assets to display per page (defaults to 10).
+    page : int, optional
+        Page number for pagination.
+
+    Behavior
+    --------
+    1. Retrieves all Asset instances whose `asset_number` or `asset_name` contains the search query.
+    2. Sorts the resulting list using natural sort order on `asset_number`.
+    3. Paginates the sorted list according to `show` and `page` parameters.
+    4. Renders the 'setupfor/display_assets.html' template with:
+       - `page_obj`: the paginated Page of Asset objects.
+       - `search_query`: the original query string for echoing in the UI.
+
+    Access Control
+    --------------
+    - User must be authenticated; otherwise they are redirected to the login page.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP GET request with possible query parameters.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the asset display template populated with the paginated assets.
+    """
     # Get the search query
     search_query = request.GET.get('q', '')
 
@@ -54,6 +112,47 @@ def display_assets(request):
     return render(request, 'setupfor/display_assets.html', {'page_obj': page_obj, 'search_query': search_query})
 
 def create_asset(request):
+    """
+    Display and process the form to create a new Asset, with optional redirection back to password creation.
+
+    GET:
+      - Renders the 'setupfor/asset_form.html' template with:
+        • form: an empty AssetForm instance.
+        • title: "Add New Asset".
+        • from_password_create flag (True if the URL contains ?from_password_create=true).
+
+    POST:
+      - Binds submitted data to AssetForm.
+      - If valid:
+         • Saves the new Asset.
+         • If `from_password_create` is True, redirects to the 'password_create' view.
+         • Otherwise redirects to 'display_assets'.
+      - If invalid and the request is AJAX (X-Requested-With header), returns JSON:
+         {
+           "success": False,
+           "errors": form.errors
+         }
+      - If invalid and non-AJAX, re-renders the form template with errors.
+
+    Query Parameters
+    ----------------
+    from_password_create : str ("true" or "false", default "false")
+        If "true", indicates the user initiated asset creation from the password creation workflow
+        and should be returned there upon success.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request.
+
+    Returns
+    -------
+    django.http.HttpResponse or django.http.JsonResponse
+        - On GET: HTML page with the asset creation form.
+        - On successful POST: HTTP redirect to 'password_create' or 'display_assets'.
+        - On invalid AJAX POST: JSON with form errors.
+        - On invalid non-AJAX POST: HTML page re-rendered with form errors.
+    """
     # Check if the user is coming from the password_create page
     from_password_create = request.GET.get('from_password_create', 'false') == 'true'
 
@@ -78,6 +177,34 @@ def create_asset(request):
 
 
 def edit_asset(request, id):
+    """
+    Display and process the form to edit an existing Asset.
+
+    GET:
+    - Retrieves the Asset by its `id` or returns HTTP 404.
+    - Instantiates an AssetForm pre-filled with the asset’s data.
+    - Renders 'setupfor/asset_form.html' with context:
+        • form: the bound AssetForm
+        • title: "Edit Asset"
+
+    POST:
+    - Binds submitted data to AssetForm with the existing asset instance.
+    - If valid, saves changes and redirects to 'display_assets'.
+    - If invalid, re-renders the form template with validation errors.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request (GET to display the form, POST to submit changes).
+    id : int
+        Primary key of the Asset to edit.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET or invalid POST: renders the asset form template.
+        - On successful POST: redirects to the asset listing view.
+    """
     # Get the Asset object by id or return 404 if not found
     asset = get_object_or_404(Asset, id=id)
     if request.method == 'POST':
@@ -90,6 +217,30 @@ def edit_asset(request, id):
     return render(request, 'setupfor/asset_form.html', {'form': form, 'title': 'Edit Asset'})
 
 def delete_asset(request, id):
+    """
+    Display a confirmation page and handle deletion of an Asset.
+
+    GET:
+      - Retrieves the Asset by `id` or returns HTTP 404 if not found.
+      - Renders 'setupfor/delete_asset.html' with the asset context for confirmation.
+
+    POST:
+      - Deletes the specified Asset.
+      - Redirects to 'display_assets' after successful deletion.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, which may be GET (to confirm) or POST (to delete).
+    id : int
+        Primary key of the Asset to delete.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET: renders the deletion confirmation template.
+        - On POST: redirects to the asset listing view.
+    """
     # Get the Asset object by id or return 404 if not found
     asset = get_object_or_404(Asset, id=id)
     if request.method == 'POST':
@@ -100,6 +251,41 @@ def delete_asset(request, id):
 
 @login_required(login_url="login")
 def display_parts(request):
+    """
+    Display a paginated list of parts, optionally filtered by a search query.
+
+    GET parameters
+    --------------
+    q : str, optional
+        Case-insensitive substring to filter parts by `part_number` or `part_name`.
+    show : int, optional
+        Number of parts to display per page (defaults to 10).
+    page : int, optional
+        Page number for pagination.
+
+    Behavior
+    --------
+    1. Retrieves all Part instances whose `part_number` or `part_name` contains the search query.
+    2. Sorts the resulting list using natural sort order on `part_number`.
+    3. Paginates the sorted list according to `show` and `page` parameters.
+    4. Renders the 'setupfor/display_parts.html' template with:
+       - `page_obj`: the paginated Page of Part objects.
+       - `search_query`: the original query string for echoing in the UI.
+
+    Access Control
+    --------------
+    - User must be authenticated; otherwise they are redirected to the login page.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP GET request with possible query parameters.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the parts display template populated with the paginated parts.
+    """
     # Get the search query
     search_query = request.GET.get('q', '')
 
@@ -124,6 +310,32 @@ def display_parts(request):
     return render(request, 'setupfor/display_parts.html', {'page_obj': page_obj, 'search_query': search_query})
 
 def create_part(request):
+    """
+    Display and process the form to create a new Part record.
+
+    GET:
+      - Instantiates an empty PartForm.
+      - Renders 'setupfor/part_form.html' with context:
+          • form: the empty PartForm
+          • title: "Add New Part"
+
+    POST:
+      - Binds submitted data to PartForm.
+      - If valid, saves the new Part instance and redirects to 'display_parts'.
+      - If invalid, re-renders the form template with validation errors.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, which may be GET (to display the form)
+        or POST (to submit the new part data).
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET or invalid POST: renders the part creation form.
+        - On valid POST: redirects to the parts listing view.
+    """
     if request.method == 'POST':
         form = PartForm(request.POST)
         if form.is_valid():
@@ -134,6 +346,34 @@ def create_part(request):
     return render(request, 'setupfor/part_form.html', {'form': form, 'title': 'Add New Part'})
 
 def edit_part(request, id):
+    """
+    Display and process the form to edit an existing Part record.
+
+    GET:
+      - Retrieves the Part by its `id` or returns HTTP 404 if not found.
+      - Instantiates a PartForm pre-filled with the part’s data.
+      - Renders 'setupfor/part_form.html' with context:
+          • form: the bound PartForm
+          • title: "Edit Part"
+
+    POST:
+      - Binds submitted data to PartForm with the existing part instance.
+      - If valid, saves changes and redirects to 'display_parts'.
+      - If invalid, re-renders the form template with validation errors.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request (GET to display the form, POST to submit changes).
+    id : int
+        Primary key of the Part to edit.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET or invalid POST: renders the part edit form template.
+        - On successful POST: redirects to the part listing view.
+    """
     # Get the Part object by id or return 404 if not found
     part = get_object_or_404(Part, id=id)
     if request.method == 'POST':
@@ -146,6 +386,30 @@ def edit_part(request, id):
     return render(request, 'setupfor/part_form.html', {'form': form, 'title': 'Edit Part'})
 
 def delete_part(request, id):
+    """
+    Display a confirmation page and handle deletion of a Part record.
+
+    GET:
+      - Retrieves the Part by its `id` or returns HTTP 404 if not found.
+      - Renders 'setupfor/delete_part.html' with the part in context for confirmation.
+
+    POST:
+      - Deletes the specified Part from the database.
+      - Redirects to the 'display_parts' view after successful deletion.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, which may be GET (to confirm deletion) or POST (to perform deletion).
+    id : int
+        Primary key of the Part to delete.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET: renders the deletion confirmation template.
+        - On POST: redirects to the parts listing view.
+    """
     # Get the Part object by id or return 404 if not found
     part = get_object_or_404(Part, id=id)
     if request.method == 'POST':
@@ -164,6 +428,32 @@ def delete_part(request, id):
 # =========================================================================
 
 def fetch_part_for_asset(request):
+    """
+    Retrieve the part number assigned to a given asset at a specific timestamp.
+
+    Expects GET parameters:
+      - asset_number (str): Identifier of the asset to query.
+      - timestamp (str):    ISO 8601 datetime string ("YYYY-MM-DDTHH:MM:SS") 
+                            representing the point in time to check.
+
+    Workflow:
+      1. Validates that both `asset_number` and `timestamp` are provided;
+         if missing, returns JSON with an `error` key.
+      2. Parses the `timestamp` into a datetime object; on format error,
+         returns JSON with an appropriate `error`.
+      3. Calls `SetupFor.setupfor_manager.get_part_at_time(asset_number, timestamp)`
+         to fetch the corresponding Part instance.
+      4. Returns a JsonResponse containing:
+         - `asset_number`: the original asset identifier.
+         - `timestamp`:    the original timestamp string.
+         - `part_number`:  the `part_number` of the found Part, or `None`.
+         - `error`:        present only if lookup failed or parameters were invalid.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON with keys `asset_number`, `timestamp`, `part_number`, and optionally `error`.
+    """
     # Get asset number and timestamp from GET parameters
     asset_number = request.GET.get('asset_number')
     timestamp_str = request.GET.get('timestamp')
@@ -336,6 +626,35 @@ def update_part_for_asset(request):
 
 @login_required(login_url="login")
 def display_setups(request):
+    """
+    Display a paginated list of setup changeover records with human- and machine-friendly timestamps.
+
+    GET:
+      - Retrieves all `SetupFor` records, ordered by descending `since` epoch timestamp.
+      - Paginates the records (100 per page, showing the first page by default).
+      - Converts each record’s `since` epoch (assumed US/Eastern) into:
+          • `since_human`: formatted "YYYY-MM-DD HH:MM"
+          • `since_local`: formatted "YYYY-MM-DDTHH:MM" (suitable for `<input type="datetime-local">`)
+      - Fetches all `Asset` and `Part` instances (ordered by their number fields) for populating dropdowns.
+      - Renders the 'setupfor/display_setups.html' template with context:
+          • `setups`: the paginated page of setup records
+          • `assets`: list of all assets
+          • `parts`:  list of all parts
+
+    Access Control
+    --------------
+    - User must be authenticated; otherwise they are redirected to the login page.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP GET request.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the setups display template populated with paginated records and reference data.
+    """
     # Retrieve all SetupFor records ordered by descending changeover datetime (since)
     setups = SetupFor.objects.all().order_by('-since')
     paginator = Paginator(setups, 100)
@@ -358,6 +677,35 @@ def display_setups(request):
     })
 
 def load_more_setups(request):
+    """
+    AJAX endpoint to load additional setup changeover records, paginated.
+
+    Expects a GET request with:
+      - page (int, optional): The 1-based page number to retrieve (defaults to 2).
+
+    Workflow:
+      1. Parse and sanitize the `page` parameter, defaulting to 2 on missing or invalid input.
+      2. Query all `SetupFor` records ordered by descending `since` timestamp.
+      3. Paginate at 100 records per page.
+      4. If the requested page is beyond the last page, return `{'records': []}`.
+      5. Otherwise, for each record on that page, compute:
+         - `since_human`: formatted "YYYY-MM-DD HH:MM" in US/Eastern.
+         - `since_local`: formatted "YYYY-MM-DDTHH:MM" in US/Eastern.
+      6. Return a JSON response `{'records': [...]}` where each entry includes:
+         - id, asset (asset_number), asset_id
+         - part (part_number), part_id
+         - since_human, since_local
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP GET request, with optional `page` query parameter.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON object with key `records` containing a list of dictionaries for each setup entry.
+    """
     # Get the requested page number from GET parameters, default to 2
     page_number = request.GET.get('page', 2)
     try:
@@ -392,6 +740,33 @@ def load_more_setups(request):
 
 @require_POST
 def update_setup(request):
+    """
+    AJAX endpoint to update an existing setup changeover record.
+
+    Expects form-encoded POST parameters:
+      - record_id (int):   Primary key of the SetupFor record to update.
+      - asset_id (int):    Primary key of the new Asset to assign.
+      - part_id (int):     Primary key of the new Part to assign.
+      - since (str):       New timestamp in ISO format "YYYY-MM-DDTHH:MM", Eastern Time.
+
+    Workflow:
+      1. Retrieve the SetupFor instance by `record_id`; return HTTP 404 if not found.
+      2. Retrieve the Asset and Part by their IDs; return HTTP 400 if either is missing.
+      3. Parse and localize the `since` string as US/Eastern time; convert to a Unix timestamp.
+         Return HTTP 400 on format errors.
+      4. Update the record’s `asset`, `part`, and `since` fields and save.
+      5. Respond with JSON containing:
+         - record_id, asset (asset_number), asset_id
+         - part (part_number), part_id
+         - since_human: formatted "YYYY-MM-DD HH:MM"
+         - since_local: formatted "YYYY-MM-DDTHH:MM"
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: JSON object with the updated record details.
+        On error:   JSON object `{'error': <message>}` with appropriate HTTP status code.
+    """
     record_id = request.POST.get('record_id')
     asset_id = request.POST.get('asset_id')
     part_id = request.POST.get('part_id')
@@ -440,6 +815,34 @@ def update_setup(request):
 
 @require_POST
 def add_setup(request):
+    """
+    AJAX endpoint to create a new setup changeover record.
+
+    Expects form-encoded POST parameters:
+      - asset_id (str):  Primary key of the Asset to assign.
+      - part_id (str):   Primary key of the Part to assign.
+      - since (str):     Timestamp in ISO format "YYYY-MM-DDTHH:MM" (US/Eastern time).
+
+    Workflow:
+      1. Validate that `asset_id`, `part_id`, and `since` are all provided; return HTTP 400 if any are missing.
+      2. Retrieve the Asset and Part instances; return HTTP 400 if either does not exist.
+      3. Parse `since` into a naive datetime, localize to US/Eastern, and convert to Unix timestamp; return HTTP 400 on format errors.
+      4. Create a new `SetupFor` record with the given `asset`, `part`, and `since` timestamp.
+      5. Respond with JSON containing:
+         - record_id (int)
+         - asset (str): asset_number
+         - asset_id (int)
+         - part (str): part_number
+         - part_id (int)
+         - since_human (str): formatted "YYYY-MM-DD HH:MM"
+         - since_local (str): formatted "YYYY-MM-DDTHH:MM"
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: JSON with the newly created record’s details.
+        On error:   JSON `{'error': message}` with an appropriate HTTP 400 status.
+    """
     asset_id = request.POST.get('asset_id', '').strip()
     part_id = request.POST.get('part_id', '').strip()
     since_value = request.POST.get('since', '').strip()  # Expected format "YYYY-MM-DDTHH:MM"
@@ -484,6 +887,27 @@ def add_setup(request):
 @csrf_exempt
 @require_POST
 def check_part(request):
+    """
+    AJAX endpoint to determine which part was installed on an asset at a given time.
+
+    Expects form-encoded POST parameters:
+      - asset_id (str):      Primary key of the Asset to query.
+      - datetime (str):      ISO-formatted datetime string (e.g. from an `<input type="datetime-local">`).
+
+    Workflow:
+      1. Validate that both `asset_id` and `datetime` are provided; return JSON error otherwise.
+      2. Parse `datetime` using `parse_datetime`; return JSON error if parsing fails.
+      3. Convert the resulting `datetime` to a Unix epoch integer (seconds since the epoch).
+      4. Query `SetupFor` for the most recent record for that asset whose `since` timestamp
+         is less than or equal to the provided epoch.
+      5. If found, return `{'part_number': <str>}`; otherwise return `{'error': ...}`.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - Success: `{'part_number': <part_number>}`
+        - Failure: `{'error': <message>}`
+    """
     asset_id = request.POST.get('asset_id')
     datetime_str = request.POST.get('datetime')
 
