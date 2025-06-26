@@ -8,6 +8,39 @@ import json
 from django.http import JsonResponse
 
 def asset_cycle_times_page(request):
+    """
+    Handle display and submission of asset cycle time entries.
+
+    This view supports both GET and POST requests:
+    - GET: Render the asset cycle times page with an empty form,
+      a list of existing entries (up to 500 most recent), and
+      available assets and parts for selection.
+    - POST: Validate submitted data via AssetCycleTimeForm. If valid,
+      convert the provided datetime to an epoch timestamp, save a new
+      AssetCycleTimes record (with asset, part, cycle_time, and
+      effective_date), and then re-render the page including the new entry.
+
+    For display purposes, each retrieved entry’s `effective_date`
+    (stored as an integer epoch) is converted back into a human-readable
+    UTC-based datetime string (`YYYY-MM-DD HH:MM`).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. On POST it should contain form data
+        for asset, part, cycle_time, and datetime fields; on GET it
+        simply indicates a page load.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        The rendered 'asset_cycle_times.html' template populated with:
+        - form: An instance of AssetCycleTimeForm (empty or bound with POST data)
+        - past_entries: A list of the 500 most recent AssetCycleTimes
+                        records, each with `effective_date_display` added
+        - assets: All Asset instances for selection
+        - parts: All Part instances for selection
+    """
     if request.method == 'POST':
         form = AssetCycleTimeForm(request.POST)
         if form.is_valid():
@@ -49,6 +82,37 @@ def asset_cycle_times_page(request):
 
 
 def update_asset_cycle_times_page(request):
+    """
+    Handle AJAX updates to existing asset cycle time records.
+
+    This view only accepts POST requests containing a JSON payload with:
+      - entry_id (int):   The primary key of the AssetCycleTimes record to update.
+      - asset (int):      The ID of the Asset to associate.
+      - part (int):       The ID of the Part to associate.
+      - cycle_time (str|float): The new cycle time value.
+      - effective_date (str):   The new effective datetime as ISO string "YYYY-MM-DDTHH:MM".
+
+    On successful update, the record’s `effective_date` (sent as ISO string) is parsed,
+    converted to an epoch timestamp (seconds since Unix epoch), and stored. The view
+    returns a JSON response with a success message and the computed epoch timestamp.
+
+    Error handling:
+      - If the record does not exist, returns HTTP 404 with `{"error": "Entry not found"}`.
+      - If the request payload is malformed or any other error occurs, returns HTTP 400
+        with `{"error": <error message>}`.
+      - If invoked with any method other than POST, returns HTTP 405
+        with `{"error": "Invalid request method"}`.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object, expected to carry a JSON body on POST.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        A JSON response indicating success (HTTP 200) or an error (HTTP 4xx).
+    """
     if request.method == "POST":
         try:
             data = json.loads(request.body)

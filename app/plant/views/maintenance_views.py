@@ -48,6 +48,26 @@ can use it. Before we had this, we had it in 2 separate json objects, which was 
 
 def get_prod_lines():
     """
+    Aggregate downtime machine records into structured production line data.
+
+    Queries all DowntimeMachine entries and groups them by `line`, constructing
+    a list of dictionaries where each dictionary represents:
+      - `line` (str):        The production line identifier.
+      - `scrap_line` (str):  Same as `line`, for scrap reporting.
+      - `operations` (list): A list of operations on that line, each with:
+          - `op` (str):              The operation identifier.
+          - `machines` (list):       A list of machines for this operation,
+              each being a dict with:
+              - `number` (int):       The machine number.
+              - `target` (Any):       The target value (None by default).
+
+    Returns
+    -------
+    list of dict
+        A fresh list of production-line entries reflecting the current state
+        of the DowntimeMachine table.
+    """
+    """
     Return a list of { line, scrap_line, operations:[ { op, machines:[{number,target}] } ] }
     built fresh from the DowntimeMachine table.
     """
@@ -91,6 +111,37 @@ def get_prod_lines():
 
 @require_POST
 def delete_downtime_entry(request):
+    """
+    Soft-delete a MachineDowntimeEvent based on the provided entry ID.
+
+    Expects a POST request with a JSON body containing:
+      - entry_id (int): The primary key of the MachineDowntimeEvent to delete.
+
+    Workflow:
+      1. Parse the JSON payload and extract `entry_id`.
+      2. Retrieve the non-deleted MachineDowntimeEvent with that ID.
+      3. Mark the event as deleted by setting `is_deleted = True`
+         and stamping `deleted_at` with the current time.
+      4. Save the changes (only `is_deleted` and `deleted_at` fields).
+      5. Return a JSON response `{'status': 'ok'}`.
+
+    Error Handling:
+      - If the payload is not valid JSON or missing `entry_id`, returns
+        HTTP 400 Bad Request with message "Invalid payload".
+      - If no matching non-deleted event is found, returns
+        HTTP 400 Bad Request with message "Entry not found".
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, which must be a POST containing JSON.
+
+    Returns
+    -------
+    django.http.JsonResponse or django.http.HttpResponseBadRequest
+        - JsonResponse({'status': 'ok'}) on successful soft-delete.
+        - HttpResponseBadRequest on invalid payload or missing entry.
+    """
     try:
         payload = json.loads(request.body)
         entry_id = payload['entry_id']
@@ -113,6 +164,43 @@ def delete_downtime_entry(request):
 
 @require_POST
 def closeout_downtime_entry(request):
+    """
+    Close out a downtime event only after all participants have left.
+
+    Expects a POST request with a JSON body containing:
+      - entry_id (int):           The primary key of the MachineDowntimeEvent.
+      - closeout (str):           The close-out timestamp in "YYYY-MM-DD HH:MM" format.
+      - closeout_comment (str):   A comment to record at close-out.
+
+    Workflow:
+      1. Parse and validate the JSON payload.
+      2. Retrieve the non-deleted, not-yet-closed MachineDowntimeEvent or return 404.
+      3. Ensure there are no active DowntimeParticipation entries (all participants have left).
+      4. Interpret the provided timestamp as local (America/Toronto), convert to a UTC epoch.
+      5. Verify the close-out epoch is strictly after the event’s start_epoch.
+      6. Save `closeout_epoch` and `closeout_comment` on the event.
+      7. Return a JSON response with status "ok" and the epoch timestamp.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP POST request with a JSON body as described above.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{"status": "ok", "closed_at_epoch": <int>}`.
+
+    Raises
+    ------
+    HttpResponseBadRequest
+        If the payload is invalid JSON/missing keys, or if the close-out time
+        is not after the event’s start time.
+    HttpResponseForbidden
+        If any DowntimeParticipation for this event remains open.
+    Http404
+        If the specified event does not exist, is deleted, or is already closed.
+    """
     """
     Close out a downtime event *only* when every participant has already left.
     Expects JSON body:
@@ -164,6 +252,49 @@ def closeout_downtime_entry(request):
 
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
+    """
+    Retrieve a paginated list of active (open and not deleted) machine downtime events.
+
+    The response JSON includes:
+      - entries: A list of event dicts, each containing:
+          • id (int)
+          • start_at (str): formatted "YYYY-MM-DD HH:MM"
+          • line (str)
+          • machine (str)
+          • category (str)
+          • subcategory (str)
+          • code (str)
+          • category_code (str): portion of code before the first hyphen
+          • subcategory_code (str): full code
+          • comment (str)
+          • labour_types (str or list)
+          • employee_id (Any): if available
+      - has_more (bool): True if additional pages remain beyond this batch.
+      - is_guest (bool): True if the requester is not authenticated.
+
+    Pagination
+    ----------
+    Uses `offset` query parameter (default 0) and a fixed page size of 300:
+      - offset (int): zero-based index of the first record in this batch.
+
+    Filtering
+    ---------
+    Only returns events where:
+      - `is_deleted` is False
+      - `closeout_epoch` is null (i.e., still open)
+    Ordered by newest `start_epoch` first.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. May include:
+          - GET parameter `offset` (optional, defaults to 0).
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON object with keys `entries`, `has_more`, and `is_guest`.
+    """
     """
     Returns a page of open MachineDowntimeEvent entries plus:
       - has_more: whether there are more to load
@@ -224,6 +355,39 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
 
 
 def maintenance_form(request):
+    """
+    Display and process the machine downtime entry form for maintenance staff.
+
+    GET:
+      - Renders the downtime entry page with:
+        • `prod_lines`: JSON-serializable list of production lines, operations, and machines.
+        • `entries`: a page of active (not deleted, not closed) MachineDowntimeEvent objects,
+          annotated with flags for open participant roles (electrician, millwright, tech, operator, plc tech, IMT).
+        • `offset`, `page_size`, `has_more`: pagination parameters.
+
+    POST:
+      - Reads form fields for an existing entry (`entry_id`) or new entry:
+          • line, machine, category, subcategory, start_date, start_time,
+            description (comment), employee_id, labour_types (JSON list).
+      - Validates that `category` is present and corresponds to a known DowntimeCode.
+      - Validates optional `subcategory` if provided.
+      - Parses and localizes the start datetime (America/Toronto) to a UTC epoch timestamp.
+      - Creates a new MachineDowntimeEvent or updates the existing one.
+      - Redirects back to the same URL (preserving pagination).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. For GET, may include `offset` as a query parameter.
+        For POST, carries form data and optional `entry_id` for updates.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        On GET: renders "plant/maintenance_form.html" with context data.
+        On POST: redirects back to the form URL on success, or returns
+        HTTP 400 Bad Request for validation errors.
+    """
     """
     Downtime‐entry form: CATEGORY is required; SUBCATEGORY + code are optional.
     """
@@ -444,6 +608,40 @@ def annotate_being_worked_on(qs):
 @login_required
 @require_POST
 def bulk_toggle_active(request):
+    """
+    Bulk add or remove users from the "maintenance_active" group.
+
+    Only users with maintenance access may perform this action.
+
+    Expects a POST request with a JSON body containing:
+      - "activate":   List of usernames to add to the group.
+      - "deactivate": List of usernames to remove from the group.
+
+    Processing:
+      1. Parses the JSON payload; returns HTTP 400 on parse errors.
+      2. Removes any usernames from `deactivate` that also appear in `activate`.
+      3. Ensures the "maintenance_active" group exists.
+      4. Adds each user in `activate` to the group.
+      5. Removes each user in `deactivate` from the group.
+      6. Returns a JSON response with the lists of processed usernames.
+
+    Permissions
+    -----------
+    - Must be authenticated (`@login_required`).
+    - Must satisfy `user_has_maintenance_access(request.user)` or returns HTTP 403.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP POST request with a JSON body.
+
+    Returns
+    -------
+    django.http.JsonResponse or django.http.HttpResponseBadRequest/HttpResponseForbidden
+        - On success: `{"status":"ok","activated": [...],"deactivated":[...]}`.
+        - HTTP 400: if the JSON payload is invalid.
+        - HTTP 403: if the user lacks maintenance access.
+    """
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized")
 
@@ -499,6 +697,30 @@ ROLE_ORDER = ["electrician", "millwright", "tech", "plctech", "imt"]
 
 def group_by_role(workers):
     """
+    Organize a list of worker records into buckets by their primary role.
+
+    Each worker is expected to be a dict containing at least:
+      - 'roles':   A list of role strings (may be empty).
+      - other keys such as 'username', 'name', etc.
+
+    Workers are assigned to the bucket corresponding to their first-listed role
+    (normalized to lowercase) in the predefined ROLE_ORDER sequence. Any worker
+    whose primary role is not in ROLE_ORDER—or who has no roles—goes into the
+    `"other"` bucket. The order of buckets in the result follows ROLE_ORDER,
+    with `"other"` appended at the end.
+
+    Parameters
+    ----------
+    workers : list of dict
+        A list of worker dictionaries, each containing a 'roles' key.
+
+    Returns
+    -------
+    collections.OrderedDict
+        An ordered mapping from role keys (each from ROLE_ORDER plus "other")
+        to lists of worker dicts whose primary role matches the key.
+    """
+    """
     Given a list of worker-dicts (with 'roles' and 'username', 'name', etc.),
     bucket them by their first-listed role, in the order of ROLE_ORDER.
     """
@@ -515,7 +737,65 @@ def group_by_role(workers):
 
 @login_required(login_url="login")
 def list_all_downtime_entries(request):
+    """
+    Display and manage all live machine downtime events for maintenance staff.
 
+    Access Control
+    --------------
+    - User must be authenticated.
+    - User must satisfy `user_has_maintenance_access(request.user)`, otherwise HTTP 403.
+
+    Data Preparation
+    ----------------
+    1. Build `prod_lines` via `get_prod_lines()` for line/operation/machine structure.
+    2. Query live (not deleted, not closed) MachineDowntimeEvent records:
+       - Annotate each with `line_priority` (fallback 999) and fetched participant relations.
+       - Apply `annotate_being_worked_on` and `filter_out_operator_only_events`.
+       - Order by priority then newest start.
+    3. Take up to `PAGE_SIZE` entries, then for each:
+       - Compute `start_display`: `"HH:MM"` if today, else `"MM/DD"`.
+       - Set `user_has_open` if the current user is still on that event.
+       - Build `current_worker_roles`: set of maintenance roles active on the event.
+       - Build `current_usernames`: list of usernames currently joined.
+
+    Worker Lists
+    ------------
+    4. Collect all active maintenance-role users, split into:
+       - `active_users`: in “maintenance_active” group.
+       - `inactive_users`: not in that group.
+    5. For each group, build a list of dicts with:
+       - `username`, `name`, `roles` (list), and `jobs` (their open events with machine, subcategory, priority).
+    6. Bucket both active and inactive workers by primary role using `group_by_role()`.
+
+    User Flags & Choices
+    --------------------
+    7. Determine `is_manager` and `is_supervisor` from user’s groups.
+    8. Filter `MachineDowntimeEvent.LABOUR_CHOICES` based on user role membership.
+
+    Code & Lines JSON
+    -----------------
+    9. Build `downtime_codes_json` for the modal, grouping subcategories by category.
+   10. Prepare `lines_json` from `prod_lines`.
+
+    Rendering
+    ---------
+    Renders "plant/maintenance_all_entries.html" with context:
+      - entries, page_size, line_priorities
+      - is_manager, is_supervisor
+      - labour_choices
+      - active_workers_by_role, inactive_workers_by_role
+      - downtime_codes_json, lines_json
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request; must be GET.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        The rendered downtime entries page or HTTP 403 if unauthorized.
+    """
     prod_lines = get_prod_lines()
     # 1) Access control
     if not user_has_maintenance_access(request.user):
@@ -753,6 +1033,36 @@ def load_more_downtime_entries(request):
 @login_required
 def downtime_history(request, event_id):
     """
+    Retrieve the full labour participation history and comments for a specific downtime event.
+
+    Only authenticated users may access this view.
+
+    Workflow:
+      1. Fetch the MachineDowntimeEvent by `event_id`, ensuring it exists and is not deleted.
+      2. Query all DowntimeParticipation records for that event, ordered by `join_epoch`.
+      3. For each participation:
+         - Convert `join_epoch` and (if present) `leave_epoch` from epoch→aware local datetime→formatted string.
+         - Gather the user’s maintenance roles based on their group memberships.
+         - Include any join/leave comments and total minutes.
+      4. Return a JSON response containing:
+         - `history`: list of participation dicts with keys
+             • id, user, roles, join_at, join_comment, leave_at, leave_comment, total_minutes
+         - `event_comment`: the event’s opening comment
+         - `closeout_comment`: the event’s close-out comment (or empty string)
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request (must be GET).
+    event_id : int
+        Primary key of the downtime event to inspect.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON payload as described above, or HTTP 404 if the event is not found.
+    """
+    """
     Return the complete labour-history JSON for one downtime event,
     PLUS the event’s own opening and close-out comments.
     """
@@ -822,6 +1132,33 @@ def downtime_history(request, event_id):
 @require_POST
 @login_required
 def join_downtime_event(request):
+    """
+    Record a user’s participation start in a machine downtime event.
+
+    Expects a POST request with a JSON body containing:
+      - event_id (int):         The primary key of the MachineDowntimeEvent.
+      - join_datetime (str):    The local join timestamp in ISO format "YYYY-MM-DDTHH:MM".
+      - join_comment (str, opt): An optional comment about the join.
+
+    Workflow:
+      1. Parse and validate the JSON payload; return HTTP 400 on errors.
+      2. Fetch the specified non-deleted downtime event; return HTTP 400 if not found.
+      3. Parse the provided local-time string as an aware datetime in the server’s
+         timezone (America/Toronto), convert it to UTC, and compute the epoch seconds.
+      4. Create a DowntimeParticipation record with `event`, `user`, `join_epoch`, and `join_comment`.
+      5. Return a JSON response with status "ok", the new participation ID, and the join epoch.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request carrying a JSON body.
+
+    Returns
+    -------
+    django.http.JsonResponse or django.http.HttpResponseBadRequest
+        - On success: `{"status":"ok","participation_id": <int>, "join_epoch": <int>}`.
+        - HTTP 400: if payload is invalid, event not found, or datetime parse fails.
+    """
     try:
         payload      = json.loads(request.body)
         event_id     = payload['event_id']
@@ -861,6 +1198,37 @@ def join_downtime_event(request):
 @require_POST
 @login_required
 def leave_downtime_event(request):
+    """
+    Record a user’s departure from a machine downtime event and calculate duration.
+
+    Expects a POST request with a JSON body containing:
+      - event_id (int):          The primary key of the MachineDowntimeEvent.
+      - leave_datetime (str):    The local leave timestamp in ISO format "YYYY-MM-DDTHH:MM".
+      - leave_comment (str, opt): An optional comment for leaving.
+
+    Workflow:
+      1. Parse and validate the JSON payload; return HTTP 400 on parse errors or missing keys.
+      2. Retrieve the most recent open DowntimeParticipation for this user and event;
+         return HTTP 400 if none exists.
+      3. Parse the provided leave timestamp as a naive datetime, localize to the server’s
+         timezone (America/Toronto), convert to UTC, and compute the epoch seconds.
+      4. Calculate the elapsed time since join (in seconds), round up to minutes, and
+         update the participation’s `leave_epoch`, `leave_comment`, and `total_minutes`.
+      5. Save the updated fields and return a JSON response with status "ok",
+         the leave epoch, and total minutes.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP POST request with a JSON body.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{"status":"ok","leave_epoch": <int>, "total_minutes": <int>}`.
+    django.http.HttpResponseBadRequest
+        If payload is invalid, no open participation is found, or datetime parsing fails.
+    """
     try:
         payload       = json.loads(request.body)
         event_id      = payload['event_id']
@@ -903,6 +1271,21 @@ def leave_downtime_event(request):
 
 
 def get_machine_priority_map():
+    """
+    Build a lookup of machine numbers to their line priority.
+
+    Queries the LinePriority table for all (line → priority) mappings,
+    then walks the current production lines (via get_prod_lines()) to
+    assign each machine’s number its corresponding line priority.
+
+    If a machine’s line has no priority entry, its value will be None.
+
+    Returns
+    -------
+    dict[str, int | None]
+        A dictionary mapping each machine_number (as used in DowntimeMachine)
+        to its line’s priority integer, or None if no priority is defined.
+    """
     prod_lines = get_prod_lines()
     """
     Returns a dict: { machine_number (str) → priority (int) } by
@@ -928,6 +1311,41 @@ def get_machine_priority_map():
 @login_required
 @require_POST
 def move_line_priority(request, pk, direction):
+    """
+    Adjust the ordering of line priorities by swapping one entry with its neighbor.
+
+    Only accepts POST requests from authenticated users.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. If the request is AJAX (XMLHttpRequest), a JSON
+        response is returned; otherwise the user is redirected back.
+    pk : int
+        Primary key of the LinePriority record to move.
+    direction : str
+        Movement direction:
+          - "up":    Swap with the entry having the next higher urgency (lower number).
+          - "down":  Swap with the entry having the next lower urgency (higher number).
+
+    Workflow
+    --------
+    1. Validate `direction`; return HTTP 400 if invalid.
+    2. Retrieve the `current` LinePriority by `pk`, 404 if not found.
+    3. Find the adjacent `neighbor` based on `direction`.
+    4. If a neighbor exists, perform an atomic swap of their `priority` values.
+    5. On AJAX requests, return JSON with the moved entry’s new priority and neighbor’s id.
+       Otherwise, redirect back to the referring page or the default list view.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On AJAX: `{"status":"ok","id":<pk>,"new_priority":<int>,"swapped_with":<neighbor_pk>}`
+    django.http.HttpResponseRedirect
+        On non-AJAX: redirects back to the referer or the downtime entries list.
+    django.http.HttpResponseBadRequest
+        If `direction` is not "up" or "down".
+    """
     """
     Swap the priority of LinePriority(pk) with its neighbor:
     - direction='up'   → swap with the next-higher-urgency (lower number)
@@ -999,6 +1417,33 @@ ROLE_TO_GROUP = {
 
 @require_POST
 def add_employee(request):
+    """
+    Create or update a user account (real or preload) and synchronize their maintenance role groups.
+
+    Workflow:
+      1. Read and normalize `first_name`, `last_name`, and `roles` from POST data.
+      2. Validate that both first and last names are provided; on failure, flash an error and redirect back.
+      3. Construct a base username (`first.last`) and a preload variant (`first.last@preload`).
+      4. Look up an existing real user by base username, then by preload username.
+      5. If no user exists, create a new preload account with a random password and staff privileges.
+      6. Determine the desired maintenance groups from the submitted roles.
+      7. For each role in `ROLE_TO_GROUP`, add or remove the corresponding group membership.
+      8. Save the user and flash a success message indicating whether the account was created or updated.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        A POST request containing form fields:
+          - `first_name` (str): Employee’s first name.
+          - `last_name` (str): Employee’s last name.
+          - `roles` (list of str): Selected maintenance role codes.
+
+    Returns
+    -------
+    django.http.HttpResponseRedirect
+        Redirects back to the referring page (or index) with appropriate Django message(s)
+        indicating success or required inputs.
+    """
     """
     Create or update a (real or preload) user and sync them to the
     correct maintenance_* groups, based on the manager’s selections.
@@ -1090,6 +1535,41 @@ def add_employee(request):
 
 @require_POST
 def maintenance_edit(request):
+    """
+    Provide JSON data for editing a machine downtime entry, including the entry’s details
+    and all reference lists needed for dependent dropdowns.
+
+    The response JSON contains:
+      - status:           "ok" or error
+      - entry_id:         The primary key of the downtime event
+      - line:             Current line identifier
+      - machine:          Current machine number
+      - category_code:    The prefix of the downtime code (before the first “–”)
+      - category_name:    The human-readable category label
+      - subcategory_code: The full downtime code (category + “–” + subcategory)
+      - start_date:       Local date portion of the event start ("YYYY-MM-DD")
+      - start_time:       Local time portion of the event start ("HH:MM")
+      - comment:          The event’s comment
+      - labour_types:     The list of labour type codes currently assigned
+      - employee_id:      The associated employee identifier (if any)
+      - lines:            Flat list of all available line identifiers
+      - machines:         Flat, sorted list of all available machine numbers
+      - categories:       List of dicts with keys `code` and `name` for each category
+      - subcategories:    List of dicts with keys `code`, `name`, and `parent` for each subcategory
+      - lines_data:       Full nested structure of lines → operations → machines
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        A POST request with JSON body containing:
+          - entry_id (int): ID of the downtime event to edit.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        A JSON object as described above, or HTTP 400 if the payload is invalid
+        or the specified entry does not exist.
+    """
     prod_lines = get_prod_lines()
     """
     Return a JSON blob with:
@@ -1175,6 +1655,43 @@ def maintenance_edit(request):
 @require_POST
 def maintenance_update_event(request):
     """
+    Update an existing machine downtime event with edited details.
+
+    Expects a POST request with a JSON body containing:
+      - entry_id (int):         The primary key of the MachineDowntimeEvent.
+      - line (str):             The production line identifier.
+      - machine (str):          The machine number.
+      - category (str):         The category code prefix (e.g. "MECH").
+      - subcategory (str):      The full downtime code (e.g. "MECH-TOOL").
+      - start_at (str):         The new start timestamp in "YYYY-MM-DD HH:MM" format.
+      - comment (str):          The downtime comment/description.
+      - labour_types (list):    Optional list of labour type codes.
+
+    Workflow:
+      1. Parse and validate the JSON payload; return HTTP 400 if malformed or missing required fields.
+      2. Retrieve the non-deleted MachineDowntimeEvent by `entry_id`; return HTTP 400 if not found.
+      3. Look up the DowntimeCode for `subcategory` to derive `category` and `subcategory` display names;
+         return HTTP 400 if the code is invalid.
+      4. Parse `start_at` as a naive datetime, localize to the default timezone, and convert to epoch seconds;
+         return HTTP 400 on format errors.
+      5. Update the event’s fields (`line`, `machine`, `category`, `subcategory`, `code`,
+         `start_epoch`, `comment`, `labour_types`) and save.
+      6. Return a JsonResponse `{'status': 'ok'}` on success.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming POST request with the JSON payload.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        `{'status': 'ok'}` on successful update.
+    django.http.HttpResponseBadRequest
+        If the payload is invalid, the event is not found, the code is invalid,
+        or the date format is incorrect.
+    """
+    """
     Receive edited fields and update the downtime event in the DB.
     """
     try:
@@ -1256,6 +1773,35 @@ def maintenance_update_event(request):
 
 
 def downtime_codes_list(request):
+    """
+    Display and manage the list of downtime codes.
+
+    GET:
+      - Retrieves all DowntimeCode records.
+      - Builds distinct lists of existing categories and subcategories.
+      - Renders the "plant/downtime_codes_list.html" template with context:
+          • codes: QuerySet of all DowntimeCode instances.
+          • categories: List of unique category strings.
+          • subcategories: List of unique subcategory strings.
+
+    POST:
+      - Reads `code`, `category`, and `subcategory` from form data.
+      - If all are provided, creates a new DowntimeCode record.
+      - Redirects back to the same view to display the updated list.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. On POST, carries form-encoded fields
+        `code`, `category`, and `subcategory`; on GET, is used to render the page.
+
+    Returns
+    -------
+    django.http.HttpResponseRedirect
+        After successful POST, redirects to 'downtime_codes_list'.
+    django.http.HttpResponse
+        On GET, renders the downtime codes list page.
+    """
     # Handle creation
     if request.method == 'POST':
         code       = request.POST.get('code')
@@ -1292,6 +1838,32 @@ def downtime_codes_list(request):
 
 @require_POST
 def downtime_codes_create(request):
+    """
+    AJAX endpoint to create a new DowntimeCode record.
+
+    Expects form-encoded POST parameters:
+      - code (str):        The unique downtime code identifier.
+      - category (str):    The human-readable category name.
+      - subcategory (str): The human-readable subcategory name.
+
+    Responses
+    ---------
+    - Success (HTTP 201):
+        JSON with:
+          • id (int):            The new DowntimeCode primary key.
+          • code (str)
+          • category (str)
+          • subcategory (str)
+          • updated_at (str):     Timestamp of creation formatted as "YYYY-MM-DD HH:MM".
+    - Failure (HTTP 400):
+        JSON with:
+          • error (str): Description of the validation error.
+
+    Error Conditions
+    ----------------
+    - Any of `code`, `category`, or `subcategory` is missing or empty.
+    - A DowntimeCode with the given `code` already exists.
+    """
     """AJAX: create a new code"""
     code       = request.POST.get('code', '').strip()
     category   = request.POST.get('category', '').strip()
@@ -1318,6 +1890,31 @@ def downtime_codes_create(request):
 
 @require_POST
 def downtime_codes_edit(request, pk):
+    """
+    AJAX endpoint to update an existing DowntimeCode record.
+
+    Expects form-encoded POST parameters:
+      - code (str):        The new downtime code identifier.
+      - category (str):    The updated category name.
+      - subcategory (str): The updated subcategory name.
+
+    Workflow:
+      1. Retrieve the DowntimeCode by primary key or return HTTP 404.
+      2. Validate that `code`, `category`, and `subcategory` are all provided;
+         on missing fields, return HTTP 400 with an error.
+      3. If the `code` has changed, ensure no other record uses the same code;
+         on conflict, return HTTP 400 with an error.
+      4. Update the object’s fields and save.
+      5. Return a JSON response including the record’s id, code, category,
+         subcategory, and the `updated_at` timestamp formatted as "YYYY-MM-DD HH:MM".
+
+    Responses
+    ---------
+    - Success (HTTP 200):
+        JSON with keys `id`, `code`, `category`, `subcategory`, `updated_at`.
+    - Failure (HTTP 400):
+        JSON with key `error` describing the issue.
+    """
     """AJAX: update an existing code"""
     obj = get_object_or_404(DowntimeCode, pk=pk)
     code     = request.POST.get('code', '').strip()
@@ -1348,6 +1945,29 @@ def downtime_codes_edit(request, pk):
 
 @require_POST
 def downtime_codes_delete(request, pk):
+    """
+    AJAX endpoint to delete a DowntimeCode record.
+
+    Expects
+    --------
+    pk : int
+        The primary key of the DowntimeCode to delete, passed as a URL parameter.
+
+    Workflow
+    --------
+    1. Retrieve the DowntimeCode object by `pk`, returning HTTP 404 if not found.
+    2. Delete the object from the database.
+    3. Return a JSON response indicating success.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{'success': True}`.
+    Raises
+    ------
+    django.http.Http404
+        If no DowntimeCode with the given `pk` exists.
+    """
     """AJAX: delete a code"""
     obj = get_object_or_404(DowntimeCode, pk=pk)
     obj.delete()
@@ -1374,6 +1994,33 @@ def downtime_codes_delete(request, pk):
 @require_POST
 @csrf_exempt
 def machine_history(request):
+    """
+    AJAX endpoint to retrieve the downtime and participation history for a given machine.
+
+    Expects form-encoded POST data with:
+      - machine (str): The machine identifier to query (required).
+
+    Workflow:
+      1. Validate that the `machine` parameter is provided; return HTTP 400 if missing.
+      2. Query the 500 most recent non-deleted MachineDowntimeEvent records for that machine,
+         ordered by descending start_epoch.
+      3. For each event, collect:
+         - id, start_epoch, start_display, closeout_epoch, closeout_display
+         - category, subcategory, code, comment, closeout_comment
+         - participations: a list of dicts for each DowntimeParticipation, containing:
+             • user: full name or username
+             • join_epoch, join_display
+             • leave_epoch, leave_display (or None)
+             • join_comment, leave_comment
+             • total_minutes
+      4. Assemble the data into a JSON object under the `"events"` key.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - On success: `{"events": [ ... ]}` with the structure described above.
+        - HTTP 400: `{"error": "Machine parameter is required."}` if no machine provided.
+    """
     machine = request.POST.get("machine", "").strip()
     if not machine:
         return JsonResponse({"error": "Machine parameter is required."}, status=400)
@@ -1426,6 +2073,38 @@ def machine_history(request):
 
 @login_required
 def employee_login_status(request):
+    """
+    Display and optionally export the login status of maintenance staff accounts.
+
+    Access Control
+    --------------
+    - User must be authenticated.
+    - User must have maintenance access or receives HTTP 403.
+
+    Functionality
+    -------------
+    1. Retrieves all users belonging to any maintenance role group.
+    2. For each user:
+       - Gathers their roles, account type (real vs. preload), and last login info.
+       - Determines whether they are currently logged in.
+       - Tallies counts of real vs. preload accounts per role.
+    3. If `?format=csv` is in the query string, returns a CSV download with columns:
+       Name, Username, Role(s), Account Type, Last Login, Logged In?
+    4. Otherwise, renders the 'plant/employee_login_status.html' template with:
+       - `users`: list of user status dicts
+       - `summary`: list of per-role real/preload counts
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming GET request; may include `format=csv` for CSV export.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - CSV file download if requested.
+        - HTML page rendering otherwise.
+    """
     # ── access control ──
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
@@ -1536,6 +2215,29 @@ def employee_login_status(request):
 
 
 def target_lines(request):
+    """
+    Provide a JSON list of available production line identifiers.
+
+    GET:
+      - Calls `get_prod_lines()` to build the nested line/operation/machine structure.
+      - Extracts just the `line` names from each block.
+      - Returns a JsonResponse with `{"lines": [...]}`.
+
+    Other methods:
+      - Returns HTTP 405 Method Not Allowed.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request; expected to be a GET.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On GET: JSON object containing the `lines` list.
+    django.http.HttpResponse
+        On non-GET: HTTP 405 response with no body.
+    """
     prod_lines = get_prod_lines()
     if request.method == 'GET':
         # extract just the line names
@@ -1568,6 +2270,43 @@ def user_is_supervisor_or_manager(user):
 @require_POST
 @user_passes_test(user_is_supervisor_or_manager)      # <--- permission gate
 def force_leave_participation(request, pk):
+    """
+    Allow a supervisor or manager to forcibly close out another user’s open participation.
+
+    Expects a POST request with a JSON body containing:
+      - leave_comment (str):  Mandatory non-empty comment explaining the forced leave.
+      - leave_datetime (str, optional): ISO local timestamp "YYYY-MM-DDTHH:MM" at which to record the leave;
+        if omitted, the current time is used.
+
+    Workflow:
+      1. Parse and validate JSON; return HTTP 400 if `leave_comment` is missing or empty.
+      2. Parse `leave_datetime` (if provided) into an aware UTC epoch; return HTTP 400 on format errors.
+      3. Retrieve the open DowntimeParticipation by `pk`, ensuring the event is live and not closed.
+      4. Ensure the leave timestamp is strictly after the original join; return HTTP 400 otherwise.
+      5. Compute total minutes (rounding up), set `leave_epoch`, `leave_comment`, and `total_minutes`.
+      6. Save the participation and return JSON `{"status":"ok","leave_epoch":<int>,"total_minutes":<int>}`.
+
+    Permissions
+    -----------
+    - Must be authenticated (`@login_required`).
+    - Must pass `user_is_supervisor_or_manager` test or receives HTTP 403.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming POST request carrying a JSON body.
+    pk : int
+        Primary key of the DowntimeParticipation to force-close.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{"status":"ok","leave_epoch": <int>,"total_minutes": <int>}`.
+    django.http.HttpResponseBadRequest
+        If payload is invalid, comment missing, datetime parse fails, or leave before join.
+    django.http.Http404
+        If no matching open participation is found.
+    """
     """
     Managers/supervisors can finish someone else’s open participation,
     supplying a mandatory comment and an optional leave_datetime.
@@ -1633,6 +2372,48 @@ def force_leave_participation(request, pk):
 
 @login_required(login_url="login")
 def maintenance_bulk_form(request):
+    """
+    Bulk-add downtime entries for one production line across multiple machines.
+
+    GET:
+      - Builds and renders the bulk-entry form with:
+        • prod_lines: nested JSON structure of lines → operations → machines.
+        • downtime_codes_json: list of downtime categories and their subcategories.
+
+    POST:
+      - Reads form fields:
+          • line (str)
+          • machines (list of str)
+          • category (str)
+          • subcategory (str, optional)
+          • start_date (str, "YYYY-MM-DD")
+          • start_time (str, "HH:MM")
+          • description (str)
+          • employee_id (str, optional)
+          • labour_types (JSON-encoded list)
+      - Validates:
+          • At least one machine selected.
+          • Category is provided and valid.
+          • Subcategory (if given) is valid.
+          • Date/time is in the correct format.
+      - Parses `labour_types` JSON and localizes the start datetime (America/Toronto → UTC epoch).
+      - Creates a MachineDowntimeEvent for each selected machine, sharing the same metadata.
+      - Redirects to the maintenance list view on success; returns HTTP 400 on any validation error.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. For GET, used to render the form; for POST, carries the bulk-entry data.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        On GET: renders "plant/maintenance_bulk_form.html" with the necessary context.
+    django.http.HttpResponseRedirect
+        On successful POST: redirects to the "maintenance_all" view.
+    django.http.HttpResponseBadRequest
+        On POST: if any required field is missing or invalid.
+    """
     prod_lines = get_prod_lines()
     """
     Bulk‐add downtime entries: pick one line, one or more machines,
@@ -1734,6 +2515,50 @@ def maintenance_bulk_form(request):
 
 @login_required(login_url="login")
 def quick_add(request):
+    """
+    Display a form for, and process, the creation of a single downtime entry.
+
+    GET:
+      - Renders the "plant/quick_add.html" template with:
+        • `lines_json`: Nested JSON of production lines → operations → machines.
+        • `downtime_codes_json`: List of downtime categories and subcategories.
+        • `labour_choices`: The available labour type choices.
+
+    POST:
+      - Reads form fields:
+          • line (str):            Production line identifier.
+          • machine (str):         Machine number.
+          • category (str):        Category code prefix.
+          • subcategory (str):     Full downtime code (optional).
+          • start_date (str):      "YYYY-MM-DD".
+          • start_time (str):      "HH:MM".
+          • description (str):     Comment for the downtime.
+          • employee_id (str):     Optional employee identifier.
+          • labour_types (JSON):   JSON-encoded list of labour type codes.
+      - Validates:
+          • A machine is selected.
+          • Category is provided and valid.
+          • Subcategory (if given) is valid.
+          • Date/time format is correct.
+      - Parses `labour_types` JSON and localizes the start datetime
+        (America/Toronto → UTC epoch).
+      - Creates one `MachineDowntimeEvent` with the provided details.
+      - Redirects to the maintenance list view on success; returns HTTP 400
+        for any validation errors.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request. GET to render the form; POST to submit data.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET: renders the quick-add form page.
+        - On successful POST: redirects to 'maintenance_all'.
+    django.http.HttpResponseBadRequest
+        - On POST: if any required field is missing or invalid.
+    """
     prod_lines = get_prod_lines()
     """
     Add a single downtime entry: pick one line, one machine,

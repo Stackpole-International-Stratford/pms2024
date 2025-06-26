@@ -12,6 +12,42 @@ from ..models.absentee_models import AbsenteeReport
 @login_required(login_url='/login/')
 def absentee_forms(request):
     """
+    Display and manage absentee report uploads for HR managers.
+
+    This view supports:
+      - GET: Render the absentee upload page with:
+        • `last_uploads`: the five most recent distinct upload dates (YYYY-MM-DD).
+        • `today`: the server’s local date (YYYY-MM-DD) for default form input.
+      - POST with `delete_time`: Delete all AbsenteeReport records whose
+        `uploaded_at` timestamp falls on the specified date (UTC-converted),
+        then re-render with an updated `last_uploads` list and a success or error message.
+      - POST with an Excel file (`excel_file`) and `upload_date`: Parse the file
+        into AbsenteeReport rows, assign each row’s `uploaded_at` to the chosen
+        date (midnight local→UTC), bulk-insert valid rows, then re-render with
+        updated `last_uploads` and a success or error message.
+
+    Access Control
+    --------------
+    Only users in the “hr_managers” group may access this view;
+    others receive HTTP 403 Forbidden.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. For POST, may include:
+          - `delete_time` (str): ISO date "YYYY-MM-DD" for deletion.
+          - `excel_file` (UploadedFile): Excel workbook of absentee data.
+          - `upload_date` (str): ISO date "YYYY-MM-DD" to stamp new rows.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders "plant/absentee.html" with context keys:
+          - `last_uploads`: list of up to five date objects.
+          - `today`: string default date for file uploads.
+          - `success` or `error`: feedback messages on POST operations.
+    """
+    """
     - Only users in 'hr_managers' can access.
     - On every request, compute the last 5 distinct upload‐DATES (not minutes).
     - On POST with 'delete_time', delete all AbsenteeReport rows whose uploaded_at
