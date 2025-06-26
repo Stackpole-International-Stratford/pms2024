@@ -4,6 +4,22 @@ from django.db import models
 
 
 class LaserMark(models.Model):
+    """A record of a single barcode scan in the system.
+
+    Attributes:
+        part_number (str):
+            The part number from the associated `BarCodePUN` record.
+        bar_code (str):
+            The full scanned barcode; guaranteed unique.
+        created_at (datetime.datetime):
+            Timestamp when this record was first created.
+        grade (str | None):
+            One‐letter quality grade ('A'–'F'), or `None` if not yet graded.
+        asset (str | None):
+            Identifier of the machine or station where the scan occurred.
+        unique_portion (str | None):
+            The portion of the barcode matched by the PUN’s regex (for quick lookup).
+    """
     part_number = models.CharField(max_length=20)
     bar_code = models.CharField(max_length=50, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -19,6 +35,18 @@ class LaserMark(models.Model):
 
 
 class LaserMarkMeasurementData(models.Model):
+    """Holds detailed measurement data for a single LaserMark scan.
+
+    Each LaserMark can have exactly one associated MeasurementData record,
+    storing whatever raw or serialized measurement results were captured.
+
+    Attributes:
+        laser_mark (LaserMark):
+            One-to-one link to the corresponding LaserMark record.
+        measurement_data (str):
+            Free-form text (e.g. JSON, CSV, or plain text) containing the
+            detailed measurements captured during the scan.
+    """
     laser_mark = models.OneToOneField(
         LaserMark, on_delete=models.CASCADE, primary_key=True)
     measurement_data = models.TextField()
@@ -31,6 +59,14 @@ class LaserMarkMeasurementData(models.Model):
 
 
 class LaserMarkDuplicateScan(models.Model):
+    """Record the timestamp of a duplicate scan for a LaserMark barcode.
+
+    Attributes:
+        laser_mark (LaserMark):
+            One-to-one link to the original `LaserMark` record that was scanned again.
+        scanned_at (datetime.datetime):
+            Timestamp (auto-set at creation) when the duplicate scan occurred.
+    """
     laser_mark = models.OneToOneField(
         LaserMark, on_delete=models.CASCADE, primary_key=True)
     scanned_at = models.DateTimeField(auto_now_add=True)
@@ -43,6 +79,15 @@ class LaserMarkDuplicateScan(models.Model):
 
 
 class BarCodePUN(models.Model):
+    """Define a Part Number Unit (PUN) with its barcode validation pattern and metadata.
+
+    Attributes:
+        name (str): A human-readable identifier for this PUN entry.
+        part_number (str): The exact part number string this PUN applies to.
+        regex (str): The regular expression used to validate scanned barcodes for this part.
+        active (bool): Whether this PUN is currently enabled for scanning operations.
+        parts_per_tray (int): Expected number of parts per tray when performing batch scans.
+    """
     name = models.CharField(max_length=50)
     part_number = models.CharField(max_length=50)
     regex = models.CharField(max_length=120)
@@ -57,6 +102,24 @@ class BarCodePUN(models.Model):
 
 
 class DuplicateBarcodeEvent(models.Model):
+    """Log an occurrence of a duplicate barcode scan along with unlock details.
+
+    Attributes:
+        barcode (str):
+            The barcode string that was scanned a second time.
+        part_number (str):
+            The part number associated with this barcode.
+        scan_time (datetime.datetime):
+            Original timestamp when the duplicate scan occurred.
+        unlock_code (str):
+            The three‐character code generated to unlock after a duplicate is detected.
+        employee_id (str | None):
+            Identifier of the employee who entered the unlock code (nullable until submitted).
+        event_time (datetime.datetime):
+            Timestamp when this event record was created.
+        user_reason (str | None):
+            Optional free‐text reason provided by the user for the duplicate scan.
+    """
     barcode = models.CharField(max_length=50)
     part_number = models.CharField(max_length=50)
     scan_time = models.DateTimeField()
