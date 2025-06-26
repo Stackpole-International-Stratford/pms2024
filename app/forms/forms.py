@@ -5,6 +5,43 @@ from django.forms.widgets import DateInput
 
 # OIS Form
 class OISForm(forms.ModelForm):
+    """
+    A ModelForm for creating and editing OIS-type Form instances, exposing
+    metadata fields (part number, operation, etc.) as individual form inputs.
+
+    This form:
+      - Renders the `name` field from the underlying Form model.
+      - Adds custom fields for each metadata key required by OIS forms.
+      - Pre-populates metadata fields from an existing instance on edit.
+      - On save, assigns the FormType "OIS" and consolidates cleaned metadata
+        back into the Form.metadata JSON field.
+
+    Fields:
+        name (CharField):
+            The descriptive name of the Form instance (from the Form model).
+        part_number (CharField):
+            The part number metadata for the OIS form.
+        operation (CharField):
+            The operation metadata for the OIS form.
+        part_name (CharField):
+            The part name metadata for the OIS form.
+        year (CharField):
+            The year metadata (4-digit string).
+        mod_level (CharField):
+            The modification level metadata.
+        machine (CharField):
+            The machine identifier metadata.
+        mod_date (DateField):
+            The modification date metadata.
+
+    Methods:
+        __init__(*args, **kwargs):
+            If editing an existing Form instance, initializes each metadata field
+            from instance.metadata.
+        save(commit=True):
+            Sets form_type to the OIS FormType, updates instance.metadata from
+            cleaned_data, saves the Form, and returns it.
+    """
     part_number = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     operation = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     part_name = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -52,6 +89,42 @@ class OISForm(forms.ModelForm):
 
 # OIS Question form
 class OISQuestionForm(forms.ModelForm):
+    """
+    A ModelForm for creating and editing OIS-specific FormQuestion instances.
+
+    Exposes each question property stored in the JSON `question` field as individual form inputs:
+      - feature
+      - special_characteristic
+      - characteristic
+      - specifications
+      - sample_frequency
+      - sample_size
+      - done_by
+      - order (hidden)
+      - checkmark (boolean)
+
+    On initialization, if editing an existing FormQuestion, pre-populates each field
+    from `instance.question`. On save, rebuilds the JSON payload combining cleaned_data
+    and any provided `form_instance` or explicit `order`.
+
+    Fields:
+        feature (CharField): The feature name.
+        special_characteristic (CharField): Optional special characteristic.
+        characteristic (CharField): The measured characteristic.
+        specifications (CharField): Specs to check against.
+        sample_frequency (CharField): How often to sample.
+        sample_size (CharField): Number of samples per check.
+        done_by (CharField): Role or person who performs the check.
+        order (IntegerField): Hidden field to maintain question ordering.
+        checkmark (BooleanField): Indicates if this question uses a checkmark UI.
+
+    Methods:
+        __init__(*args, **kwargs):
+            Pre-fill fields from `instance.question` when editing.
+        save(form_instance=None, order=None, commit=True):
+            Assigns `form_instance` if provided, rebuilds `question` JSON from cleaned_data,
+            uses explicit `order` if passed, saves the model, and returns the instance.
+    """
     feature = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     special_characteristic = forms.CharField(max_length=255, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
     characteristic = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -105,6 +178,33 @@ class OISQuestionForm(forms.ModelForm):
 
 # TPM Form
 class TPMForm(forms.ModelForm):
+    """
+    A ModelForm for creating and editing TPM-type Form instances, exposing
+    metadata fields (part number and operation) as individual form inputs.
+
+    This form:
+      - Renders the `name` field from the underlying Form model.
+      - Adds custom fields for TPM-specific metadata: `part_number` and `operation`.
+      - Pre-populates those fields from `instance.metadata` when editing.
+      - On save, assigns the FormType "TPM" and consolidates cleaned metadata
+        back into the Form.metadata JSON field.
+
+    Fields:
+        name (CharField):
+            The descriptive name of the Form instance (inherited from Form).
+        part_number (CharField):
+            The part number metadata for the TPM form.
+        operation (CharField):
+            The operation metadata for the TPM form.
+
+    Methods:
+        __init__(*args, **kwargs):
+            If editing an existing Form instance, initializes metadata fields
+            from `instance.metadata`.
+        save(commit=True):
+            Sets `form_type` to the "TPM" FormType, updates `metadata` from
+            `cleaned_data`, saves the Form, and returns it.
+    """
     part_number = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     operation = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
@@ -133,6 +233,32 @@ class TPMForm(forms.ModelForm):
 
 # Updated TPM Question Form with order field
 class TPMQuestionForm(forms.ModelForm):
+    """
+    A ModelForm for creating and editing TPM-specific FormQuestion instances,
+    exposing a simple question text and hidden ordering field.
+
+    This form:
+      - Renders a `question_text` input for the question prompt.
+      - Includes a hidden `order` field to control question ordering.
+      - Pre-populates fields from `instance.question` JSON when editing.
+      - On save, assigns the parent form (if provided) and rebuilds the JSON
+        payload with `question_text` and `order`.
+
+    Fields:
+        question_text (CharField):
+            The text of the TPM question.
+        order (IntegerField):
+            Hidden field indicating the question’s order in the form.
+
+    Methods:
+        __init__(*args, **kwargs):
+            If editing an existing FormQuestion, initializes fields from
+            `instance.question` JSON.
+        save(form_instance=None, order=None, commit=True):
+            Sets `form_instance` if provided, uses the explicit `order` argument
+            or the cleaned_data value, rebuilds `question` JSON, saves the model,
+            and returns the instance.
+    """
     question_text = forms.CharField(
         # max_length=255,
         required=True,
@@ -172,6 +298,33 @@ class TPMQuestionForm(forms.ModelForm):
 
 # LPA Form
 class LPAForm(forms.ModelForm):
+    """
+    A ModelForm for creating and editing LPA-type Form instances, exposing
+    metadata fields (part number and operation) as individual form inputs.
+
+    This form:
+      - Renders the `name` field from the underlying Form model.
+      - Adds custom fields for LPA-specific metadata: `part_number` and `operation`.
+      - Pre-populates those fields from `instance.metadata` when editing.
+      - On save, assigns the FormType "LPA" and consolidates cleaned metadata
+        back into the Form.metadata JSON field.
+
+    Fields:
+        name (CharField):
+            The descriptive name of the Form instance (inherited from Form).
+        part_number (CharField):
+            The part number metadata for the LPA form.
+        operation (CharField):
+            The operation metadata for the LPA form.
+
+    Methods:
+        __init__(*args, **kwargs):
+            If editing an existing Form instance, initializes metadata fields
+            from `instance.metadata`.
+        save(commit=True):
+            Sets `form_type` to the "LPA" FormType, updates `metadata` from
+            `cleaned_data`, saves the Form, and returns it.
+    """
     part_number = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     operation = forms.CharField(max_length=255, required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
 
@@ -199,6 +352,40 @@ class LPAForm(forms.ModelForm):
 
 
 class LPAQuestionForm(forms.ModelForm):
+    """
+    A ModelForm for creating and editing LPA-specific FormQuestion instances.
+
+    Exposes JSON-backed question properties as individual form fields:
+      - question_text: the main question prompt.
+      - what_to_look_for: optional guidance on what to inspect.
+      - recommended_action: optional follow-up action.
+      - typed_answer: boolean flag indicating free-text response.
+      - order: hidden integer to control question ordering.
+      - expiry_date: optional date after which the question expires.
+
+    Initialization:
+      - If editing an existing FormQuestion, each field is pre-populated
+        from `instance.question` JSON.
+
+    Saving:
+      - Accepts an optional `form_instance` to associate the question with its Form.
+      - Uses an explicit `order` argument if provided, otherwise the cleaned_data value.
+      - Converts `expiry_date` to ISO format if present.
+      - Rebuilds `question_instance.question` as a JSON dict from cleaned_data.
+      - Saves and returns the FormQuestion instance.
+
+    Fields:
+        question_text (CharField): Required prompt text (max 600 chars).
+        what_to_look_for (CharField): Optional guidance (max 600 chars).
+        recommended_action (CharField): Optional action instructions (max 600 chars).
+        typed_answer (BooleanField): Checkbox to indicate a typed response is allowed.
+        order (IntegerField): Hidden ordering index (default 1).
+        expiry_date (DateField): Optional expiration date (YYYY-MM-DD).
+
+    Methods:
+        __init__(*args, **kwargs): Pre-populate fields from JSON on edit.
+        save(form_instance=None, order=None, commit=True): Build and save the JSON payload.
+    """
     question_text = forms.CharField(
         max_length=600,
         required=True,
@@ -295,6 +482,24 @@ from django import forms
 from .models import FormAnswer
 
 class OISAnswerForm(forms.ModelForm):
+    """
+    A ModelForm for submitting answers to OIS questions, dynamically choosing
+    the input widget based on the question's `checkmark` flag.
+
+    - If `question.question['checkmark']` is True, renders a dropdown with
+      Pass/Fail choices.
+    - Otherwise, renders a text input for a free-form answer.
+
+    Meta:
+        model: FormAnswer
+        fields: ['answer']
+
+    Methods:
+        __init__(*args, question=None, **kwargs):
+            Initializes the form and, if a `question` is provided, inspects
+            its JSON data to determine whether to use a ChoiceField (checkmark)
+            or CharField (text input) for the `answer` field.
+    """
     class Meta:
         model = FormAnswer
         fields = ['answer']
