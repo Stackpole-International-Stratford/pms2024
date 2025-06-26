@@ -4,6 +4,36 @@ from django.utils import timezone
 
 
 class AbsenteeReport(models.Model):
+    """
+    Record of an employee’s absentee report for payroll purposes.
+
+    Fields
+    ------
+    employee_name : str
+        Full name of the employee.
+    job : str
+        Job title or position.
+    pay_date : date
+        The date to which this absentee record applies.
+    pay_code : str
+        Code representing the type of pay (e.g., absence reason).
+    pay_category : str
+        Higher-level category grouping of the pay code.
+    hours : Decimal
+        Number of hours absent.
+    pay_group_name : str
+        Name of the pay group (e.g., department or union group).
+    shift_rotation_description : str
+        Description of the employee’s shift rotation at the time.
+    uploaded_at : datetime
+        Timestamp (UTC) when this record was uploaded to the system.
+
+    Methods
+    -------
+    __str__()
+        Returns a human-readable representation: 
+        "{employee_name} – {pay_date} ({pay_code})".
+    """
     employee_name                = models.CharField(max_length=255)
     job                          = models.CharField(max_length=255)
     pay_date                     = models.DateField()
