@@ -1,0 +1,3636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>plant.views.maintenance_views API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>plant.views.maintenance_views</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="plant.views.maintenance_views.add_employee"><code class="name flex">
+<span>def <span class="ident">add_employee</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def add_employee(request):
+    &#34;&#34;&#34;
+    Create or update a user account (real or preload) and synchronize their maintenance role groups.
+
+    Workflow:
+      1. Read and normalize `first_name`, `last_name`, and `roles` from POST data.
+      2. Validate that both first and last names are provided; on failure, flash an error and redirect back.
+      3. Construct a base username (`first.last`) and a preload variant (`first.last@preload`).
+      4. Look up an existing real user by base username, then by preload username.
+      5. If no user exists, create a new preload account with a random password and staff privileges.
+      6. Determine the desired maintenance groups from the submitted roles.
+      7. For each role in `ROLE_TO_GROUP`, add or remove the corresponding group membership.
+      8. Save the user and flash a success message indicating whether the account was created or updated.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        A POST request containing form fields:
+          - `first_name` (str): Employee’s first name.
+          - `last_name` (str): Employee’s last name.
+          - `roles` (list of str): Selected maintenance role codes.
+
+    Returns
+    -------
+    django.http.HttpResponseRedirect
+        Redirects back to the referring page (or index) with appropriate Django message(s)
+        indicating success or required inputs.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Create or update a (real or preload) user and sync them to the
+    correct maintenance_* groups, based on the manager’s selections.
+    &#34;&#34;&#34;
+    first = request.POST.get(&#34;first_name&#34;, &#34;&#34;).strip().lower()
+    last  = request.POST.get(&#34;last_name&#34;,  &#34;&#34;).strip().lower()
+    roles = [r.strip().lower() for r in request.POST.getlist(&#34;roles&#34;)]   # list[]
+
+    if not first or not last:
+        messages.error(request, &#34;First and last name are required.&#34;)
+        return redirect(request.META.get(&#34;HTTP_REFERER&#34;, &#34;index&#34;))
+
+    base_username = f&#34;{first}.{last}&#34;            # e.g. tyler.careless
+    preload_un    = f&#34;{base_username}@preload&#34;   # e.g. tyler.careless@preload
+    User = get_user_model()
+
+    # 1️⃣ does a real account already exist?
+    user = User.objects.filter(username=base_username).first()
+
+    # 2️⃣ else: is there a preload account?
+    if user is None:
+        user = User.objects.filter(username=preload_un).first()
+
+    # 3️⃣ else: create a fresh preload account
+    if user is None:
+        dummy_pw = get_random_string(20)
+        user = User.objects.create_user(
+            username=preload_un,
+            password=dummy_pw,
+            is_staff=True  # keep admin access consistent with your backend
+        )
+        created = True
+    else:
+        created = False
+
+    # ------------------------------------------------------------------ #
+    # Sync their group memberships
+    # ------------------------------------------------------------------ #
+    desired_group_names = {
+        ROLE_TO_GROUP[r] for r in roles if r in ROLE_TO_GROUP
+    }
+
+    for role, group_name in ROLE_TO_GROUP.items():
+        grp, _ = Group.objects.get_or_create(name=group_name)
+
+        if group_name in desired_group_names:
+            user.groups.add(grp)
+        else:
+            user.groups.remove(grp)
+
+    user.save()
+
+    # ------------------------------------------------------------------ #
+    # Friendly feedback
+    # ------------------------------------------------------------------ #
+    if created:
+        messages.success(
+            request,
+            f&#34;Pre‑load account “{user.username}” created with roles: &#34;
+            f&#34;{&#39;, &#39;.join(roles) if roles else &#39;none&#39;}.&#34;
+        )
+    else:
+        messages.success(
+            request,
+            f&#34;Updated {user.username}: now in groups &#34;
+            f&#34;{&#39;, &#39;.join(sorted(desired_group_names)) or &#39;none&#39;}.&#34;
+        )
+
+    # [DEBUG] console output, as you requested earlier
+    print(f&#34;[DEBUG] New/updated employee → {first} {last}, roles: {roles}&#34;)
+
+    return redirect(request.META.get(&#34;HTTP_REFERER&#34;, &#34;index&#34;))</code></pre>
+</details>
+<div class="desc"><p>Create or update a user account (real or preload) and synchronize their maintenance role groups.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Read and normalize <code>first_name</code>, <code>last_name</code>, and <code>roles</code> from POST data.</li>
+<li>Validate that both first and last names are provided; on failure, flash an error and redirect back.</li>
+<li>Construct a base username (<code>first.last</code>) and a preload variant (<code>first.last@preload</code>).</li>
+<li>Look up an existing real user by base username, then by preload username.</li>
+<li>If no user exists, create a new preload account with a random password and staff privileges.</li>
+<li>Determine the desired maintenance groups from the submitted roles.</li>
+<li>For each role in <code>ROLE_TO_GROUP</code>, add or remove the corresponding group membership.</li>
+<li>Save the user and flash a success message indicating whether the account was created or updated.</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>A POST request containing form fields:
+- <code>first_name</code> (str): Employee’s first name.
+- <code>last_name</code> (str): Employee’s last name.
+- <code>roles</code> (list of str): Selected maintenance role codes.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponseRedirect</code></dt>
+<dd>Redirects back to the referring page (or index) with appropriate Django message(s)
+indicating success or required inputs.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.annotate_being_worked_on"><code class="name flex">
+<span>def <span class="ident">annotate_being_worked_on</span></span>(<span>qs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def annotate_being_worked_on(qs):
+    &#34;&#34;&#34;
+    Takes a MachineDowntimeEvent queryset `qs` and returns it
+    annotated with a boolean `being_worked_on` that’s True
+    if any DowntimeParticipation for that event has no leave_epoch.
+    &#34;&#34;&#34;
+    return qs.annotate(
+        being_worked_on=Exists(
+            DowntimeParticipation.objects
+              .filter(event_id=OuterRef(&#39;pk&#39;), leave_epoch__isnull=True)
+        )
+    )</code></pre>
+</details>
+<div class="desc"><p>Takes a MachineDowntimeEvent queryset <code>qs</code> and returns it
+annotated with a boolean <code>being_worked_on</code> that’s True
+if any DowntimeParticipation for that event has no leave_epoch.</p></div>
+</dd>
+<dt id="plant.views.maintenance_views.bulk_toggle_active"><code class="name flex">
+<span>def <span class="ident">bulk_toggle_active</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required
+@require_POST
+def bulk_toggle_active(request):
+    &#34;&#34;&#34;
+    Bulk add or remove users from the &#34;maintenance_active&#34; group.
+
+    Only users with maintenance access may perform this action.
+
+    Expects a POST request with a JSON body containing:
+      - &#34;activate&#34;:   List of usernames to add to the group.
+      - &#34;deactivate&#34;: List of usernames to remove from the group.
+
+    Processing:
+      1. Parses the JSON payload; returns HTTP 400 on parse errors.
+      2. Removes any usernames from `deactivate` that also appear in `activate`.
+      3. Ensures the &#34;maintenance_active&#34; group exists.
+      4. Adds each user in `activate` to the group.
+      5. Removes each user in `deactivate` from the group.
+      6. Returns a JSON response with the lists of processed usernames.
+
+    Permissions
+    -----------
+    - Must be authenticated (`@login_required`).
+    - Must satisfy `user_has_maintenance_access(request.user)` or returns HTTP 403.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP POST request with a JSON body.
+
+    Returns
+    -------
+    django.http.JsonResponse or django.http.HttpResponseBadRequest/HttpResponseForbidden
+        - On success: `{&#34;status&#34;:&#34;ok&#34;,&#34;activated&#34;: [...],&#34;deactivated&#34;:[...]}`.
+        - HTTP 400: if the JSON payload is invalid.
+        - HTTP 403: if the user lacks maintenance access.
+    &#34;&#34;&#34;
+    if not user_has_maintenance_access(request.user):
+        return HttpResponseForbidden(&#34;Not authorized&#34;)
+
+    try:
+        data       = json.loads(request.body)
+        activate   = set(data.get(&#34;activate&#34;, []))
+        deactivate = set(data.get(&#34;deactivate&#34;, []))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest(&#34;Bad JSON payload&#34;)
+
+    # avoid dupes
+    deactivate -= activate
+
+    User = get_user_model()
+    grp, _ = Group.objects.get_or_create(name=&#34;maintenance_active&#34;)
+
+    # Activate
+    for u in User.objects.filter(username__in=activate):
+        u.groups.add(grp)
+
+    # Deactivate
+    for u in User.objects.filter(username__in=deactivate):
+        u.groups.remove(grp)
+
+    return JsonResponse({
+        &#34;status&#34;: &#34;ok&#34;,
+        &#34;activated&#34;  : list(activate),
+        &#34;deactivated&#34;: list(deactivate),
+    })</code></pre>
+</details>
+<div class="desc"><p>Bulk add or remove users from the "maintenance_active" group.</p>
+<p>Only users with maintenance access may perform this action.</p>
+<p>Expects a POST request with a JSON body containing:
+- "activate":
+List of usernames to add to the group.
+- "deactivate": List of usernames to remove from the group.</p>
+<h2 id="processing">Processing</h2>
+<ol>
+<li>Parses the JSON payload; returns HTTP 400 on parse errors.</li>
+<li>Removes any usernames from <code>deactivate</code> that also appear in <code>activate</code>.</li>
+<li>Ensures the "maintenance_active" group exists.</li>
+<li>Adds each user in <code>activate</code> to the group.</li>
+<li>Removes each user in <code>deactivate</code> from the group.</li>
+<li>Returns a JSON response with the lists of processed usernames.</li>
+</ol>
+<h2 id="permissions">Permissions</h2>
+<ul>
+<li>Must be authenticated (<code>@login_required</code>).</li>
+<li>Must satisfy <code><a title="plant.views.maintenance_views.user_has_maintenance_access" href="#plant.views.maintenance_views.user_has_maintenance_access">user_has_maintenance_access()</a>(request.user)</code> or returns HTTP 403.</li>
+</ul>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP POST request with a JSON body.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code> or <code>django.http.HttpResponseBadRequest/HttpResponseForbidden</code></dt>
+<dd>
+<ul>
+<li>On success: <code>{"status":"ok","activated": [...],"deactivated":[...]}</code>.</li>
+<li>HTTP 400: if the JSON payload is invalid.</li>
+<li>HTTP 403: if the user lacks maintenance access.</li>
+</ul>
+</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.closeout_downtime_entry"><code class="name flex">
+<span>def <span class="ident">closeout_downtime_entry</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def closeout_downtime_entry(request):
+    &#34;&#34;&#34;
+    Close out a downtime event only after all participants have left.
+
+    Expects a POST request with a JSON body containing:
+      - entry_id (int):           The primary key of the MachineDowntimeEvent.
+      - closeout (str):           The close-out timestamp in &#34;YYYY-MM-DD HH:MM&#34; format.
+      - closeout_comment (str):   A comment to record at close-out.
+
+    Workflow:
+      1. Parse and validate the JSON payload.
+      2. Retrieve the non-deleted, not-yet-closed MachineDowntimeEvent or return 404.
+      3. Ensure there are no active DowntimeParticipation entries (all participants have left).
+      4. Interpret the provided timestamp as local (America/Toronto), convert to a UTC epoch.
+      5. Verify the close-out epoch is strictly after the event’s start_epoch.
+      6. Save `closeout_epoch` and `closeout_comment` on the event.
+      7. Return a JSON response with status &#34;ok&#34; and the epoch timestamp.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP POST request with a JSON body as described above.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{&#34;status&#34;: &#34;ok&#34;, &#34;closed_at_epoch&#34;: &lt;int&gt;}`.
+
+    Raises
+    ------
+    HttpResponseBadRequest
+        If the payload is invalid JSON/missing keys, or if the close-out time
+        is not after the event’s start time.
+    HttpResponseForbidden
+        If any DowntimeParticipation for this event remains open.
+    Http404
+        If the specified event does not exist, is deleted, or is already closed.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Close out a downtime event *only* when every participant has already left.
+    Expects JSON body:
+      {
+        &#34;entry_id&#34;:         &lt;int&gt;,
+        &#34;closeout&#34;:         &#34;YYYY-MM-DD HH:MM&#34;,
+        &#34;closeout_comment&#34;: &lt;string&gt;
+      }
+    &#34;&#34;&#34;
+    # 1) payload
+    try:
+        p             = json.loads(request.body)
+        entry_id      = p[&#34;entry_id&#34;]
+        naive_dt      = datetime.strptime(p[&#34;closeout&#34;], &#34;%Y-%m-%d %H:%M&#34;)
+        close_comment = p[&#34;closeout_comment&#34;].strip()
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;Invalid payload&#34;)
+
+    # 2) fetch event
+    event = get_object_or_404(
+        MachineDowntimeEvent,
+        pk=entry_id,
+        is_deleted=False,
+        closeout_epoch__isnull=True
+    )
+
+    # 3) ensure no open participants
+    if DowntimeParticipation.objects.filter(event=event, leave_epoch__isnull=True).exists():
+        return HttpResponseForbidden(&#34;Cannot close out until all participants have left.&#34;)
+
+    # 4) localize and convert to UTC epoch
+    local_tz    = timezone.get_current_timezone()  # America/Toronto
+    aware_local = timezone.make_aware(naive_dt, local_tz)
+    epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+
+    # 5) sanity check: must be after the start
+    if epoch_ts &lt;= event.start_epoch:
+        return HttpResponseBadRequest(&#34;Close-out time must be after the start time.&#34;)
+
+    # 6) save
+    event.closeout_epoch   = epoch_ts
+    event.closeout_comment = close_comment
+    event.save(update_fields=[&#34;closeout_epoch&#34;, &#34;closeout_comment&#34;])
+
+    return JsonResponse({&#34;status&#34;: &#34;ok&#34;, &#34;closed_at_epoch&#34;: epoch_ts})</code></pre>
+</details>
+<div class="desc"><p>Close out a downtime event only after all participants have left.</p>
+<p>Expects a POST request with a JSON body containing:
+- entry_id (int):
+The primary key of the MachineDowntimeEvent.
+- closeout (str):
+The close-out timestamp in "YYYY-MM-DD HH:MM" format.
+- closeout_comment (str):
+A comment to record at close-out.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Parse and validate the JSON payload.</li>
+<li>Retrieve the non-deleted, not-yet-closed MachineDowntimeEvent or return 404.</li>
+<li>Ensure there are no active DowntimeParticipation entries (all participants have left).</li>
+<li>Interpret the provided timestamp as local (America/Toronto), convert to a UTC epoch.</li>
+<li>Verify the close-out epoch is strictly after the event’s start_epoch.</li>
+<li>Save <code>closeout_epoch</code> and <code>closeout_comment</code> on the event.</li>
+<li>Return a JSON response with status "ok" and the epoch timestamp.</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming HTTP POST request with a JSON body as described above.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>On success: <code>{"status": "ok", "closed_at_epoch": &lt;int&gt;}</code>.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>HttpResponseBadRequest</code></dt>
+<dd>If the payload is invalid JSON/missing keys, or if the close-out time
+is not after the event’s start time.</dd>
+<dt><code>HttpResponseForbidden</code></dt>
+<dd>If any DowntimeParticipation for this event remains open.</dd>
+<dt><code>Http404</code></dt>
+<dd>If the specified event does not exist, is deleted, or is already closed.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.delete_downtime_entry"><code class="name flex">
+<span>def <span class="ident">delete_downtime_entry</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def delete_downtime_entry(request):
+    &#34;&#34;&#34;
+    Soft-delete a MachineDowntimeEvent based on the provided entry ID.
+
+    Expects a POST request with a JSON body containing:
+      - entry_id (int): The primary key of the MachineDowntimeEvent to delete.
+
+    Workflow:
+      1. Parse the JSON payload and extract `entry_id`.
+      2. Retrieve the non-deleted MachineDowntimeEvent with that ID.
+      3. Mark the event as deleted by setting `is_deleted = True`
+         and stamping `deleted_at` with the current time.
+      4. Save the changes (only `is_deleted` and `deleted_at` fields).
+      5. Return a JSON response `{&#39;status&#39;: &#39;ok&#39;}`.
+
+    Error Handling:
+      - If the payload is not valid JSON or missing `entry_id`, returns
+        HTTP 400 Bad Request with message &#34;Invalid payload&#34;.
+      - If no matching non-deleted event is found, returns
+        HTTP 400 Bad Request with message &#34;Entry not found&#34;.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, which must be a POST containing JSON.
+
+    Returns
+    -------
+    django.http.JsonResponse or django.http.HttpResponseBadRequest
+        - JsonResponse({&#39;status&#39;: &#39;ok&#39;}) on successful soft-delete.
+        - HttpResponseBadRequest on invalid payload or missing entry.
+    &#34;&#34;&#34;
+    try:
+        payload = json.loads(request.body)
+        entry_id = payload[&#39;entry_id&#39;]
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;Invalid payload&#34;)
+
+    try:
+        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest(&#34;Entry not found&#34;)
+
+    # soft-delete
+    e.is_deleted = True
+    e.deleted_at = timezone.now()
+    e.save(update_fields=[&#39;is_deleted&#39;, &#39;deleted_at&#39;])
+
+    return JsonResponse({&#39;status&#39;: &#39;ok&#39;})</code></pre>
+</details>
+<div class="desc"><p>Soft-delete a MachineDowntimeEvent based on the provided entry ID.</p>
+<p>Expects a POST request with a JSON body containing:
+- entry_id (int): The primary key of the MachineDowntimeEvent to delete.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Parse the JSON payload and extract <code>entry_id</code>.</li>
+<li>Retrieve the non-deleted MachineDowntimeEvent with that ID.</li>
+<li>Mark the event as deleted by setting <code>is_deleted = True</code>
+and stamping <code>deleted_at</code> with the current time.</li>
+<li>Save the changes (only <code>is_deleted</code> and <code>deleted_at</code> fields).</li>
+<li>Return a JSON response <code>{'status': 'ok'}</code>.</li>
+</ol>
+<p>Error Handling:
+- If the payload is not valid JSON or missing <code>entry_id</code>, returns
+HTTP 400 Bad Request with message "Invalid payload".
+- If no matching non-deleted event is found, returns
+HTTP 400 Bad Request with message "Entry not found".</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming HTTP request, which must be a POST containing JSON.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code> or <code>django.http.HttpResponseBadRequest</code></dt>
+<dd>
+<ul>
+<li>JsonResponse({'status': 'ok'}) on successful soft-delete.</li>
+<li>HttpResponseBadRequest on invalid payload or missing entry.</li>
+</ul>
+</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.downtime_codes_create"><code class="name flex">
+<span>def <span class="ident">downtime_codes_create</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def downtime_codes_create(request):
+    &#34;&#34;&#34;
+    AJAX endpoint to create a new DowntimeCode record.
+
+    Expects form-encoded POST parameters:
+      - code (str):        The unique downtime code identifier.
+      - category (str):    The human-readable category name.
+      - subcategory (str): The human-readable subcategory name.
+
+    Responses
+    ---------
+    - Success (HTTP 201):
+        JSON with:
+          • id (int):            The new DowntimeCode primary key.
+          • code (str)
+          • category (str)
+          • subcategory (str)
+          • updated_at (str):     Timestamp of creation formatted as &#34;YYYY-MM-DD HH:MM&#34;.
+    - Failure (HTTP 400):
+        JSON with:
+          • error (str): Description of the validation error.
+
+    Error Conditions
+    ----------------
+    - Any of `code`, `category`, or `subcategory` is missing or empty.
+    - A DowntimeCode with the given `code` already exists.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;AJAX: create a new code&#34;&#34;&#34;
+    code       = request.POST.get(&#39;code&#39;, &#39;&#39;).strip()
+    category   = request.POST.get(&#39;category&#39;, &#39;&#39;).strip()
+    subcat     = request.POST.get(&#39;subcategory&#39;, &#39;&#39;).strip()
+
+    if not all([code, category, subcat]):
+        return JsonResponse({&#39;error&#39;: &#39;All fields are required.&#39;}, status=400)
+
+    if DowntimeCode.objects.filter(code=code).exists():
+        return JsonResponse({&#39;error&#39;: f&#39;Code &#34;{code}&#34; already exists.&#39;}, status=400)
+
+    obj = DowntimeCode.objects.create(
+        code=code, category=category, subcategory=subcat
+    )
+    data = {
+        &#39;id&#39;: obj.id,
+        &#39;code&#39;: obj.code,
+        &#39;category&#39;: obj.category,
+        &#39;subcategory&#39;: obj.subcategory,
+        &#39;updated_at&#39;: obj.updated_at.strftime(&#39;%Y-%m-%d %H:%M&#39;),
+    }
+    return JsonResponse(data, status=201)</code></pre>
+</details>
+<div class="desc"><p>AJAX endpoint to create a new DowntimeCode record.</p>
+<p>Expects form-encoded POST parameters:
+- code (str):
+The unique downtime code identifier.
+- category (str):
+The human-readable category name.
+- subcategory (str): The human-readable subcategory name.</p>
+<h2 id="responses">Responses</h2>
+<ul>
+<li>Success (HTTP 201):
+JSON with:
+• id (int):
+The new DowntimeCode primary key.
+• code (str)
+• category (str)
+• subcategory (str)
+• updated_at (str):
+Timestamp of creation formatted as "YYYY-MM-DD HH:MM".</li>
+<li>Failure (HTTP 400):
+JSON with:
+• error (str): Description of the validation error.</li>
+</ul>
+<h2 id="error-conditions">Error Conditions</h2>
+<ul>
+<li>Any of <code>code</code>, <code>category</code>, or <code>subcategory</code> is missing or empty.</li>
+<li>A DowntimeCode with the given <code>code</code> already exists.</li>
+</ul></div>
+</dd>
+<dt id="plant.views.maintenance_views.downtime_codes_delete"><code class="name flex">
+<span>def <span class="ident">downtime_codes_delete</span></span>(<span>request, pk)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def downtime_codes_delete(request, pk):
+    &#34;&#34;&#34;
+    AJAX endpoint to delete a DowntimeCode record.
+
+    Expects
+    --------
+    pk : int
+        The primary key of the DowntimeCode to delete, passed as a URL parameter.
+
+    Workflow
+    --------
+    1. Retrieve the DowntimeCode object by `pk`, returning HTTP 404 if not found.
+    2. Delete the object from the database.
+    3. Return a JSON response indicating success.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{&#39;success&#39;: True}`.
+    Raises
+    ------
+    django.http.Http404
+        If no DowntimeCode with the given `pk` exists.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;AJAX: delete a code&#34;&#34;&#34;
+    obj = get_object_or_404(DowntimeCode, pk=pk)
+    obj.delete()
+    return JsonResponse({&#39;success&#39;: True})</code></pre>
+</details>
+<div class="desc"><p>AJAX endpoint to delete a DowntimeCode record.</p>
+<h2 id="expects">Expects</h2>
+<p>pk : int
+The primary key of the DowntimeCode to delete, passed as a URL parameter.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Retrieve the DowntimeCode object by <code>pk</code>, returning HTTP 404 if not found.</li>
+<li>Delete the object from the database.</li>
+<li>Return a JSON response indicating success.</li>
+</ol>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>On success: <code>{'success': True}</code>.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>django.http.Http404</code></dt>
+<dd>If no DowntimeCode with the given <code>pk</code> exists.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.downtime_codes_edit"><code class="name flex">
+<span>def <span class="ident">downtime_codes_edit</span></span>(<span>request, pk)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def downtime_codes_edit(request, pk):
+    &#34;&#34;&#34;
+    AJAX endpoint to update an existing DowntimeCode record.
+
+    Expects form-encoded POST parameters:
+      - code (str):        The new downtime code identifier.
+      - category (str):    The updated category name.
+      - subcategory (str): The updated subcategory name.
+
+    Workflow:
+      1. Retrieve the DowntimeCode by primary key or return HTTP 404.
+      2. Validate that `code`, `category`, and `subcategory` are all provided;
+         on missing fields, return HTTP 400 with an error.
+      3. If the `code` has changed, ensure no other record uses the same code;
+         on conflict, return HTTP 400 with an error.
+      4. Update the object’s fields and save.
+      5. Return a JSON response including the record’s id, code, category,
+         subcategory, and the `updated_at` timestamp formatted as &#34;YYYY-MM-DD HH:MM&#34;.
+
+    Responses
+    ---------
+    - Success (HTTP 200):
+        JSON with keys `id`, `code`, `category`, `subcategory`, `updated_at`.
+    - Failure (HTTP 400):
+        JSON with key `error` describing the issue.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;AJAX: update an existing code&#34;&#34;&#34;
+    obj = get_object_or_404(DowntimeCode, pk=pk)
+    code     = request.POST.get(&#39;code&#39;, &#39;&#39;).strip()
+    category = request.POST.get(&#39;category&#39;, &#39;&#39;).strip()
+    subcat   = request.POST.get(&#39;subcategory&#39;, &#39;&#39;).strip()
+
+    if not all([code, category, subcat]):
+        return JsonResponse({&#39;error&#39;: &#39;All fields are required.&#39;}, status=400)
+
+    # if they changed the code, ensure uniqueness
+    if obj.code != code and DowntimeCode.objects.filter(code=code).exists():
+        return JsonResponse({&#39;error&#39;: f&#39;Code &#34;{code}&#34; already exists.&#39;}, status=400)
+
+    obj.code = code
+    obj.category = category
+    obj.subcategory = subcat
+    obj.save()
+
+    data = {
+        &#39;id&#39;: obj.id,
+        &#39;code&#39;: obj.code,
+        &#39;category&#39;: obj.category,
+        &#39;subcategory&#39;: obj.subcategory,
+        &#39;updated_at&#39;: obj.updated_at.strftime(&#39;%Y-%m-%d %H:%M&#39;),
+    }
+    return JsonResponse(data)</code></pre>
+</details>
+<div class="desc"><p>AJAX endpoint to update an existing DowntimeCode record.</p>
+<p>Expects form-encoded POST parameters:
+- code (str):
+The new downtime code identifier.
+- category (str):
+The updated category name.
+- subcategory (str): The updated subcategory name.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Retrieve the DowntimeCode by primary key or return HTTP 404.</li>
+<li>Validate that <code>code</code>, <code>category</code>, and <code>subcategory</code> are all provided;
+on missing fields, return HTTP 400 with an error.</li>
+<li>If the <code>code</code> has changed, ensure no other record uses the same code;
+on conflict, return HTTP 400 with an error.</li>
+<li>Update the object’s fields and save.</li>
+<li>Return a JSON response including the record’s id, code, category,
+subcategory, and the <code>updated_at</code> timestamp formatted as "YYYY-MM-DD HH:MM".</li>
+</ol>
+<h2 id="responses">Responses</h2>
+<ul>
+<li>Success (HTTP 200):
+JSON with keys <code>id</code>, <code>code</code>, <code>category</code>, <code>subcategory</code>, <code>updated_at</code>.</li>
+<li>Failure (HTTP 400):
+JSON with key <code>error</code> describing the issue.</li>
+</ul></div>
+</dd>
+<dt id="plant.views.maintenance_views.downtime_codes_list"><code class="name flex">
+<span>def <span class="ident">downtime_codes_list</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def downtime_codes_list(request):
+    &#34;&#34;&#34;
+    Display and manage the list of downtime codes.
+
+    GET:
+      - Retrieves all DowntimeCode records.
+      - Builds distinct lists of existing categories and subcategories.
+      - Renders the &#34;plant/downtime_codes_list.html&#34; template with context:
+          • codes: QuerySet of all DowntimeCode instances.
+          • categories: List of unique category strings.
+          • subcategories: List of unique subcategory strings.
+
+    POST:
+      - Reads `code`, `category`, and `subcategory` from form data.
+      - If all are provided, creates a new DowntimeCode record.
+      - Redirects back to the same view to display the updated list.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. On POST, carries form-encoded fields
+        `code`, `category`, and `subcategory`; on GET, is used to render the page.
+
+    Returns
+    -------
+    django.http.HttpResponseRedirect
+        After successful POST, redirects to &#39;downtime_codes_list&#39;.
+    django.http.HttpResponse
+        On GET, renders the downtime codes list page.
+    &#34;&#34;&#34;
+    # Handle creation
+    if request.method == &#39;POST&#39;:
+        code       = request.POST.get(&#39;code&#39;)
+        category   = request.POST.get(&#39;category&#39;)
+        subcategory= request.POST.get(&#39;subcategory&#39;)
+        if code and category and subcategory:
+            DowntimeCode.objects.create(
+                code=code,
+                category=category,
+                subcategory=subcategory
+            )
+        return redirect(&#39;downtime_codes_list&#39;)
+
+    # For GET: list all codes and supply existing cats/subcats
+    codes = DowntimeCode.objects.all()
+    categories   = (DowntimeCode.objects
+                    .order_by(&#39;category&#39;)
+                    .values_list(&#39;category&#39;, flat=True)
+                    .distinct())
+    subcategories= (DowntimeCode.objects
+                    .order_by(&#39;subcategory&#39;)
+                    .values_list(&#39;subcategory&#39;, flat=True)
+                    .distinct())
+
+    return render(request, &#39;plant/downtime_codes_list.html&#39;, {
+        &#39;codes&#39;: codes,
+        &#39;categories&#39;: categories,
+        &#39;subcategories&#39;: subcategories,
+    })</code></pre>
+</details>
+<div class="desc"><p>Display and manage the list of downtime codes.</p>
+<h2 id="get">Get</h2>
+<ul>
+<li>Retrieves all DowntimeCode records.</li>
+<li>Builds distinct lists of existing categories and subcategories.</li>
+<li>Renders the "plant/downtime_codes_list.html" template with context:
+• codes: QuerySet of all DowntimeCode instances.
+• categories: List of unique category strings.
+• subcategories: List of unique subcategory strings.</li>
+</ul>
+<h2 id="post">Post</h2>
+<ul>
+<li>Reads <code>code</code>, <code>category</code>, and <code>subcategory</code> from form data.</li>
+<li>If all are provided, creates a new DowntimeCode record.</li>
+<li>Redirects back to the same view to display the updated list.</li>
+</ul>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object. On POST, carries form-encoded fields
+<code>code</code>, <code>category</code>, and <code>subcategory</code>; on GET, is used to render the page.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponseRedirect</code></dt>
+<dd>After successful POST, redirects to 'downtime_codes_list'.</dd>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>On GET, renders the downtime codes list page.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.downtime_history"><code class="name flex">
+<span>def <span class="ident">downtime_history</span></span>(<span>request, event_id)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required
+def downtime_history(request, event_id):
+    &#34;&#34;&#34;
+    Retrieve the full labour participation history and comments for a specific downtime event.
+
+    Only authenticated users may access this view.
+
+    Workflow:
+      1. Fetch the MachineDowntimeEvent by `event_id`, ensuring it exists and is not deleted.
+      2. Query all DowntimeParticipation records for that event, ordered by `join_epoch`.
+      3. For each participation:
+         - Convert `join_epoch` and (if present) `leave_epoch` from epoch→aware local datetime→formatted string.
+         - Gather the user’s maintenance roles based on their group memberships.
+         - Include any join/leave comments and total minutes.
+      4. Return a JSON response containing:
+         - `history`: list of participation dicts with keys
+             • id, user, roles, join_at, join_comment, leave_at, leave_comment, total_minutes
+         - `event_comment`: the event’s opening comment
+         - `closeout_comment`: the event’s close-out comment (or empty string)
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request (must be GET).
+    event_id : int
+        Primary key of the downtime event to inspect.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON payload as described above, or HTTP 404 if the event is not found.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Return the complete labour-history JSON for one downtime event,
+    PLUS the event’s own opening and close-out comments.
+    &#34;&#34;&#34;
+    # 1) validate event
+    event = get_object_or_404(
+        MachineDowntimeEvent,
+        pk=event_id,
+        is_deleted=False
+    )
+
+    # 2) collect participations
+    parts = (
+        DowntimeParticipation.objects
+        .filter(event=event)
+        .order_by(&#39;join_epoch&#39;)
+        .select_related(&#39;user&#39;)
+    )
+
+    # 3) serialise
+    tz       = get_default_timezone()
+    history  = []
+    for p in parts:
+        # join time
+        jdt = datetime.fromtimestamp(p.join_epoch)
+        if is_naive(jdt):
+            jdt = make_aware(jdt, tz)
+        jdt = localtime(jdt)
+        join_at = jdt.strftime(&#39;%Y-%m-%d %H:%M&#39;)
+
+        # leave time (may be null)
+        if p.leave_epoch:
+            ldt = datetime.fromtimestamp(p.leave_epoch)
+            if is_naive(ldt):
+                ldt = make_aware(ldt, tz)
+            ldt = localtime(ldt)
+            leave_at = ldt.strftime(&#39;%Y-%m-%d %H:%M&#39;)
+        else:
+            leave_at = None
+
+        # roles
+        user_group_names = set(
+            p.user.groups.values_list(&#39;name&#39;, flat=True)
+        )
+        roles = [
+            role
+            for role, group_name in ROLE_TO_GROUP.items()
+            if group_name in user_group_names
+        ]
+
+        history.append({
+            &#34;id&#34;            : p.id,
+            &#34;user&#34;          : p.user.username,
+            &#34;roles&#34;         : roles,
+            &#34;join_at&#34;       : join_at,
+            &#34;join_comment&#34;  : p.join_comment,
+            &#34;leave_at&#34;      : leave_at or &#34;&#34;,
+            &#34;leave_comment&#34; : p.leave_comment or &#34;&#34;,
+            &#34;total_minutes&#34; : p.total_minutes or 0,
+        })
+
+    return JsonResponse({
+        &#34;history&#34;         : history,
+        &#34;event_comment&#34;   : event.comment,
+        &#34;closeout_comment&#34;: event.closeout_comment or &#34;&#34;,
+    })</code></pre>
+</details>
+<div class="desc"><p>Retrieve the full labour participation history and comments for a specific downtime event.</p>
+<p>Only authenticated users may access this view.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Fetch the MachineDowntimeEvent by <code>event_id</code>, ensuring it exists and is not deleted.</li>
+<li>Query all DowntimeParticipation records for that event, ordered by <code>join_epoch</code>.</li>
+<li>For each participation:</li>
+<li>Convert <code>join_epoch</code> and (if present) <code>leave_epoch</code> from epoch→aware local datetime→formatted string.</li>
+<li>Gather the user’s maintenance roles based on their group memberships.</li>
+<li>Include any join/leave comments and total minutes.</li>
+<li>Return a JSON response containing:</li>
+<li><code>history</code>: list of participation dicts with keys
+• id, user, roles, join_at, join_comment, leave_at, leave_comment, total_minutes</li>
+<li><code>event_comment</code>: the event’s opening comment</li>
+<li><code>closeout_comment</code>: the event’s close-out comment (or empty string)</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming request (must be GET).</dd>
+<dt><strong><code>event_id</code></strong> :&ensp;<code>int</code></dt>
+<dd>Primary key of the downtime event to inspect.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>JSON payload as described above, or HTTP 404 if the event is not found.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.employee_login_status"><code class="name flex">
+<span>def <span class="ident">employee_login_status</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required
+def employee_login_status(request):
+    &#34;&#34;&#34;
+    Display and optionally export the login status of maintenance staff accounts.
+
+    Access Control
+    --------------
+    - User must be authenticated.
+    - User must have maintenance access or receives HTTP 403.
+
+    Functionality
+    -------------
+    1. Retrieves all users belonging to any maintenance role group.
+    2. For each user:
+       - Gathers their roles, account type (real vs. preload), and last login info.
+       - Determines whether they are currently logged in.
+       - Tallies counts of real vs. preload accounts per role.
+    3. If `?format=csv` is in the query string, returns a CSV download with columns:
+       Name, Username, Role(s), Account Type, Last Login, Logged In?
+    4. Otherwise, renders the &#39;plant/employee_login_status.html&#39; template with:
+       - `users`: list of user status dicts
+       - `summary`: list of per-role real/preload counts
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming GET request; may include `format=csv` for CSV export.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - CSV file download if requested.
+        - HTML page rendering otherwise.
+    &#34;&#34;&#34;
+    # ── access control ──
+    if not user_has_maintenance_access(request.user):
+        return HttpResponseForbidden(&#34;Not authorized; please ask a manager.&#34;)
+
+    User = get_user_model()
+    group_names = set(ROLE_TO_GROUP.values())
+    qs = (
+        User.objects
+            .filter(groups__name__in=group_names)
+            .distinct()
+            .order_by(&#39;last_name&#39;, &#39;first_name&#39;)
+    )
+
+    # initialize summary counters
+    summary = { role: {&#39;real&#39;: 0, &#39;preload&#39;: 0}
+                for role in ROLE_TO_GROUP.keys() }
+
+    users_status = []
+    for u in qs:
+        # raw roles &amp; display string
+        roles_raw = [
+            role
+            for role, grp in ROLE_TO_GROUP.items()
+            if u.groups.filter(name=grp).exists()
+        ]
+        roles_display = &#34;, &#34;.join(r.capitalize() for r in roles_raw)
+
+        # account type
+        is_preload = u.username.endswith(&#39;@preload&#39;)
+        account_type = &#39;Preload&#39; if is_preload else &#39;Real&#39;
+
+        # last_login formatted
+        if u.last_login:
+            last_login_str = u.last_login.strftime(&#39;%Y-%m-%d %H:%M&#39;)
+            logged_in = &#39;Yes&#39;
+        else:
+            last_login_str = &#39;&#39;
+            logged_in = &#39;No&#39;
+
+        # increment summary for each role they occupy
+        for r in roles_raw:
+            key = &#39;preload&#39; if is_preload else &#39;real&#39;
+            summary[r][key] += 1
+
+        users_status.append({
+            &#39;name&#39;:       u.get_full_name() or u.username,
+            &#39;username&#39;:   u.username,
+            &#39;roles&#39;:      roles_display,
+            &#39;roles_raw&#39;:  roles_raw,
+            &#39;account&#39;:    account_type,
+            &#39;last_login&#39;: last_login_str,
+            &#39;logged_in&#39;:  logged_in,
+        })
+
+    # build a simple list for the template
+    summary_list = [
+        {
+            &#39;role&#39;: role.capitalize(),
+            &#39;real&#39;: summary[role][&#39;real&#39;],
+            &#39;preload&#39;: summary[role][&#39;preload&#39;],
+        }
+        for role in ROLE_TO_GROUP.keys()
+    ]
+
+    # ── CSV export? ──
+    if request.GET.get(&#39;format&#39;) == &#39;csv&#39;:
+        resp = HttpResponse(content_type=&#39;text/csv&#39;)
+        resp[&#39;Content-Disposition&#39;] = &#39;attachment; filename=&#34;maintenance_login_status.csv&#34;&#39;
+        writer = csv.writer(resp)
+        writer.writerow([
+            smart_str(&#34;Name&#34;),
+            smart_str(&#34;Username&#34;),
+            smart_str(&#34;Role(s)&#34;),
+            smart_str(&#34;Account Type&#34;),
+            smart_str(&#34;Last Login&#34;),
+            smart_str(&#34;Logged In?&#34;),
+        ])
+        for u in users_status:
+            writer.writerow([
+                smart_str(u[&#39;name&#39;]),
+                smart_str(u[&#39;username&#39;]),
+                smart_str(u[&#39;roles&#39;]),
+                smart_str(u[&#39;account&#39;]),
+                smart_str(u[&#39;last_login&#39;]),
+                smart_str(u[&#39;logged_in&#39;]),
+            ])
+        return resp
+
+    # ── otherwise render HTML ──
+    return render(request, &#39;plant/employee_login_status.html&#39;, {
+        &#39;users&#39;:   users_status,
+        &#39;summary&#39;: summary_list,
+    })</code></pre>
+</details>
+<div class="desc"><p>Display and optionally export the login status of maintenance staff accounts.</p>
+<h2 id="access-control">Access Control</h2>
+<ul>
+<li>User must be authenticated.</li>
+<li>User must have maintenance access or receives HTTP 403.</li>
+</ul>
+<h2 id="functionality">Functionality</h2>
+<ol>
+<li>Retrieves all users belonging to any maintenance role group.</li>
+<li>For each user:</li>
+<li>Gathers their roles, account type (real vs. preload), and last login info.</li>
+<li>Determines whether they are currently logged in.</li>
+<li>Tallies counts of real vs. preload accounts per role.</li>
+<li>If <code>?format=csv</code> is in the query string, returns a CSV download with columns:
+Name, Username, Role(s), Account Type, Last Login, Logged In?</li>
+<li>Otherwise, renders the 'plant/employee_login_status.html' template with:</li>
+<li><code>users</code>: list of user status dicts</li>
+<li><code>summary</code>: list of per-role real/preload counts</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming GET request; may include <code>format=csv</code> for CSV export.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>
+<ul>
+<li>CSV file download if requested.</li>
+<li>HTML page rendering otherwise.</li>
+</ul>
+</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.filter_out_operator_only_events"><code class="name flex">
+<span>def <span class="ident">filter_out_operator_only_events</span></span>(<span>qs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def filter_out_operator_only_events(qs):
+    &#34;&#34;&#34;
+    Given a MachineDowntimeEvent queryset, return a new queryset
+    with all events whose labour_types == [&#34;OPERATOR&#34;] OR [&#34;NA&#34;] removed.
+    &#34;&#34;&#34;
+    # Exclude any event whose labour_types exactly equals [&#34;OPERATOR&#34;] or [&#34;NA&#34;]
+    return qs.exclude(
+        Q(labour_types=[&#34;OPERATOR&#34;])
+    )</code></pre>
+</details>
+<div class="desc"><p>Given a MachineDowntimeEvent queryset, return a new queryset
+with all events whose labour_types == ["OPERATOR"] OR ["NA"] removed.</p></div>
+</dd>
+<dt id="plant.views.maintenance_views.force_leave_participation"><code class="name flex">
+<span>def <span class="ident">force_leave_participation</span></span>(<span>request, pk)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required
+@require_POST
+@user_passes_test(user_is_supervisor_or_manager)      # &lt;--- permission gate
+def force_leave_participation(request, pk):
+    &#34;&#34;&#34;
+    Allow a supervisor or manager to forcibly close out another user’s open participation.
+
+    Expects a POST request with a JSON body containing:
+      - leave_comment (str):  Mandatory non-empty comment explaining the forced leave.
+      - leave_datetime (str, optional): ISO local timestamp &#34;YYYY-MM-DDTHH:MM&#34; at which to record the leave;
+        if omitted, the current time is used.
+
+    Workflow:
+      1. Parse and validate JSON; return HTTP 400 if `leave_comment` is missing or empty.
+      2. Parse `leave_datetime` (if provided) into an aware UTC epoch; return HTTP 400 on format errors.
+      3. Retrieve the open DowntimeParticipation by `pk`, ensuring the event is live and not closed.
+      4. Ensure the leave timestamp is strictly after the original join; return HTTP 400 otherwise.
+      5. Compute total minutes (rounding up), set `leave_epoch`, `leave_comment`, and `total_minutes`.
+      6. Save the participation and return JSON `{&#34;status&#34;:&#34;ok&#34;,&#34;leave_epoch&#34;:&lt;int&gt;,&#34;total_minutes&#34;:&lt;int&gt;}`.
+
+    Permissions
+    -----------
+    - Must be authenticated (`@login_required`).
+    - Must pass `user_is_supervisor_or_manager` test or receives HTTP 403.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming POST request carrying a JSON body.
+    pk : int
+        Primary key of the DowntimeParticipation to force-close.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{&#34;status&#34;:&#34;ok&#34;,&#34;leave_epoch&#34;: &lt;int&gt;,&#34;total_minutes&#34;: &lt;int&gt;}`.
+    django.http.HttpResponseBadRequest
+        If payload is invalid, comment missing, datetime parse fails, or leave before join.
+    django.http.Http404
+        If no matching open participation is found.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Managers/supervisors can finish someone else’s open participation,
+    supplying a mandatory comment and an optional leave_datetime.
+    &#34;&#34;&#34;
+    try:
+        payload = json.loads(request.body)
+        comment = payload[&#34;leave_comment&#34;].strip()
+        if not comment:
+            raise KeyError
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;leave_comment is required&#34;)
+
+    # ---------- pull &amp; parse leave_datetime -----------------
+    leave_dt_str = payload.get(&#34;leave_datetime&#34;)         # &#34;2025-06-12T14:35&#34;
+    tz           = get_default_timezone()                # America/Toronto
+    try:
+        if leave_dt_str:
+            naive = parse_datetime(leave_dt_str)         # → naive DT
+            if naive is None:
+                raise ValueError
+            aware_local = make_aware(naive, timezone=tz) # → aware local
+            aware_utc   = aware_local.astimezone(timezone.utc)
+            leave_ts    = int(aware_utc.timestamp())
+        else:
+            leave_ts = int(time.time())                  # fallback to “now”
+    except Exception:
+        return HttpResponseBadRequest(&#34;Bad leave_datetime&#34;)
+    # -------------------------------------------------------
+
+    part = get_object_or_404(
+        DowntimeParticipation,
+        pk=pk,
+        leave_epoch__isnull=True,
+        event__is_deleted=False,
+        event__closeout_epoch__isnull=True,
+    )
+
+    if leave_ts &lt;= part.join_epoch:
+        return HttpResponseBadRequest(&#34;Leave time must be after join time.&#34;)
+
+    delta_s = leave_ts - part.join_epoch
+    part.leave_epoch   = leave_ts
+    part.leave_comment = comment
+    part.total_minutes = math.ceil(delta_s / 60)
+    part.save(update_fields=[&#34;leave_epoch&#34;, &#34;leave_comment&#34;, &#34;total_minutes&#34;])
+
+    return JsonResponse({
+        &#34;status&#34;       : &#34;ok&#34;,
+        &#34;leave_epoch&#34;  : leave_ts,
+        &#34;total_minutes&#34;: part.total_minutes,
+    })</code></pre>
+</details>
+<div class="desc"><p>Allow a supervisor or manager to forcibly close out another user’s open participation.</p>
+<p>Expects a POST request with a JSON body containing:
+- leave_comment (str):
+Mandatory non-empty comment explaining the forced leave.
+- leave_datetime (str, optional): ISO local timestamp "YYYY-MM-DDTHH:MM" at which to record the leave;
+if omitted, the current time is used.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Parse and validate JSON; return HTTP 400 if <code>leave_comment</code> is missing or empty.</li>
+<li>Parse <code>leave_datetime</code> (if provided) into an aware UTC epoch; return HTTP 400 on format errors.</li>
+<li>Retrieve the open DowntimeParticipation by <code>pk</code>, ensuring the event is live and not closed.</li>
+<li>Ensure the leave timestamp is strictly after the original join; return HTTP 400 otherwise.</li>
+<li>Compute total minutes (rounding up), set <code>leave_epoch</code>, <code>leave_comment</code>, and <code>total_minutes</code>.</li>
+<li>Save the participation and return JSON <code>{"status":"ok","leave_epoch":&lt;int&gt;,"total_minutes":&lt;int&gt;}</code>.</li>
+</ol>
+<h2 id="permissions">Permissions</h2>
+<ul>
+<li>Must be authenticated (<code>@login_required</code>).</li>
+<li>Must pass <code><a title="plant.views.maintenance_views.user_is_supervisor_or_manager" href="#plant.views.maintenance_views.user_is_supervisor_or_manager">user_is_supervisor_or_manager()</a></code> test or receives HTTP 403.</li>
+</ul>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming POST request carrying a JSON body.</dd>
+<dt><strong><code>pk</code></strong> :&ensp;<code>int</code></dt>
+<dd>Primary key of the DowntimeParticipation to force-close.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>On success: <code>{"status":"ok","leave_epoch": &lt;int&gt;,"total_minutes": &lt;int&gt;}</code>.</dd>
+<dt><code>django.http.HttpResponseBadRequest</code></dt>
+<dd>If payload is invalid, comment missing, datetime parse fails, or leave before join.</dd>
+<dt><code>django.http.Http404</code></dt>
+<dd>If no matching open participation is found.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.get_machine_priority_map"><code class="name flex">
+<span>def <span class="ident">get_machine_priority_map</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_machine_priority_map():
+    &#34;&#34;&#34;
+    Build a lookup of machine numbers to their line priority.
+
+    Queries the LinePriority table for all (line → priority) mappings,
+    then walks the current production lines (via get_prod_lines()) to
+    assign each machine’s number its corresponding line priority.
+
+    If a machine’s line has no priority entry, its value will be None.
+
+    Returns
+    -------
+    dict[str, int | None]
+        A dictionary mapping each machine_number (as used in DowntimeMachine)
+        to its line’s priority integer, or None if no priority is defined.
+    &#34;&#34;&#34;
+    prod_lines = get_prod_lines()
+    &#34;&#34;&#34;
+    Returns a dict: { machine_number (str) → priority (int) } by
+    walking prod_lines and the LinePriority table.
+    &#34;&#34;&#34;
+    # grab all line→priority pairs in one query
+    line_prios = {
+        lp.line: lp.priority
+        for lp in LinePriority.objects.all()
+    }
+
+    mp = {}
+    # for each line in our merged prod_lines, pull its machines
+    for line_block in prod_lines:
+        prio = line_prios.get(line_block[&#39;line&#39;], None)
+        for op in line_block[&#39;operations&#39;]:
+            for m in op[&#39;machines&#39;]:
+                mp[m[&#39;number&#39;]] = prio
+    return mp</code></pre>
+</details>
+<div class="desc"><p>Build a lookup of machine numbers to their line priority.</p>
+<p>Queries the LinePriority table for all (line → priority) mappings,
+then walks the current production lines (via get_prod_lines()) to
+assign each machine’s number its corresponding line priority.</p>
+<p>If a machine’s line has no priority entry, its value will be None.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict[str, int | None]</code></dt>
+<dd>A dictionary mapping each machine_number (as used in DowntimeMachine)
+to its line’s priority integer, or None if no priority is defined.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.get_prod_lines"><code class="name flex">
+<span>def <span class="ident">get_prod_lines</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_prod_lines():
+    &#34;&#34;&#34;
+    Aggregate downtime machine records into structured production line data.
+
+    Queries all DowntimeMachine entries and groups them by `line`, constructing
+    a list of dictionaries where each dictionary represents:
+      - `line` (str):        The production line identifier.
+      - `scrap_line` (str):  Same as `line`, for scrap reporting.
+      - `operations` (list): A list of operations on that line, each with:
+          - `op` (str):              The operation identifier.
+          - `machines` (list):       A list of machines for this operation,
+              each being a dict with:
+              - `number` (int):       The machine number.
+              - `target` (Any):       The target value (None by default).
+
+    Returns
+    -------
+    list of dict
+        A fresh list of production-line entries reflecting the current state
+        of the DowntimeMachine table.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Return a list of { line, scrap_line, operations:[ { op, machines:[{number,target}] } ] }
+    built fresh from the DowntimeMachine table.
+    &#34;&#34;&#34;
+    _by_name = {}
+
+    for dm in DowntimeMachine.objects.all():
+        # 1) ensure the line‐block
+        blk = _by_name.setdefault(
+            dm.line,
+            {
+                &#39;line&#39;:       dm.line,
+                &#39;scrap_line&#39;: dm.line,
+                &#39;operations&#39;: []
+            }
+        )
+
+        # 2) find or create this op
+        ops = blk[&#39;operations&#39;]
+        op_entry = next((o for o in ops if o[&#39;op&#39;] == dm.operation), None)
+        machine_dict = {
+            &#39;number&#39;: dm.machine_number,
+            &#39;target&#39;: None    # or dm.target if you’ve extended the model
+        }
+
+        if op_entry:
+            op_entry[&#39;machines&#39;].append(machine_dict)
+        else:
+            ops.append({
+                &#39;op&#39;:       dm.operation,
+                &#39;machines&#39;: [machine_dict]
+            })
+
+    return list(_by_name.values())</code></pre>
+</details>
+<div class="desc"><p>Aggregate downtime machine records into structured production line data.</p>
+<p>Queries all DowntimeMachine entries and groups them by <code>line</code>, constructing
+a list of dictionaries where each dictionary represents:
+- <code>line</code> (str):
+The production line identifier.
+- <code>scrap_line</code> (str):
+Same as <code>line</code>, for scrap reporting.
+- <code>operations</code> (list): A list of operations on that line, each with:
+- <code>op</code> (str):
+The operation identifier.
+- <code>machines</code> (list):
+A list of machines for this operation,
+each being a dict with:
+- <code>number</code> (int):
+The machine number.
+- <code>target</code> (Any):
+The target value (None by default).</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code> of <code>dict</code></dt>
+<dd>A fresh list of production-line entries reflecting the current state
+of the DowntimeMachine table.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.group_by_role"><code class="name flex">
+<span>def <span class="ident">group_by_role</span></span>(<span>workers)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def group_by_role(workers):
+    &#34;&#34;&#34;
+    Organize a list of worker records into buckets by their primary role.
+
+    Each worker is expected to be a dict containing at least:
+      - &#39;roles&#39;:   A list of role strings (may be empty).
+      - other keys such as &#39;username&#39;, &#39;name&#39;, etc.
+
+    Workers are assigned to the bucket corresponding to their first-listed role
+    (normalized to lowercase) in the predefined ROLE_ORDER sequence. Any worker
+    whose primary role is not in ROLE_ORDER—or who has no roles—goes into the
+    `&#34;other&#34;` bucket. The order of buckets in the result follows ROLE_ORDER,
+    with `&#34;other&#34;` appended at the end.
+
+    Parameters
+    ----------
+    workers : list of dict
+        A list of worker dictionaries, each containing a &#39;roles&#39; key.
+
+    Returns
+    -------
+    collections.OrderedDict
+        An ordered mapping from role keys (each from ROLE_ORDER plus &#34;other&#34;)
+        to lists of worker dicts whose primary role matches the key.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Given a list of worker-dicts (with &#39;roles&#39; and &#39;username&#39;, &#39;name&#39;, etc.),
+    bucket them by their first-listed role, in the order of ROLE_ORDER.
+    &#34;&#34;&#34;
+    buckets = OrderedDict((r, []) for r in ROLE_ORDER)
+    buckets[&#34;other&#34;] = []
+    for w in workers:
+        primary = w[&#34;roles&#34;][0].lower() if w[&#34;roles&#34;] else &#34;other&#34;
+        if primary in buckets:
+            buckets[primary].append(w)
+        else:
+            buckets[&#34;other&#34;].append(w)
+    return buckets</code></pre>
+</details>
+<div class="desc"><p>Organize a list of worker records into buckets by their primary role.</p>
+<p>Each worker is expected to be a dict containing at least:
+- 'roles':
+A list of role strings (may be empty).
+- other keys such as 'username', 'name', etc.</p>
+<p>Workers are assigned to the bucket corresponding to their first-listed role
+(normalized to lowercase) in the predefined ROLE_ORDER sequence. Any worker
+whose primary role is not in ROLE_ORDER—or who has no roles—goes into the
+<code>"other"</code> bucket. The order of buckets in the result follows ROLE_ORDER,
+with <code>"other"</code> appended at the end.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>workers</code></strong> :&ensp;<code>list</code> of <code>dict</code></dt>
+<dd>A list of worker dictionaries, each containing a 'roles' key.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>collections.OrderedDict</code></dt>
+<dd>An ordered mapping from role keys (each from ROLE_ORDER plus "other")
+to lists of worker dicts whose primary role matches the key.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.join_downtime_event"><code class="name flex">
+<span>def <span class="ident">join_downtime_event</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+@login_required
+def join_downtime_event(request):
+    &#34;&#34;&#34;
+    Record a user’s participation start in a machine downtime event.
+
+    Expects a POST request with a JSON body containing:
+      - event_id (int):         The primary key of the MachineDowntimeEvent.
+      - join_datetime (str):    The local join timestamp in ISO format &#34;YYYY-MM-DDTHH:MM&#34;.
+      - join_comment (str, opt): An optional comment about the join.
+
+    Workflow:
+      1. Parse and validate the JSON payload; return HTTP 400 on errors.
+      2. Fetch the specified non-deleted downtime event; return HTTP 400 if not found.
+      3. Parse the provided local-time string as an aware datetime in the server’s
+         timezone (America/Toronto), convert it to UTC, and compute the epoch seconds.
+      4. Create a DowntimeParticipation record with `event`, `user`, `join_epoch`, and `join_comment`.
+      5. Return a JSON response with status &#34;ok&#34;, the new participation ID, and the join epoch.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request carrying a JSON body.
+
+    Returns
+    -------
+    django.http.JsonResponse or django.http.HttpResponseBadRequest
+        - On success: `{&#34;status&#34;:&#34;ok&#34;,&#34;participation_id&#34;: &lt;int&gt;, &#34;join_epoch&#34;: &lt;int&gt;}`.
+        - HTTP 400: if payload is invalid, event not found, or datetime parse fails.
+    &#34;&#34;&#34;
+    try:
+        payload      = json.loads(request.body)
+        event_id     = payload[&#39;event_id&#39;]
+        comment      = payload.get(&#39;join_comment&#39;, &#39;&#39;).strip()
+        dt_str       = payload[&#39;join_datetime&#39;]       # e.g. &#34;2025-05-06T14:30&#34;
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;Invalid payload&#34;)
+
+    # fetch the event…
+    event = MachineDowntimeEvent.objects.filter(pk=event_id, is_deleted=False).first()
+    if not event:
+        return HttpResponseBadRequest(&#34;Event not found&#34;)
+
+    # parse the local-time string into a timezone-aware UTC datetime
+    try:
+        naive_dt = datetime.strptime(dt_str, &#34;%Y-%m-%dT%H:%M&#34;)
+    except ValueError:
+        return HttpResponseBadRequest(&#34;Bad datetime format&#34;)
+    local_tz = get_default_timezone()   # should be America/Toronto
+    aware_dt = make_aware(naive_dt, local_tz)
+    utc_dt   = aware_dt.astimezone(utc)
+    epoch_ts = int(utc_dt.timestamp())
+
+    participation = DowntimeParticipation.objects.create(
+        event        = event,
+        user         = request.user,
+        join_epoch   = epoch_ts,
+        join_comment = comment
+    )
+    return JsonResponse({
+        &#39;status&#39;:           &#39;ok&#39;,
+        &#39;participation_id&#39;: participation.id,
+        &#39;join_epoch&#39;:       epoch_ts,
+    })</code></pre>
+</details>
+<div class="desc"><p>Record a user’s participation start in a machine downtime event.</p>
+<p>Expects a POST request with a JSON body containing:
+- event_id (int):
+The primary key of the MachineDowntimeEvent.
+- join_datetime (str):
+The local join timestamp in ISO format "YYYY-MM-DDTHH:MM".
+- join_comment (str, opt): An optional comment about the join.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Parse and validate the JSON payload; return HTTP 400 on errors.</li>
+<li>Fetch the specified non-deleted downtime event; return HTTP 400 if not found.</li>
+<li>Parse the provided local-time string as an aware datetime in the server’s
+timezone (America/Toronto), convert it to UTC, and compute the epoch seconds.</li>
+<li>Create a DowntimeParticipation record with <code>event</code>, <code>user</code>, <code>join_epoch</code>, and <code>join_comment</code>.</li>
+<li>Return a JSON response with status "ok", the new participation ID, and the join epoch.</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming HTTP request carrying a JSON body.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code> or <code>django.http.HttpResponseBadRequest</code></dt>
+<dd>
+<ul>
+<li>On success: <code>{"status":"ok","participation_id": &lt;int&gt;, "join_epoch": &lt;int&gt;}</code>.</li>
+<li>HTTP 400: if payload is invalid, event not found, or datetime parse fails.</li>
+</ul>
+</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.leave_downtime_event"><code class="name flex">
+<span>def <span class="ident">leave_downtime_event</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+@login_required
+def leave_downtime_event(request):
+    &#34;&#34;&#34;
+    Record a user’s departure from a machine downtime event and calculate duration.
+
+    Expects a POST request with a JSON body containing:
+      - event_id (int):          The primary key of the MachineDowntimeEvent.
+      - leave_datetime (str):    The local leave timestamp in ISO format &#34;YYYY-MM-DDTHH:MM&#34;.
+      - leave_comment (str, opt): An optional comment for leaving.
+
+    Workflow:
+      1. Parse and validate the JSON payload; return HTTP 400 on parse errors or missing keys.
+      2. Retrieve the most recent open DowntimeParticipation for this user and event;
+         return HTTP 400 if none exists.
+      3. Parse the provided leave timestamp as a naive datetime, localize to the server’s
+         timezone (America/Toronto), convert to UTC, and compute the epoch seconds.
+      4. Calculate the elapsed time since join (in seconds), round up to minutes, and
+         update the participation’s `leave_epoch`, `leave_comment`, and `total_minutes`.
+      5. Save the updated fields and return a JSON response with status &#34;ok&#34;,
+         the leave epoch, and total minutes.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP POST request with a JSON body.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success: `{&#34;status&#34;:&#34;ok&#34;,&#34;leave_epoch&#34;: &lt;int&gt;, &#34;total_minutes&#34;: &lt;int&gt;}`.
+    django.http.HttpResponseBadRequest
+        If payload is invalid, no open participation is found, or datetime parsing fails.
+    &#34;&#34;&#34;
+    try:
+        payload       = json.loads(request.body)
+        event_id      = payload[&#39;event_id&#39;]
+        comment       = payload.get(&#39;leave_comment&#39;, &#39;&#39;).strip()
+        dt_str        = payload[&#39;leave_datetime&#39;]
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;Invalid payload&#34;)
+
+    # find the open participation…
+    part = (DowntimeParticipation.objects
+            .filter(event__pk=event_id, user=request.user, leave_epoch__isnull=True)
+            .order_by(&#39;-join_epoch&#39;)
+            .first())
+    if not part:
+        return HttpResponseBadRequest(&#34;No active participation to leave&#34;)
+
+    # parse and convert to UTC epoch
+    try:
+        naive_dt = datetime.strptime(dt_str, &#34;%Y-%m-%dT%H:%M&#34;)
+    except ValueError:
+        return HttpResponseBadRequest(&#34;Bad datetime format&#34;)
+    local_tz = get_default_timezone()
+    aware_dt = make_aware(naive_dt, local_tz)
+    utc_dt   = aware_dt.astimezone(utc)
+    now_ts   = int(utc_dt.timestamp())
+
+    # compute minutes
+    import math
+    delta_s = now_ts - part.join_epoch
+    part.leave_epoch   = now_ts
+    part.leave_comment = comment
+    part.total_minutes = math.ceil(delta_s / 60)
+    part.save(update_fields=[&#39;leave_epoch&#39;, &#39;leave_comment&#39;, &#39;total_minutes&#39;])
+
+    return JsonResponse({
+        &#39;status&#39;       : &#39;ok&#39;,
+        &#39;leave_epoch&#39;  : now_ts,
+        &#39;total_minutes&#39;: part.total_minutes,
+    })</code></pre>
+</details>
+<div class="desc"><p>Record a user’s departure from a machine downtime event and calculate duration.</p>
+<p>Expects a POST request with a JSON body containing:
+- event_id (int):
+The primary key of the MachineDowntimeEvent.
+- leave_datetime (str):
+The local leave timestamp in ISO format "YYYY-MM-DDTHH:MM".
+- leave_comment (str, opt): An optional comment for leaving.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Parse and validate the JSON payload; return HTTP 400 on parse errors or missing keys.</li>
+<li>Retrieve the most recent open DowntimeParticipation for this user and event;
+return HTTP 400 if none exists.</li>
+<li>Parse the provided leave timestamp as a naive datetime, localize to the server’s
+timezone (America/Toronto), convert to UTC, and compute the epoch seconds.</li>
+<li>Calculate the elapsed time since join (in seconds), round up to minutes, and
+update the participation’s <code>leave_epoch</code>, <code>leave_comment</code>, and <code>total_minutes</code>.</li>
+<li>Save the updated fields and return a JSON response with status "ok",
+the leave epoch, and total minutes.</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming HTTP POST request with a JSON body.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>On success: <code>{"status":"ok","leave_epoch": &lt;int&gt;, "total_minutes": &lt;int&gt;}</code>.</dd>
+<dt><code>django.http.HttpResponseBadRequest</code></dt>
+<dd>If payload is invalid, no open participation is found, or datetime parsing fails.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.list_all_downtime_entries"><code class="name flex">
+<span>def <span class="ident">list_all_downtime_entries</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required(login_url=&#34;login&#34;)
+def list_all_downtime_entries(request):
+    &#34;&#34;&#34;
+    Display and manage all live machine downtime events for maintenance staff.
+
+    Access Control
+    --------------
+    - User must be authenticated.
+    - User must satisfy `user_has_maintenance_access(request.user)`, otherwise HTTP 403.
+
+    Data Preparation
+    ----------------
+    1. Build `prod_lines` via `get_prod_lines()` for line/operation/machine structure.
+    2. Query live (not deleted, not closed) MachineDowntimeEvent records:
+       - Annotate each with `line_priority` (fallback 999) and fetched participant relations.
+       - Apply `annotate_being_worked_on` and `filter_out_operator_only_events`.
+       - Order by priority then newest start.
+    3. Take up to `PAGE_SIZE` entries, then for each:
+       - Compute `start_display`: `&#34;HH:MM&#34;` if today, else `&#34;MM/DD&#34;`.
+       - Set `user_has_open` if the current user is still on that event.
+       - Build `current_worker_roles`: set of maintenance roles active on the event.
+       - Build `current_usernames`: list of usernames currently joined.
+
+    Worker Lists
+    ------------
+    4. Collect all active maintenance-role users, split into:
+       - `active_users`: in “maintenance_active” group.
+       - `inactive_users`: not in that group.
+    5. For each group, build a list of dicts with:
+       - `username`, `name`, `roles` (list), and `jobs` (their open events with machine, subcategory, priority).
+    6. Bucket both active and inactive workers by primary role using `group_by_role()`.
+
+    User Flags &amp; Choices
+    --------------------
+    7. Determine `is_manager` and `is_supervisor` from user’s groups.
+    8. Filter `MachineDowntimeEvent.LABOUR_CHOICES` based on user role membership.
+
+    Code &amp; Lines JSON
+    -----------------
+    9. Build `downtime_codes_json` for the modal, grouping subcategories by category.
+   10. Prepare `lines_json` from `prod_lines`.
+
+    Rendering
+    ---------
+    Renders &#34;plant/maintenance_all_entries.html&#34; with context:
+      - entries, page_size, line_priorities
+      - is_manager, is_supervisor
+      - labour_choices
+      - active_workers_by_role, inactive_workers_by_role
+      - downtime_codes_json, lines_json
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request; must be GET.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        The rendered downtime entries page or HTTP 403 if unauthorized.
+    &#34;&#34;&#34;
+    prod_lines = get_prod_lines()
+    # 1) Access control
+    if not user_has_maintenance_access(request.user):
+        return HttpResponseForbidden(&#34;Not authorized; please ask a manager.&#34;)
+
+    # 2) Fetch &amp; annotate live events
+    priority_sq = (
+        LinePriority.objects
+        .filter(line=OuterRef(&#34;line&#34;))
+        .values(&#34;priority&#34;)[:1]
+    )
+    base_qs = (
+        MachineDowntimeEvent.objects
+        .filter(is_deleted=False, closeout_epoch__isnull=True)
+        .annotate(
+            line_priority=Coalesce(
+                Subquery(priority_sq, output_field=IntegerField()),
+                Value(999),
+                output_field=IntegerField()
+            )
+        )
+        .order_by(&#34;line_priority&#34;, &#34;-start_epoch&#34;)
+        .prefetch_related(&#34;participants__user&#34;)
+    )
+    qs = annotate_being_worked_on(base_qs)
+    qs = filter_out_operator_only_events(qs)
+
+    # 3) Paginate + format “entries” for the table
+    entries = list(qs[:PAGE_SIZE])
+    today   = timezone.localdate()
+    tz      = get_default_timezone()
+
+    for e in entries:
+        # — display timestamp as “HH:MM” if today, else “MM/DD”
+        dt = e.start_at
+        if is_naive(dt):
+            dt = make_aware(dt, tz)
+        local_dt = localtime(dt)
+        e.start_display = (
+            local_dt.strftime(&#34;%H:%M&#34;)
+            if local_dt.date() == today
+            else local_dt.strftime(&#34;%m/%d&#34;)
+        )
+
+        # — flag if *this user* is currently on the job
+        e.user_has_open = e.participants.filter(
+            user=request.user,
+            leave_epoch__isnull=True
+        ).exists()
+
+        # ── NEW ── determine exactly which maintenance-roles are active on this event
+        open_parts   = [p for p in e.participants.all() if p.leave_epoch is None]
+        active_roles = set()
+        for p in open_parts:
+            user_groups = set(p.user.groups.values_list(&#34;name&#34;, flat=True))
+            for role, grp_name in ROLE_TO_GROUP.items():
+                if grp_name in user_groups:
+                    active_roles.add(role)
+        e.current_worker_roles = active_roles
+
+        # ── NEW ── record the usernames who are currently joined
+        e.current_usernames = [p.user.username for p in open_parts]
+
+    # 4) Collect all maintenance‐role users
+    User            = get_user_model()
+    maint_groups    = list(ROLE_TO_GROUP.values())
+    all_maint_users = (
+        User.objects
+        .filter(groups__name__in=maint_groups, is_active=True)
+        .distinct()
+        .order_by(&#34;username&#34;)
+    )
+    active_group, _    = Group.objects.get_or_create(name=&#34;maintenance_active&#34;)
+    active_users       = all_maint_users.filter(groups=active_group)
+    inactive_users     = all_maint_users.exclude(groups=active_group)
+
+    # 5) Build per‐user dicts (with their open jobs)
+    machine_priority_map = get_machine_priority_map()
+    def build_worker_list(user_qs):
+        lst = []
+        for u in user_qs:
+            name        = u.get_full_name() or u.username
+            user_groups = set(u.groups.values_list(&#34;name&#34;, flat=True))
+            roles       = [
+                r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
+            ]
+            parts = DowntimeParticipation.objects.filter(
+                user=u,
+                leave_epoch__isnull=True,
+                event__closeout_epoch__isnull=True
+            ).select_related(&#34;event&#34;)
+            jobs = [
+                {
+                    &#34;machine&#34;:     p.event.machine,
+                    &#34;subcategory&#34;: p.event.subcategory,
+                    &#34;priority&#34;:    machine_priority_map.get(p.event.machine, &#34;—&#34;),
+                }
+                for p in parts
+            ]
+            lst.append({
+                &#34;username&#34;: u.username,
+                &#34;name&#34;:     name,
+                &#34;roles&#34;:    roles,
+                &#34;jobs&#34;:     jobs,
+            })
+        return sorted(lst, key=lambda w: w[&#34;name&#34;])
+
+    active_workers   = build_worker_list(active_users)
+    inactive_workers = build_worker_list(inactive_users)
+
+    # 6) Bucket by role
+    active_by_role   = group_by_role(active_workers)
+    inactive_by_role = group_by_role(inactive_workers)
+
+    # 7) Determine current‐user flags
+    user_grps     = set(request.user.groups.values_list(&#34;name&#34;, flat=True))
+    is_manager    = &#34;maintenance_managers&#34; in user_grps
+    is_supervisor = &#34;maintenance_supervisors&#34; in user_grps
+
+    # 8) Build the labour_choices list
+    full_choices = MachineDowntimeEvent.LABOUR_CHOICES
+    allowed_groups = {
+        ROLE_TO_GROUP[&#34;electrician&#34;],
+        ROLE_TO_GROUP[&#34;millwright&#34;],
+        &#34;maintenance_supervisors&#34;,
+        &#34;maintenance_managers&#34;,
+        &#34;maintenance_tech&#34;,
+    }
+    if user_grps &amp; allowed_groups:
+        labour_choices = list(full_choices)
+    else:
+        labour_choices = [
+            (code, label)
+            for code, label in full_choices
+            if code not in (&#34;PLCTECH&#34;, &#34;IMT&#34;)
+        ]
+
+    # 9) Downtime‐codes JSON for the modal
+    downtime_codes = DowntimeCode.objects.all().order_by(
+        &#34;category&#34;, &#34;subcategory&#34;, &#34;code&#34;
+    )
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split(&#34;-&#34;, 1)[0]
+        structured.setdefault(cat, {
+            &#34;name&#34;:          cat,
+            &#34;code&#34;:          cat,
+            &#34;subcategories&#34;: []
+        })[&#34;subcategories&#34;].append({
+            &#34;code&#34;: c.code,
+            &#34;name&#34;: c.subcategory
+        })
+
+    # 10) Final render
+    return render(request, &#34;plant/maintenance_all_entries.html&#34;, {
+        &#34;entries&#34;:                  entries,
+        &#34;page_size&#34;:                PAGE_SIZE,
+        &#34;line_priorities&#34;:          LinePriority.objects.all(),
+        &#34;is_manager&#34;:               is_manager,
+        &#34;is_supervisor&#34;:            is_supervisor,
+        &#34;labour_choices&#34;:           labour_choices,
+        &#34;active_workers_by_role&#34;:   active_by_role,
+        &#34;inactive_workers_by_role&#34;: inactive_by_role,
+        &#34;downtime_codes_json&#34;:      mark_safe(json.dumps(list(structured.values()))),
+        &#34;lines_json&#34;:               mark_safe(json.dumps(prod_lines)),
+    })</code></pre>
+</details>
+<div class="desc"><p>Display and manage all live machine downtime events for maintenance staff.</p>
+<p>Access Control</p>
+<hr>
+<ul>
+<li>User must be authenticated.</li>
+<li>User must satisfy <code><a title="plant.views.maintenance_views.user_has_maintenance_access" href="#plant.views.maintenance_views.user_has_maintenance_access">user_has_maintenance_access()</a>(request.user)</code>, otherwise HTTP 403.</li>
+</ul>
+<p>Data Preparation</p>
+<hr>
+<ol>
+<li>Build <code>prod_lines</code> via <code><a title="plant.views.maintenance_views.get_prod_lines" href="#plant.views.maintenance_views.get_prod_lines">get_prod_lines()</a></code> for line/operation/machine structure.</li>
+<li>Query live (not deleted, not closed) MachineDowntimeEvent records:<ul>
+<li>Annotate each with <code>line_priority</code> (fallback 999) and fetched participant relations.</li>
+<li>Apply <code><a title="plant.views.maintenance_views.annotate_being_worked_on" href="#plant.views.maintenance_views.annotate_being_worked_on">annotate_being_worked_on()</a></code> and <code><a title="plant.views.maintenance_views.filter_out_operator_only_events" href="#plant.views.maintenance_views.filter_out_operator_only_events">filter_out_operator_only_events()</a></code>.</li>
+<li>Order by priority then newest start.</li>
+</ul>
+</li>
+<li>Take up to <code>PAGE_SIZE</code> entries, then for each:<ul>
+<li>Compute <code>start_display</code>: <code>"HH:MM"</code> if today, else <code>"MM/DD"</code>.</li>
+<li>Set <code>user_has_open</code> if the current user is still on that event.</li>
+<li>Build <code>current_worker_roles</code>: set of maintenance roles active on the event.</li>
+<li>Build <code>current_usernames</code>: list of usernames currently joined.</li>
+</ul>
+</li>
+</ol>
+<p>Worker Lists</p>
+<hr>
+<ol>
+<li>Collect all active maintenance-role users, split into:<ul>
+<li><code>active_users</code>: in “maintenance_active” group.</li>
+<li><code>inactive_users</code>: not in that group.</li>
+</ul>
+</li>
+<li>For each group, build a list of dicts with:<ul>
+<li><code>username</code>, <code>name</code>, <code>roles</code> (list), and <code>jobs</code> (their open events with machine, subcategory, priority).</li>
+</ul>
+</li>
+<li>Bucket both active and inactive workers by primary role using <code><a title="plant.views.maintenance_views.group_by_role" href="#plant.views.maintenance_views.group_by_role">group_by_role()</a></code>.</li>
+</ol>
+<p>User Flags &amp; Choices</p>
+<hr>
+<ol>
+<li>Determine <code>is_manager</code> and <code>is_supervisor</code> from user’s groups.</li>
+<li>Filter <code>MachineDowntimeEvent.LABOUR_CHOICES</code> based on user role membership.</li>
+</ol>
+<p>Code &amp; Lines JSON</p>
+<hr>
+<ol>
+<li>Build <code>downtime_codes_json</code> for the modal, grouping subcategories by category.</li>
+<li>Prepare <code>lines_json</code> from <code>prod_lines</code>.</li>
+</ol>
+<p>Rendering</p>
+<hr>
+<p>Renders "plant/maintenance_all_entries.html" with context:
+- entries, page_size, line_priorities
+- is_manager, is_supervisor
+- labour_choices
+- active_workers_by_role, inactive_workers_by_role
+- downtime_codes_json, lines_json</p>
+<p>Parameters</p>
+<hr>
+<p>request : django.http.HttpRequest
+The incoming request; must be GET.</p>
+<p>Returns</p>
+<hr>
+<p>django.http.HttpResponse
+The rendered downtime entries page or HTTP 403 if unauthorized.</p></div>
+</dd>
+<dt id="plant.views.maintenance_views.load_more_downtime_entries"><code class="name flex">
+<span>def <span class="ident">load_more_downtime_entries</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required
+def load_more_downtime_entries(request):
+    # parse offset
+    try:
+        offset = int(request.GET.get(&#39;offset&#39;, 0))
+    except (TypeError, ValueError):
+        offset = 0
+
+    # base queryset
+    base_qs = (
+        MachineDowntimeEvent.objects
+        .filter(is_deleted=False, closeout_epoch__isnull=True)
+        .order_by(&#34;-start_epoch&#34;)
+        .prefetch_related(&#34;participants__user&#34;)
+    )
+    # annotate working-on flag
+    qs = annotate_being_worked_on(base_qs)
+
+    total = qs.count()
+    batch = qs[offset:offset + PAGE_SIZE]
+
+    today = timezone.localdate()
+    default_tz = get_default_timezone()
+
+    data = []
+    for e in batch:
+        # timezone-aware start_at
+        dt = e.start_at
+        if is_naive(dt):
+            dt = make_aware(dt, default_tz)
+        local_dt = timezone.localtime(dt)
+
+        start_display = (
+            local_dt.strftime(&#39;%H:%M&#39;)
+            if local_dt.date() == today
+            else local_dt.strftime(&#39;%m/%d&#39;)
+        )
+
+        # gather open participants
+        open_parts = e.participants.filter(leave_epoch__isnull=True)
+        users = [p.user.username for p in open_parts]
+
+        data.append({
+            &#39;id&#39;:                e.id,
+            &#39;start_at&#39;:          e.start_at.strftime(&#39;%Y-%m-%d %H:%M&#39;),
+            &#39;start_display&#39;:     start_display,
+            &#39;closeout_at&#39;:       (
+                                    e.closeout_epoch and
+                                    datetime.fromtimestamp(e.closeout_epoch)
+                                            .strftime(&#39;%Y-%m-%d %H:%M&#39;)
+                                  ) or None,
+            &#39;line&#39;:              e.line,
+            &#39;machine&#39;:           e.machine,
+            &#39;category&#39;:          e.category,
+            &#39;subcategory&#39;:       e.subcategory,
+            &#39;labour_types&#39;:      e.labour_types,
+            &#39;assigned_to&#39;:       users,
+            &#39;being_worked_on&#39;:   e.being_worked_on,
+            &#39;comment&#39;:           e.comment,
+        })
+
+    return JsonResponse({
+        &#39;entries&#39;:  data,
+        &#39;has_more&#39;: total &gt; offset + PAGE_SIZE,
+    })</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.views.maintenance_views.machine_history"><code class="name flex">
+<span>def <span class="ident">machine_history</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+@csrf_exempt
+def machine_history(request):
+    &#34;&#34;&#34;
+    AJAX endpoint to retrieve the downtime and participation history for a given machine.
+
+    Expects form-encoded POST data with:
+      - machine (str): The machine identifier to query (required).
+
+    Workflow:
+      1. Validate that the `machine` parameter is provided; return HTTP 400 if missing.
+      2. Query the 500 most recent non-deleted MachineDowntimeEvent records for that machine,
+         ordered by descending start_epoch.
+      3. For each event, collect:
+         - id, start_epoch, start_display, closeout_epoch, closeout_display
+         - category, subcategory, code, comment, closeout_comment
+         - participations: a list of dicts for each DowntimeParticipation, containing:
+             • user: full name or username
+             • join_epoch, join_display
+             • leave_epoch, leave_display (or None)
+             • join_comment, leave_comment
+             • total_minutes
+      4. Assemble the data into a JSON object under the `&#34;events&#34;` key.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - On success: `{&#34;events&#34;: [ ... ]}` with the structure described above.
+        - HTTP 400: `{&#34;error&#34;: &#34;Machine parameter is required.&#34;}` if no machine provided.
+    &#34;&#34;&#34;
+    machine = request.POST.get(&#34;machine&#34;, &#34;&#34;).strip()
+    if not machine:
+        return JsonResponse({&#34;error&#34;: &#34;Machine parameter is required.&#34;}, status=400)
+
+    events = (
+        MachineDowntimeEvent.objects
+        .filter(machine=machine, is_deleted=False)
+        .order_by(&#34;-start_epoch&#34;)[:500]
+    )
+
+    payload = []
+    for e in events:
+        parts = []
+        for p in e.participants.all().order_by(&#34;join_epoch&#34;):
+            # build a python datetime (in local time) from your epoch seconds
+            join_dt = datetime.fromtimestamp(p.join_epoch, tz=timezone.get_current_timezone())
+            leave_dt = (
+                datetime.fromtimestamp(p.leave_epoch, tz=timezone.get_current_timezone())
+                if p.leave_epoch
+                else None
+            )
+
+            parts.append({
+                &#34;user&#34;: p.user.get_full_name() or p.user.username,
+                &#34;join_epoch&#34;: p.join_epoch,
+                &#34;join_display&#34;: join_dt.strftime(&#34;%B %d, %Y %I:%M %p&#34;),
+                &#34;leave_epoch&#34;: p.leave_epoch,
+                &#34;leave_display&#34;: leave_dt.strftime(&#34;%B %d, %Y %I:%M %p&#34;) if leave_dt else None,
+                &#34;join_comment&#34;: p.join_comment,
+                &#34;leave_comment&#34;: p.leave_comment,
+                &#34;total_minutes&#34;: p.total_minutes,
+            })
+
+        payload.append({
+            &#34;id&#34;: e.id,
+            &#34;start_epoch&#34;: e.start_epoch,
+            &#34;start_display&#34;: e.start_at.strftime(&#34;%Y-%m-%d %H:%M&#34;),
+            &#34;closeout_epoch&#34;: e.closeout_epoch,
+            &#34;closeout_display&#34;: e.closeout_at.strftime(&#34;%Y-%m-%d %H:%M&#34;) if e.closeout_at else None,
+            &#34;category&#34;: e.category,
+            &#34;subcategory&#34;: e.subcategory,
+            &#34;code&#34;: e.code,
+            &#34;comment&#34;: e.comment,
+            &#34;closeout_comment&#34;: e.closeout_comment,
+            &#34;participations&#34;: parts,
+        })
+
+    return JsonResponse({&#34;events&#34;: payload})</code></pre>
+</details>
+<div class="desc"><p>AJAX endpoint to retrieve the downtime and participation history for a given machine.</p>
+<p>Expects form-encoded POST data with:
+- machine (str): The machine identifier to query (required).</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Validate that the <code>machine</code> parameter is provided; return HTTP 400 if missing.</li>
+<li>Query the 500 most recent non-deleted MachineDowntimeEvent records for that machine,
+ordered by descending start_epoch.</li>
+<li>For each event, collect:</li>
+<li>id, start_epoch, start_display, closeout_epoch, closeout_display</li>
+<li>category, subcategory, code, comment, closeout_comment</li>
+<li>participations: a list of dicts for each DowntimeParticipation, containing:
+• user: full name or username
+• join_epoch, join_display
+• leave_epoch, leave_display (or None)
+• join_comment, leave_comment
+• total_minutes</li>
+<li>Assemble the data into a JSON object under the <code>"events"</code> key.</li>
+</ol>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>
+<ul>
+<li>On success: <code>{"events": [ ... ]}</code> with the structure described above.</li>
+<li>HTTP 400: <code>{"error": "Machine parameter is required."}</code> if no machine provided.</li>
+</ul>
+</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.maintenance_bulk_form"><code class="name flex">
+<span>def <span class="ident">maintenance_bulk_form</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required(login_url=&#34;login&#34;)
+def maintenance_bulk_form(request):
+    &#34;&#34;&#34;
+    Bulk-add downtime entries for one production line across multiple machines.
+
+    GET:
+      - Builds and renders the bulk-entry form with:
+        • prod_lines: nested JSON structure of lines → operations → machines.
+        • downtime_codes_json: list of downtime categories and their subcategories.
+
+    POST:
+      - Reads form fields:
+          • line (str)
+          • machines (list of str)
+          • category (str)
+          • subcategory (str, optional)
+          • start_date (str, &#34;YYYY-MM-DD&#34;)
+          • start_time (str, &#34;HH:MM&#34;)
+          • description (str)
+          • employee_id (str, optional)
+          • labour_types (JSON-encoded list)
+      - Validates:
+          • At least one machine selected.
+          • Category is provided and valid.
+          • Subcategory (if given) is valid.
+          • Date/time is in the correct format.
+      - Parses `labour_types` JSON and localizes the start datetime (America/Toronto → UTC epoch).
+      - Creates a MachineDowntimeEvent for each selected machine, sharing the same metadata.
+      - Redirects to the maintenance list view on success; returns HTTP 400 on any validation error.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. For GET, used to render the form; for POST, carries the bulk-entry data.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        On GET: renders &#34;plant/maintenance_bulk_form.html&#34; with the necessary context.
+    django.http.HttpResponseRedirect
+        On successful POST: redirects to the &#34;maintenance_all&#34; view.
+    django.http.HttpResponseBadRequest
+        On POST: if any required field is missing or invalid.
+    &#34;&#34;&#34;
+    prod_lines = get_prod_lines()
+    &#34;&#34;&#34;
+    Bulk‐add downtime entries: pick one line, one or more machines,
+    same category/subcategory/comment for all, plus labour.
+    &#34;&#34;&#34;
+    if request.method == &#34;POST&#34;:
+        line        = request.POST.get(&#39;line&#39;, &#39;&#39;).strip()
+        machines    = request.POST.getlist(&#39;machines&#39;)
+        raw_cat     = request.POST.get(&#39;category&#39;, &#39;&#39;).strip()
+        raw_sub     = request.POST.get(&#39;subcategory&#39;, &#39;&#39;).strip()
+        start_date  = request.POST.get(&#39;start_date&#39;, &#39;&#39;)
+        start_time  = request.POST.get(&#39;start_time&#39;, &#39;&#39;)
+        comment     = request.POST.get(&#39;description&#39;, &#39;&#39;).strip()
+        emp_id      = request.POST.get(&#39;employee_id&#39;, &#39;&#39;).strip()
+        raw_labour  = request.POST.get(&#39;labour_types&#39;, &#39;[]&#39;)
+
+        # --- validations ---
+        if not machines:
+            return HttpResponseBadRequest(&#34;You must select at least one machine.&#34;)
+        if not raw_cat:
+            return HttpResponseBadRequest(&#34;You must choose a category.&#34;)
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + &#34;-&#34;).first()
+        if not cat_obj:
+            return HttpResponseBadRequest(&#34;Invalid category code.&#34;)
+        category_name = cat_obj.category
+
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest(&#34;Invalid subcategory code.&#34;)
+            subcategory_name = sub_obj.subcategory
+            code_value       = raw_sub
+        else:
+            subcategory_name = &#34;NOTSELECTED&#34;
+            code_value       = &#34;NOTSELECTED&#34;
+
+        # parse labour JSON
+        try:
+            labour_list = json.loads(raw_labour)
+            if not isinstance(labour_list, list):
+                labour_list = []
+        except json.JSONDecodeError:
+            labour_list = []
+
+
+        # parse &amp; localize datetime
+        try:
+            dt_naive    = datetime.strptime(f&#34;{start_date} {start_time}&#34;, &#34;%Y-%m-%d %H:%M&#34;)
+        except ValueError:
+
+            return HttpResponseBadRequest(&#34;Bad date/time format.&#34;)
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+
+
+        # create one event per machine
+        for machine in machines:
+            MachineDowntimeEvent.objects.create(
+                line         = line,
+                machine      = machine,
+                category     = category_name,
+                subcategory  = subcategory_name,
+                code         = code_value,
+                start_epoch  = epoch_ts,
+                comment      = comment,
+                labour_types = labour_list,
+                employee_id  = emp_id or None,
+            )
+
+        return redirect(&#39;maintenance_all&#39;)
+
+    # GET → build JSON for selects
+    downtime_codes = DowntimeCode.objects.all().order_by(&#39;category&#39;,&#39;subcategory&#39;,&#39;code&#39;)
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split(&#39;-&#39;,1)[0]
+        structured.setdefault(cat, {
+            &#39;name&#39;: c.category,
+            &#39;code&#39;: cat,
+            &#39;subcategories&#39;: []
+        })[&#39;subcategories&#39;].append({&#39;code&#39;: c.code, &#39;name&#39;: c.subcategory})
+    downtime_codes_list = list(structured.values())
+
+    return render(request, &#39;plant/maintenance_bulk_form.html&#39;, {
+        &#39;lines_json&#39;:           json.dumps(prod_lines),
+        &#39;downtime_codes_json&#39;:  json.dumps(downtime_codes_list),
+    })</code></pre>
+</details>
+<div class="desc"><p>Bulk-add downtime entries for one production line across multiple machines.</p>
+<h2 id="get">Get</h2>
+<ul>
+<li>Builds and renders the bulk-entry form with:
+• prod_lines: nested JSON structure of lines → operations → machines.
+• downtime_codes_json: list of downtime categories and their subcategories.</li>
+</ul>
+<h2 id="post">Post</h2>
+<ul>
+<li>Reads form fields:
+• line (str)
+• machines (list of str)
+• category (str)
+• subcategory (str, optional)
+• start_date (str, "YYYY-MM-DD")
+• start_time (str, "HH:MM")
+• description (str)
+• employee_id (str, optional)
+• labour_types (JSON-encoded list)</li>
+<li>Validates:
+• At least one machine selected.
+• Category is provided and valid.
+• Subcategory (if given) is valid.
+• Date/time is in the correct format.</li>
+<li>Parses <code>labour_types</code> JSON and localizes the start datetime (America/Toronto → UTC epoch).</li>
+<li>Creates a MachineDowntimeEvent for each selected machine, sharing the same metadata.</li>
+<li>Redirects to the maintenance list view on success; returns HTTP 400 on any validation error.</li>
+</ul>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object. For GET, used to render the form; for POST, carries the bulk-entry data.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>On GET: renders "plant/maintenance_bulk_form.html" with the necessary context.</dd>
+<dt><code>django.http.HttpResponseRedirect</code></dt>
+<dd>On successful POST: redirects to the "maintenance_all" view.</dd>
+<dt><code>django.http.HttpResponseBadRequest</code></dt>
+<dd>On POST: if any required field is missing or invalid.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.maintenance_edit"><code class="name flex">
+<span>def <span class="ident">maintenance_edit</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def maintenance_edit(request):
+    &#34;&#34;&#34;
+    Provide JSON data for editing a machine downtime entry, including the entry’s details
+    and all reference lists needed for dependent dropdowns.
+
+    The response JSON contains:
+      - status:           &#34;ok&#34; or error
+      - entry_id:         The primary key of the downtime event
+      - line:             Current line identifier
+      - machine:          Current machine number
+      - category_code:    The prefix of the downtime code (before the first “–”)
+      - category_name:    The human-readable category label
+      - subcategory_code: The full downtime code (category + “–” + subcategory)
+      - start_date:       Local date portion of the event start (&#34;YYYY-MM-DD&#34;)
+      - start_time:       Local time portion of the event start (&#34;HH:MM&#34;)
+      - comment:          The event’s comment
+      - labour_types:     The list of labour type codes currently assigned
+      - employee_id:      The associated employee identifier (if any)
+      - lines:            Flat list of all available line identifiers
+      - machines:         Flat, sorted list of all available machine numbers
+      - categories:       List of dicts with keys `code` and `name` for each category
+      - subcategories:    List of dicts with keys `code`, `name`, and `parent` for each subcategory
+      - lines_data:       Full nested structure of lines → operations → machines
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        A POST request with JSON body containing:
+          - entry_id (int): ID of the downtime event to edit.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        A JSON object as described above, or HTTP 400 if the payload is invalid
+        or the specified entry does not exist.
+    &#34;&#34;&#34;
+    prod_lines = get_prod_lines()
+    &#34;&#34;&#34;
+    Return a JSON blob with:
+      - entry_id, line, machine, category_code, subcategory_code,
+        start_date, start_time, comment
+      - flat lists: lines[], machines[], categories[{code,name}], subcategories[{code,name,parent}]
+      - and the full lines_data for dependent dropdowns
+    &#34;&#34;&#34;
+    try:
+        payload = json.loads(request.body)
+        entry_id = payload[&#39;entry_id&#39;]
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;Invalid JSON or missing &#39;entry_id&#39;&#34;)
+
+    # Fetch the downtime event
+    try:
+        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest(&#34;Entry not found&#34;)
+
+    # Convert epoch to human-readable local datetime
+    dt = datetime.fromtimestamp(e.start_epoch)
+    if is_naive(dt):
+        dt = make_aware(dt, get_default_timezone())
+    local = localtime(dt)
+
+    # Generate flat machine list
+    machines = sorted({
+        m[&#39;number&#39;]
+        for line in prod_lines
+        for op in line[&#39;operations&#39;]
+        for m in op[&#39;machines&#39;]
+    })
+
+    # Fetch all downtime codes from the database
+    downtime_codes = DowntimeCode.objects.all().order_by(&#39;category&#39;, &#39;subcategory&#39;, &#39;code&#39;)
+
+    # Structure categories and subcategories
+    categories_dict = {}
+    for code_obj in downtime_codes:
+        # Extract category code (assuming it&#39;s the prefix before the first &#39;-&#39;)
+        cat_code = code_obj.code.split(&#39;-&#39;, 1)[0]
+        if cat_code not in categories_dict:
+            categories_dict[cat_code] = {
+                &#39;code&#39;: cat_code,
+                &#39;name&#39;: code_obj.category,
+            }
+    # Remove duplicates while preserving order
+    unique_categories = list(categories_dict.values())
+
+    # Structure subcategories with parent links
+    subcategories = [
+        {
+            &#39;code&#39;: code_obj.code,
+            &#39;name&#39;: code_obj.subcategory,
+            &#39;parent&#39;: code_obj.code.split(&#39;-&#39;, 1)[0]  # Assuming parent is category code
+        }
+        for code_obj in downtime_codes
+    ]
+
+    return JsonResponse({
+        &#39;status&#39;:           &#39;ok&#39;,
+        &#39;entry_id&#39;:         e.pk,
+        &#39;line&#39;:             e.line,
+        &#39;machine&#39;:          e.machine,
+        &#39;category_code&#39;:    e.code.split(&#39;-&#39;, 1)[0],  # Assuming category code is prefix before &#39;-&#39;
+        &#39;category_name&#39;:    e.category,         # ← the display name
+        &#39;subcategory_code&#39;: e.code,
+        &#39;start_date&#39;:       local.strftime(&#39;%Y-%m-%d&#39;),
+        &#39;start_time&#39;:       local.strftime(&#39;%H:%M&#39;),
+        &#39;comment&#39;:          e.comment,
+        &#39;labour_types&#39;:     e.labour_types,  # ← added
+        &#39;employee_id&#39;:      e.employee_id, 
+        &#39;lines&#39;:            [l[&#39;line&#39;] for l in prod_lines],
+        &#39;machines&#39;:         machines,
+        &#39;categories&#39;:       unique_categories,
+        &#39;subcategories&#39;:    subcategories,
+        &#39;lines_data&#39;:       prod_lines,
+    })</code></pre>
+</details>
+<div class="desc"><p>Provide JSON data for editing a machine downtime entry, including the entry’s details
+and all reference lists needed for dependent dropdowns.</p>
+<p>The response JSON contains:
+- status:
+"ok" or error
+- entry_id:
+The primary key of the downtime event
+- line:
+Current line identifier
+- machine:
+Current machine number
+- category_code:
+The prefix of the downtime code (before the first “–”)
+- category_name:
+The human-readable category label
+- subcategory_code: The full downtime code (category + “–” + subcategory)
+- start_date:
+Local date portion of the event start ("YYYY-MM-DD")
+- start_time:
+Local time portion of the event start ("HH:MM")
+- comment:
+The event’s comment
+- labour_types:
+The list of labour type codes currently assigned
+- employee_id:
+The associated employee identifier (if any)
+- lines:
+Flat list of all available line identifiers
+- machines:
+Flat, sorted list of all available machine numbers
+- categories:
+List of dicts with keys <code>code</code> and <code>name</code> for each category
+- subcategories:
+List of dicts with keys <code>code</code>, <code>name</code>, and <code>parent</code> for each subcategory
+- lines_data:
+Full nested structure of lines → operations → machines</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>A POST request with JSON body containing:
+- entry_id (int): ID of the downtime event to edit.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>A JSON object as described above, or HTTP 400 if the payload is invalid
+or the specified entry does not exist.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.maintenance_entries"><code class="name flex">
+<span>def <span class="ident">maintenance_entries</span></span>(<span>request: django.http.request.HttpRequest) ‑> django.http.response.JsonResponse</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def maintenance_entries(request: HttpRequest) -&gt; JsonResponse:
+    &#34;&#34;&#34;
+    Retrieve a paginated list of active (open and not deleted) machine downtime events.
+
+    The response JSON includes:
+      - entries: A list of event dicts, each containing:
+          • id (int)
+          • start_at (str): formatted &#34;YYYY-MM-DD HH:MM&#34;
+          • line (str)
+          • machine (str)
+          • category (str)
+          • subcategory (str)
+          • code (str)
+          • category_code (str): portion of code before the first hyphen
+          • subcategory_code (str): full code
+          • comment (str)
+          • labour_types (str or list)
+          • employee_id (Any): if available
+      - has_more (bool): True if additional pages remain beyond this batch.
+      - is_guest (bool): True if the requester is not authenticated.
+
+    Pagination
+    ----------
+    Uses `offset` query parameter (default 0) and a fixed page size of 300:
+      - offset (int): zero-based index of the first record in this batch.
+
+    Filtering
+    ---------
+    Only returns events where:
+      - `is_deleted` is False
+      - `closeout_epoch` is null (i.e., still open)
+    Ordered by newest `start_epoch` first.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. May include:
+          - GET parameter `offset` (optional, defaults to 0).
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON object with keys `entries`, `has_more`, and `is_guest`.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Returns a page of open MachineDowntimeEvent entries plus:
+      - has_more: whether there are more to load
+      - is_guest: true if the user is anonymous (not logged in)
+    &#34;&#34;&#34;
+    # paging params
+    offset    = int(request.GET.get(&#39;offset&#39;, 0))
+    page_size = 300
+
+    # only live, un‐closed events
+    qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_epoch__isnull=True
+    ).order_by(&#39;-start_epoch&#39;)
+
+    total = qs.count()
+    batch = qs[offset: offset + page_size]
+
+    entries = [
+        {
+            &#39;id&#39;               : e.id,
+            &#39;start_at&#39;         : e.start_at.strftime(&#39;%Y-%m-%d %H:%M&#39;),
+            &#39;line&#39;             : e.line,
+            &#39;machine&#39;          : e.machine,
+            &#39;category&#39;         : e.category,
+            &#39;subcategory&#39;      : e.subcategory,
+            &#39;code&#39;             : e.code,
+            &#39;category_code&#39;    : e.code.split(&#39;-&#39;, 1)[0],
+            &#39;subcategory_code&#39; : e.code,
+            &#39;comment&#39;          : e.comment,
+            &#39;labour_types&#39;      : e.labour_types,
+            &#39;employee_id&#39;      : e.employee_id,         # ← optional, if you ever need it
+
+        }
+        for e in batch
+    ]
+    has_more = (offset + page_size) &lt; total
+    is_guest = request.user.is_anonymous
+
+    return JsonResponse({
+        &#39;entries&#39; : entries,
+        &#39;has_more&#39;: has_more,
+        &#39;is_guest&#39;: is_guest,
+    })</code></pre>
+</details>
+<div class="desc"><p>Retrieve a paginated list of active (open and not deleted) machine downtime events.</p>
+<p>The response JSON includes:
+- entries: A list of event dicts, each containing:
+• id (int)
+• start_at (str): formatted "YYYY-MM-DD HH:MM"
+• line (str)
+• machine (str)
+• category (str)
+• subcategory (str)
+• code (str)
+• category_code (str): portion of code before the first hyphen
+• subcategory_code (str): full code
+• comment (str)
+• labour_types (str or list)
+• employee_id (Any): if available
+- has_more (bool): True if additional pages remain beyond this batch.
+- is_guest (bool): True if the requester is not authenticated.</p>
+<h2 id="pagination">Pagination</h2>
+<p>Uses <code>offset</code> query parameter (default 0) and a fixed page size of 300:
+- offset (int): zero-based index of the first record in this batch.</p>
+<h2 id="filtering">Filtering</h2>
+<p>Only returns events where:
+- <code>is_deleted</code> is False
+- <code>closeout_epoch</code> is null (i.e., still open)
+Ordered by newest <code>start_epoch</code> first.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming HTTP request. May include:
+- GET parameter <code>offset</code> (optional, defaults to 0).</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>JSON object with keys <code>entries</code>, <code>has_more</code>, and <code>is_guest</code>.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.maintenance_form"><code class="name flex">
+<span>def <span class="ident">maintenance_form</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def maintenance_form(request):
+    &#34;&#34;&#34;
+    Display and process the machine downtime entry form for maintenance staff.
+
+    GET:
+      - Renders the downtime entry page with:
+        • `prod_lines`: JSON-serializable list of production lines, operations, and machines.
+        • `entries`: a page of active (not deleted, not closed) MachineDowntimeEvent objects,
+          annotated with flags for open participant roles (electrician, millwright, tech, operator, plc tech, IMT).
+        • `offset`, `page_size`, `has_more`: pagination parameters.
+
+    POST:
+      - Reads form fields for an existing entry (`entry_id`) or new entry:
+          • line, machine, category, subcategory, start_date, start_time,
+            description (comment), employee_id, labour_types (JSON list).
+      - Validates that `category` is present and corresponds to a known DowntimeCode.
+      - Validates optional `subcategory` if provided.
+      - Parses and localizes the start datetime (America/Toronto) to a UTC epoch timestamp.
+      - Creates a new MachineDowntimeEvent or updates the existing one.
+      - Redirects back to the same URL (preserving pagination).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. For GET, may include `offset` as a query parameter.
+        For POST, carries form data and optional `entry_id` for updates.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        On GET: renders &#34;plant/maintenance_form.html&#34; with context data.
+        On POST: redirects back to the form URL on success, or returns
+        HTTP 400 Bad Request for validation errors.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Downtime‐entry form: CATEGORY is required; SUBCATEGORY + code are optional.
+    &#34;&#34;&#34;
+
+    prod_lines = get_prod_lines()
+
+    offset    = int(request.GET.get(&#39;offset&#39;, 0))
+    page_size = 300
+
+    if request.method == &#34;POST&#34;:
+        # Pull form data
+        entry_id   = request.POST.get(&#39;entry_id&#39;)   # None for new
+        line       = request.POST.get(&#39;line&#39;, &#39;&#39;).strip()
+        machine    = request.POST.get(&#39;machine&#39;, &#39;&#39;).strip()
+        raw_cat    = request.POST.get(&#39;category&#39;, &#39;&#39;).strip()
+        raw_sub    = request.POST.get(&#39;subcategory&#39;, &#39;&#39;).strip()
+        start_date = request.POST.get(&#39;start_date&#39;, &#39;&#39;)   # &#34;YYYY-MM-DD&#34;
+        start_time = request.POST.get(&#39;start_time&#39;, &#39;&#39;)   # &#34;HH:MM&#34;
+        comment    = request.POST.get(&#39;description&#39;, &#39;&#39;).strip()
+        emp_id     = request.POST.get(&#39;employee_id&#39;, &#39;&#39;).strip()
+        raw_labour = request.POST.get(&#39;labour_types&#39;, &#39;[]&#39;)
+
+        # Parse labour JSON
+        try:
+            labour_list = json.loads(raw_labour)
+            if not isinstance(labour_list, list):
+                labour_list = []
+        except json.JSONDecodeError:
+            labour_list = []
+
+        # Validate category
+        if not raw_cat:
+            return HttpResponseBadRequest(&#34;You must choose a category.&#34;)
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + &#34;-&#34;).first()
+        if not cat_obj:
+            return HttpResponseBadRequest(&#34;Invalid category code.&#34;)
+        category_name = cat_obj.category
+
+        # Validate subcategory
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest(&#34;Invalid subcategory code.&#34;)
+            subcategory_name = sub_obj.subcategory
+            code_value       = raw_sub
+        else:
+            subcategory_name = &#34;NOTSELECTED&#34;
+            code_value       = &#34;NOTSELECTED&#34;
+
+        # Build epoch timestamp (localize to America/Toronto then UTC)
+        try:
+            dt_naive = datetime.strptime(f&#34;{start_date} {start_time}&#34;, &#34;%Y-%m-%d %H:%M&#34;)
+        except ValueError:
+            return HttpResponseBadRequest(&#34;Bad date/time format.&#34;)
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+
+        # Create or update
+        if entry_id:
+            e = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
+            e.line         = line
+            e.machine      = machine
+            e.category     = category_name
+            e.subcategory  = subcategory_name
+            e.code         = code_value
+            e.start_epoch  = epoch_ts
+            e.comment      = comment
+            e.labour_types = labour_list
+            e.employee_id  = emp_id or None
+            e.save(update_fields=[
+                &#39;line&#39;,&#39;machine&#39;,&#39;category&#39;,&#39;subcategory&#39;,
+                &#39;code&#39;,&#39;start_epoch&#39;,&#39;comment&#39;,
+                &#39;labour_types&#39;,&#39;employee_id&#39;
+            ])
+        else:
+            MachineDowntimeEvent.objects.create(
+                line         = line,
+                machine      = machine,
+                category     = category_name,
+                subcategory  = subcategory_name,
+                code         = code_value,
+                start_epoch  = epoch_ts,
+                comment      = comment,
+                labour_types = labour_list,
+                employee_id  = emp_id or None,
+            )
+
+        # Redirect back, preserving offset
+        return redirect(request.get_full_path())
+
+    # GET: render form
+    qs = MachineDowntimeEvent.objects.filter(
+        is_deleted=False,
+        closeout_epoch__isnull=True
+    ).annotate(
+        has_electrician=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef(&#39;pk&#39;),
+                leave_epoch__isnull=True,
+                user__groups__name=&#39;maintenance_electrician&#39;
+            )
+        ),
+        has_millwright=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef(&#39;pk&#39;),
+                leave_epoch__isnull=True,
+                user__groups__name=&#39;maintenance_millwright&#39;
+            )
+        ),
+        has_tech=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef(&#39;pk&#39;),
+                leave_epoch__isnull=True,
+                user__groups__name=&#39;maintenance_tech&#39;
+            )
+        ),
+        has_operator=Case(
+            When(labour_types__contains=[&#39;OPERATOR&#39;], then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        has_plctech=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef(&#39;pk&#39;),
+                leave_epoch__isnull=True,
+                user__groups__name=&#39;maintenance_plctech&#39;
+            )
+        ),
+        has_imt=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef(&#39;pk&#39;),
+                leave_epoch__isnull=True,
+                user__groups__name=&#39;maintenance_imt&#39;
+            )
+        ),
+    ).order_by(&#39;-start_epoch&#39;)
+
+    total    = qs.count()
+    entries  = list(qs[offset: offset + page_size])
+    has_more = (offset + page_size) &lt; total
+
+    # Build downtime_codes_list and prod_lines JSON...
+    downtime_codes = DowntimeCode.objects.all().order_by(&#39;category&#39;,&#39;subcategory&#39;,&#39;code&#39;)
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split(&#39;-&#39;,1)[0]
+        structured.setdefault(cat, {
+            &#39;name&#39;: c.category,
+            &#39;code&#39;: cat,
+            &#39;subcategories&#39;: []
+        })[&#39;subcategories&#39;].append({&#39;code&#39;: c.code, &#39;name&#39;: c.subcategory})
+    downtime_codes_list = list(structured.values())
+
+    return render(request, &#39;plant/maintenance_form.html&#39;, {
+        &#39;entries&#39;:             entries,
+        &#39;offset&#39;:              offset,
+        &#39;page_size&#39;:           page_size,
+        &#39;has_more&#39;:            has_more,
+        &#39;downtime_codes_json&#39;: json.dumps(downtime_codes_list),
+        &#39;lines_json&#39;:          json.dumps(prod_lines),
+    })</code></pre>
+</details>
+<div class="desc"><p>Display and process the machine downtime entry form for maintenance staff.</p>
+<h2 id="get">Get</h2>
+<ul>
+<li>Renders the downtime entry page with:
+• <code>prod_lines</code>: JSON-serializable list of production lines, operations, and machines.
+• <code>entries</code>: a page of active (not deleted, not closed) MachineDowntimeEvent objects,
+annotated with flags for open participant roles (electrician, millwright, tech, operator, plc tech, IMT).
+• <code>offset</code>, <code>page_size</code>, <code>has_more</code>: pagination parameters.</li>
+</ul>
+<h2 id="post">Post</h2>
+<ul>
+<li>Reads form fields for an existing entry (<code>entry_id</code>) or new entry:
+• line, machine, category, subcategory, start_date, start_time,
+description (comment), employee_id, labour_types (JSON list).</li>
+<li>Validates that <code>category</code> is present and corresponds to a known DowntimeCode.</li>
+<li>Validates optional <code>subcategory</code> if provided.</li>
+<li>Parses and localizes the start datetime (America/Toronto) to a UTC epoch timestamp.</li>
+<li>Creates a new MachineDowntimeEvent or updates the existing one.</li>
+<li>Redirects back to the same URL (preserving pagination).</li>
+</ul>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object. For GET, may include <code>offset</code> as a query parameter.
+For POST, carries form data and optional <code>entry_id</code> for updates.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>On GET: renders "plant/maintenance_form.html" with context data.
+On POST: redirects back to the form URL on success, or returns
+HTTP 400 Bad Request for validation errors.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.maintenance_update_event"><code class="name flex">
+<span>def <span class="ident">maintenance_update_event</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@require_POST
+def maintenance_update_event(request):
+    &#34;&#34;&#34;
+    Update an existing machine downtime event with edited details.
+
+    Expects a POST request with a JSON body containing:
+      - entry_id (int):         The primary key of the MachineDowntimeEvent.
+      - line (str):             The production line identifier.
+      - machine (str):          The machine number.
+      - category (str):         The category code prefix (e.g. &#34;MECH&#34;).
+      - subcategory (str):      The full downtime code (e.g. &#34;MECH-TOOL&#34;).
+      - start_at (str):         The new start timestamp in &#34;YYYY-MM-DD HH:MM&#34; format.
+      - comment (str):          The downtime comment/description.
+      - labour_types (list):    Optional list of labour type codes.
+
+    Workflow:
+      1. Parse and validate the JSON payload; return HTTP 400 if malformed or missing required fields.
+      2. Retrieve the non-deleted MachineDowntimeEvent by `entry_id`; return HTTP 400 if not found.
+      3. Look up the DowntimeCode for `subcategory` to derive `category` and `subcategory` display names;
+         return HTTP 400 if the code is invalid.
+      4. Parse `start_at` as a naive datetime, localize to the default timezone, and convert to epoch seconds;
+         return HTTP 400 on format errors.
+      5. Update the event’s fields (`line`, `machine`, `category`, `subcategory`, `code`,
+         `start_epoch`, `comment`, `labour_types`) and save.
+      6. Return a JsonResponse `{&#39;status&#39;: &#39;ok&#39;}` on success.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming POST request with the JSON payload.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        `{&#39;status&#39;: &#39;ok&#39;}` on successful update.
+    django.http.HttpResponseBadRequest
+        If the payload is invalid, the event is not found, the code is invalid,
+        or the date format is incorrect.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Receive edited fields and update the downtime event in the DB.
+    &#34;&#34;&#34;
+    try:
+        payload = json.loads(request.body)
+        entry_id = payload[&#39;entry_id&#39;]
+        line = payload[&#39;line&#39;]
+        machine = payload[&#39;machine&#39;]
+        category_code = payload[&#39;category&#39;]      # e.g. &#34;MECH&#34;
+        subcategory_code = payload[&#39;subcategory&#39;]  # e.g. &#34;MECH-TOOL&#34;
+        start_at_str = payload[&#39;start_at&#39;]        # &#34;YYYY-MM-DD HH:MM&#34;
+        comment = payload[&#39;comment&#39;]
+        labour_list = payload.get(&#39;labour_types&#39;, [])
+    except (ValueError, KeyError):
+        return HttpResponseBadRequest(&#34;Invalid JSON or missing fields&#34;)
+
+    # 1) Lookup the event
+    try:
+        event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEvent.DoesNotExist:
+        return HttpResponseBadRequest(&#34;Entry not found&#34;)
+
+    # 2) Derive display names from DowntimeCode model
+    try:
+        # Fetch the DowntimeCode instance for subcategory
+        sub_code_obj = DowntimeCode.objects.get(code=subcategory_code)
+        category_name = sub_code_obj.category
+        subcategory_name = sub_code_obj.subcategory
+    except DowntimeCode.DoesNotExist:
+        return HttpResponseBadRequest(&#34;Invalid category or subcategory code&#34;)
+
+    # 3) Parse start_at into an epoch
+    try:
+        # Assume local date/time in the project&#39;s default timezone
+        dt_naive = datetime.strptime(start_at_str, &#34;%Y-%m-%d %H:%M&#34;)
+    except ValueError:
+        return HttpResponseBadRequest(&#34;Bad start_at format&#34;)
+
+    local_tz = get_default_timezone()
+    dt_aware = make_aware(dt_naive, local_tz) if is_naive(dt_naive) else dt_naive
+    epoch_ts = int(dt_aware.timestamp())
+
+    # 4) Apply updates
+    event.line = line
+    event.machine = machine
+    event.category = category_name
+    event.subcategory = subcategory_name
+    event.code = subcategory_code
+    event.start_epoch = epoch_ts
+    event.comment = comment
+    event.labour_types = labour_list
+    event.save(update_fields=[
+        &#39;line&#39;, &#39;machine&#39;, &#39;category&#39;, &#39;subcategory&#39;,
+        &#39;code&#39;, &#39;start_epoch&#39;, &#39;comment&#39;, &#39;labour_types&#39;,
+    ])
+
+    print(f&#34;[DEBUG] Updated downtime {entry_id}&#34;)
+    return JsonResponse({&#39;status&#39;: &#39;ok&#39;})</code></pre>
+</details>
+<div class="desc"><p>Update an existing machine downtime event with edited details.</p>
+<p>Expects a POST request with a JSON body containing:
+- entry_id (int):
+The primary key of the MachineDowntimeEvent.
+- line (str):
+The production line identifier.
+- machine (str):
+The machine number.
+- category (str):
+The category code prefix (e.g. "MECH").
+- subcategory (str):
+The full downtime code (e.g. "MECH-TOOL").
+- start_at (str):
+The new start timestamp in "YYYY-MM-DD HH:MM" format.
+- comment (str):
+The downtime comment/description.
+- labour_types (list):
+Optional list of labour type codes.</p>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Parse and validate the JSON payload; return HTTP 400 if malformed or missing required fields.</li>
+<li>Retrieve the non-deleted MachineDowntimeEvent by <code>entry_id</code>; return HTTP 400 if not found.</li>
+<li>Look up the DowntimeCode for <code>subcategory</code> to derive <code>category</code> and <code>subcategory</code> display names;
+return HTTP 400 if the code is invalid.</li>
+<li>Parse <code>start_at</code> as a naive datetime, localize to the default timezone, and convert to epoch seconds;
+return HTTP 400 on format errors.</li>
+<li>Update the event’s fields (<code>line</code>, <code>machine</code>, <code>category</code>, <code>subcategory</code>, <code>code</code>,
+<code>start_epoch</code>, <code>comment</code>, <code>labour_types</code>) and save.</li>
+<li>Return a JsonResponse <code>{'status': 'ok'}</code> on success.</li>
+</ol>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming POST request with the JSON payload.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd><code>{'status': 'ok'}</code> on successful update.</dd>
+<dt><code>django.http.HttpResponseBadRequest</code></dt>
+<dd>If the payload is invalid, the event is not found, the code is invalid,
+or the date format is incorrect.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.move_line_priority"><code class="name flex">
+<span>def <span class="ident">move_line_priority</span></span>(<span>request, pk, direction)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required
+@require_POST
+def move_line_priority(request, pk, direction):
+    &#34;&#34;&#34;
+    Adjust the ordering of line priorities by swapping one entry with its neighbor.
+
+    Only accepts POST requests from authenticated users.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. If the request is AJAX (XMLHttpRequest), a JSON
+        response is returned; otherwise the user is redirected back.
+    pk : int
+        Primary key of the LinePriority record to move.
+    direction : str
+        Movement direction:
+          - &#34;up&#34;:    Swap with the entry having the next higher urgency (lower number).
+          - &#34;down&#34;:  Swap with the entry having the next lower urgency (higher number).
+
+    Workflow
+    --------
+    1. Validate `direction`; return HTTP 400 if invalid.
+    2. Retrieve the `current` LinePriority by `pk`, 404 if not found.
+    3. Find the adjacent `neighbor` based on `direction`.
+    4. If a neighbor exists, perform an atomic swap of their `priority` values.
+    5. On AJAX requests, return JSON with the moved entry’s new priority and neighbor’s id.
+       Otherwise, redirect back to the referring page or the default list view.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On AJAX: `{&#34;status&#34;:&#34;ok&#34;,&#34;id&#34;:&lt;pk&gt;,&#34;new_priority&#34;:&lt;int&gt;,&#34;swapped_with&#34;:&lt;neighbor_pk&gt;}`
+    django.http.HttpResponseRedirect
+        On non-AJAX: redirects back to the referer or the downtime entries list.
+    django.http.HttpResponseBadRequest
+        If `direction` is not &#34;up&#34; or &#34;down&#34;.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Swap the priority of LinePriority(pk) with its neighbor:
+    - direction=&#39;up&#39;   → swap with the next-higher-urgency (lower number)
+    - direction=&#39;down&#39; → swap with the next-lower-urgency (higher number)
+    &#34;&#34;&#34;
+    if direction not in (&#39;up&#39;, &#39;down&#39;):
+        return HttpResponseBadRequest(&#34;Invalid move direction.&#34;)
+
+    current = get_object_or_404(LinePriority, pk=pk)
+
+    # find the neighbor to swap with
+    if direction == &#39;up&#39;:
+        neighbor = (
+            LinePriority.objects
+            .filter(priority__lt=current.priority)
+            .order_by(&#39;-priority&#39;)
+            .first()
+        )
+    else:  # down
+        neighbor = (
+            LinePriority.objects
+            .filter(priority__gt=current.priority)
+            .order_by(&#39;priority&#39;)
+            .first()
+        )
+
+    if neighbor:
+        # atomic swap
+        with transaction.atomic():
+            current.priority, neighbor.priority = neighbor.priority, current.priority
+            current.save(update_fields=[&#39;priority&#39;])
+            neighbor.save(update_fields=[&#39;priority&#39;])
+
+    # If AJAX, return new values; otherwise redirect back
+    if request.headers.get(&#39;x-requested-with&#39;) == &#39;XMLHttpRequest&#39;:
+        return JsonResponse({
+            &#39;status&#39;: &#39;ok&#39;,
+            &#39;id&#39;: current.pk,
+            &#39;new_priority&#39;: current.priority,
+            &#39;swapped_with&#39;: neighbor.pk if neighbor else None,
+        })
+
+    # fallback: redirect back to referring page (or a named view)
+    referer = request.META.get(&#39;HTTP_REFERER&#39;)
+    if referer:
+        return HttpResponseRedirect(referer)
+    return redirect(reverse(&#39;list_all_downtime_entries&#39;))</code></pre>
+</details>
+<div class="desc"><p>Adjust the ordering of line priorities by swapping one entry with its neighbor.</p>
+<p>Only accepts POST requests from authenticated users.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object. If the request is AJAX (XMLHttpRequest), a JSON
+response is returned; otherwise the user is redirected back.</dd>
+<dt><strong><code>pk</code></strong> :&ensp;<code>int</code></dt>
+<dd>Primary key of the LinePriority record to move.</dd>
+<dt><strong><code>direction</code></strong> :&ensp;<code>str</code></dt>
+<dd>Movement direction:
+- "up":
+Swap with the entry having the next higher urgency (lower number).
+- "down":
+Swap with the entry having the next lower urgency (higher number).</dd>
+</dl>
+<h2 id="workflow">Workflow</h2>
+<ol>
+<li>Validate <code>direction</code>; return HTTP 400 if invalid.</li>
+<li>Retrieve the <code>current</code> LinePriority by <code>pk</code>, 404 if not found.</li>
+<li>Find the adjacent <code>neighbor</code> based on <code>direction</code>.</li>
+<li>If a neighbor exists, perform an atomic swap of their <code>priority</code> values.</li>
+<li>On AJAX requests, return JSON with the moved entry’s new priority and neighbor’s id.
+Otherwise, redirect back to the referring page or the default list view.</li>
+</ol>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>On AJAX: <code>{"status":"ok","id":&lt;pk&gt;,"new_priority":&lt;int&gt;,"swapped_with":&lt;neighbor_pk&gt;}</code></dd>
+<dt><code>django.http.HttpResponseRedirect</code></dt>
+<dd>On non-AJAX: redirects back to the referer or the downtime entries list.</dd>
+<dt><code>django.http.HttpResponseBadRequest</code></dt>
+<dd>If <code>direction</code> is not "up" or "down".</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.quick_add"><code class="name flex">
+<span>def <span class="ident">quick_add</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required(login_url=&#34;login&#34;)
+def quick_add(request):
+    &#34;&#34;&#34;
+    Display a form for, and process, the creation of a single downtime entry.
+
+    GET:
+      - Renders the &#34;plant/quick_add.html&#34; template with:
+        • `lines_json`: Nested JSON of production lines → operations → machines.
+        • `downtime_codes_json`: List of downtime categories and subcategories.
+        • `labour_choices`: The available labour type choices.
+
+    POST:
+      - Reads form fields:
+          • line (str):            Production line identifier.
+          • machine (str):         Machine number.
+          • category (str):        Category code prefix.
+          • subcategory (str):     Full downtime code (optional).
+          • start_date (str):      &#34;YYYY-MM-DD&#34;.
+          • start_time (str):      &#34;HH:MM&#34;.
+          • description (str):     Comment for the downtime.
+          • employee_id (str):     Optional employee identifier.
+          • labour_types (JSON):   JSON-encoded list of labour type codes.
+      - Validates:
+          • A machine is selected.
+          • Category is provided and valid.
+          • Subcategory (if given) is valid.
+          • Date/time format is correct.
+      - Parses `labour_types` JSON and localizes the start datetime
+        (America/Toronto → UTC epoch).
+      - Creates one `MachineDowntimeEvent` with the provided details.
+      - Redirects to the maintenance list view on success; returns HTTP 400
+        for any validation errors.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request. GET to render the form; POST to submit data.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On GET: renders the quick-add form page.
+        - On successful POST: redirects to &#39;maintenance_all&#39;.
+    django.http.HttpResponseBadRequest
+        - On POST: if any required field is missing or invalid.
+    &#34;&#34;&#34;
+    prod_lines = get_prod_lines()
+    &#34;&#34;&#34;
+    Add a single downtime entry: pick one line, one machine,
+    same category/subcategory/comment, plus labour.
+    &#34;&#34;&#34;
+    if request.method == &#34;POST&#34;:
+        line        = request.POST.get(&#39;line&#39;, &#39;&#39;).strip()
+        machine     = request.POST.get(&#39;machine&#39;, &#39;&#39;).strip()
+        raw_cat     = request.POST.get(&#39;category&#39;, &#39;&#39;).strip()
+        raw_sub     = request.POST.get(&#39;subcategory&#39;, &#39;&#39;).strip()
+        start_date  = request.POST.get(&#39;start_date&#39;, &#39;&#39;)
+        start_time  = request.POST.get(&#39;start_time&#39;, &#39;&#39;)
+        comment     = request.POST.get(&#39;description&#39;, &#39;&#39;).strip()
+        emp_id      = request.POST.get(&#39;employee_id&#39;, &#39;&#39;).strip()
+        raw_labour  = request.POST.get(&#39;labour_types&#39;, &#39;[]&#39;)
+
+        # --- validations ---
+        if not machine:
+            return HttpResponseBadRequest(&#34;You must select a machine.&#34;)
+        if not raw_cat:
+            return HttpResponseBadRequest(&#34;You must choose a category.&#34;)
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + &#34;-&#34;).first()
+        if not cat_obj:
+            return HttpResponseBadRequest(&#34;Invalid category code.&#34;)
+        category_name = cat_obj.category
+
+        if raw_sub:
+            try:
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+                subcategory_name = sub_obj.subcategory
+                code_value       = raw_sub
+            except DowntimeCode.DoesNotExist:
+                return HttpResponseBadRequest(&#34;Invalid subcategory code.&#34;)
+        else:
+            subcategory_name = &#34;NOTSELECTED&#34;
+            code_value       = &#34;NOTSELECTED&#34;
+
+        # parse labour JSON
+        try:
+            labour_list = json.loads(raw_labour)
+            if not isinstance(labour_list, list):
+                labour_list = []
+        except json.JSONDecodeError:
+            labour_list = []
+
+        # parse &amp; localize datetime
+        try:
+            dt_naive    = datetime.strptime(f&#34;{start_date} {start_time}&#34;, &#34;%Y-%m-%d %H:%M&#34;)
+        except ValueError:
+            return HttpResponseBadRequest(&#34;Bad date/time format.&#34;)
+        local_tz    = timezone.get_current_timezone()  # America/Toronto
+        aware_local = timezone.make_aware(dt_naive, local_tz)
+        epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+
+        # --- single event create ---
+        MachineDowntimeEvent.objects.create(
+            line         = line,
+            machine      = machine,
+            category     = category_name,
+            subcategory  = subcategory_name,
+            code         = code_value,
+            start_epoch  = epoch_ts,
+            comment      = comment,
+            labour_types = labour_list,
+            employee_id  = emp_id or None,
+        )
+
+        # just redirect to your “all downtime entries” page:
+        return redirect(&#39;maintenance_all&#39;)
+
+    # GET → build JSON for selects (unchanged)
+    downtime_codes = DowntimeCode.objects.all().order_by(&#39;category&#39;,&#39;subcategory&#39;,&#39;code&#39;)
+    structured = {}
+    for c in downtime_codes:
+        cat = c.code.split(&#39;-&#39;,1)[0]
+        structured.setdefault(cat, {
+            &#39;name&#39;: c.category,
+            &#39;code&#39;: cat,
+            &#39;subcategories&#39;: []
+        })[&#39;subcategories&#39;].append({&#39;code&#39;: c.code, &#39;name&#39;: c.subcategory})
+    downtime_codes_list = list(structured.values())
+
+    return render(request, &#39;plant/quick_add.html&#39;, {
+        &#39;lines_json&#39;:           json.dumps(prod_lines),
+        &#39;downtime_codes_json&#39;:  json.dumps(downtime_codes_list),
+        &#39;labour_choices&#39;:      MachineDowntimeEvent.LABOUR_CHOICES,
+    })</code></pre>
+</details>
+<div class="desc"><p>Display a form for, and process, the creation of a single downtime entry.</p>
+<h2 id="get">Get</h2>
+<ul>
+<li>Renders the "plant/quick_add.html" template with:
+• <code>lines_json</code>: Nested JSON of production lines → operations → machines.
+• <code>downtime_codes_json</code>: List of downtime categories and subcategories.
+• <code>labour_choices</code>: The available labour type choices.</li>
+</ul>
+<h2 id="post">Post</h2>
+<ul>
+<li>Reads form fields:
+• line (str):
+Production line identifier.
+• machine (str):
+Machine number.
+• category (str):
+Category code prefix.
+• subcategory (str):
+Full downtime code (optional).
+• start_date (str):
+"YYYY-MM-DD".
+• start_time (str):
+"HH:MM".
+• description (str):
+Comment for the downtime.
+• employee_id (str):
+Optional employee identifier.
+• labour_types (JSON):
+JSON-encoded list of labour type codes.</li>
+<li>Validates:
+• A machine is selected.
+• Category is provided and valid.
+• Subcategory (if given) is valid.
+• Date/time format is correct.</li>
+<li>Parses <code>labour_types</code> JSON and localizes the start datetime
+(America/Toronto → UTC epoch).</li>
+<li>Creates one <code>MachineDowntimeEvent</code> with the provided details.</li>
+<li>Redirects to the maintenance list view on success; returns HTTP 400
+for any validation errors.</li>
+</ul>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming request. GET to render the form; POST to submit data.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>
+<ul>
+<li>On GET: renders the quick-add form page.</li>
+<li>On successful POST: redirects to 'maintenance_all'.</li>
+</ul>
+</dd>
+<dt><code>django.http.HttpResponseBadRequest</code></dt>
+<dd>
+<ul>
+<li>On POST: if any required field is missing or invalid.</li>
+</ul>
+</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.target_lines"><code class="name flex">
+<span>def <span class="ident">target_lines</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def target_lines(request):
+    &#34;&#34;&#34;
+    Provide a JSON list of available production line identifiers.
+
+    GET:
+      - Calls `get_prod_lines()` to build the nested line/operation/machine structure.
+      - Extracts just the `line` names from each block.
+      - Returns a JsonResponse with `{&#34;lines&#34;: [...]}`.
+
+    Other methods:
+      - Returns HTTP 405 Method Not Allowed.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request; expected to be a GET.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On GET: JSON object containing the `lines` list.
+    django.http.HttpResponse
+        On non-GET: HTTP 405 response with no body.
+    &#34;&#34;&#34;
+    prod_lines = get_prod_lines()
+    if request.method == &#39;GET&#39;:
+        # extract just the line names
+        line_names = [blk[&#39;line&#39;] for blk in prod_lines]
+        return JsonResponse({&#39;lines&#39;: line_names})
+    return HttpResponse(status=405)</code></pre>
+</details>
+<div class="desc"><p>Provide a JSON list of available production line identifiers.</p>
+<h2 id="get">Get</h2>
+<ul>
+<li>Calls <code><a title="plant.views.maintenance_views.get_prod_lines" href="#plant.views.maintenance_views.get_prod_lines">get_prod_lines()</a></code> to build the nested line/operation/machine structure.</li>
+<li>Extracts just the <code>line</code> names from each block.</li>
+<li>Returns a JsonResponse with <code>{"lines": [...]}</code>.</li>
+</ul>
+<p>Other methods:
+- Returns HTTP 405 Method Not Allowed.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The incoming HTTP request; expected to be a GET.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>On GET: JSON object containing the <code>lines</code> list.</dd>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>On non-GET: HTTP 405 response with no body.</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.maintenance_views.user_has_maintenance_access"><code class="name flex">
+<span>def <span class="ident">user_has_maintenance_access</span></span>(<span>user) ‑> bool</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def user_has_maintenance_access(user) -&gt; bool:
+    &#34;&#34;&#34;True if the user may enter the maintenance dashboard.&#34;&#34;&#34;
+    return (
+        user.is_active
+        and (
+            user.is_superuser
+            or user.groups.filter(name__in=MAINT_GROUPS).exists()
+        )
+    )</code></pre>
+</details>
+<div class="desc"><p>True if the user may enter the maintenance dashboard.</p></div>
+</dd>
+<dt id="plant.views.maintenance_views.user_is_supervisor_or_manager"><code class="name flex">
+<span>def <span class="ident">user_is_supervisor_or_manager</span></span>(<span>user)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def user_is_supervisor_or_manager(user):
+    return user.groups.filter(
+        name__in={&#34;maintenance_supervisors&#34;, &#34;maintenance_managers&#34;}
+    ).exists()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="plant.views.maintenance_views.add_employee" href="#plant.views.maintenance_views.add_employee">add_employee</a></code></li>
+<li><code><a title="plant.views.maintenance_views.annotate_being_worked_on" href="#plant.views.maintenance_views.annotate_being_worked_on">annotate_being_worked_on</a></code></li>
+<li><code><a title="plant.views.maintenance_views.bulk_toggle_active" href="#plant.views.maintenance_views.bulk_toggle_active">bulk_toggle_active</a></code></li>
+<li><code><a title="plant.views.maintenance_views.closeout_downtime_entry" href="#plant.views.maintenance_views.closeout_downtime_entry">closeout_downtime_entry</a></code></li>
+<li><code><a title="plant.views.maintenance_views.delete_downtime_entry" href="#plant.views.maintenance_views.delete_downtime_entry">delete_downtime_entry</a></code></li>
+<li><code><a title="plant.views.maintenance_views.downtime_codes_create" href="#plant.views.maintenance_views.downtime_codes_create">downtime_codes_create</a></code></li>
+<li><code><a title="plant.views.maintenance_views.downtime_codes_delete" href="#plant.views.maintenance_views.downtime_codes_delete">downtime_codes_delete</a></code></li>
+<li><code><a title="plant.views.maintenance_views.downtime_codes_edit" href="#plant.views.maintenance_views.downtime_codes_edit">downtime_codes_edit</a></code></li>
+<li><code><a title="plant.views.maintenance_views.downtime_codes_list" href="#plant.views.maintenance_views.downtime_codes_list">downtime_codes_list</a></code></li>
+<li><code><a title="plant.views.maintenance_views.downtime_history" href="#plant.views.maintenance_views.downtime_history">downtime_history</a></code></li>
+<li><code><a title="plant.views.maintenance_views.employee_login_status" href="#plant.views.maintenance_views.employee_login_status">employee_login_status</a></code></li>
+<li><code><a title="plant.views.maintenance_views.filter_out_operator_only_events" href="#plant.views.maintenance_views.filter_out_operator_only_events">filter_out_operator_only_events</a></code></li>
+<li><code><a title="plant.views.maintenance_views.force_leave_participation" href="#plant.views.maintenance_views.force_leave_participation">force_leave_participation</a></code></li>
+<li><code><a title="plant.views.maintenance_views.get_machine_priority_map" href="#plant.views.maintenance_views.get_machine_priority_map">get_machine_priority_map</a></code></li>
+<li><code><a title="plant.views.maintenance_views.get_prod_lines" href="#plant.views.maintenance_views.get_prod_lines">get_prod_lines</a></code></li>
+<li><code><a title="plant.views.maintenance_views.group_by_role" href="#plant.views.maintenance_views.group_by_role">group_by_role</a></code></li>
+<li><code><a title="plant.views.maintenance_views.join_downtime_event" href="#plant.views.maintenance_views.join_downtime_event">join_downtime_event</a></code></li>
+<li><code><a title="plant.views.maintenance_views.leave_downtime_event" href="#plant.views.maintenance_views.leave_downtime_event">leave_downtime_event</a></code></li>
+<li><code><a title="plant.views.maintenance_views.list_all_downtime_entries" href="#plant.views.maintenance_views.list_all_downtime_entries">list_all_downtime_entries</a></code></li>
+<li><code><a title="plant.views.maintenance_views.load_more_downtime_entries" href="#plant.views.maintenance_views.load_more_downtime_entries">load_more_downtime_entries</a></code></li>
+<li><code><a title="plant.views.maintenance_views.machine_history" href="#plant.views.maintenance_views.machine_history">machine_history</a></code></li>
+<li><code><a title="plant.views.maintenance_views.maintenance_bulk_form" href="#plant.views.maintenance_views.maintenance_bulk_form">maintenance_bulk_form</a></code></li>
+<li><code><a title="plant.views.maintenance_views.maintenance_edit" href="#plant.views.maintenance_views.maintenance_edit">maintenance_edit</a></code></li>
+<li><code><a title="plant.views.maintenance_views.maintenance_entries" href="#plant.views.maintenance_views.maintenance_entries">maintenance_entries</a></code></li>
+<li><code><a title="plant.views.maintenance_views.maintenance_form" href="#plant.views.maintenance_views.maintenance_form">maintenance_form</a></code></li>
+<li><code><a title="plant.views.maintenance_views.maintenance_update_event" href="#plant.views.maintenance_views.maintenance_update_event">maintenance_update_event</a></code></li>
+<li><code><a title="plant.views.maintenance_views.move_line_priority" href="#plant.views.maintenance_views.move_line_priority">move_line_priority</a></code></li>
+<li><code><a title="plant.views.maintenance_views.quick_add" href="#plant.views.maintenance_views.quick_add">quick_add</a></code></li>
+<li><code><a title="plant.views.maintenance_views.target_lines" href="#plant.views.maintenance_views.target_lines">target_lines</a></code></li>
+<li><code><a title="plant.views.maintenance_views.user_has_maintenance_access" href="#plant.views.maintenance_views.user_has_maintenance_access">user_has_maintenance_access</a></code></li>
+<li><code><a title="plant.views.maintenance_views.user_is_supervisor_or_manager" href="#plant.views.maintenance_views.user_is_supervisor_or_manager">user_is_supervisor_or_manager</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

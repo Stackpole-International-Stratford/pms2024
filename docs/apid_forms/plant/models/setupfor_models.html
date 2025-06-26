@@ -1,0 +1,1623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>plant.models.setupfor_models API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>plant.models.setupfor_models</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="plant.models.setupfor_models.current_epoch"><code class="name flex">
+<span>def <span class="ident">current_epoch</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def current_epoch():
+    &#34;&#34;&#34;
+    Utility function to return the current time as Unix epoch seconds (int).
+
+    Returns
+    -------
+    int
+        The current timestamp in seconds since the Unix epoch.
+    &#34;&#34;&#34;
+    return int(time.time())</code></pre>
+</details>
+<div class="desc"><p>Utility function to return the current time as Unix epoch seconds (int).</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>The current timestamp in seconds since the Unix epoch.</dd>
+</dl></div>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="plant.models.setupfor_models.Asset"><code class="flex name class">
+<span>class <span class="ident">Asset</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Asset(models.Model):
+    &#34;&#34;&#34;
+    Represents a physical asset with a unique identifier and optional descriptive name.
+
+    Fields
+    ------
+    asset_number : str
+        Unique code or number identifying the asset.
+    asset_name : str, optional
+        Human-readable name or description of the asset.
+    Methods
+    -------
+    __str__()
+        Returns &#34;{asset_number} - {asset_name}&#34; for display.
+    &#34;&#34;&#34;
+    asset_number = models.CharField(max_length=100)
+    asset_name = models.CharField(max_length=256, null=True, blank=True)
+
+    def __str__(self):
+        return f&#34;{self.asset_number} - {self.asset_name}&#34;</code></pre>
+</details>
+<div class="desc"><p>Represents a physical asset with a unique identifier and optional descriptive name.</p>
+<h2 id="fields">Fields</h2>
+<p>asset_number : str
+Unique code or number identifying the asset.
+asset_name : str, optional
+Human-readable name or description of the asset.
+Methods</p>
+<hr>
+<p><strong>str</strong>()
+Returns "{asset_number} - {asset_name}" for display.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.Asset.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.Asset.asset_name"><code class="name">var <span class="ident">asset_name</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.asset_number"><code class="name">var <span class="ident">asset_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.assetcycletimes_set"><code class="name">var <span class="ident">assetcycletimes_set</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.password_set"><code class="name">var <span class="ident">password_set</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Asset.setupfor_set"><code class="name">var <span class="ident">setupfor_set</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes"><code class="flex name class">
+<span>class <span class="ident">AssetCycleTimes</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AssetCycleTimes(models.Model):
+    &#34;&#34;&#34;
+    Record the cycle time of a specific part on an asset, effective from a given date.
+
+    Fields
+    ------
+    asset : ForeignKey to Asset
+        The asset to which this cycle time applies.
+    part : ForeignKey to Part
+        The part on the asset for which the cycle time is recorded.
+    cycle_time : float
+        The measured cycle time in seconds.
+    effective_date : int
+        Epoch timestamp (seconds since Unix epoch) indicating when this cycle time becomes effective.
+    created_at : datetime
+        Timestamp when the record was created (auto-populated).
+
+    Methods
+    -------
+    __str__()
+        Returns a string in the format:
+        &#34;{asset_number} - {part_number} - {cycle_time}s (Effective: {effective_date})&#34;
+    &#34;&#34;&#34;
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    part = models.ForeignKey(Part, on_delete=models.CASCADE)
+    cycle_time = models.FloatField()
+    effective_date = models.BigIntegerField()  # Storing as an epoch timestamp
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f&#34;{self.asset.asset_number} - {self.part.part_number} - {self.cycle_time}s (Effective: {self.effective_date})&#34;</code></pre>
+</details>
+<div class="desc"><p>Record the cycle time of a specific part on an asset, effective from a given date.</p>
+<h2 id="fields">Fields</h2>
+<p>asset : ForeignKey to Asset
+The asset to which this cycle time applies.
+part : ForeignKey to Part
+The part on the asset for which the cycle time is recorded.
+cycle_time : float
+The measured cycle time in seconds.
+effective_date : int
+Epoch timestamp (seconds since Unix epoch) indicating when this cycle time becomes effective.
+created_at : datetime
+Timestamp when the record was created (auto-populated).</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a string in the format:
+"{asset_number} - {part_number} - {cycle_time}s (Effective: {effective_date})"</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.asset"><code class="name">var <span class="ident">asset</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.asset_id"><code class="name">var <span class="ident">asset_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.created_at"><code class="name">var <span class="ident">created_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.cycle_time"><code class="name">var <span class="ident">cycle_time</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.effective_date"><code class="name">var <span class="ident">effective_date</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.part"><code class="name">var <span class="ident">part</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.part_id"><code class="name">var <span class="ident">part_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.get_next_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.setupfor_models.AssetCycleTimes.get_previous_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.setupfor_models.Part"><code class="flex name class">
+<span>class <span class="ident">Part</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Part(models.Model):
+    &#34;&#34;&#34;
+    Represents a part with a unique identifier and optional descriptive name.
+
+    Fields
+    ------
+    part_number : str
+        Unique code or number identifying the part.
+    part_name : str, optional
+        Human-readable name or description of the part.
+    Methods
+    -------
+    __str__()
+        Returns &#34;{part_number} - {part_name}&#34; for display.
+    &#34;&#34;&#34;
+    part_number = models.CharField(max_length=100)
+    part_name = models.CharField(max_length=256, null=True, blank=True)
+
+    def __str__(self):
+        return f&#34;{self.part_number} - {self.part_name}&#34;</code></pre>
+</details>
+<div class="desc"><p>Represents a part with a unique identifier and optional descriptive name.</p>
+<h2 id="fields">Fields</h2>
+<p>part_number : str
+Unique code or number identifying the part.
+part_name : str, optional
+Human-readable name or description of the part.
+Methods</p>
+<hr>
+<p><strong>str</strong>()
+Returns "{part_number} - {part_name}" for display.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.Part.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.Part.assetcycletimes_set"><code class="name">var <span class="ident">assetcycletimes_set</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.custom_message"><code class="name">var <span class="ident">custom_message</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the reverse relation.
+
+    With the example above, when getting ``place.restaurant``:
+
+    - ``self`` is the descriptor managing the ``restaurant`` attribute
+    - ``instance`` is the ``place`` instance
+    - ``cls`` is the ``Place`` class (unused)
+
+    Keep in mind that ``Restaurant`` holds the foreign key to ``Place``.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the forward accessor (ForwardManyToOneDescriptor).
+    try:
+        rel_obj = self.related.get_cached_value(instance)
+    except KeyError:
+        related_pk = instance.pk
+        if related_pk is None:
+            rel_obj = None
+        else:
+            filter_args = self.related.field.get_forward_related_filter(instance)
+            try:
+                rel_obj = self.get_queryset(instance=instance).get(**filter_args)
+            except self.related.related_model.DoesNotExist:
+                rel_obj = None
+            else:
+                # Set the forward accessor cache on the related object to
+                # the current instance to avoid an extra SQL query if it&#39;s
+                # accessed later on.
+                self.related.field.set_cached_value(rel_obj, instance)
+        self.related.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34;
+            % (instance.__class__.__name__, self.related.get_accessor_name())
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the reverse side of a one-to-one
+relation.</p>
+<p>In the example::</p>
+<pre><code>class Restaurant(Model):
+    place = OneToOneField(Place, related_name='restaurant')
+</code></pre>
+<p><code>Place.restaurant</code> is a <code>ReverseOneToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.feat_set"><code class="name">var <span class="ident">feat_set</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.part_name"><code class="name">var <span class="ident">part_name</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.part_number"><code class="name">var <span class="ident">part_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.pdf_documents"><code class="name">var <span class="ident">pdf_documents</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the forward and reverse sides of
+a many-to-many relation.</p>
+<p>In the example::</p>
+<pre><code>class Pizza(Model):
+    toppings = ManyToManyField(Topping, related_name='pizzas')
+</code></pre>
+<p><code>Pizza.toppings</code> and <code>Topping.pizzas</code> are <code>ManyToManyDescriptor</code>
+instances.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.red_rabbit_types"><code class="name">var <span class="ident">red_rabbit_types</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.red_rabbits_entries"><code class="name">var <span class="ident">red_rabbits_entries</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.Part.setupfor_set"><code class="name">var <span class="ident">setupfor_set</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor"><code class="flex name class">
+<span>class <span class="ident">SetupFor</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SetupFor(models.Model):
+    &#34;&#34;&#34;
+    Records which Part is set up on an Asset starting at a specific time.
+
+    Fields
+    ------
+    asset : ForeignKey to Asset
+        The asset that was set up.
+    part : ForeignKey to Part
+        The part that was installed on the asset.
+    created_at : int
+        Epoch timestamp when this record was created (auto-populated).
+    since : int
+        Epoch timestamp indicating when the part setup took effect.
+
+    Methods
+    -------
+    __str__()
+        Returns a string in the format &#34;{asset_number} setup for {part_number}&#34;.
+    &#34;&#34;&#34;
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    part = models.ForeignKey(Part, on_delete=models.CASCADE)
+    created_at = models.BigIntegerField(default=current_epoch, editable=False)
+    since = models.BigIntegerField()
+
+    def __str__(self):
+        return f&#39;{self.asset.asset_number} setup for {self.part.part_number}&#39;</code></pre>
+</details>
+<div class="desc"><p>Records which Part is set up on an Asset starting at a specific time.</p>
+<h2 id="fields">Fields</h2>
+<p>asset : ForeignKey to Asset
+The asset that was set up.
+part : ForeignKey to Part
+The part that was installed on the asset.
+created_at : int
+Epoch timestamp when this record was created (auto-populated).
+since : int
+Epoch timestamp indicating when the part setup took effect.</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a string in the format "{asset_number} setup for {part_number}".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.SetupFor.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.setupfor_models.SetupFor.asset"><code class="name">var <span class="ident">asset</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.asset_id"><code class="name">var <span class="ident">asset_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.created_at"><code class="name">var <span class="ident">created_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.part"><code class="name">var <span class="ident">part</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.part_id"><code class="name">var <span class="ident">part_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.setupfor_models.SetupFor.since"><code class="name">var <span class="ident">since</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.setupfor_models.SetupForManager"><code class="flex name class">
+<span>class <span class="ident">SetupForManager</span></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SetupForManager(models.Manager):
+    &#34;&#34;&#34;
+    Custom manager for SetupFor records, providing lookups by asset and time.
+
+    Methods
+    -------
+    get_part_at_time(asset_number: str, timestamp: int) -&gt; Part or None
+        Returns the Part assigned to the given asset at or before the specified epoch,
+        or None if no setup record exists.
+    &#34;&#34;&#34;
+    def get_part_at_time(self, asset_number, timestamp):
+        try:
+            setup = (
+                self.filter(asset__asset_number=asset_number, since__lte=timestamp)
+                    .order_by(&#39;-since&#39;)
+                    .first()
+            )
+            return setup.part if setup else None
+        except self.model.DoesNotExist:
+            return None</code></pre>
+</details>
+<div class="desc"><p>Custom manager for SetupFor records, providing lookups by asset and time.</p>
+<h2 id="methods">Methods</h2>
+<p>get_part_at_time(asset_number: str, timestamp: int) -&gt; Part or None
+Returns the Part assigned to the given asset at or before the specified epoch,
+or None if no setup record exists.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.manager.Manager</li>
+<li>django.db.models.manager.BaseManagerFromQuerySet</li>
+<li>django.db.models.manager.BaseManager</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="plant.models.setupfor_models.SetupForManager.get_part_at_time"><code class="name flex">
+<span>def <span class="ident">get_part_at_time</span></span>(<span>self, asset_number, timestamp)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_part_at_time(self, asset_number, timestamp):
+    try:
+        setup = (
+            self.filter(asset__asset_number=asset_number, since__lte=timestamp)
+                .order_by(&#39;-since&#39;)
+                .first()
+        )
+        return setup.part if setup else None
+    except self.model.DoesNotExist:
+        return None</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="plant.models.setupfor_models.current_epoch" href="#plant.models.setupfor_models.current_epoch">current_epoch</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="plant.models.setupfor_models.Asset" href="#plant.models.setupfor_models.Asset">Asset</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.setupfor_models.Asset.DoesNotExist" href="#plant.models.setupfor_models.Asset.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.MultipleObjectsReturned" href="#plant.models.setupfor_models.Asset.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.asset_name" href="#plant.models.setupfor_models.Asset.asset_name">asset_name</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.asset_number" href="#plant.models.setupfor_models.Asset.asset_number">asset_number</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.assetcycletimes_set" href="#plant.models.setupfor_models.Asset.assetcycletimes_set">assetcycletimes_set</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.id" href="#plant.models.setupfor_models.Asset.id">id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.objects" href="#plant.models.setupfor_models.Asset.objects">objects</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.password_set" href="#plant.models.setupfor_models.Asset.password_set">password_set</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Asset.setupfor_set" href="#plant.models.setupfor_models.Asset.setupfor_set">setupfor_set</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.setupfor_models.AssetCycleTimes" href="#plant.models.setupfor_models.AssetCycleTimes">AssetCycleTimes</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.DoesNotExist" href="#plant.models.setupfor_models.AssetCycleTimes.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.MultipleObjectsReturned" href="#plant.models.setupfor_models.AssetCycleTimes.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.asset" href="#plant.models.setupfor_models.AssetCycleTimes.asset">asset</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.asset_id" href="#plant.models.setupfor_models.AssetCycleTimes.asset_id">asset_id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.created_at" href="#plant.models.setupfor_models.AssetCycleTimes.created_at">created_at</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.cycle_time" href="#plant.models.setupfor_models.AssetCycleTimes.cycle_time">cycle_time</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.effective_date" href="#plant.models.setupfor_models.AssetCycleTimes.effective_date">effective_date</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.get_next_by_created_at" href="#plant.models.setupfor_models.AssetCycleTimes.get_next_by_created_at">get_next_by_created_at</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.get_previous_by_created_at" href="#plant.models.setupfor_models.AssetCycleTimes.get_previous_by_created_at">get_previous_by_created_at</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.id" href="#plant.models.setupfor_models.AssetCycleTimes.id">id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.objects" href="#plant.models.setupfor_models.AssetCycleTimes.objects">objects</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.part" href="#plant.models.setupfor_models.AssetCycleTimes.part">part</a></code></li>
+<li><code><a title="plant.models.setupfor_models.AssetCycleTimes.part_id" href="#plant.models.setupfor_models.AssetCycleTimes.part_id">part_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.setupfor_models.Part" href="#plant.models.setupfor_models.Part">Part</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.setupfor_models.Part.DoesNotExist" href="#plant.models.setupfor_models.Part.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.MultipleObjectsReturned" href="#plant.models.setupfor_models.Part.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.assetcycletimes_set" href="#plant.models.setupfor_models.Part.assetcycletimes_set">assetcycletimes_set</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.custom_message" href="#plant.models.setupfor_models.Part.custom_message">custom_message</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.feat_set" href="#plant.models.setupfor_models.Part.feat_set">feat_set</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.id" href="#plant.models.setupfor_models.Part.id">id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.objects" href="#plant.models.setupfor_models.Part.objects">objects</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.part_name" href="#plant.models.setupfor_models.Part.part_name">part_name</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.part_number" href="#plant.models.setupfor_models.Part.part_number">part_number</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.pdf_documents" href="#plant.models.setupfor_models.Part.pdf_documents">pdf_documents</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.red_rabbit_types" href="#plant.models.setupfor_models.Part.red_rabbit_types">red_rabbit_types</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.red_rabbits_entries" href="#plant.models.setupfor_models.Part.red_rabbits_entries">red_rabbits_entries</a></code></li>
+<li><code><a title="plant.models.setupfor_models.Part.setupfor_set" href="#plant.models.setupfor_models.Part.setupfor_set">setupfor_set</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.setupfor_models.SetupFor" href="#plant.models.setupfor_models.SetupFor">SetupFor</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.setupfor_models.SetupFor.DoesNotExist" href="#plant.models.setupfor_models.SetupFor.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.MultipleObjectsReturned" href="#plant.models.setupfor_models.SetupFor.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.asset" href="#plant.models.setupfor_models.SetupFor.asset">asset</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.asset_id" href="#plant.models.setupfor_models.SetupFor.asset_id">asset_id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.created_at" href="#plant.models.setupfor_models.SetupFor.created_at">created_at</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.id" href="#plant.models.setupfor_models.SetupFor.id">id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.objects" href="#plant.models.setupfor_models.SetupFor.objects">objects</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.part" href="#plant.models.setupfor_models.SetupFor.part">part</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.part_id" href="#plant.models.setupfor_models.SetupFor.part_id">part_id</a></code></li>
+<li><code><a title="plant.models.setupfor_models.SetupFor.since" href="#plant.models.setupfor_models.SetupFor.since">since</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.setupfor_models.SetupForManager" href="#plant.models.setupfor_models.SetupForManager">SetupForManager</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.setupfor_models.SetupForManager.get_part_at_time" href="#plant.models.setupfor_models.SetupForManager.get_part_at_time">get_part_at_time</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

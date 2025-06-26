@@ -1,0 +1,3552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>quality.models API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>quality.models</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="quality.models.delete_file_on_delete"><code class="name flex">
+<span>def <span class="ident">delete_file_on_delete</span></span>(<span>sender, instance, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@receiver(post_delete, sender=QualityPDFDocument)
+def delete_file_on_delete(sender, instance, **kwargs):
+    &#34;&#34;&#34;
+    Remove the PDF file from disk when its database record is deleted.
+
+    Triggered automatically after a QualityPDFDocument is deleted.
+    Checks that the file exists on disk before attempting removal.
+    &#34;&#34;&#34;
+    if instance.pdf_file:
+        if os.path.isfile(instance.pdf_file.path):
+            os.remove(instance.pdf_file.path)</code></pre>
+</details>
+<div class="desc"><p>Remove the PDF file from disk when its database record is deleted.</p>
+<p>Triggered automatically after a QualityPDFDocument is deleted.
+Checks that the file exists on disk before attempting removal.</p></div>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="quality.models.Feat"><code class="flex name class">
+<span>class <span class="ident">Feat</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Feat(models.Model):
+    &#34;&#34;&#34;
+    Define a feature or operation associated with a specific Part.
+
+    Fields
+    ------
+    part : ForeignKey to Part
+        The Part to which this feature belongs; cascading delete applies.
+    name : str
+        The unique name of the feature for the given part.
+    order : int
+        Display or execution order of this feature (ascending).
+    alarm : int
+        Numeric alarm threshold or code for this feature (default 0).
+    critical : bool
+        Flag indicating whether this feature is critical (default False).
+
+    Meta
+    ----
+    unique_together : (part, name)
+        Enforce that each feature name is unique per part.
+    ordering : [&#39;order&#39;]
+        Default queryset ordering by the `order` field.
+
+    __str__
+    -------
+    Returns a string in the format: &#34;&lt;name&gt; (&lt;part&gt;)&#34;.
+    &#34;&#34;&#34;
+    part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name=&#39;feat_set&#39;)
+    name = models.CharField(max_length=256)
+    order = models.PositiveIntegerField(default=1)
+    alarm = models.IntegerField(default=0)  # New alarm field
+    critical = models.BooleanField(default=False)  # New critical field
+
+
+    class Meta:
+        unique_together = (&#39;part&#39;, &#39;name&#39;)
+        ordering = [&#39;order&#39;]
+
+    def __str__(self):
+        return f&#39;{self.name} ({self.part})&#39;</code></pre>
+</details>
+<div class="desc"><p>Define a feature or operation associated with a specific Part.</p>
+<h2 id="fields">Fields</h2>
+<p>part : ForeignKey to Part
+The Part to which this feature belongs; cascading delete applies.
+name : str
+The unique name of the feature for the given part.
+order : int
+Display or execution order of this feature (ascending).
+alarm : int
+Numeric alarm threshold or code for this feature (default 0).
+critical : bool
+Flag indicating whether this feature is critical (default False).</p>
+<h2 id="meta">Meta</h2>
+<p>unique_together : (part, name)
+Enforce that each feature name is unique per part.
+ordering : ['order']
+Default queryset ordering by the <code>order</code> field.</p>
+<h2 id="str"><strong>Str</strong></h2>
+<p>Returns a string in the format: "<name> (<part>)".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.Feat.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.Feat.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.Feat.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.Feat.alarm"><code class="name">var <span class="ident">alarm</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.Feat.critical"><code class="name">var <span class="ident">critical</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.Feat.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.Feat.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.Feat.order"><code class="name">var <span class="ident">order</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.Feat.part"><code class="name">var <span class="ident">part</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.Feat.part_id"><code class="name">var <span class="ident">part_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.FeatEntry"><code class="flex name class">
+<span>class <span class="ident">FeatEntry</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class FeatEntry(models.Model):
+    &#34;&#34;&#34;
+    Represent defect counts for a specific feature within a scrap form.
+
+    Each FeatEntry links to a parent ScrapForm and records:
+      - featName (str):      The name of the feature being inspected.
+      - defects (int):       The number of defects observed for that feature.
+      - partNumber (str):    The identifier of the part associated with this feature entry.
+
+    Relationships
+    -------------
+    scrap_form : ForeignKey to ScrapForm
+        The ScrapForm instance to which this feature entry belongs. Deletion of the
+        parent ScrapForm cascades to its FeatEntry records.
+
+    Fields
+    ------
+    scrap_form    : ScrapForm
+    featName      : CharField(max_length=256)
+    defects       : IntegerField
+    partNumber    : CharField(max_length=256)
+
+    Methods
+    -------
+    __str__()
+        Returns a human-readable string summarizing the feature name, defect count,
+        and part number.
+    &#34;&#34;&#34;
+    scrap_form = models.ForeignKey(ScrapForm, related_name=&#39;feat_entries&#39;, on_delete=models.CASCADE)
+    featName = models.CharField(max_length=256)
+    defects = models.IntegerField()
+    partNumber = models.CharField(max_length=256)  # Add the partNumber field
+
+    def __str__(self):
+        return f&#39;FeatEntry for {self.featName} with {self.defects} defects, Part Number: {self.partNumber}&#39;</code></pre>
+</details>
+<div class="desc"><p>Represent defect counts for a specific feature within a scrap form.</p>
+<p>Each FeatEntry links to a parent ScrapForm and records:
+- featName (str):
+The name of the feature being inspected.
+- defects (int):
+The number of defects observed for that feature.
+- partNumber (str):
+The identifier of the part associated with this feature entry.</p>
+<h2 id="relationships">Relationships</h2>
+<p>scrap_form : ForeignKey to ScrapForm
+The ScrapForm instance to which this feature entry belongs. Deletion of the
+parent ScrapForm cascades to its FeatEntry records.</p>
+<h2 id="fields">Fields</h2>
+<p>scrap_form
+: ScrapForm
+featName
+: CharField(max_length=256)
+defects
+: IntegerField
+partNumber
+: CharField(max_length=256)</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a human-readable string summarizing the feature name, defect count,
+and part number.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.FeatEntry.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.FeatEntry.defects"><code class="name">var <span class="ident">defects</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.featName"><code class="name">var <span class="ident">featName</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.partNumber"><code class="name">var <span class="ident">partNumber</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.scrap_form"><code class="name">var <span class="ident">scrap_form</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.FeatEntry.scrap_form_id"><code class="name">var <span class="ident">scrap_form_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.PartMessage"><code class="flex name class">
+<span>class <span class="ident">PartMessage</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PartMessage(models.Model):
+    &#34;&#34;&#34;
+    Store a custom display message and font size for a specific Part.
+
+    Each PartMessage is a one-to-one extension of a Part, allowing you to:
+      - Define a free-form `message` to show alongside that part.
+      - Choose a `font_size` from predefined options (&#39;small&#39;, &#39;medium&#39;, &#39;large&#39;, &#39;xl&#39;, &#39;xxl&#39;, &#39;xxxl&#39;).
+
+    Fields
+    ------
+    part : OneToOneField to Part
+        The Part instance this message customizes. Deletion of the Part
+        cascades to its PartMessage.
+    message : TextField, optional
+        The custom text to display; may be blank or null if no message is set.
+    font_size : CharField
+        The display size for the message text. Choices are defined in
+        `FONT_SIZE_CHOICES`, defaulting to &#39;medium&#39;.
+
+    Methods
+    -------
+    __str__()
+        Returns a concise identifier: &#34;Message for &lt;part_number&gt;&#34;.
+    &#34;&#34;&#34;
+    FONT_SIZE_CHOICES = [
+        (&#39;small&#39;, &#39;Small&#39;),
+        (&#39;medium&#39;, &#39;Medium&#39;),
+        (&#39;large&#39;, &#39;Large&#39;),
+        (&#39;xl&#39;, &#39;Extra Large&#39;),
+        (&#39;xxl&#39;, &#39;Double Extra Large&#39;),
+        (&#39;xxxl&#39;, &#39;Triple Extra Large&#39;),
+    ]
+
+    part = models.OneToOneField(Part, on_delete=models.CASCADE, related_name=&#39;custom_message&#39;)
+    message = models.TextField(blank=True, null=True)
+    font_size = models.CharField(max_length=10, choices=FONT_SIZE_CHOICES, default=&#39;medium&#39;)  # Default size
+
+    def __str__(self):
+        return f&#34;Message for {self.part.part_number}&#34;</code></pre>
+</details>
+<div class="desc"><p>Store a custom display message and font size for a specific Part.</p>
+<p>Each PartMessage is a one-to-one extension of a Part, allowing you to:
+- Define a free-form <code>message</code> to show alongside that part.
+- Choose a <code>font_size</code> from predefined options ('small', 'medium', 'large', 'xl', 'xxl', 'xxxl').</p>
+<h2 id="fields">Fields</h2>
+<p>part : OneToOneField to Part
+The Part instance this message customizes. Deletion of the Part
+cascades to its PartMessage.
+message : TextField, optional
+The custom text to display; may be blank or null if no message is set.
+font_size : CharField
+The display size for the message text. Choices are defined in
+<code>FONT_SIZE_CHOICES</code>, defaulting to 'medium'.</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a concise identifier: "Message for <part_number>".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.PartMessage.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.PartMessage.FONT_SIZE_CHOICES"><code class="name">var <span class="ident">FONT_SIZE_CHOICES</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.PartMessage.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.PartMessage.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.PartMessage.font_size"><code class="name">var <span class="ident">font_size</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.PartMessage.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.PartMessage.message"><code class="name">var <span class="ident">message</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.PartMessage.part"><code class="name">var <span class="ident">part</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a one-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Restaurant(Model):
+    place = OneToOneField(Place, related_name='restaurant')
+</code></pre>
+<p><code>Restaurant.place</code> is a <code>ForwardOneToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.PartMessage.part_id"><code class="name">var <span class="ident">part_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quality.models.PartMessage.get_font_size_display"><code class="name flex">
+<span>def <span class="ident">get_font_size_display</span></span>(<span>self, *, field=&lt;django.db.models.fields.CharField: font_size&gt;)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.QualityPDFDocument"><code class="flex name class">
+<span>class <span class="ident">QualityPDFDocument</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class QualityPDFDocument(models.Model):
+    &#34;&#34;&#34;
+    Store and categorize PDF documents related to quality processes and associate them with parts.
+
+    Fields
+    ------
+    title : str
+        Human-readable title of the document.
+    pdf_file : FileField
+        The uploaded PDF file; stored under ‘pdfs/’ in media.
+    associated_parts : ManyToManyField to Part
+        Parts to which this document applies.
+    uploaded_at : datetime
+        Timestamp when the document was uploaded (auto-set).
+    category : str
+        The document category, chosen from:
+          - &#39;QA&#39;  (Quality Alerts)
+          - &#39;SI&#39;  (Special Instruction)
+          - &#39;TPC&#39; (TPC)
+          - &#39;VAC&#39; (Visual Acceptance Criteria)
+          - &#39;PMR&#39; (Part Marking Requirement)
+          - &#39;CT&#39;  (Certification Tag)
+          - &#39;SA&#39;  (Safety Alert)
+        Defaults to &#39;QA&#39;.
+
+    Methods
+    -------
+    __str__()
+        Returns the document’s title.
+    is_new()
+        Returns True if `uploaded_at` is within the last 4 hours.
+
+    Notes
+    -----
+    A post-delete signal ensures that when a database record is removed,
+    its corresponding file is also deleted from disk.
+    &#34;&#34;&#34;
+    CATEGORY_CHOICES = [
+        (&#39;QA&#39;, &#39;Quality Alerts&#39;),
+        (&#39;SI&#39;, &#39;Special Instruction&#39;),
+        (&#39;TPC&#39;, &#39;TPC&#39;),
+        (&#39;VAC&#39;, &#39;Visual Acceptance Criteria&#39;),
+        (&#39;PMR&#39;, &#39;Part Marking Requirement&#39;),
+        (&#39;CT&#39;, &#39;Certification Tag&#39;),
+        (&#39;SA&#39;, &#39;Safety Alert&#39;),
+    ]
+
+    title = models.CharField(max_length=256)
+    pdf_file = models.FileField(upload_to=&#39;pdfs/&#39;)  # Stores the PDF file
+    associated_parts = models.ManyToManyField(Part, related_name=&#39;pdf_documents&#39;)  # Many-to-Many relation with parts
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default=&#39;QA&#39;)
+
+    def __str__(self):
+        return self.title
+
+    def is_new(self):
+        # Return True if the PDF was uploaded within the last 8 hours
+        return timezone.now() - self.uploaded_at &lt; timedelta(hours=4)</code></pre>
+</details>
+<div class="desc"><p>Store and categorize PDF documents related to quality processes and associate them with parts.</p>
+<h2 id="fields">Fields</h2>
+<p>title : str
+Human-readable title of the document.
+pdf_file : FileField
+The uploaded PDF file; stored under ‘pdfs/’ in media.
+associated_parts : ManyToManyField to Part
+Parts to which this document applies.
+uploaded_at : datetime
+Timestamp when the document was uploaded (auto-set).
+category : str
+The document category, chosen from:
+- 'QA'
+(Quality Alerts)
+- 'SI'
+(Special Instruction)
+- 'TPC' (TPC)
+- 'VAC' (Visual Acceptance Criteria)
+- 'PMR' (Part Marking Requirement)
+- 'CT'
+(Certification Tag)
+- 'SA'
+(Safety Alert)
+Defaults to 'QA'.</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns the document’s title.
+is_new()
+Returns True if <code>uploaded_at</code> is within the last 4 hours.</p>
+<h2 id="notes">Notes</h2>
+<p>A post-delete signal ensures that when a database record is removed,
+its corresponding file is also deleted from disk.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.QualityPDFDocument.CATEGORY_CHOICES"><code class="name">var <span class="ident">CATEGORY_CHOICES</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.QualityPDFDocument.associated_parts"><code class="name">var <span class="ident">associated_parts</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the forward and reverse sides of
+a many-to-many relation.</p>
+<p>In the example::</p>
+<pre><code>class Pizza(Model):
+    toppings = ManyToManyField(Topping, related_name='pizzas')
+</code></pre>
+<p><code>Pizza.toppings</code> and <code>Topping.pizzas</code> are <code>ManyToManyDescriptor</code>
+instances.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.category"><code class="name">var <span class="ident">category</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.pdf_file"><code class="name">var <span class="ident">pdf_file</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    if instance is None:
+        return self
+
+    # This is slightly complicated, so worth an explanation.
+    # instance.file needs to ultimately return some instance of `File`,
+    # probably a subclass. Additionally, this returned object needs to have
+    # the FieldFile API so that users can easily do things like
+    # instance.file.path and have that delegated to the file storage engine.
+    # Easy enough if we&#39;re strict about assignment in __set__, but if you
+    # peek below you can see that we&#39;re not. So depending on the current
+    # value of the field we have to dynamically construct some sort of
+    # &#34;thing&#34; to return.
+
+    # The instance dict contains whatever was originally assigned
+    # in __set__.
+    file = super().__get__(instance, cls)
+
+    # If this value is a string (instance.file = &#34;path/to/file&#34;) or None
+    # then we simply wrap it with the appropriate attribute class according
+    # to the file field. [This is FieldFile for FileFields and
+    # ImageFieldFile for ImageFields; it&#39;s also conceivable that user
+    # subclasses might also want to subclass the attribute class]. This
+    # object understands how to convert a path to a file, and also how to
+    # handle None.
+    if isinstance(file, str) or file is None:
+        attr = self.field.attr_class(instance, self.field, file)
+        instance.__dict__[self.field.attname] = attr
+
+    # Other types of files may be assigned as well, but they need to have
+    # the FieldFile interface added to them. Thus, we wrap any other type of
+    # File inside a FieldFile (well, the field&#39;s attr_class, which is
+    # usually FieldFile).
+    elif isinstance(file, File) and not isinstance(file, FieldFile):
+        file_copy = self.field.attr_class(instance, self.field, file.name)
+        file_copy.file = file
+        file_copy._committed = False
+        instance.__dict__[self.field.attname] = file_copy
+
+    # Finally, because of the (some would say boneheaded) way pickle works,
+    # the underlying FieldFile might not actually itself have an associated
+    # file. So we need to reset the details of the FieldFile in those cases.
+    elif isinstance(file, FieldFile) and not hasattr(file, &#34;field&#34;):
+        file.instance = instance
+        file.field = self.field
+        file.storage = self.field.storage
+
+    # Make sure that the instance is correct.
+    elif isinstance(file, FieldFile) and instance is not file.instance:
+        file.instance = instance
+
+    # That was fun, wasn&#39;t it?
+    return instance.__dict__[self.field.attname]</code></pre>
+</details>
+<div class="desc"><p>The descriptor for the file attribute on the model instance. Return a
+FieldFile when accessed so you can write code like::</p>
+<pre><code>&gt;&gt;&gt; from myapp.models import MyModel
+&gt;&gt;&gt; instance = MyModel.objects.get(pk=1)
+&gt;&gt;&gt; instance.file.size
+</code></pre>
+<p>Assign a file object on assignment so you can do::</p>
+<pre><code>&gt;&gt;&gt; with open('/path/to/hello.world') as f:
+...     instance.file = File(f)
+</code></pre></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.title"><code class="name">var <span class="ident">title</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.uploaded_at"><code class="name">var <span class="ident">uploaded_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.viewing_records"><code class="name">var <span class="ident">viewing_records</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quality.models.QualityPDFDocument.get_category_display"><code class="name flex">
+<span>def <span class="ident">get_category_display</span></span>(<span>self, *, field=&lt;django.db.models.fields.CharField: category&gt;)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.get_next_by_uploaded_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_uploaded_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: uploaded_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.get_previous_by_uploaded_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_uploaded_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: uploaded_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.QualityPDFDocument.is_new"><code class="name flex">
+<span>def <span class="ident">is_new</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def is_new(self):
+    # Return True if the PDF was uploaded within the last 8 hours
+    return timezone.now() - self.uploaded_at &lt; timedelta(hours=4)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.RedRabbitType"><code class="flex name class">
+<span>class <span class="ident">RedRabbitType</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RedRabbitType(models.Model):
+    &#34;&#34;&#34;
+    Define a category of “Red Rabbit” inspection or process for a given part.
+
+    Fields
+    ------
+    name : str
+        Unique name of this red rabbit type.
+    description : str, optional
+        Free-form description or notes about this type.
+    part : ForeignKey to Part
+        The Part to which this type applies; defaults to Part with ID 1.
+        Deletion of the Part cascades to its RedRabbitType entries.
+
+    Methods
+    -------
+    __str__()
+        Returns the type’s name along with its associated part number.
+    &#34;&#34;&#34;
+    name = models.CharField(max_length=256, unique=True)
+    description = models.TextField(blank=True, null=True)  # Optional description
+    part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name=&#34;red_rabbit_types&#34;, default=1)  # Default to part ID 1
+
+    def __str__(self):
+        return f&#34;{self.name} (Part: {self.part.part_number})&#34;</code></pre>
+</details>
+<div class="desc"><p>Define a category of “Red Rabbit” inspection or process for a given part.</p>
+<h2 id="fields">Fields</h2>
+<p>name : str
+Unique name of this red rabbit type.
+description : str, optional
+Free-form description or notes about this type.
+part : ForeignKey to Part
+The Part to which this type applies; defaults to Part with ID 1.
+Deletion of the Part cascades to its RedRabbitType entries.</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns the type’s name along with its associated part number.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.RedRabbitType.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.RedRabbitType.description"><code class="name">var <span class="ident">description</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.entries"><code class="name">var <span class="ident">entries</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.part"><code class="name">var <span class="ident">part</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitType.part_id"><code class="name">var <span class="ident">part_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.RedRabbitsEntry"><code class="flex name class">
+<span>class <span class="ident">RedRabbitsEntry</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RedRabbitsEntry(models.Model):
+    &#34;&#34;&#34;
+    Record a single “Red Rabbit” event or verification for a part.
+
+    Fields
+    ------
+    part : ForeignKey to Part
+        The Part being inspected or processed.
+    red_rabbit_type : ForeignKey to RedRabbitType
+        The type/category of this entry; defaults to type ID 1.
+    date : date
+        Date when the entry was created (auto-set to today).
+    clock_number : str
+        Operator’s clock number or identifier.
+    shift : int
+        Shift number during which the event occurred.
+    verification_okay : bool
+        Whether the red rabbit verification passed.
+    supervisor_comments : str, optional
+        Any additional comments from the supervisor.
+    supervisor_id : str, optional
+        Identifier of the supervising person.
+    created_at : datetime
+        Timestamp when this entry was created (auto-set).
+
+    Methods
+    -------
+    __str__()
+        Returns a summary string including the type, part number, and operator.
+    &#34;&#34;&#34;
+    part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name=&#39;red_rabbits_entries&#39;)
+    red_rabbit_type = models.ForeignKey(RedRabbitType, on_delete=models.CASCADE, related_name=&#39;entries&#39;, default=1)
+    date = models.DateField(auto_now_add=True)
+    clock_number = models.CharField(max_length=20)
+    shift = models.PositiveSmallIntegerField()
+    verification_okay = models.BooleanField()
+    supervisor_comments = models.TextField(blank=True, null=True)
+    supervisor_id = models.CharField(max_length=20, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f&#39;{self.red_rabbit_type} Entry for {self.part.part_number} by {self.clock_number}&#39;</code></pre>
+</details>
+<div class="desc"><p>Record a single “Red Rabbit” event or verification for a part.</p>
+<h2 id="fields">Fields</h2>
+<p>part : ForeignKey to Part
+The Part being inspected or processed.
+red_rabbit_type : ForeignKey to RedRabbitType
+The type/category of this entry; defaults to type ID 1.
+date : date
+Date when the entry was created (auto-set to today).
+clock_number : str
+Operator’s clock number or identifier.
+shift : int
+Shift number during which the event occurred.
+verification_okay : bool
+Whether the red rabbit verification passed.
+supervisor_comments : str, optional
+Any additional comments from the supervisor.
+supervisor_id : str, optional
+Identifier of the supervising person.
+created_at : datetime
+Timestamp when this entry was created (auto-set).</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a summary string including the type, part number, and operator.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.RedRabbitsEntry.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.RedRabbitsEntry.clock_number"><code class="name">var <span class="ident">clock_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.created_at"><code class="name">var <span class="ident">created_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.date"><code class="name">var <span class="ident">date</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.part"><code class="name">var <span class="ident">part</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.part_id"><code class="name">var <span class="ident">part_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.red_rabbit_type"><code class="name">var <span class="ident">red_rabbit_type</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.red_rabbit_type_id"><code class="name">var <span class="ident">red_rabbit_type_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.shift"><code class="name">var <span class="ident">shift</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.supervisor_comments"><code class="name">var <span class="ident">supervisor_comments</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.supervisor_id"><code class="name">var <span class="ident">supervisor_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.verification_okay"><code class="name">var <span class="ident">verification_okay</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quality.models.RedRabbitsEntry.get_next_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.get_next_by_date"><code class="name flex">
+<span>def <span class="ident">get_next_by_date</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateField: date&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.get_previous_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.RedRabbitsEntry.get_previous_by_date"><code class="name flex">
+<span>def <span class="ident">get_previous_by_date</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateField: date&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.ScrapForm"><code class="flex name class">
+<span>class <span class="ident">ScrapForm</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ScrapForm(models.Model):
+    &#34;&#34;&#34;
+    Record daily scrap inspection and packing data for a specific part.
+
+    Fields
+    ------
+    partNumber : str
+        Identifier of the part being reported.
+    date : date
+        The calendar date of this scrap report.
+    operator : str, optional
+        The name or ID of the operator on that date.
+    shift : int, optional
+        The shift number during which the data was collected.
+    qtyPacked : int, optional
+        Quantity of parts packed that day.
+    totalDefects : int, optional
+        Total number of defects found.
+    totalInspected : int, optional
+        Total number of parts inspected.
+    comments : str, optional
+        Any general remarks or notes.
+    detailOther : str, optional
+        Additional detail on other defect types or observations.
+    tpc_number : str, optional
+        TPC (Third-Party Certification) number if applicable.
+    payload : dict
+        Raw JSON payload of the full submission, for audit or replay.
+    created_at : datetime
+        Timestamp when this record was created (auto-set).
+
+    Methods
+    -------
+    __str__()
+        Returns a human-readable identifier for this scrap form.
+
+    Usage
+    -----
+    Instances capture both summarized and raw data for daily scrap/inspection
+    operations, allowing both structured queries (via columns) and full
+    payload replay via the `payload` JSON field.
+    &#34;&#34;&#34;
+    partNumber = models.CharField(max_length=256)
+    date = models.DateField()
+    operator = models.CharField(max_length=256, blank=True, null=True)
+    shift = models.IntegerField(blank=True, null=True)
+    qtyPacked = models.IntegerField(blank=True, null=True)  # Updated field name
+    totalDefects = models.IntegerField(blank=True, null=True)
+    totalInspected = models.IntegerField(blank=True, null=True)  # Updated field name
+    comments = models.TextField(blank=True, null=True)
+    detailOther = models.TextField(blank=True, null=True)
+    tpc_number = models.CharField(max_length=256, blank=True, null=True)  # New field for TPC #
+    payload = models.JSONField()  # Storing the entire payload as JSON
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f&#39;Scrap Form {self.id} for Part {self.partNumber}&#39;</code></pre>
+</details>
+<div class="desc"><p>Record daily scrap inspection and packing data for a specific part.</p>
+<h2 id="fields">Fields</h2>
+<p>partNumber : str
+Identifier of the part being reported.
+date : date
+The calendar date of this scrap report.
+operator : str, optional
+The name or ID of the operator on that date.
+shift : int, optional
+The shift number during which the data was collected.
+qtyPacked : int, optional
+Quantity of parts packed that day.
+totalDefects : int, optional
+Total number of defects found.
+totalInspected : int, optional
+Total number of parts inspected.
+comments : str, optional
+Any general remarks or notes.
+detailOther : str, optional
+Additional detail on other defect types or observations.
+tpc_number : str, optional
+TPC (Third-Party Certification) number if applicable.
+payload : dict
+Raw JSON payload of the full submission, for audit or replay.
+created_at : datetime
+Timestamp when this record was created (auto-set).</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a human-readable identifier for this scrap form.</p>
+<h2 id="usage">Usage</h2>
+<p>Instances capture both summarized and raw data for daily scrap/inspection
+operations, allowing both structured queries (via columns) and full
+payload replay via the <code>payload</code> JSON field.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.ScrapForm.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.ScrapForm.comments"><code class="name">var <span class="ident">comments</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.created_at"><code class="name">var <span class="ident">created_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.date"><code class="name">var <span class="ident">date</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.detailOther"><code class="name">var <span class="ident">detailOther</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.feat_entries"><code class="name">var <span class="ident">feat_entries</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.operator"><code class="name">var <span class="ident">operator</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.partNumber"><code class="name">var <span class="ident">partNumber</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.payload"><code class="name">var <span class="ident">payload</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.qtyPacked"><code class="name">var <span class="ident">qtyPacked</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.shift"><code class="name">var <span class="ident">shift</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.totalDefects"><code class="name">var <span class="ident">totalDefects</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.totalInspected"><code class="name">var <span class="ident">totalInspected</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ScrapForm.tpc_number"><code class="name">var <span class="ident">tpc_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quality.models.ScrapForm.get_next_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.ScrapForm.get_next_by_date"><code class="name flex">
+<span>def <span class="ident">get_next_by_date</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateField: date&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.ScrapForm.get_previous_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.ScrapForm.get_previous_by_date"><code class="name flex">
+<span>def <span class="ident">get_previous_by_date</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateField: date&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.SupervisorAuthorization"><code class="flex name class">
+<span>class <span class="ident">SupervisorAuthorization</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SupervisorAuthorization(models.Model):
+    &#34;&#34;&#34;
+    Record supervisor approvals for feature work on specific parts.
+
+    Each instance represents a single authorization event, capturing:
+      - supervisor_id (str):  Identifier of the approving supervisor.
+      - part_number (str):    The part for which authorization is granted.
+      - feat_name (str):      The name of the feature or operation authorized.
+      - created_at (datetime): Timestamp when the authorization was created (auto-set).
+
+    The string representation includes the supervisor, feature, part, and creation time.
+    &#34;&#34;&#34;
+    supervisor_id = models.CharField(max_length=256)
+    part_number = models.CharField(max_length=256)
+    feat_name = models.CharField(max_length=256)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f&#39;Authorization by {self.supervisor_id} for {self.feat_name} (Part {self.part_number}) at {self.created_at}&#39;</code></pre>
+</details>
+<div class="desc"><p>Record supervisor approvals for feature work on specific parts.</p>
+<p>Each instance represents a single authorization event, capturing:
+- supervisor_id (str):
+Identifier of the approving supervisor.
+- part_number (str):
+The part for which authorization is granted.
+- feat_name (str):
+The name of the feature or operation authorized.
+- created_at (datetime): Timestamp when the authorization was created (auto-set).</p>
+<p>The string representation includes the supervisor, feature, part, and creation time.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.SupervisorAuthorization.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.SupervisorAuthorization.created_at"><code class="name">var <span class="ident">created_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.feat_name"><code class="name">var <span class="ident">feat_name</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.part_number"><code class="name">var <span class="ident">part_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.supervisor_id"><code class="name">var <span class="ident">supervisor_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quality.models.SupervisorAuthorization.get_next_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.SupervisorAuthorization.get_previous_by_created_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_created_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="quality.models.ViewingRecord"><code class="flex name class">
+<span>class <span class="ident">ViewingRecord</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ViewingRecord(models.Model):
+    &#34;&#34;&#34;
+    Log when an operator views a quality PDF document.
+
+    Each record captures:
+      - operator_number (str): The operator&#39;s clock number or identifier.
+      - pdf_document (QualityPDFDocument): The document that was viewed.
+      - viewed_at (datetime): Timestamp when the view occurred (auto-set on creation).
+
+    Relationships
+    -------------
+    pdf_document : ForeignKey to QualityPDFDocument
+        Deletes viewing records if the linked PDF document is removed.
+
+    Fields
+    ------
+    operator_number : CharField(max_length=20)
+        Operator’s clock number (stored as string for flexibility).
+    pdf_document : ForeignKey
+        Reference to the viewed QualityPDFDocument.
+    viewed_at : DateTimeField
+        Auto-populated with the current time when the record is created.
+
+    Methods
+    -------
+    __str__()
+        Returns a readable string in the format:
+        &#34;Operator &lt;operator_number&gt; viewed &lt;document title&gt; on &lt;viewed_at&gt;&#34;.
+    &#34;&#34;&#34;
+    operator_number = models.CharField(max_length=20)  # Operator&#39;s clock number (string for flexibility)
+    pdf_document = models.ForeignKey(QualityPDFDocument, on_delete=models.CASCADE, related_name=&#39;viewing_records&#39;)
+    viewed_at = models.DateTimeField(auto_now_add=True)  # Automatically set the timestamp when viewed
+
+    def __str__(self):
+        return f&#34;Operator {self.operator_number} viewed {self.pdf_document.title} on {self.viewed_at}&#34;</code></pre>
+</details>
+<div class="desc"><p>Log when an operator views a quality PDF document.</p>
+<p>Each record captures:
+- operator_number (str): The operator's clock number or identifier.
+- pdf_document (QualityPDFDocument): The document that was viewed.
+- viewed_at (datetime): Timestamp when the view occurred (auto-set on creation).</p>
+<h2 id="relationships">Relationships</h2>
+<p>pdf_document : ForeignKey to QualityPDFDocument
+Deletes viewing records if the linked PDF document is removed.</p>
+<h2 id="fields">Fields</h2>
+<p>operator_number : CharField(max_length=20)
+Operator’s clock number (stored as string for flexibility).
+pdf_document : ForeignKey
+Reference to the viewed QualityPDFDocument.
+viewed_at : DateTimeField
+Auto-populated with the current time when the record is created.</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a readable string in the format:
+"Operator <operator_number> viewed <document title> on <viewed_at>".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quality.models.ViewingRecord.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="quality.models.ViewingRecord.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="quality.models.ViewingRecord.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="quality.models.ViewingRecord.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ViewingRecord.operator_number"><code class="name">var <span class="ident">operator_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="quality.models.ViewingRecord.pdf_document"><code class="name">var <span class="ident">pdf_document</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="quality.models.ViewingRecord.pdf_document_id"><code class="name">var <span class="ident">pdf_document_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.ViewingRecord.viewed_at"><code class="name">var <span class="ident">viewed_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quality.models.ViewingRecord.get_next_by_viewed_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_viewed_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: viewed_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="quality.models.ViewingRecord.get_previous_by_viewed_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_viewed_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: viewed_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="quality.models.delete_file_on_delete" href="#quality.models.delete_file_on_delete">delete_file_on_delete</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="quality.models.Feat" href="#quality.models.Feat">Feat</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.Feat.DoesNotExist" href="#quality.models.Feat.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.Feat.MultipleObjectsReturned" href="#quality.models.Feat.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.Feat.alarm" href="#quality.models.Feat.alarm">alarm</a></code></li>
+<li><code><a title="quality.models.Feat.critical" href="#quality.models.Feat.critical">critical</a></code></li>
+<li><code><a title="quality.models.Feat.id" href="#quality.models.Feat.id">id</a></code></li>
+<li><code><a title="quality.models.Feat.name" href="#quality.models.Feat.name">name</a></code></li>
+<li><code><a title="quality.models.Feat.objects" href="#quality.models.Feat.objects">objects</a></code></li>
+<li><code><a title="quality.models.Feat.order" href="#quality.models.Feat.order">order</a></code></li>
+<li><code><a title="quality.models.Feat.part" href="#quality.models.Feat.part">part</a></code></li>
+<li><code><a title="quality.models.Feat.part_id" href="#quality.models.Feat.part_id">part_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.FeatEntry" href="#quality.models.FeatEntry">FeatEntry</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.FeatEntry.DoesNotExist" href="#quality.models.FeatEntry.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.FeatEntry.MultipleObjectsReturned" href="#quality.models.FeatEntry.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.FeatEntry.defects" href="#quality.models.FeatEntry.defects">defects</a></code></li>
+<li><code><a title="quality.models.FeatEntry.featName" href="#quality.models.FeatEntry.featName">featName</a></code></li>
+<li><code><a title="quality.models.FeatEntry.id" href="#quality.models.FeatEntry.id">id</a></code></li>
+<li><code><a title="quality.models.FeatEntry.objects" href="#quality.models.FeatEntry.objects">objects</a></code></li>
+<li><code><a title="quality.models.FeatEntry.partNumber" href="#quality.models.FeatEntry.partNumber">partNumber</a></code></li>
+<li><code><a title="quality.models.FeatEntry.scrap_form" href="#quality.models.FeatEntry.scrap_form">scrap_form</a></code></li>
+<li><code><a title="quality.models.FeatEntry.scrap_form_id" href="#quality.models.FeatEntry.scrap_form_id">scrap_form_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.PartMessage" href="#quality.models.PartMessage">PartMessage</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.PartMessage.DoesNotExist" href="#quality.models.PartMessage.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.PartMessage.FONT_SIZE_CHOICES" href="#quality.models.PartMessage.FONT_SIZE_CHOICES">FONT_SIZE_CHOICES</a></code></li>
+<li><code><a title="quality.models.PartMessage.MultipleObjectsReturned" href="#quality.models.PartMessage.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.PartMessage.font_size" href="#quality.models.PartMessage.font_size">font_size</a></code></li>
+<li><code><a title="quality.models.PartMessage.get_font_size_display" href="#quality.models.PartMessage.get_font_size_display">get_font_size_display</a></code></li>
+<li><code><a title="quality.models.PartMessage.id" href="#quality.models.PartMessage.id">id</a></code></li>
+<li><code><a title="quality.models.PartMessage.message" href="#quality.models.PartMessage.message">message</a></code></li>
+<li><code><a title="quality.models.PartMessage.objects" href="#quality.models.PartMessage.objects">objects</a></code></li>
+<li><code><a title="quality.models.PartMessage.part" href="#quality.models.PartMessage.part">part</a></code></li>
+<li><code><a title="quality.models.PartMessage.part_id" href="#quality.models.PartMessage.part_id">part_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.QualityPDFDocument" href="#quality.models.QualityPDFDocument">QualityPDFDocument</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.QualityPDFDocument.CATEGORY_CHOICES" href="#quality.models.QualityPDFDocument.CATEGORY_CHOICES">CATEGORY_CHOICES</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.DoesNotExist" href="#quality.models.QualityPDFDocument.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.MultipleObjectsReturned" href="#quality.models.QualityPDFDocument.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.associated_parts" href="#quality.models.QualityPDFDocument.associated_parts">associated_parts</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.category" href="#quality.models.QualityPDFDocument.category">category</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.get_category_display" href="#quality.models.QualityPDFDocument.get_category_display">get_category_display</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.get_next_by_uploaded_at" href="#quality.models.QualityPDFDocument.get_next_by_uploaded_at">get_next_by_uploaded_at</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.get_previous_by_uploaded_at" href="#quality.models.QualityPDFDocument.get_previous_by_uploaded_at">get_previous_by_uploaded_at</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.id" href="#quality.models.QualityPDFDocument.id">id</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.is_new" href="#quality.models.QualityPDFDocument.is_new">is_new</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.objects" href="#quality.models.QualityPDFDocument.objects">objects</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.pdf_file" href="#quality.models.QualityPDFDocument.pdf_file">pdf_file</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.title" href="#quality.models.QualityPDFDocument.title">title</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.uploaded_at" href="#quality.models.QualityPDFDocument.uploaded_at">uploaded_at</a></code></li>
+<li><code><a title="quality.models.QualityPDFDocument.viewing_records" href="#quality.models.QualityPDFDocument.viewing_records">viewing_records</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.RedRabbitType" href="#quality.models.RedRabbitType">RedRabbitType</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.RedRabbitType.DoesNotExist" href="#quality.models.RedRabbitType.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.MultipleObjectsReturned" href="#quality.models.RedRabbitType.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.description" href="#quality.models.RedRabbitType.description">description</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.entries" href="#quality.models.RedRabbitType.entries">entries</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.id" href="#quality.models.RedRabbitType.id">id</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.name" href="#quality.models.RedRabbitType.name">name</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.objects" href="#quality.models.RedRabbitType.objects">objects</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.part" href="#quality.models.RedRabbitType.part">part</a></code></li>
+<li><code><a title="quality.models.RedRabbitType.part_id" href="#quality.models.RedRabbitType.part_id">part_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.RedRabbitsEntry" href="#quality.models.RedRabbitsEntry">RedRabbitsEntry</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.RedRabbitsEntry.DoesNotExist" href="#quality.models.RedRabbitsEntry.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.MultipleObjectsReturned" href="#quality.models.RedRabbitsEntry.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.clock_number" href="#quality.models.RedRabbitsEntry.clock_number">clock_number</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.created_at" href="#quality.models.RedRabbitsEntry.created_at">created_at</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.date" href="#quality.models.RedRabbitsEntry.date">date</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.get_next_by_created_at" href="#quality.models.RedRabbitsEntry.get_next_by_created_at">get_next_by_created_at</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.get_next_by_date" href="#quality.models.RedRabbitsEntry.get_next_by_date">get_next_by_date</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.get_previous_by_created_at" href="#quality.models.RedRabbitsEntry.get_previous_by_created_at">get_previous_by_created_at</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.get_previous_by_date" href="#quality.models.RedRabbitsEntry.get_previous_by_date">get_previous_by_date</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.id" href="#quality.models.RedRabbitsEntry.id">id</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.objects" href="#quality.models.RedRabbitsEntry.objects">objects</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.part" href="#quality.models.RedRabbitsEntry.part">part</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.part_id" href="#quality.models.RedRabbitsEntry.part_id">part_id</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.red_rabbit_type" href="#quality.models.RedRabbitsEntry.red_rabbit_type">red_rabbit_type</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.red_rabbit_type_id" href="#quality.models.RedRabbitsEntry.red_rabbit_type_id">red_rabbit_type_id</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.shift" href="#quality.models.RedRabbitsEntry.shift">shift</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.supervisor_comments" href="#quality.models.RedRabbitsEntry.supervisor_comments">supervisor_comments</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.supervisor_id" href="#quality.models.RedRabbitsEntry.supervisor_id">supervisor_id</a></code></li>
+<li><code><a title="quality.models.RedRabbitsEntry.verification_okay" href="#quality.models.RedRabbitsEntry.verification_okay">verification_okay</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.ScrapForm" href="#quality.models.ScrapForm">ScrapForm</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.ScrapForm.DoesNotExist" href="#quality.models.ScrapForm.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.ScrapForm.MultipleObjectsReturned" href="#quality.models.ScrapForm.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.ScrapForm.comments" href="#quality.models.ScrapForm.comments">comments</a></code></li>
+<li><code><a title="quality.models.ScrapForm.created_at" href="#quality.models.ScrapForm.created_at">created_at</a></code></li>
+<li><code><a title="quality.models.ScrapForm.date" href="#quality.models.ScrapForm.date">date</a></code></li>
+<li><code><a title="quality.models.ScrapForm.detailOther" href="#quality.models.ScrapForm.detailOther">detailOther</a></code></li>
+<li><code><a title="quality.models.ScrapForm.feat_entries" href="#quality.models.ScrapForm.feat_entries">feat_entries</a></code></li>
+<li><code><a title="quality.models.ScrapForm.get_next_by_created_at" href="#quality.models.ScrapForm.get_next_by_created_at">get_next_by_created_at</a></code></li>
+<li><code><a title="quality.models.ScrapForm.get_next_by_date" href="#quality.models.ScrapForm.get_next_by_date">get_next_by_date</a></code></li>
+<li><code><a title="quality.models.ScrapForm.get_previous_by_created_at" href="#quality.models.ScrapForm.get_previous_by_created_at">get_previous_by_created_at</a></code></li>
+<li><code><a title="quality.models.ScrapForm.get_previous_by_date" href="#quality.models.ScrapForm.get_previous_by_date">get_previous_by_date</a></code></li>
+<li><code><a title="quality.models.ScrapForm.id" href="#quality.models.ScrapForm.id">id</a></code></li>
+<li><code><a title="quality.models.ScrapForm.objects" href="#quality.models.ScrapForm.objects">objects</a></code></li>
+<li><code><a title="quality.models.ScrapForm.operator" href="#quality.models.ScrapForm.operator">operator</a></code></li>
+<li><code><a title="quality.models.ScrapForm.partNumber" href="#quality.models.ScrapForm.partNumber">partNumber</a></code></li>
+<li><code><a title="quality.models.ScrapForm.payload" href="#quality.models.ScrapForm.payload">payload</a></code></li>
+<li><code><a title="quality.models.ScrapForm.qtyPacked" href="#quality.models.ScrapForm.qtyPacked">qtyPacked</a></code></li>
+<li><code><a title="quality.models.ScrapForm.shift" href="#quality.models.ScrapForm.shift">shift</a></code></li>
+<li><code><a title="quality.models.ScrapForm.totalDefects" href="#quality.models.ScrapForm.totalDefects">totalDefects</a></code></li>
+<li><code><a title="quality.models.ScrapForm.totalInspected" href="#quality.models.ScrapForm.totalInspected">totalInspected</a></code></li>
+<li><code><a title="quality.models.ScrapForm.tpc_number" href="#quality.models.ScrapForm.tpc_number">tpc_number</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.SupervisorAuthorization" href="#quality.models.SupervisorAuthorization">SupervisorAuthorization</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.SupervisorAuthorization.DoesNotExist" href="#quality.models.SupervisorAuthorization.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.MultipleObjectsReturned" href="#quality.models.SupervisorAuthorization.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.created_at" href="#quality.models.SupervisorAuthorization.created_at">created_at</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.feat_name" href="#quality.models.SupervisorAuthorization.feat_name">feat_name</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.get_next_by_created_at" href="#quality.models.SupervisorAuthorization.get_next_by_created_at">get_next_by_created_at</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.get_previous_by_created_at" href="#quality.models.SupervisorAuthorization.get_previous_by_created_at">get_previous_by_created_at</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.id" href="#quality.models.SupervisorAuthorization.id">id</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.objects" href="#quality.models.SupervisorAuthorization.objects">objects</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.part_number" href="#quality.models.SupervisorAuthorization.part_number">part_number</a></code></li>
+<li><code><a title="quality.models.SupervisorAuthorization.supervisor_id" href="#quality.models.SupervisorAuthorization.supervisor_id">supervisor_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quality.models.ViewingRecord" href="#quality.models.ViewingRecord">ViewingRecord</a></code></h4>
+<ul class="">
+<li><code><a title="quality.models.ViewingRecord.DoesNotExist" href="#quality.models.ViewingRecord.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.MultipleObjectsReturned" href="#quality.models.ViewingRecord.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.get_next_by_viewed_at" href="#quality.models.ViewingRecord.get_next_by_viewed_at">get_next_by_viewed_at</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.get_previous_by_viewed_at" href="#quality.models.ViewingRecord.get_previous_by_viewed_at">get_previous_by_viewed_at</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.id" href="#quality.models.ViewingRecord.id">id</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.objects" href="#quality.models.ViewingRecord.objects">objects</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.operator_number" href="#quality.models.ViewingRecord.operator_number">operator_number</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.pdf_document" href="#quality.models.ViewingRecord.pdf_document">pdf_document</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.pdf_document_id" href="#quality.models.ViewingRecord.pdf_document_id">pdf_document_id</a></code></li>
+<li><code><a title="quality.models.ViewingRecord.viewed_at" href="#quality.models.ViewingRecord.viewed_at">viewed_at</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

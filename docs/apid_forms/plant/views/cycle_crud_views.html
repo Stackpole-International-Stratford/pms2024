@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>plant.views.cycle_crud_views API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>plant.views.cycle_crud_views</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="plant.views.cycle_crud_views.asset_cycle_times_page"><code class="name flex">
+<span>def <span class="ident">asset_cycle_times_page</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def asset_cycle_times_page(request):
+    &#34;&#34;&#34;
+    Handle display and submission of asset cycle time entries.
+
+    This view supports both GET and POST requests:
+    - GET: Render the asset cycle times page with an empty form,
+      a list of existing entries (up to 500 most recent), and
+      available assets and parts for selection.
+    - POST: Validate submitted data via AssetCycleTimeForm. If valid,
+      convert the provided datetime to an epoch timestamp, save a new
+      AssetCycleTimes record (with asset, part, cycle_time, and
+      effective_date), and then re-render the page including the new entry.
+
+    For display purposes, each retrieved entry’s `effective_date`
+    (stored as an integer epoch) is converted back into a human-readable
+    UTC-based datetime string (`YYYY-MM-DD HH:MM`).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. On POST it should contain form data
+        for asset, part, cycle_time, and datetime fields; on GET it
+        simply indicates a page load.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        The rendered &#39;asset_cycle_times.html&#39; template populated with:
+        - form: An instance of AssetCycleTimeForm (empty or bound with POST data)
+        - past_entries: A list of the 500 most recent AssetCycleTimes
+                        records, each with `effective_date_display` added
+        - assets: All Asset instances for selection
+        - parts: All Part instances for selection
+    &#34;&#34;&#34;
+    if request.method == &#39;POST&#39;:
+        form = AssetCycleTimeForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            epoch_timestamp = int(data[&#39;datetime&#39;].timestamp())  # Convert datetime to epoch
+
+            # Save to AssetCycleTimes model
+            AssetCycleTimes.objects.create(
+                asset=data[&#39;asset&#39;],
+                part=data[&#39;part&#39;],
+                cycle_time=float(data[&#39;cycle_time&#39;]),
+                effective_date=epoch_timestamp
+            )
+            print(&#34;Entry saved successfully!&#34;)
+    else:
+        form = AssetCycleTimeForm()
+
+    # Fetch past entries and convert effective_date from epoch to datetime
+    past_entries = AssetCycleTimes.objects.all().order_by(&#39;-created_at&#39;)[:500]
+    for entry in past_entries:
+        entry.effective_date_display = datetime.fromtimestamp(entry.effective_date, pytz.utc).strftime(&#34;%Y-%m-%d %H:%M&#34;)
+
+    # Fetch possible assets and parts
+    assets = Asset.objects.all()
+    parts = Part.objects.all()
+
+    return render(
+        request,
+        &#39;asset_cycle_times.html&#39;,
+        {
+            &#39;form&#39;: form,
+            &#39;past_entries&#39;: past_entries,
+            &#39;assets&#39;: assets,
+            &#39;parts&#39;: parts,
+        }
+    )</code></pre>
+</details>
+<div class="desc"><p>Handle display and submission of asset cycle time entries.</p>
+<p>This view supports both GET and POST requests:
+- GET: Render the asset cycle times page with an empty form,
+a list of existing entries (up to 500 most recent), and
+available assets and parts for selection.
+- POST: Validate submitted data via AssetCycleTimeForm. If valid,
+convert the provided datetime to an epoch timestamp, save a new
+AssetCycleTimes record (with asset, part, cycle_time, and
+effective_date), and then re-render the page including the new entry.</p>
+<p>For display purposes, each retrieved entry’s <code>effective_date</code>
+(stored as an integer epoch) is converted back into a human-readable
+UTC-based datetime string (<code>YYYY-MM-DD HH:MM</code>).</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object. On POST it should contain form data
+for asset, part, cycle_time, and datetime fields; on GET it
+simply indicates a page load.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>The rendered 'asset_cycle_times.html' template populated with:
+- form: An instance of AssetCycleTimeForm (empty or bound with POST data)
+- past_entries: A list of the 500 most recent AssetCycleTimes
+records, each with <code>effective_date_display</code> added
+- assets: All Asset instances for selection
+- parts: All Part instances for selection</dd>
+</dl></div>
+</dd>
+<dt id="plant.views.cycle_crud_views.update_asset_cycle_times_page"><code class="name flex">
+<span>def <span class="ident">update_asset_cycle_times_page</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_asset_cycle_times_page(request):
+    &#34;&#34;&#34;
+    Handle AJAX updates to existing asset cycle time records.
+
+    This view only accepts POST requests containing a JSON payload with:
+      - entry_id (int):   The primary key of the AssetCycleTimes record to update.
+      - asset (int):      The ID of the Asset to associate.
+      - part (int):       The ID of the Part to associate.
+      - cycle_time (str|float): The new cycle time value.
+      - effective_date (str):   The new effective datetime as ISO string &#34;YYYY-MM-DDTHH:MM&#34;.
+
+    On successful update, the record’s `effective_date` (sent as ISO string) is parsed,
+    converted to an epoch timestamp (seconds since Unix epoch), and stored. The view
+    returns a JSON response with a success message and the computed epoch timestamp.
+
+    Error handling:
+      - If the record does not exist, returns HTTP 404 with `{&#34;error&#34;: &#34;Entry not found&#34;}`.
+      - If the request payload is malformed or any other error occurs, returns HTTP 400
+        with `{&#34;error&#34;: &lt;error message&gt;}`.
+      - If invoked with any method other than POST, returns HTTP 405
+        with `{&#34;error&#34;: &#34;Invalid request method&#34;}`.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object, expected to carry a JSON body on POST.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        A JSON response indicating success (HTTP 200) or an error (HTTP 4xx).
+    &#34;&#34;&#34;
+    if request.method == &#34;POST&#34;:
+        try:
+            data = json.loads(request.body)
+            entry_id = data.get(&#34;entry_id&#34;)
+            asset_id = data.get(&#34;asset&#34;)
+            part_id = data.get(&#34;part&#34;)
+            cycle_time = data.get(&#34;cycle_time&#34;)
+            effective_date_str = data.get(&#34;effective_date&#34;)
+
+            # Convert effective date to epoch timestamp
+            effective_date_obj = datetime.strptime(effective_date_str, &#34;%Y-%m-%dT%H:%M&#34;)
+            effective_date_epoch = int(effective_date_obj.timestamp())  # Convert to epoch (seconds)
+
+            # Retrieve the existing record
+            try:
+                entry = AssetCycleTimes.objects.get(id=entry_id)
+                
+                # Update the fields
+                entry.asset_id = asset_id
+                entry.part_id = part_id
+                entry.cycle_time = float(cycle_time)
+                entry.effective_date = effective_date_epoch
+                entry.save()  # Save changes to the database
+                
+                print(f&#34;Updated Entry ID: {entry_id}&#34;)
+                return JsonResponse({&#34;message&#34;: &#34;Entry updated successfully!&#34;, &#34;epoch_timestamp&#34;: effective_date_epoch}, status=200)
+            except AssetCycleTimes.DoesNotExist:
+                return JsonResponse({&#34;error&#34;: &#34;Entry not found&#34;}, status=404)
+
+        except Exception as e:
+            print(f&#34;Error: {e}&#34;)
+            return JsonResponse({&#34;error&#34;: str(e)}, status=400)
+
+    return JsonResponse({&#34;error&#34;: &#34;Invalid request method&#34;}, status=405)</code></pre>
+</details>
+<div class="desc"><p>Handle AJAX updates to existing asset cycle time records.</p>
+<p>This view only accepts POST requests containing a JSON payload with:
+- entry_id (int):
+The primary key of the AssetCycleTimes record to update.
+- asset (int):
+The ID of the Asset to associate.
+- part (int):
+The ID of the Part to associate.
+- cycle_time (str|float): The new cycle time value.
+- effective_date (str):
+The new effective datetime as ISO string "YYYY-MM-DDTHH:MM".</p>
+<p>On successful update, the record’s <code>effective_date</code> (sent as ISO string) is parsed,
+converted to an epoch timestamp (seconds since Unix epoch), and stored. The view
+returns a JSON response with a success message and the computed epoch timestamp.</p>
+<p>Error handling:
+- If the record does not exist, returns HTTP 404 with <code>{"error": "Entry not found"}</code>.
+- If the request payload is malformed or any other error occurs, returns HTTP 400
+with <code>{"error": &lt;error message&gt;}</code>.
+- If invoked with any method other than POST, returns HTTP 405
+with <code>{"error": "Invalid request method"}</code>.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object, expected to carry a JSON body on POST.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.JsonResponse</code></dt>
+<dd>A JSON response indicating success (HTTP 200) or an error (HTTP 4xx).</dd>
+</dl></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="plant.views.cycle_crud_views.asset_cycle_times_page" href="#plant.views.cycle_crud_views.asset_cycle_times_page">asset_cycle_times_page</a></code></li>
+<li><code><a title="plant.views.cycle_crud_views.update_asset_cycle_times_page" href="#plant.views.cycle_crud_views.update_asset_cycle_times_page">update_asset_cycle_times_page</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

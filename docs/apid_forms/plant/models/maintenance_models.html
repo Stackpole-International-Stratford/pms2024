@@ -1,0 +1,2293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>plant.models.maintenance_models API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>plant.models.maintenance_models</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeCode"><code class="flex name class">
+<span>class <span class="ident">DowntimeCode</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class DowntimeCode(models.Model):
+    &#34;&#34;&#34;
+    Lookup table for downtime codes, mapping each unique code to its category and subcategory.
+
+    Fields
+    ------
+    code : str
+        Unique downtime code identifier (e.g., &#34;MECH-TOOL&#34;).
+    category : str
+        High-level category description (e.g., &#34;Mechanical / Equipment Failure&#34;).
+    subcategory : str
+        Detailed, human-readable subcategory (e.g., &#34;Tooling Failure&#34;).
+    updated_at : datetime
+        Timestamp of the last change to this record (auto-updated).
+
+    Meta
+    ----
+    ordering : list
+        Default ordering by category, then subcategory, then code.
+    verbose_name : str
+        Singular display name &#34;Downtime Code&#34;.
+    verbose_name_plural : str
+        Plural display name &#34;Downtime Codes&#34;.
+
+    Methods
+    -------
+    __str__()
+        Returns a string in the format:
+        &#34;{code}: {category} → {subcategory}&#34;.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Lookup table for all downtime codes, with their category
+    and subcategory, plus a last‐updated stamp.
+    &#34;&#34;&#34;
+    code = models.CharField(
+        &#34;Code&#34;,
+        max_length=20,
+        unique=True,
+        help_text=&#34;Unique downtime code, e.g. MECH-TOOL&#34;
+    )
+    category = models.CharField(
+        &#34;Category&#34;,
+        max_length=100,
+        help_text=&#34;High‐level category, e.g. Mechanical / Equipment Failure&#34;
+    )
+    subcategory = models.CharField(
+        &#34;Subcategory&#34;,
+        max_length=100,
+        help_text=&#34;Human‐readable subcategory, e.g. Tooling Failure&#34;
+    )
+    updated_at = models.DateTimeField(
+        &#34;Last Updated&#34;,
+        auto_now=True,
+        help_text=&#34;When this lookup row was last changed&#34;
+    )
+
+    class Meta:
+        ordering = [&#39;category&#39;, &#39;subcategory&#39;, &#39;code&#39;]
+        verbose_name = &#34;Downtime Code&#34;
+        verbose_name_plural = &#34;Downtime Codes&#34;
+
+    def __str__(self):
+        return f&#34;{self.code}: {self.category} → {self.subcategory}&#34;</code></pre>
+</details>
+<div class="desc"><p>Lookup table for downtime codes, mapping each unique code to its category and subcategory.</p>
+<h2 id="fields">Fields</h2>
+<p>code : str
+Unique downtime code identifier (e.g., "MECH-TOOL").
+category : str
+High-level category description (e.g., "Mechanical / Equipment Failure").
+subcategory : str
+Detailed, human-readable subcategory (e.g., "Tooling Failure").
+updated_at : datetime
+Timestamp of the last change to this record (auto-updated).</p>
+<h2 id="meta">Meta</h2>
+<p>ordering : list
+Default ordering by category, then subcategory, then code.
+verbose_name : str
+Singular display name "Downtime Code".
+verbose_name_plural : str
+Plural display name "Downtime Codes".</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a string in the format:
+"{code}: {category} → {subcategory}".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeCode.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeCode.category"><code class="name">var <span class="ident">category</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.code"><code class="name">var <span class="ident">code</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.subcategory"><code class="name">var <span class="ident">subcategory</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.updated_at"><code class="name">var <span class="ident">updated_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeCode.get_next_by_updated_at"><code class="name flex">
+<span>def <span class="ident">get_next_by_updated_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: updated_at&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeCode.get_previous_by_updated_at"><code class="name flex">
+<span>def <span class="ident">get_previous_by_updated_at</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: updated_at&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine"><code class="flex name class">
+<span>class <span class="ident">DowntimeMachine</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class DowntimeMachine(models.Model):
+    &#34;&#34;&#34;
+    Master list of all machines available for downtime tracking, organized by line and operation.
+
+    Fields
+    ------
+    line : str
+        Production line identifier where this machine is located.
+    operation : str
+        Name of the operation or process performed by the machine.
+    machine_number : str
+        Unique machine identifier or code within the line/operation.
+    is_tracked : bool
+        Flag indicating whether downtime should be recorded for this machine.
+    created_at_UTC : datetime
+        Timestamp (UTC) when this machine record was created.
+    updated_at_UTC : datetime
+        Timestamp (UTC) when this machine record was last updated.
+
+    Meta
+    ----
+    unique_together : tuple
+        Ensures that (line, operation, machine_number) is unique.
+    ordering : list
+        Default ordering by line, then operation, then machine_number.
+    verbose_name : str
+        Singular name &#34;Downtime Machine&#34;.
+    verbose_name_plural : str
+        Plural name &#34;Downtime Machines&#34;.
+
+    Methods
+    -------
+    __str__()
+        Returns a string in the format:
+        &#34;{line} / {operation} / #{machine_number}&#34;.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Master list of all machines you can track downtime against.
+    &#34;&#34;&#34;
+    line           = models.CharField(
+        &#34;Line&#34;,
+        max_length=50,
+        help_text=&#34;Production line this machine lives on&#34;,
+    )
+    operation      = models.CharField(
+        &#34;Operation&#34;,
+        max_length=100,
+        help_text=&#34;Operation or process name&#34;,
+    )
+    machine_number = models.CharField(
+        &#34;Machine #&#34;,
+        max_length=50,
+        help_text=&#34;Unique number or code for the machine&#34;,
+    )
+    is_tracked     = models.BooleanField(
+        &#34;Tracked?&#34;,
+        default=True,
+        help_text=&#34;Whether downtime is being recorded for this machine&#34;,
+    )
+    created_at_UTC = models.DateTimeField(
+        auto_now_add=True,
+        help_text=&#34;When this machine record was created (UTC)&#34;,
+    )
+    updated_at_UTC = models.DateTimeField(
+        auto_now=True,
+        help_text=&#34;When this machine record was last updated (UTC)&#34;,
+    )
+
+    class Meta:
+        unique_together = (&#39;line&#39;, &#39;operation&#39;, &#39;machine_number&#39;)
+        ordering = [&#39;line&#39;, &#39;operation&#39;, &#39;machine_number&#39;]
+        verbose_name = &#34;Downtime Machine&#34;
+        verbose_name_plural = &#34;Downtime Machines&#34;
+
+    def __str__(self):
+        return f&#34;{self.line} / {self.operation} / #{self.machine_number}&#34;</code></pre>
+</details>
+<div class="desc"><p>Master list of all machines available for downtime tracking, organized by line and operation.</p>
+<h2 id="fields">Fields</h2>
+<p>line : str
+Production line identifier where this machine is located.
+operation : str
+Name of the operation or process performed by the machine.
+machine_number : str
+Unique machine identifier or code within the line/operation.
+is_tracked : bool
+Flag indicating whether downtime should be recorded for this machine.
+created_at_UTC : datetime
+Timestamp (UTC) when this machine record was created.
+updated_at_UTC : datetime
+Timestamp (UTC) when this machine record was last updated.</p>
+<h2 id="meta">Meta</h2>
+<p>unique_together : tuple
+Ensures that (line, operation, machine_number) is unique.
+ordering : list
+Default ordering by line, then operation, then machine_number.
+verbose_name : str
+Singular name "Downtime Machine".
+verbose_name_plural : str
+Plural name "Downtime Machines".</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a string in the format:
+"{line} / {operation} / #{machine_number}".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeMachine.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeMachine.created_at_UTC"><code class="name">var <span class="ident">created_at_UTC</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.is_tracked"><code class="name">var <span class="ident">is_tracked</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.line"><code class="name">var <span class="ident">line</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.machine_number"><code class="name">var <span class="ident">machine_number</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.operation"><code class="name">var <span class="ident">operation</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.updated_at_UTC"><code class="name">var <span class="ident">updated_at_UTC</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeMachine.get_next_by_created_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_next_by_created_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at_UTC&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.get_next_by_updated_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_next_by_updated_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: updated_at_UTC&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.get_previous_by_created_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_previous_by_created_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at_UTC&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeMachine.get_previous_by_updated_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_previous_by_updated_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: updated_at_UTC&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation"><code class="flex name class">
+<span>class <span class="ident">DowntimeParticipation</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class DowntimeParticipation(models.Model):
+    &#34;&#34;&#34;
+    Track a user’s participation in a machine downtime event, including join/leave times and comments.
+
+    Fields
+    ------
+    event : ForeignKey to MachineDowntimeEvent
+        The downtime event this participation pertains to.
+    user : ForeignKey to AUTH_USER_MODEL
+        The user who joined the event.
+    join_epoch : int
+        The timestamp (seconds since Unix epoch) when the user joined.
+    leave_epoch : int or None
+        The timestamp when the user left; null if still active.
+    join_comment : str
+        Optional note provided by the user upon joining.
+    leave_comment : str or None
+        Optional note provided by the user upon leaving.
+    total_minutes : int or None
+        The computed duration of participation in minutes; null until set.
+
+    Meta
+    ----
+    ordering = [&#39;-join_epoch&#39;]
+        Participation records are ordered by most recent join first.
+    unique_together = (&#39;event&#39;, &#39;user&#39;, &#39;join_epoch&#39;)
+        Prevents duplicate participation entries for the same event, user, and join time.
+
+    Methods
+    -------
+    (Uses default Django ORM methods; no custom methods defined.)
+    &#34;&#34;&#34;
+    event = models.ForeignKey(
+        MachineDowntimeEvent,
+        related_name=&#39;participants&#39;,
+        on_delete=models.CASCADE
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    join_epoch     = models.BigIntegerField()
+    leave_epoch    = models.BigIntegerField(null=True, blank=True)
+    join_comment   = models.TextField(blank=True, default=&#39;&#39;)
+    leave_comment  = models.TextField(null=True, blank=True)
+    total_minutes  = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = [&#39;-join_epoch&#39;]
+        # If you want to prevent duplicates:
+        unique_together = (&#39;event&#39;, &#39;user&#39;, &#39;join_epoch&#39;)</code></pre>
+</details>
+<div class="desc"><p>Track a user’s participation in a machine downtime event, including join/leave times and comments.</p>
+<h2 id="fields">Fields</h2>
+<p>event : ForeignKey to MachineDowntimeEvent
+The downtime event this participation pertains to.
+user : ForeignKey to AUTH_USER_MODEL
+The user who joined the event.
+join_epoch : int
+The timestamp (seconds since Unix epoch) when the user joined.
+leave_epoch : int or None
+The timestamp when the user left; null if still active.
+join_comment : str
+Optional note provided by the user upon joining.
+leave_comment : str or None
+Optional note provided by the user upon leaving.
+total_minutes : int or None
+The computed duration of participation in minutes; null until set.</p>
+<h2 id="meta">Meta</h2>
+<p>ordering = ['-join_epoch']
+Participation records are ordered by most recent join first.
+unique_together = ('event', 'user', 'join_epoch')
+Prevents duplicate participation entries for the same event, user, and join time.</p>
+<h2 id="methods">Methods</h2>
+<p>(Uses default Django ORM methods; no custom methods defined.)</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.event"><code class="name">var <span class="ident">event</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.event_id"><code class="name">var <span class="ident">event_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.join_comment"><code class="name">var <span class="ident">join_comment</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.join_epoch"><code class="name">var <span class="ident">join_epoch</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.leave_comment"><code class="name">var <span class="ident">leave_comment</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.leave_epoch"><code class="name">var <span class="ident">leave_epoch</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.total_minutes"><code class="name">var <span class="ident">total_minutes</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.user"><code class="name">var <span class="ident">user</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related instance through the forward relation.
+
+    With the example above, when getting ``child.parent``:
+
+    - ``self`` is the descriptor managing the ``parent`` attribute
+    - ``instance`` is the ``child`` instance
+    - ``cls`` is the ``Child`` class (we don&#39;t need it)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    # The related instance is loaded from the database and then cached
+    # by the field on the model instance state. It can also be pre-cached
+    # by the reverse accessor (ReverseOneToOneDescriptor).
+    try:
+        rel_obj = self.field.get_cached_value(instance)
+    except KeyError:
+        has_value = None not in self.field.get_local_related_value(instance)
+        ancestor_link = (
+            instance._meta.get_ancestor_link(self.field.model)
+            if has_value
+            else None
+        )
+        if ancestor_link and ancestor_link.is_cached(instance):
+            # An ancestor link will exist if this field is defined on a
+            # multi-table inheritance parent of the instance&#39;s class.
+            ancestor = ancestor_link.get_cached_value(instance)
+            # The value might be cached on an ancestor if the instance
+            # originated from walking down the inheritance chain.
+            rel_obj = self.field.get_cached_value(ancestor, default=None)
+        else:
+            rel_obj = None
+        if rel_obj is None and has_value:
+            rel_obj = self.get_object(instance)
+            remote_field = self.field.remote_field
+            # If this is a one-to-one relation, set the reverse accessor
+            # cache on the related object to the current instance to avoid
+            # an extra SQL query if it&#39;s accessed later on.
+            if not remote_field.multiple:
+                remote_field.set_cached_value(rel_obj, instance)
+        self.field.set_cached_value(instance, rel_obj)
+
+    if rel_obj is None and not self.field.null:
+        raise self.RelatedObjectDoesNotExist(
+            &#34;%s has no %s.&#34; % (self.field.model.__name__, self.field.name)
+        )
+    else:
+        return rel_obj</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related object on the forward side of a many-to-one or
+one-to-one (via ForwardOneToOneDescriptor subclass) relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Child.parent</code> is a <code>ForwardManyToOneDescriptor</code> instance.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.DowntimeParticipation.user_id"><code class="name">var <span class="ident">user_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.maintenance_models.LinePriority"><code class="flex name class">
+<span>class <span class="ident">LinePriority</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class LinePriority(models.Model):
+    &#34;&#34;&#34;
+    Map a production line to its urgency priority.
+
+    Each instance represents a single production line and an associated
+    priority value, where lower numbers indicate higher urgency.
+
+    Fields
+    ------
+    line : str
+        Unique identifier for the production line.
+    priority : int
+        Urgency level of the line (lower numbers are higher priority).
+
+    Meta
+    ----
+    ordering = [&#39;priority&#39;]
+        Default queryset ordering by ascending priority.
+
+    Methods
+    -------
+    __str__()
+        Returns a human-readable string in the format &#34;{line} (prio {priority})&#34;.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    A single Line and its priority (lower = more urgent).
+    &#34;&#34;&#34;
+    line     = models.CharField(max_length=50, unique=True)
+    priority = models.PositiveIntegerField(default=0, help_text=&#34;Lower numbers are higher priority&#34;)
+
+    class Meta:
+        ordering = [&#39;priority&#39;]
+
+    def __str__(self):
+        return f&#34;{self.line} (prio {self.priority})&#34;</code></pre>
+</details>
+<div class="desc"><p>Map a production line to its urgency priority.</p>
+<p>Each instance represents a single production line and an associated
+priority value, where lower numbers indicate higher urgency.</p>
+<h2 id="fields">Fields</h2>
+<p>line : str
+Unique identifier for the production line.
+priority : int
+Urgency level of the line (lower numbers are higher priority).</p>
+<h2 id="meta">Meta</h2>
+<p>ordering = ['priority']
+Default queryset ordering by ascending priority.</p>
+<h2 id="methods">Methods</h2>
+<p><strong>str</strong>()
+Returns a human-readable string in the format "{line} (prio {priority})".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.LinePriority.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.LinePriority.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.LinePriority.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.LinePriority.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.LinePriority.line"><code class="name">var <span class="ident">line</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.LinePriority.priority"><code class="name">var <span class="ident">priority</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent"><code class="flex name class">
+<span>class <span class="ident">MachineDowntimeEvent</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class MachineDowntimeEvent(models.Model):
+    &#34;&#34;&#34;
+    Represents a single downtime event on a production line, with support for soft-deletion,
+    labour requirements, and tracking of participant actions.
+
+    Fields
+    ------
+    line : str
+        Production line identifier.
+    machine : str
+        Machine identifier within the line.
+    category : str
+        High-level category of the downtime.
+    subcategory : str
+        Optional sub-category (defaults to empty string).
+    code : str
+        Downtime code (typically matches subcategory if provided).
+    start_epoch : int
+        Event start time expressed as seconds since the Unix epoch.
+    closeout_epoch : int or None
+        Event close-out time as epoch seconds, or None if not yet closed out.
+    comment : str
+        Description or notes about the downtime event.
+    is_deleted : bool
+        Soft-delete flag; True if the record has been “deleted” without removal.
+    deleted_at : datetime or None
+        Timestamp when the record was soft-deleted, or None.
+    created_at_UTC : datetime
+        Auto-populated creation timestamp (UTC).
+    updated_at_UTC : datetime
+        Auto-populated last-modified timestamp (UTC).
+    labour_types : list of str
+        JSON field listing one or more labour role codes required
+        (choices defined in LABOUR_CHOICES).
+    employee_id : str or None
+        Optional identifier of the person who logged the downtime.
+    closeout_comment : str or None
+        Notes added at close-out describing corrective actions taken.
+
+    Class Attributes
+    ----------------
+    LABOUR_CHOICES : list of tuple
+        Permissible labour role codes and their human-readable labels.
+
+    Properties
+    ----------
+    start_at : datetime
+        Converts `start_epoch` into a Python `datetime` for display or formatting.
+    closeout_at : datetime or None
+        Converts `closeout_epoch` into a `datetime`, or returns None if not set.
+
+    Methods
+    -------
+    delete(using=None, keep_parents=False)
+        Overrides Model.delete() to perform a soft-delete by setting `is_deleted`
+        and stamping `deleted_at` instead of removing the record.
+    __str__()
+        Returns a concise string representation: 
+        &#34;{code} @ {start_epoch} on {line}/{machine}&#34;.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    Represents a single downtime event on a production line.
+    &#34;&#34;&#34;
+    line               = models.CharField(&#34;Line&#34;,         max_length=50)
+    machine            = models.CharField(&#34;Machine&#34;,      max_length=50)
+    category           = models.TextField(&#34;Category&#34;)
+    subcategory        = models.TextField(
+        &#34;Subcategory&#34;,
+        blank=True,
+        default=&#34;&#34;,
+        help_text=&#34;Optional sub-category&#34;
+    )
+    code               = models.CharField(
+        &#34;Downtime Code&#34;,
+        max_length=20,
+        blank=True,
+        default=&#34;&#34;,
+        help_text=&#34;Optional, same as subcategory if provided&#34;
+    )
+    start_epoch        = models.BigIntegerField(&#34;Start (epoch)&#34;)
+    closeout_epoch     = models.BigIntegerField(&#34;Closeout (epoch)&#34;, null=True, blank=True)
+    comment            = models.TextField(&#34;Comment&#34;)
+
+    # new soft-delete fields
+    is_deleted         = models.BooleanField(default=False)
+    deleted_at         = models.DateTimeField(null=True, blank=True)
+
+    created_at_UTC     = models.DateTimeField(auto_now_add=True)
+    updated_at_UTC     = models.DateTimeField(auto_now=True)
+
+    # new:
+    LABOUR_CHOICES = [
+        (&#39;ELECTRICIAN&#39;, &#39;Need Electrician&#39;),
+        (&#39;TECH&#39;,        &#39;Need Tech&#39;),
+        (&#39;MILLWRIGHT&#39;,  &#39;Need Millwright&#39;),
+        (&#39;PLCTECH&#39;,    &#39;Need PLC Technician&#39;),
+        (&#39;IMT&#39;,        &#39;Need IMT&#39;),
+        (&#39;NA&#39;,          &#39;N/A&#39;),
+    ]
+    labour_types = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=&#34;List of labour roles needed (one or more of OPERATOR,ELECTRICIAN,TECH,MILLWRIGHT)&#34;
+    )
+    employee_id = models.TextField(
+        &#34;Employee ID&#34;,
+        null=True,
+        blank=True,
+        help_text=&#34;(optional) ID of the person who logged this downtime&#34;
+    )
+    closeout_comment = models.TextField(
+        &#34;Close-out Comment&#34;,
+        null=True,
+        blank=True,
+        help_text=&#34;What the labourer did to fix the issue when closing out&#34;,
+    )
+
+    @property
+    def start_at(self) -&gt; _datetime:
+        &#34;&#34;&#34;
+        Returns the start timestamp as a Python datetime for easy formatting.
+        &#34;&#34;&#34;
+        return _datetime.fromtimestamp(self.start_epoch)
+
+    def delete(self, using=None, keep_parents=False):
+        &#34;&#34;&#34;
+        Soft-delete: mark the row as deleted instead of actually deleting.
+        &#34;&#34;&#34;
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=[&#39;is_deleted&#39;, &#39;deleted_at&#39;])
+
+    @property
+    def closeout_at(self):
+        &#34;&#34;&#34;
+        Returns a datetime if closeout_epoch is set,
+        else None.
+        &#34;&#34;&#34;
+        if self.closeout_epoch:
+            return datetime.fromtimestamp(self.closeout_epoch)
+        return None
+
+    def __str__(self):
+        return f&#34;{self.code} @ {self.start_epoch} on {self.line}/{self.machine}&#34;</code></pre>
+</details>
+<div class="desc"><p>Represents a single downtime event on a production line, with support for soft-deletion,
+labour requirements, and tracking of participant actions.</p>
+<h2 id="fields">Fields</h2>
+<p>line : str
+Production line identifier.
+machine : str
+Machine identifier within the line.
+category : str
+High-level category of the downtime.
+subcategory : str
+Optional sub-category (defaults to empty string).
+code : str
+Downtime code (typically matches subcategory if provided).
+start_epoch : int
+Event start time expressed as seconds since the Unix epoch.
+closeout_epoch : int or None
+Event close-out time as epoch seconds, or None if not yet closed out.
+comment : str
+Description or notes about the downtime event.
+is_deleted : bool
+Soft-delete flag; True if the record has been “deleted” without removal.
+deleted_at : datetime or None
+Timestamp when the record was soft-deleted, or None.
+created_at_UTC : datetime
+Auto-populated creation timestamp (UTC).
+updated_at_UTC : datetime
+Auto-populated last-modified timestamp (UTC).
+labour_types : list of str
+JSON field listing one or more labour role codes required
+(choices defined in LABOUR_CHOICES).
+employee_id : str or None
+Optional identifier of the person who logged the downtime.
+closeout_comment : str or None
+Notes added at close-out describing corrective actions taken.</p>
+<h2 id="class-attributes">Class Attributes</h2>
+<p>LABOUR_CHOICES : list of tuple
+Permissible labour role codes and their human-readable labels.</p>
+<h2 id="properties">Properties</h2>
+<p>start_at : datetime
+Converts <code>start_epoch</code> into a Python <code>datetime</code> for display or formatting.
+closeout_at : datetime or None
+Converts <code>closeout_epoch</code> into a <code>datetime</code>, or returns None if not set.</p>
+<h2 id="methods">Methods</h2>
+<p>delete(using=None, keep_parents=False)
+Overrides Model.delete() to perform a soft-delete by setting <code>is_deleted</code>
+and stamping <code>deleted_at</code> instead of removing the record.
+<strong>str</strong>()
+Returns a concise string representation:
+"{code} @ {start_epoch} on {line}/{machine}".</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>django.db.models.base.Model</li>
+<li>django.db.models.utils.AltersData</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.DoesNotExist"><code class="name">var <span class="ident">DoesNotExist</span></code></dt>
+<dd>
+<div class="desc"><p>The requested object does not exist</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.LABOUR_CHOICES"><code class="name">var <span class="ident">LABOUR_CHOICES</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.MultipleObjectsReturned"><code class="name">var <span class="ident">MultipleObjectsReturned</span></code></dt>
+<dd>
+<div class="desc"><p>The query returned multiple objects when only one was expected.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.objects"><code class="name">var <span class="ident">objects</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.category"><code class="name">var <span class="ident">category</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.closeout_at"><code class="name">prop <span class="ident">closeout_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def closeout_at(self):
+    &#34;&#34;&#34;
+    Returns a datetime if closeout_epoch is set,
+    else None.
+    &#34;&#34;&#34;
+    if self.closeout_epoch:
+        return datetime.fromtimestamp(self.closeout_epoch)
+    return None</code></pre>
+</details>
+<div class="desc"><p>Returns a datetime if closeout_epoch is set,
+else None.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.closeout_comment"><code class="name">var <span class="ident">closeout_comment</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.closeout_epoch"><code class="name">var <span class="ident">closeout_epoch</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.code"><code class="name">var <span class="ident">code</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.comment"><code class="name">var <span class="ident">comment</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.created_at_UTC"><code class="name">var <span class="ident">created_at_UTC</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.deleted_at"><code class="name">var <span class="ident">deleted_at</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.employee_id"><code class="name">var <span class="ident">employee_id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.is_deleted"><code class="name">var <span class="ident">is_deleted</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.labour_types"><code class="name">var <span class="ident">labour_types</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.line"><code class="name">var <span class="ident">line</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.machine"><code class="name">var <span class="ident">machine</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.participants"><code class="name">var <span class="ident">participants</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Get the related objects through the reverse relation.
+
+    With the example above, when getting ``parent.children``:
+
+    - ``self`` is the descriptor managing the ``children`` attribute
+    - ``instance`` is the ``parent`` instance
+    - ``cls`` is the ``Parent`` class (unused)
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+
+    return self.related_manager_cls(instance)</code></pre>
+</details>
+<div class="desc"><p>Accessor to the related objects manager on the reverse side of a
+many-to-one relation.</p>
+<p>In the example::</p>
+<pre><code>class Child(Model):
+    parent = ForeignKey(Parent, related_name='children')
+</code></pre>
+<p><code>Parent.children</code> is a <code>ReverseManyToOneDescriptor</code> instance.</p>
+<p>Most of the implementation is delegated to a dynamically defined manager
+class built by <code>create_forward_many_to_many_manager()</code> defined below.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.start_at"><code class="name">prop <span class="ident">start_at</span> : datetime.datetime</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def start_at(self) -&gt; _datetime:
+    &#34;&#34;&#34;
+    Returns the start timestamp as a Python datetime for easy formatting.
+    &#34;&#34;&#34;
+    return _datetime.fromtimestamp(self.start_epoch)</code></pre>
+</details>
+<div class="desc"><p>Returns the start timestamp as a Python datetime for easy formatting.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.start_epoch"><code class="name">var <span class="ident">start_epoch</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.subcategory"><code class="name">var <span class="ident">subcategory</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.updated_at_UTC"><code class="name">var <span class="ident">updated_at_UTC</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __get__(self, instance, cls=None):
+    &#34;&#34;&#34;
+    Retrieve and caches the value from the datastore on the first lookup.
+    Return the cached value.
+    &#34;&#34;&#34;
+    if instance is None:
+        return self
+    data = instance.__dict__
+    field_name = self.field.attname
+    if field_name not in data:
+        # Let&#39;s see if the field is part of the parent chain. If so we
+        # might be able to reuse the already loaded value. Refs #18343.
+        val = self._check_parent_chain(instance)
+        if val is None:
+            instance.refresh_from_db(fields=[field_name])
+        else:
+            data[field_name] = val
+    return data[field_name]</code></pre>
+</details>
+<div class="desc"><p>A wrapper for a deferred-loading field. When the value is read from this
+object the first time, the query is executed.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.delete"><code class="name flex">
+<span>def <span class="ident">delete</span></span>(<span>self, using=None, keep_parents=False)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def delete(self, using=None, keep_parents=False):
+    &#34;&#34;&#34;
+    Soft-delete: mark the row as deleted instead of actually deleting.
+    &#34;&#34;&#34;
+    self.is_deleted = True
+    self.deleted_at = timezone.now()
+    self.save(update_fields=[&#39;is_deleted&#39;, &#39;deleted_at&#39;])</code></pre>
+</details>
+<div class="desc"><p>Soft-delete: mark the row as deleted instead of actually deleting.</p></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.get_next_by_created_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_next_by_created_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at_UTC&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.get_next_by_updated_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_next_by_updated_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: updated_at_UTC&gt;,<br>is_next=True,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.get_previous_by_created_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_previous_by_created_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: created_at_UTC&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="plant.models.maintenance_models.MachineDowntimeEvent.get_previous_by_updated_at_UTC"><code class="name flex">
+<span>def <span class="ident">get_previous_by_updated_at_UTC</span></span>(<span>self,<br>*,<br>field=&lt;django.db.models.fields.DateTimeField: updated_at_UTC&gt;,<br>is_next=False,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _method(cls_or_self, /, *args, **keywords):
+    keywords = {**self.keywords, **keywords}
+    return self.func(cls_or_self, *self.args, *args, **keywords)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="plant.models.maintenance_models.DowntimeCode" href="#plant.models.maintenance_models.DowntimeCode">DowntimeCode</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.DoesNotExist" href="#plant.models.maintenance_models.DowntimeCode.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.MultipleObjectsReturned" href="#plant.models.maintenance_models.DowntimeCode.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.category" href="#plant.models.maintenance_models.DowntimeCode.category">category</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.code" href="#plant.models.maintenance_models.DowntimeCode.code">code</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.get_next_by_updated_at" href="#plant.models.maintenance_models.DowntimeCode.get_next_by_updated_at">get_next_by_updated_at</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.get_previous_by_updated_at" href="#plant.models.maintenance_models.DowntimeCode.get_previous_by_updated_at">get_previous_by_updated_at</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.id" href="#plant.models.maintenance_models.DowntimeCode.id">id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.objects" href="#plant.models.maintenance_models.DowntimeCode.objects">objects</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.subcategory" href="#plant.models.maintenance_models.DowntimeCode.subcategory">subcategory</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeCode.updated_at" href="#plant.models.maintenance_models.DowntimeCode.updated_at">updated_at</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.maintenance_models.DowntimeMachine" href="#plant.models.maintenance_models.DowntimeMachine">DowntimeMachine</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.DoesNotExist" href="#plant.models.maintenance_models.DowntimeMachine.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.MultipleObjectsReturned" href="#plant.models.maintenance_models.DowntimeMachine.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.created_at_UTC" href="#plant.models.maintenance_models.DowntimeMachine.created_at_UTC">created_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.get_next_by_created_at_UTC" href="#plant.models.maintenance_models.DowntimeMachine.get_next_by_created_at_UTC">get_next_by_created_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.get_next_by_updated_at_UTC" href="#plant.models.maintenance_models.DowntimeMachine.get_next_by_updated_at_UTC">get_next_by_updated_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.get_previous_by_created_at_UTC" href="#plant.models.maintenance_models.DowntimeMachine.get_previous_by_created_at_UTC">get_previous_by_created_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.get_previous_by_updated_at_UTC" href="#plant.models.maintenance_models.DowntimeMachine.get_previous_by_updated_at_UTC">get_previous_by_updated_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.id" href="#plant.models.maintenance_models.DowntimeMachine.id">id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.is_tracked" href="#plant.models.maintenance_models.DowntimeMachine.is_tracked">is_tracked</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.line" href="#plant.models.maintenance_models.DowntimeMachine.line">line</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.machine_number" href="#plant.models.maintenance_models.DowntimeMachine.machine_number">machine_number</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.objects" href="#plant.models.maintenance_models.DowntimeMachine.objects">objects</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.operation" href="#plant.models.maintenance_models.DowntimeMachine.operation">operation</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeMachine.updated_at_UTC" href="#plant.models.maintenance_models.DowntimeMachine.updated_at_UTC">updated_at_UTC</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.maintenance_models.DowntimeParticipation" href="#plant.models.maintenance_models.DowntimeParticipation">DowntimeParticipation</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.DoesNotExist" href="#plant.models.maintenance_models.DowntimeParticipation.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.MultipleObjectsReturned" href="#plant.models.maintenance_models.DowntimeParticipation.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.event" href="#plant.models.maintenance_models.DowntimeParticipation.event">event</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.event_id" href="#plant.models.maintenance_models.DowntimeParticipation.event_id">event_id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.id" href="#plant.models.maintenance_models.DowntimeParticipation.id">id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.join_comment" href="#plant.models.maintenance_models.DowntimeParticipation.join_comment">join_comment</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.join_epoch" href="#plant.models.maintenance_models.DowntimeParticipation.join_epoch">join_epoch</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.leave_comment" href="#plant.models.maintenance_models.DowntimeParticipation.leave_comment">leave_comment</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.leave_epoch" href="#plant.models.maintenance_models.DowntimeParticipation.leave_epoch">leave_epoch</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.objects" href="#plant.models.maintenance_models.DowntimeParticipation.objects">objects</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.total_minutes" href="#plant.models.maintenance_models.DowntimeParticipation.total_minutes">total_minutes</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.user" href="#plant.models.maintenance_models.DowntimeParticipation.user">user</a></code></li>
+<li><code><a title="plant.models.maintenance_models.DowntimeParticipation.user_id" href="#plant.models.maintenance_models.DowntimeParticipation.user_id">user_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.maintenance_models.LinePriority" href="#plant.models.maintenance_models.LinePriority">LinePriority</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.maintenance_models.LinePriority.DoesNotExist" href="#plant.models.maintenance_models.LinePriority.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.maintenance_models.LinePriority.MultipleObjectsReturned" href="#plant.models.maintenance_models.LinePriority.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.maintenance_models.LinePriority.id" href="#plant.models.maintenance_models.LinePriority.id">id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.LinePriority.line" href="#plant.models.maintenance_models.LinePriority.line">line</a></code></li>
+<li><code><a title="plant.models.maintenance_models.LinePriority.objects" href="#plant.models.maintenance_models.LinePriority.objects">objects</a></code></li>
+<li><code><a title="plant.models.maintenance_models.LinePriority.priority" href="#plant.models.maintenance_models.LinePriority.priority">priority</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="plant.models.maintenance_models.MachineDowntimeEvent" href="#plant.models.maintenance_models.MachineDowntimeEvent">MachineDowntimeEvent</a></code></h4>
+<ul class="">
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.DoesNotExist" href="#plant.models.maintenance_models.MachineDowntimeEvent.DoesNotExist">DoesNotExist</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.LABOUR_CHOICES" href="#plant.models.maintenance_models.MachineDowntimeEvent.LABOUR_CHOICES">LABOUR_CHOICES</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.MultipleObjectsReturned" href="#plant.models.maintenance_models.MachineDowntimeEvent.MultipleObjectsReturned">MultipleObjectsReturned</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.category" href="#plant.models.maintenance_models.MachineDowntimeEvent.category">category</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.closeout_at" href="#plant.models.maintenance_models.MachineDowntimeEvent.closeout_at">closeout_at</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.closeout_comment" href="#plant.models.maintenance_models.MachineDowntimeEvent.closeout_comment">closeout_comment</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.closeout_epoch" href="#plant.models.maintenance_models.MachineDowntimeEvent.closeout_epoch">closeout_epoch</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.code" href="#plant.models.maintenance_models.MachineDowntimeEvent.code">code</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.comment" href="#plant.models.maintenance_models.MachineDowntimeEvent.comment">comment</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.created_at_UTC" href="#plant.models.maintenance_models.MachineDowntimeEvent.created_at_UTC">created_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.delete" href="#plant.models.maintenance_models.MachineDowntimeEvent.delete">delete</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.deleted_at" href="#plant.models.maintenance_models.MachineDowntimeEvent.deleted_at">deleted_at</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.employee_id" href="#plant.models.maintenance_models.MachineDowntimeEvent.employee_id">employee_id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.get_next_by_created_at_UTC" href="#plant.models.maintenance_models.MachineDowntimeEvent.get_next_by_created_at_UTC">get_next_by_created_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.get_next_by_updated_at_UTC" href="#plant.models.maintenance_models.MachineDowntimeEvent.get_next_by_updated_at_UTC">get_next_by_updated_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.get_previous_by_created_at_UTC" href="#plant.models.maintenance_models.MachineDowntimeEvent.get_previous_by_created_at_UTC">get_previous_by_created_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.get_previous_by_updated_at_UTC" href="#plant.models.maintenance_models.MachineDowntimeEvent.get_previous_by_updated_at_UTC">get_previous_by_updated_at_UTC</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.id" href="#plant.models.maintenance_models.MachineDowntimeEvent.id">id</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.is_deleted" href="#plant.models.maintenance_models.MachineDowntimeEvent.is_deleted">is_deleted</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.labour_types" href="#plant.models.maintenance_models.MachineDowntimeEvent.labour_types">labour_types</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.line" href="#plant.models.maintenance_models.MachineDowntimeEvent.line">line</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.machine" href="#plant.models.maintenance_models.MachineDowntimeEvent.machine">machine</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.objects" href="#plant.models.maintenance_models.MachineDowntimeEvent.objects">objects</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.participants" href="#plant.models.maintenance_models.MachineDowntimeEvent.participants">participants</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.start_at" href="#plant.models.maintenance_models.MachineDowntimeEvent.start_at">start_at</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.start_epoch" href="#plant.models.maintenance_models.MachineDowntimeEvent.start_epoch">start_epoch</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.subcategory" href="#plant.models.maintenance_models.MachineDowntimeEvent.subcategory">subcategory</a></code></li>
+<li><code><a title="plant.models.maintenance_models.MachineDowntimeEvent.updated_at_UTC" href="#plant.models.maintenance_models.MachineDowntimeEvent.updated_at_UTC">updated_at_UTC</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

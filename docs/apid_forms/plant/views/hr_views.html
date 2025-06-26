@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>plant.views.hr_views API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>plant.views.hr_views</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="plant.views.hr_views.absentee_forms"><code class="name flex">
+<span>def <span class="ident">absentee_forms</span></span>(<span>request)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@login_required(login_url=&#39;/login/&#39;)
+def absentee_forms(request):
+    &#34;&#34;&#34;
+    Display and manage absentee report uploads for HR managers.
+
+    This view supports:
+      - GET: Render the absentee upload page with:
+        • `last_uploads`: the five most recent distinct upload dates (YYYY-MM-DD).
+        • `today`: the server’s local date (YYYY-MM-DD) for default form input.
+      - POST with `delete_time`: Delete all AbsenteeReport records whose
+        `uploaded_at` timestamp falls on the specified date (UTC-converted),
+        then re-render with an updated `last_uploads` list and a success or error message.
+      - POST with an Excel file (`excel_file`) and `upload_date`: Parse the file
+        into AbsenteeReport rows, assign each row’s `uploaded_at` to the chosen
+        date (midnight local→UTC), bulk-insert valid rows, then re-render with
+        updated `last_uploads` and a success or error message.
+
+    Access Control
+    --------------
+    Only users in the “hr_managers” group may access this view;
+    others receive HTTP 403 Forbidden.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. For POST, may include:
+          - `delete_time` (str): ISO date &#34;YYYY-MM-DD&#34; for deletion.
+          - `excel_file` (UploadedFile): Excel workbook of absentee data.
+          - `upload_date` (str): ISO date &#34;YYYY-MM-DD&#34; to stamp new rows.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders &#34;plant/absentee.html&#34; with context keys:
+          - `last_uploads`: list of up to five date objects.
+          - `today`: string default date for file uploads.
+          - `success` or `error`: feedback messages on POST operations.
+    &#34;&#34;&#34;
+    &#34;&#34;&#34;
+    - Only users in &#39;hr_managers&#39; can access.
+    - On every request, compute the last 5 distinct upload‐DATES (not minutes).
+    - On POST with &#39;delete_time&#39;, delete all AbsenteeReport rows whose uploaded_at
+      falls within that chosen DAY (UTC‐converted).
+    - On POST with an Excel file, bulk‐insert new rows and stamp each row’s uploaded_at
+      with the user’s chosen date (in UTC).
+    &#34;&#34;&#34;
+
+    # 1) Ensure user is in the hr_managers group
+    if not request.user.groups.filter(name=&#34;hr_managers&#34;).exists():
+        return HttpResponseForbidden(
+            &#34;You are not authorized to view this page. &#34;
+            &#34;If you need access, please contact site administrators to be added to the HR Managers group.&#34;
+        )
+
+    context = {}
+
+    # 2) Compute the last 5 distinct upload‐DAYS:
+    recent_days = (
+        AbsenteeReport.objects
+        .annotate(trunc_day=TruncDate(&#39;uploaded_at&#39;))
+        .values_list(&#39;trunc_day&#39;, flat=True)    # yields Python date objects
+        .order_by(&#39;-trunc_day&#39;)                  # newest date first
+        .distinct()                              # collapse duplicates at day level
+        [:5]
+    )
+    context[&#39;last_uploads&#39;] = recent_days
+
+    # 2a) Provide “today” (in YYYY-MM-DD) so the template’s &lt;input type=&#34;date&#34;&gt; can default
+    today_local_date = timezone.localdate()       # e.g. date(2025, 6, 4) in America/Toronto
+    context[&#39;today&#39;] = today_local_date.isoformat()  # e.g. &#34;2025-06-04&#34;
+
+    if request.method == &#34;POST&#34;:
+        # —— 3a) If delete_time is posted, delete that entire day’s records —— #
+        if &#39;delete_time&#39; in request.POST:
+            raw_day_iso = request.POST.get(&#39;delete_time&#39;, &#39;&#39;)  # e.g. &#34;2025-06-03&#34;
+            try:
+                # 3a.1) Parse &#34;YYYY-MM-DD&#34; into naive midnight
+                dt_naive = datetime.fromisoformat(raw_day_iso)  # 2025-06-03 00:00:00
+
+                # 3a.2) Localize to the server’s timezone (America/Toronto)
+                local_tz = timezone.get_current_timezone()
+                dt_local_midnight = timezone.make_aware(dt_naive, local_tz)
+
+                # 3a.3) Convert local midnight → UTC
+                start_utc = dt_local_midnight.astimezone(timezone.utc)
+
+                # 3a.4) Build a 24-hour window in UTC
+                end_utc = start_utc + timedelta(days=1)
+
+                # 3a.5) Delete all rows whose uploaded_at falls in [start_utc, end_utc)
+                deleted_count, _ = AbsenteeReport.objects.filter(
+                    uploaded_at__gte=start_utc,
+                    uploaded_at__lt =end_utc
+                ).delete()
+
+                context[&#39;success&#39;] = (
+                    f&#34;Deleted {deleted_count} record(s) from upload date &#34;
+                    f&#34;{dt_local_midnight.strftime(&#39;%Y-%m-%d&#39;)}.&#34;
+                )
+            except Exception:
+                context[&#39;error&#39;] = &#34;Invalid upload‐date selected for deletion.&#34;
+
+            # 3a.6) Refresh the “last_uploads” list
+            recent_days = (
+                AbsenteeReport.objects
+                .annotate(trunc_day=TruncDate(&#39;uploaded_at&#39;))
+                .values_list(&#39;trunc_day&#39;, flat=True)
+                .order_by(&#39;-trunc_day&#39;)
+                .distinct()
+                [:5]
+            )
+            context[&#39;last_uploads&#39;] = recent_days
+            return render(request, &#34;plant/absentee.html&#34;, context)
+
+        # —— 3b) Otherwise, handle a new Excel‐file upload —— #
+        excel_file = request.FILES.get(&#34;excel_file&#34;)
+        if not excel_file:
+            context[&#34;error&#34;] = &#34;No file was uploaded.&#34;
+            return render(request, &#34;plant/absentee.html&#34;, context)
+
+        # 3b.1) Try reading the Excel
+        try:
+            df = pd.read_excel(excel_file)
+        except Exception as e:
+            print(f&#34;Error reading Excel file: {e}&#34;)
+            context[&#34;error&#34;] = &#34;Could not read the uploaded file. Make sure it’s a valid .xls/.xlsx.&#34;
+            return render(request, &#34;plant/absentee.html&#34;, context)
+
+        # 3b.2) Read and parse the “upload_date” from the form
+        raw_date_str = request.POST.get(&#34;upload_date&#34;, &#34;&#34;)
+        try:
+            # Parse &#34;YYYY-MM-DD&#34; → naive datetime at midnight
+            dt_naive = datetime.fromisoformat(raw_date_str)  # e.g. 2025-06-04 00:00:00 (naive)
+            local_tz = timezone.get_current_timezone()
+            dt_local_midnight = timezone.make_aware(dt_naive, local_tz)
+            # Convert that local midnight to UTC
+            chosen_upload_utc = dt_local_midnight.astimezone(timezone.utc)
+        except Exception:
+            # If they typed an invalid date, fallback to “now”
+            chosen_upload_utc = timezone.now()
+
+        # 3b.3) Build AbsenteeReport objects, assigning uploaded_at = chosen_upload_utc
+        objs_to_create = []
+        for idx, row in df.iterrows():
+            raw_pay_date = row.get(&#34;Pay Date&#34;)
+            if pd.isna(raw_pay_date):
+                continue  # skip rows without a valid Pay Date
+
+            try:
+                pay_date = pd.to_datetime(raw_pay_date).date()
+            except Exception:
+                print(f&#34;Skipping row {idx}: invalid Pay Date → {raw_pay_date}&#34;)
+                continue
+
+            report = AbsenteeReport(
+                employee_name=              (row.get(&#34;Employee Name&#34;) or &#34;&#34;).strip(),
+                job=                        (row.get(&#34;Job&#34;) or &#34;&#34;).strip(),
+                pay_date=                   pay_date,
+                pay_code=                   (row.get(&#34;Pay Code&#34;) or &#34;&#34;).strip(),
+                pay_category=               (row.get(&#34;Pay Category&#34;) or &#34;&#34;).strip(),
+                hours=                      row.get(&#34;Hours&#34;) if not pd.isna(row.get(&#34;Hours&#34;)) else 0,
+                pay_group_name=             (row.get(&#34;Pay Group Name&#34;) or &#34;&#34;).strip(),
+                shift_rotation_description= (row.get(&#34;Shift Rotation Description&#34;) or &#34;&#34;).strip(),
+                uploaded_at=                chosen_upload_utc,    # ← assign the chosen date/time in UTC
+            )
+            objs_to_create.append(report)
+
+        # 3b.4) Bulk‐insert
+        if objs_to_create:
+            AbsenteeReport.objects.bulk_create(objs_to_create)
+            context[&#34;success&#34;] = (
+                f&#34;Inserted {len(objs_to_create)} row(s) into AbsenteeReport &#34;
+                f&#34;with upload date {chosen_upload_utc.astimezone(timezone.get_current_timezone()).strftime(&#39;%Y-%m-%d&#39;)}.&#34;
+            )
+        else:
+            context[&#34;error&#34;] = &#34;No valid rows found to insert.&#34;
+
+        # 3b.5) Refresh the “last_uploads” list after insertion
+        recent_days = (
+            AbsenteeReport.objects
+            .annotate(trunc_day=TruncDate(&#39;uploaded_at&#39;))
+            .values_list(&#39;trunc_day&#39;, flat=True)
+            .order_by(&#39;-trunc_day&#39;)
+            .distinct()
+            [:5]
+        )
+        context[&#39;last_uploads&#39;] = recent_days
+        return render(request, &#34;plant/absentee.html&#34;, context)
+
+    # —— 4) GET: just render with last_uploads + today —— #
+    return render(request, &#34;plant/absentee.html&#34;, context)</code></pre>
+</details>
+<div class="desc"><p>Display and manage absentee report uploads for HR managers.</p>
+<p>This view supports:
+- GET: Render the absentee upload page with:
+• <code>last_uploads</code>: the five most recent distinct upload dates (YYYY-MM-DD).
+• <code>today</code>: the server’s local date (YYYY-MM-DD) for default form input.
+- POST with <code>delete_time</code>: Delete all AbsenteeReport records whose
+<code>uploaded_at</code> timestamp falls on the specified date (UTC-converted),
+then re-render with an updated <code>last_uploads</code> list and a success or error message.
+- POST with an Excel file (<code>excel_file</code>) and <code>upload_date</code>: Parse the file
+into AbsenteeReport rows, assign each row’s <code>uploaded_at</code> to the chosen
+date (midnight local→UTC), bulk-insert valid rows, then re-render with
+updated <code>last_uploads</code> and a success or error message.</p>
+<h2 id="access-control">Access Control</h2>
+<p>Only users in the “hr_managers” group may access this view;
+others receive HTTP 403 Forbidden.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>request</code></strong> :&ensp;<code>django.http.HttpRequest</code></dt>
+<dd>The HTTP request object. For POST, may include:
+- <code>delete_time</code> (str): ISO date "YYYY-MM-DD" for deletion.
+- <code>excel_file</code> (UploadedFile): Excel workbook of absentee data.
+- <code>upload_date</code> (str): ISO date "YYYY-MM-DD" to stamp new rows.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>django.http.HttpResponse</code></dt>
+<dd>Renders "plant/absentee.html" with context keys:
+- <code>last_uploads</code>: list of up to five date objects.
+- <code>today</code>: string default date for file uploads.
+- <code>success</code> or <code>error</code>: feedback messages on POST operations.</dd>
+</dl></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="plant.views.hr_views.absentee_forms" href="#plant.views.hr_views.absentee_forms">absentee_forms</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>
