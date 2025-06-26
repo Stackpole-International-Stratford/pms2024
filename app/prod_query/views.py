@@ -62,6 +62,25 @@ def sub_index(request):
 # returns a tupple with the part number and the goal
 
 def weekly_prod_goal(part, end_of_period):
+    """
+    Retrieve the most recent production goal for a given part at or before a specified time.
+
+    Queries Weekly_Production_Goal records for the given part, ordered by descending year and week.
+    Converts each goal’s ISO week and year into a timestamp for the Sunday of that week (at midnight UTC-2 offset),
+    and returns the first goal whose timestamp is less than or equal to `end_of_period`.
+
+    Parameters
+    ----------
+    part : str
+        The part_number to look up goals for.
+    end_of_period : float
+        Epoch timestamp (seconds) representing the end of the period to check against.
+
+    Returns
+    -------
+    int
+        The goal quantity for the matching week, or 0 if no prior goal is found.
+    """
     goals = Weekly_Production_Goal.objects.filter(part_number=part).order_by('-year', '-week').all()
     for goal in goals:
         goal_date = date.fromisocalendar(year=goal.year, week=goal.week, day=7)
@@ -73,6 +92,27 @@ def weekly_prod_goal(part, end_of_period):
 
 
 def adjust_target_to_effective_date(target_date):
+    """
+    Calculate the effective date for a production target given any date within the target week.
+
+    The effective date is defined as the Sunday of the week immediately preceding the ISO week 
+    containing `target_date`.
+
+    Parameters
+    ----------
+    target_date : datetime.date
+        Any date within the ISO week for which you want to find the previous Sunday effective date.
+
+    Returns
+    -------
+    datetime.date
+        The date of the Sunday immediately before the ISO week of `target_date`.
+
+    Example
+    -------
+    >>> adjust_target_to_effective_date(date(2025, 6, 18))  # a Wednesday in week 25
+    datetime.date(2025, 6, 8)  # Sunday of week 24
+    """
     (temp_year,temp_week,temp_day) = target_date.isocalendar()
     effective_date = date.fromisocalendar(year=temp_year, week=temp_week, day=7)
     effective_date -= timedelta(days = 7)
@@ -81,6 +121,46 @@ def adjust_target_to_effective_date(target_date):
 
 #  Report total production by part from end of line machines
 def weekly_prod(request):
+    """
+    Generate and display a weekly production report for specified parts.
+
+    Allows selection of a target week via WeeklyProdDate form and updating production goals
+    via WeeklyProdUpdate form. For each configured part:
+      - Calculates shift start timestamps for 21 shifts over the week.
+      - Retrieves the actual production counts per shift from the `GFxPRoduction` database.
+      - Computes cumulative totals, predictions to week’s end, and variance against the set goal.
+      - Prepends the part number and appends week_total, predicted_total, goal, and difference to each row.
+
+    Context variables passed to the 'prod_query/weekly-prod.html' template:
+      - form:                WeeklyProdDate form for selecting the week.
+      - update_form:         WeeklyProdUpdate form for setting or updating the weekly goal.
+      - dates:               List of seven dates (Monday–Sunday) for the target week.
+      - rows:                List of data rows; each row contains:
+                              [part, col1...col21, week_total, predicted, goal, difference].
+      - page_title:          "Weekly Production"
+
+    Request methods
+    ---------------
+    GET:
+      - Initializes `form` and `update_form` to the current or default week.
+      - Renders the report with default parameters.
+    POST:
+      - If updating a goal, processes WeeklyProdUpdate and saves/overwrites the Weekly_Production_Goal.
+      - Processes WeeklyProdDate to shift the target week forward, backward, or specific date.
+      - Rebuilds `form` and `update_form` with the updated target and effective dates.
+      - Renders the report for the newly selected week.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. May be GET or POST with form data.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the 'prod_query/weekly-prod.html' template populated with the report data.
+    """
+
 
     # Part, shift start in 24 hour time, list of machines used
     parameters = [
@@ -246,6 +326,29 @@ def weekly_prod(request):
 
 
 def prod_query_index_view(request):
+    """
+    Render the main index page for production query tools.
+
+    This view prepares basic page metadata and displays the entry point
+    for all production-related query interfaces.
+
+    Context
+    -------
+    main_heading : str
+        The primary heading displayed on the page ("Prod Query Index").
+    title : str
+        The HTML `<title>` for the page ("Prod Query Index - pmsdata12").
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP GET request.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/index_prod_query.html' with the above context.
+    """
     context = {}
     context["main_heading"] = "Prod Query Index"
     context["title"] = "Prod Query Index - pmsdata12"
@@ -253,6 +356,51 @@ def prod_query_index_view(request):
 
 # Updated strokes_per_min_graph view
 def strokes_per_min_graph(request):
+    """
+    Display and retrieve data for a strokes-per-minute line chart over a specified time range.
+
+    GET:
+      - Instantiates an empty `CycleQueryForm` for user input.
+      - Sets `numGraphPoints` to a default of 300.
+      - Renders 'prod_query/strokes_per_minute.html' with the form and default point count.
+
+    POST:
+      - Binds `CycleQueryForm` with submitted data (machine, start/end dates and times).
+      - Validates and extracts:
+          • machine (str)
+          • start_date (date), start_time (time)
+          • end_date (date), end_time (time)
+      - Reads `numGraphPoints` from POST (defaults to 300), clamped to [50, 1000].
+      - Computes `start_ts` and `end_ts` as Unix timestamps.
+      - Calculates total minutes and derives a whole-minute `interval`:
+          • If `interval == 1`, uses an internal 5-minute `effective_interval` for querying.
+      - Calls `fetch_chart_data(machine, start_ts, end_ts, interval=effective_interval, group_by_shift=False)`
+        to get lists of `(datetime, count)` for each bin.
+      - If the original interval was 1, expands each 5-minute bin into five 1-minute points.
+      - Builds `chartdata` dict with:
+          - `labels`: list of datetime labels for the x-axis
+          - `dataset`: dict with `label`, `data`, and `borderWidth`
+      - Re-renders the template with the populated form, `numGraphPoints`, and `chartdata`.
+
+    Context
+    -------
+    form : CycleQueryForm
+        The input form for specifying machine and time range.
+    numGraphPoints : int
+        Number of data points requested by the user (50–1000).
+    chartdata : dict (POST only)
+        Contains `labels` (datetimes) and `dataset` (chart.js configuration).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request (GET to show the form, POST to fetch chart data).
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/strokes_per_minute.html' with the context described above.
+    """
     default_numGraphPoints = 300
     context = {}
     if request.method == 'GET':
@@ -322,6 +470,39 @@ def strokes_per_min_graph(request):
 
 
 def strokes_per_minute_chart_data(machine, start, end, interval=5):
+    """
+    Generate time-series data of average strokes per minute for a given machine.
+
+    Executes a SQL query against the `GFxProduction` table to count events
+    (strokes) in fixed-minute intervals, then fills any missing intervals
+    with zero counts and computes the average strokes per minute.
+
+    Parameters
+    ----------
+    machine : str
+        The machine identifier to filter the production records.
+    start : int
+        The start time as a Unix epoch timestamp (seconds).
+    end : int
+        The end time as a Unix epoch timestamp (seconds).
+    interval : int, optional
+        The aggregation interval in minutes (default is 5).
+
+    Returns
+    -------
+    labels : list of datetime.datetime
+        A list of Python datetime objects marking the start of each interval.
+    counts : list of float
+        A list of average strokes per minute for each interval
+        (count_in_interval / interval).
+
+    Notes
+    -----
+    - Uses CEILING of the minute-difference divided by `interval` to bucket events.
+    - Fills in any intervals with no events as zero.
+    - Assumes the `TimeStamp` column in `GFxProduction` is stored as a Unix epoch.
+    - Requires a Django DB connection alias `'prodrpt-md'`.
+    """
     sql  = f'SELECT DATE_ADD('
     sql += f'FROM_UNIXTIME({start}), '
     sql += f'Interval CEILING(TIMESTAMPDIFF(MINUTE, FROM_UNIXTIME({start}), '
@@ -462,6 +643,37 @@ def strokes_per_minute_chart_data(machine, start, end, interval=5):
 
 def get_cycle_metrics(cycle_data):
     """
+    Compute key cycle-time statistics from a frequency histogram.
+
+    This function analyzes a list of `(cycle_time_in_seconds, frequency)` tuples
+    (sorted by ascending cycle time) to extract the most frequent cycle times,
+    calculate a weighted average of those top occurrences, and preserve the
+    original histogram data.
+
+    Parameters
+    ----------
+    cycle_data : list of tuple
+        A list of `(cycle_time, frequency)` pairs, where:
+          - `cycle_time` is the duration of a cycle in seconds (float or int),
+          - `frequency` is the count of occurrences for that cycle time (int).
+        The list should be sorted by `cycle_time` in ascending order.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+          - `top_eight` (list of tuple):
+              The eight `(cycle_time, frequency)` entries with the highest frequencies,
+              sorted by frequency in descending order.
+          - `weighted_cycle_time` (float):
+              The weighted average of the `top_eight` cycle times,
+              computed as the sum of `(cycle_time * frequency)` divided by the
+              total frequency of the top eight, rounded to three decimal places.
+              Returns `0` if all top frequencies are zero or `cycle_data` is empty.
+          - `histogram` (list of tuple):
+              The original `cycle_data` list, unmodified.
+    """
+    """
     Compute cycle metrics from a sorted list of (cycle_time, frequency).
 
     Args:
@@ -593,6 +805,53 @@ def fetch_cycle_data(machine, start_ts, end_ts, include_zeros, part_number):
     return sorted(times_dict.items(), key=lambda x: x[0])
 
 def cycle_times(request):
+    """
+    Render and process cycle-time queries for a specified machine and time range.
+
+    On GET:
+      - Simply renders the 'prod_query/cycle_query.html' template with an empty context.
+
+    On POST:
+      1. Reads form data:
+         - `machine` (str): machine identifier
+         - `start_datetime` (str): start of shift, format "YYYY-MM-DD HH:MM"
+         - `end_datetime` (str): end of shift, format "YYYY-MM-DD HH:MM"
+         - `part_number` (str, optional): filter for a specific part
+      2. Parses datetimes to Unix timestamps.
+      3. Invokes `fetch_cycle_data(machine, start_ts, end_ts, include_zeros, part_number)`
+         to retrieve a list of `(cycle_time_seconds, frequency)` tuples.
+      4. Computes cycle metrics via `get_cycle_metrics`.
+      5. Prepares histogram data (cycles ≤ 900 s) for a Chart.js bar chart (`chartdata`).
+      6. Iterates over each day in the past year to:
+         - Fetch daily cycle data
+         - Compute the daily weighted cycle time
+         - Include days with ≥ 300 total occurrences
+         - Build a Chart.js line chart dataset (`yearly_chartdata`).
+      7. Populates the template context with:
+         - `result`: raw cycle-data list
+         - `machine`, `part_number`
+         - `start_datetime_str`, `end_datetime_str`
+         - `cycle_metrics`: dict or None
+         - `chartdata`: bar-chart config dict
+         - `yearly_chartdata`: line-chart config dict
+         - `error`: error message if inputs were missing
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. On POST, expects form fields as described above.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        The rendered 'prod_query/cycle_query.html' template with the context keys:
+        - `result`, `machine`, `part_number`
+        - `start_datetime_str`, `end_datetime_str`
+        - `cycle_metrics`
+        - `chartdata`
+        - `yearly_chartdata`
+        - `error` (optional)
+    """
     context = {}
     if request.method == 'POST':
         # Capture the machine and datetime values from the request
@@ -806,6 +1065,63 @@ def fetch_chart_data(machine, start, end, interval=5, group_by_shift=False):
 
 
 def prod_query(request):
+    """
+    Render and process machine production inquiries over various time windows.
+
+    On GET:
+      - Instantiate an empty `MachineInquiryForm` and render the 'prod_query/prod_query.html' template.
+
+    On POST (when `form.is_valid()`):
+      1. Extract form fields:
+         - `inquiry_date` (date): the date to query.
+         - `times` (int): a code indicating the time window:
+             • 1–6: eight consecutive 1-hour buckets
+             • 7–8: three 8-hour shift buckets (24 h total)
+             • 9–10: seven daily buckets (1 week)
+             • 11–12: twenty-one consecutive 8-h shift buckets (1 week)
+         - `machines` (list of str): machine identifiers; code also queries variants
+             with "REJ" and "AS" suffixes.
+         - `parts` (list of str, optional): part numbers to filter.
+
+      2. Compute `shift_start` and `shift_end` datetimes via `shift_start_end_from_form_times()`.
+      3. Build a parameterized SQL query against `GFxPRoduction`, grouping counts into
+         the appropriate time buckets based on `times`, filtering by `Machine` and `Part`.
+      4. Execute the query for each machine variant, aggregate results into `results`.
+      5. Compute per-bucket totals across all machines.
+      6. If weekly-shift mode (`times` 11 or 12), package the 21 shift totals into a dict
+         mapping each day of the week to its three shifts.
+      7. Measure query execution time and add to context.
+
+    Context Variables
+    -----------------
+    form                : MachineInquiryForm
+    production          : list of lists
+        Each row: [Machine, Part, bucket1, bucket2, …, total]
+    totals              : list of numeric
+        Sum of each time bucket across all rows.
+    packaged_shifts     : dict (optional)
+        For weekly-shift queries, maps weekdays to lists of three shift totals.
+    start, end          : datetime
+        Computed shift start/end times.
+    ts                  : int
+        Unix timestamp of `shift_start`.
+    times               : int
+        The selected time-window code.
+    is_weekly_shifts    : bool
+        True if `times` indicates weekly-shift mode.
+    elapsed_time        : float
+        Seconds taken to execute the query loop.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming request. Supports GET (renders form) and POST (processes inquiry).
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/prod_query.html' with the populated context.
+    """
     context = {}
     if request.method == 'GET':
         form = MachineInquiryForm()
@@ -1072,6 +1388,39 @@ def prod_query(request):
 
 
 def shift_start_end_from_form_times(inquiry_date, times):
+    """
+    Determine the start and end datetimes for predefined shift windows.
+
+    Given a date and a shift code (as string), returns the corresponding
+    shift’s start and end as naive `datetime` objects.
+
+    Shift Codes
+    -----------
+    '1'  : Night shift, 10:00 PM (previous day) → 6:00 AM
+    '2'  : Night shift, 11:00 PM (previous day) → 7:00 AM
+    '3'  : Day shift, 6:00 AM → 2:00 PM
+    '4'  : Day shift, 7:00 AM → 3:00 PM
+    '5'  : Afternoon, 2:00 PM → 10:00 PM
+    '6'  : Afternoon, 3:00 PM → 11:00 PM
+    '7'  : 24-hour window, 6:00 AM → next day 6:00 AM
+    '8'  : 24-hour window, 7:00 AM → next day 7:00 AM
+    '9'  : Weekly window starting Sunday 10:00 PM → 7 days later
+    '10' : Weekly window starting Sunday 11:00 PM → 7 days later
+    '11' : Week-by-shifts, Sunday 10:00 PM start → 7 days later
+    '12' : Week-by-shifts, Sunday 11:00 PM start → 7 days later
+
+    Parameters
+    ----------
+    inquiry_date : datetime.date
+        The date from which to calculate the shift window.
+    times : str
+        A code '1'–'12' indicating which predefined shift or window to use.
+
+    Returns
+    -------
+    tuple of (datetime.datetime, datetime.datetime)
+        A 2-tuple of naive datetimes: (`shift_start`, `shift_end`).
+    """
     if times == '1':  # 10pm - 6am
         shift_start = datetime(
                     inquiry_date.year, inquiry_date.month, inquiry_date.day, 22, 0, 0)-timedelta(days=1)
@@ -1130,6 +1479,59 @@ def shift_start_end_from_form_times(inquiry_date, times):
 
 
 def reject_query(request):
+    """
+    Render and process reject-rate inquiries for selected machines and parts.
+
+    On every request:
+      - Query the distinct machine-part combinations available in the
+        `01_vw_production_rejects` view and expose them as `available`.
+
+    On GET:
+      - Instantiate an empty `MachineInquiryForm` and render the 
+        'prod_query/reject_query.html' template with `available` and `form`.
+
+    On POST (when `form.is_valid()`):
+      1. Extract from the form:
+         - `inquiry_date` (date)
+         - `times` (int code for time window, 1–6 hour buckets, 7–8 shifts, or week)
+         - `machines` (list of identifiers)
+         - `parts` (list of part numbers)
+      2. Compute `shift_start` and `shift_end` via `shift_start_end_from_form_times()`.
+      3. Build a SQL query against `01_vw_production_rejects` that counts rejects
+         per time bucket (hourly, shift, or daily), filtered by the selected
+         machines and parts.
+      4. Execute the query, fetch rows, append a total-per-row column, and
+         collect into `production`.
+      5. Record query execution time as `elapsed_time`.
+
+    Context Variables
+    -----------------
+    available     : list of [Part, Machine]
+        Distinct combinations for form selection.
+    form          : MachineInquiryForm
+    production    : list of lists
+        Each row: [Machine, Part, bucket1, bucket2, …, total]
+    start, end    : datetime.datetime
+        Computed window boundaries.
+    ts            : float
+        Unix timestamp of `shift_start`.
+    times         : int
+        The selected time-window code.
+    elapsed_time  : float
+        Seconds taken to run the query.
+    title         : str
+        Page title ("Production").
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, supporting GET and POST methods.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/reject_query.html' with the above context.
+    """
     context = {}
     tic = time.time()
 
@@ -1319,7 +1721,49 @@ def reject_query(request):
 
 
 def machine_detail(request, machine, start_timestamp, times):
+    """
+    Render detailed production and reject statistics for a single machine.
 
+    Given a machine identifier (optionally with a "REJ" suffix for rejects),
+    a Unix epoch start time, and a time-window code, this view:
+      1. Measures execution time.
+      2. Retrieves reject data via `get_reject_data(machine, start_timestamp, times, part_list)`.
+      3. Normalizes the machine name by stripping "REJ" (if present) and retrieves
+         production data via `get_production_data(clean_machine, start_timestamp, times, part_list)`.
+      4. Computes pagination offsets (`pagerprev`, `pagernext`) based on the window length:
+         - 1–6: 8-hour window
+         - 7–8: 24-hour window
+         - 9+: 7-day window
+      5. Formats `start_dt` and `end_dt` as human-readable strings.
+      6. Populates context keys:
+         - `title`: f"{machine} Detail"
+         - `machine`: original identifier
+         - `reject_data`, `production_data`
+         - `ts`: integer start timestamp
+         - `times`: integer time-window code
+         - `elapsed`: seconds taken to gather data
+         - `pagerprev`, `pagernext`: epoch offsets for navigation
+         - `start_dt`, `end_dt`: formatted window boundaries
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request, possibly including a GET parameter `parts`.
+    machine : str
+        The machine code to query; may include "REJ" to indicate reject data.
+    start_timestamp : int or str
+        The Unix epoch (in seconds) of the window’s start.
+    times : int or str
+        A time-window code determining the window length:
+          • 1–6: eight-hour shift
+          • 7–8: 24-hour shift
+          • 9+: one-week span
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/machine_detail.html' with the populated context.
+    """
     tic = time.time()
     part_list = request.GET.get('parts')
     context = {}
@@ -1359,6 +1803,44 @@ def machine_detail(request, machine, start_timestamp, times):
 
 
 def get_reject_data(machine, start_timestamp, times, part_list):
+    """
+    Retrieve reject counts for a machine over specified time buckets.
+
+    Constructs and executes a SQL query against the `01_vw_production_rejects` view,
+    grouping reject records by Part and Reason into time buckets determined by `times`.
+
+    Parameters
+    ----------
+    machine : str
+        The base machine code; if it does not already end with "REJ", "REJ" will be appended
+        to target the reject-specific data.
+    start_timestamp : int
+        Unix epoch (seconds) marking the start of the analysis window.
+    times : int or str
+        A code indicating the desired bucketization:
+          - 1–6: eight consecutive 1-hour buckets (hour1…hour8)
+          - 7–8: three 8-hour shift buckets (shift1…shift3)
+          - 9+: seven daily buckets (mon…sun)
+    part_list : str or None
+        A comma-separated, quoted list of part numbers for an SQL IN clause (e.g. `"A","B","C"`),
+        or None/empty to include all parts.
+
+    Returns
+    -------
+    list of list
+        Each inner list corresponds to a row in the result set:
+          [ Part (str), Reason (str), bucket1 (int), bucket2 (int), …, total (int) ]
+        where `total` is the sum of the bucket counts for that Part+Reason.
+
+    Notes
+    -----
+    - The SQL query filters `TimeStamp` between `start_timestamp` and the window end,
+      calculated as:
+        • +8 hours for times 1–6
+        • +24 hours for times 7–8
+        • +7 days for times 9+
+    - A final “totals” row (with Part="Totals", Reason="") is appended, summing each bucket.
+    """
     if int(times) <= 6:  # 8 hour query
         sql = 'SELECT Part, Reason, '
         sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp) + ' AND TimeStamp <= ' + \
@@ -1486,6 +1968,43 @@ def get_reject_data(machine, start_timestamp, times, part_list):
 
 
 def get_production_data(machine, start_timestamp, times, part_list):
+    """
+    Retrieve production counts for a machine over specified time buckets.
+
+    Constructs and executes a SQL query against the `GFxPRoduction` table,
+    grouping production events by Part into time buckets determined by `times`.
+
+    Parameters
+    ----------
+    machine : str
+        The machine identifier to filter production records.
+    start_timestamp : int
+        Unix epoch (seconds) marking the start of the analysis window.
+    times : int or str
+        A code indicating the desired bucketization:
+          - 1–6: eight consecutive 1-hour buckets (hour1…hour8)
+          - 7–8: three 8-hour shift buckets (shift1…shift3)
+          - 9+: seven daily buckets (mon…sun)
+    part_list : str or None
+        A comma-separated, quoted list of part numbers for an SQL IN clause
+        (e.g. `"A","B","C"`), or None/empty to include all parts.
+
+    Returns
+    -------
+    list of list
+        Each inner list corresponds to a row in the result set:
+          [ Part (str), bucket1 (int), bucket2 (int), …, total (int) ]
+        where `total` is the sum of the bucket counts for that Part.
+
+    Notes
+    -----
+    - The SQL query filters `TimeStamp` between `start_timestamp` and the window end:
+        • +8 hours for times 1–6
+        • +24 hours for times 7–8
+        • +7 days for times 9+
+    - A final total-per-row column is appended in Python, summing all bucket values.
+    - Requires a Django DB connection alias `'prodrpt-md'`.
+    """
 
     if int(times) <= 6:  # 8 hour query
         sql = 'SELECT Part, '
@@ -1692,6 +2211,45 @@ def moving_average(data, window_size):
 
 # Updated shift_totals_view view
 def shift_totals_view(request):
+    """
+    Display and process shift totals inquiries for one or more machines over a date range.
+
+    On GET:
+      - Renders the 'prod_query/shift_totals.html' template with an empty ShiftTotalsForm.
+
+    On POST:
+      1. Validates the submitted ShiftTotalsForm, which includes:
+         - `machine_number` (str): comma-separated machine IDs.
+         - `start_date` (date): the beginning of the analysis window.
+         - `end_date` (date): the end of the analysis window.
+      2. Splits and strips the machine numbers.
+      3. For each machine, calls `fetch_chart_data(machine, start_ts, end_ts, group_by_shift=True)`
+         to retrieve four parallel lists:
+         - `labels`: list of dates (YYYY-MM-DD).
+         - `day_counts`: counts for the day shift.
+         - `afternoon_counts`: counts for the afternoon shift.
+         - `night_counts`: counts for the night shift.
+         - `total_counts`: total counts across all shifts.
+      4. Computes a 7-day moving average of `total_counts`, aligning the averaged labels.
+      5. Builds a `chartdata` list of dictionaries, each containing:
+         - `machine_number`
+         - `labels`
+         - `datasets`: Chart.js configurations for day, afternoon, night, and total series.
+         - `moving_avg`: sub-dictionary with `labels` and `data` for the moving average.
+      6. Updates the context with the bound form and `chartdata`.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object, supporting GET and POST methods.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/shift_totals.html' with context:
+          - `form`: the ShiftTotalsForm (empty or bound).
+          - `chartdata`: list of chart configurations for each machine (if POST and valid).
+    """
     context = {'form': ShiftTotalsForm()}
     if request.method == 'POST':
         form = ShiftTotalsForm(request.POST)
@@ -1756,6 +2314,47 @@ from collections import defaultdict
 import MySQLdb
 
 def get_sc_production_data(request):
+    """
+    Handle SC production data queries and prepare Chart.js context.
+
+    On GET:
+      - Renders the 'prod_query/sc_production.html' template with no chart.
+
+    On POST:
+      1. Reads form fields from `request.POST`:
+         - `asset_num` (str/int): the asset number to query.
+         - `start_date` (str, "YYYY-MM-DD"): start of date range.
+         - `end_date` (str, "YYYY-MM-DD"): end of date range.
+      2. Parses `start_date` and `end_date` into `datetime.date`.
+      3. Connects to the MySQL database `prodrptdb` (host 10.4.1.224) using MySQLdb.
+      4. Executes a query against `sc_production1` to select daily production:
+           `SELECT pdate, actual_produced, shift
+            FROM sc_production1
+            WHERE asset_num = <asset_num>
+              AND pdate BETWEEN '<start_date>' AND '<end_date>'
+            ORDER BY pdate ASC;`
+      5. Aggregates results into a dictionary keyed by date, accumulating:
+         - `'7am-3pm'`, `'3pm-11pm'`, `'11pm-7am'` shift totals
+         - `'grand_total'` across all shifts.
+      6. Prepares Chart.js data structures:
+         - `labels`: list of date strings ("YYYY-MM-DD")
+         - `data_by_shift`: dict mapping each shift (and grand_total) to its list of daily totals.
+      7. Populates `context` with:
+         - `labels`, `data_by_shift`
+         - `asset_num`, `start_date`, `end_date`
+         - `show_chart`: True to signal the template to render the chart.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. Expects POST form fields as described above.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/sc_production.html' with context including
+        chart data on POST, or an empty context on GET.
+    """
     context = {}
 
     if request.method == 'POST':
@@ -1832,6 +2431,44 @@ from datetime import datetime, timedelta
 import MySQLdb
 
 def get_sc_production_data_v2(request):
+    """
+    Retrieve and return weekly SC production data by shift for a given asset.
+
+    On GET:
+      - Renders the 'prod_query/sc_production_v2.html' template with a date-selection form.
+
+    On POST:
+      1. Reads from `request.POST`:
+         - `asset_num` (str/int): the asset number to query.
+         - `selected_date` (str, "YYYY-MM-DD"): any date within the target week.
+      2. Parses `selected_date` into a `datetime.date` and computes the preceding Sunday.
+      3. Defines the production window from Sunday at 11:00 PM through the following Saturday at 11:00 PM.
+      4. Queries the `sc_production1` table for rows where:
+           `asset_num = <asset_num>` AND
+           `pdate BETWEEN <start_date 23:00:00> AND <end_date 23:00:00>`.
+      5. Aggregates `actual_produced` totals per day and per shift:
+         - Shifts: '7am-3pm', '3pm-11pm', '11pm-7am'
+      6. Builds two parallel lists:
+         - `labels`: strings like "YYYY-MM-DD 7am-3pm"
+         - `totals`: corresponding production totals.
+      7. Returns a JSON response:
+           {
+             'selected_date': <week’s reference date>,
+             'labels': [...],
+             'totals': [...]
+           }
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. For POST, expects form fields `asset_num` and `selected_date`.
+
+    Returns
+    -------
+    django.http.HttpResponse or django.http.JsonResponse
+        - On GET: renders the selection form.
+        - On POST: returns JSON with keys `selected_date`, `labels`, and `totals`.
+    """
     if request.method == 'POST':
         asset_num = request.POST.get('asset_num')
         selected_date = request.POST.get('selected_date')
@@ -2438,6 +3075,27 @@ def oa_display(request):
 
 # View for providing machine data
 def get_machine_data(request):
+    """
+    Provide JSON mappings of machine targets and production line assignments.
+
+    Iterates over the global `lines` structure (each containing a `line` name,
+    a list of `operations`, and for each operation, a list of `machines`
+    with `number` and `target`), and builds two dictionaries:
+      - `machine_targets`: maps each machine number (str/int) to its target value.
+      - `line_mapping`: maps each production line name (str) to the list of machine numbers on that line.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request (unused in this view).
+
+    Returns
+    -------
+    django.http.JsonResponse
+        A JSON response with keys:
+          - `machine_targets`: dict of `{ machine_number: target }`
+          - `line_mapping`: dict of `{ line_name: [machine_number, ...] }`
+    """
     # Prepare machine targets and line-to-machine mapping dynamically
     machine_targets = {}
     line_mapping = {}
@@ -2680,6 +3338,43 @@ MACHINE_MAP = {
 from .useful_functions import fetch_prdowntime1_entries
 
 def pr_downtime_view(request):
+    """
+    Provide downtime event details and strokes-per-minute chart data for a given asset.
+
+    Expects HTTP GET with query parameters:
+      - `assetnum` (str): the asset identifier (mapped via MACHINE_MAP if present).
+      - `called4helptime` (str): ISO timestamp "YYYY-MM-DD HH:MM:SS TZ" when help was called.
+      - `completedtime` (str): ISO timestamp "YYYY-MM-DD HH:MM:SS TZ" when downtime was resolved.
+
+    Workflow:
+      1. Validate presence of all three parameters or return HTTP 400.
+      2. Map `assetnum` via `MACHINE_MAP`, defaulting to the original.
+      3. Parse both timestamps into aware `datetime` objects in US/Eastern.
+         On parse error, return HTTP 400 with an error message.
+      4. Convert to Unix timestamps and compute total downtime in minutes.
+      5. Determine an aggregation `interval` to produce up to 250 graph points.
+      6. Retrieve raw downtime entries using `fetch_prdowntime1_entries`.
+      7. Retrieve strokes-per-minute series via `fetch_chart_data`.
+      8. Serialize:
+         - `"data"`: list of dicts with keys `problem`, `called4helptime`, and `completedtime`.
+         - `"chart_data"`: dict with parallel `"labels"` (ISO datetimes) and `"counts"` (int).
+      9. Return a JSON response containing both datasets.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP GET request with required query parameters.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        On success (HTTP 200): 
+          {
+            "data": [ { "problem": str, "called4helptime": str or None, "completedtime": str or None }, … ],
+            "chart_data": { "labels": [str, …], "counts": [int, …] }
+          }
+        On error: JSON with an `"error"` key and appropriate HTTP status (400 or 500).
+    """
     try:
         default_numGraphPoints = 250  # Set default number of graph points
         
@@ -2761,6 +3456,46 @@ def pr_downtime_view(request):
 from django.http import JsonResponse
 
 def total_scrap_view(request):
+    """
+    Return scrap records and totals for a specified scrap line over a 5-day window.
+
+    Expects HTTP GET with query parameters:
+      - `scrap_line` (str): identifier of the scrap line (required).
+      - `start_date` (str): ISO-formatted date or datetime string (with optional 'Z' suffix)
+                            marking the beginning of the 5-day window (required).
+
+    Workflow:
+      1. Validate presence of `scrap_line` and `start_date` or return HTTP 400 with an error.
+      2. Parse `start_date` via `datetime.fromisoformat`, handling a trailing 'Z' as UTC.
+      3. Compute `end_date` as `start_date + 5 days`.
+      4. Query the `tkb_scrap` table for records where:
+           `scrap_line = %s` AND
+           `date_current BETWEEN %s AND %s`
+         ordering by `date_current` ascending.
+      5. Sum the `scrap_amount` column across the returned rows.
+      6. Build a list of dicts for each row with keys:
+         `Id`, `Scrap Part`, `Scrap Operation`, `Scrap Category`,
+         `Scrap Amount`, `Scrap Line`, `Total Cost`, `Date`, `Date Current`.
+      7. Return HTTP 200 JSON:
+         ```json
+         {
+           "total_scrap_amount": <float>,
+           "scrap_data": [ { ... }, ... ]
+         }
+         ```
+      8. On parsing or database errors, return HTTP 400 or 500 with an error message.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request with the required GET parameters.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - On success: contains `total_scrap_amount` and `scrap_data`.
+        - On error: contains an `"error"` key with status 400 or 500.
+    """
     try:
         # Extract and validate GET parameters
         scrap_line = request.GET.get('scrap_line')
@@ -2862,6 +3597,37 @@ def calculate_oa_metrics(data):
 
 @csrf_exempt
 def calculate_oa(request):
+    """
+    Handle OA metric calculations via a JSON POST request.
+
+    This view accepts POST requests with a JSON body containing the input data
+    required by the `calculate_oa_metrics` utility function. It returns the
+    computed metrics as a JSON response.
+
+    Workflow
+    --------
+    1. Ensure the request method is POST; otherwise return HTTP 405.
+    2. Read and parse `request.body` as JSON; on parse error, return HTTP 400.
+    3. Pass the parsed data dict to `calculate_oa_metrics`; on validation error
+       (ValueError), return HTTP 400 with the error message.
+    4. On success, log and return the resulting metrics dict as JSON (HTTP 200).
+    5. Catch any other exceptions and return HTTP 500 with an error message.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. For POST, expects a JSON payload in the body
+        matching the input schema for `calculate_oa_metrics`.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - On success: the metrics dict returned by `calculate_oa_metrics`.
+        - On JSON decode error: `{'error': 'Invalid JSON format'}`, HTTP 400.
+        - On validation error: `{'error': <message>}`, HTTP 400.
+        - On unexpected error: `{'error': <message>}`, HTTP 500.
+        - On non-POST method: `{'error': 'Invalid request method'}`, HTTP 405.
+    """
     if request.method == 'POST':
         try:
             # Parse input data
@@ -3012,6 +3778,29 @@ from datetime import datetime, timedelta
 
 
 def get_month_start_and_end(selected_date):
+    """
+    Calculate the reporting window start and end datetimes for a given month.
+
+    The start time is set to 11:00 PM local time on the day before the first of the month,
+    except when the first of the month falls on a Sunday—in that case, it uses 11:00 PM
+    on that Sunday itself.
+
+    The end time is:
+      - If `selected_date` is in the current month and year: the current moment
+        (with seconds and microseconds zeroed out).
+      - Otherwise: 11:00 PM on the last day of the selected month.
+
+    Parameters
+    ----------
+    selected_date : datetime.datetime
+        Any datetime within the month for which the start/end window should be calculated.
+
+    Returns
+    -------
+    tuple of (datetime.datetime, datetime.datetime)
+        - start_date: The lower bound of the reporting window.
+        - end_date:   The upper bound of the reporting window.
+    """
     today = datetime.now()
     first_day_of_month = selected_date.replace(day=1)
     if first_day_of_month.weekday() == 6:
@@ -3029,6 +3818,31 @@ def get_month_start_and_end(selected_date):
 
 
 def get_sunday_to_friday_ranges(first_day, last_day):
+    """
+    Split a date window into contiguous Sunday-to-Friday sub-ranges.
+
+    Starting from `first_day`, this function finds the first Friday on or after
+    the start, then produces:
+      1. An initial partial range from `first_day` up to that first Friday at 23:00.
+      2. Full weeks from each subsequent Sunday at 23:00 through the following Friday at 23:00.
+      3. A final partial range from the last Sunday before or on `last_day` at 23:00
+         up to `last_day` (if it does not already end on a Friday range).
+
+    All datetimes in the returned ranges have their time components set to 23:00:00.
+
+    Parameters
+    ----------
+    first_day : datetime.datetime
+        The start of the overall window.
+    last_day : datetime.datetime
+        The end of the overall window.
+
+    Returns
+    -------
+    list of tuple(datetime.datetime, datetime.datetime)
+        A list of `(start, end)` tuples covering every day from `first_day` to
+        `last_day`, segmented into Sunday-through-Friday blocks as described.
+    """
     ranges = []
     first_friday = first_day
     while first_friday.weekday() != 4:
@@ -3055,6 +3869,42 @@ def get_sunday_to_friday_ranges(first_day, last_day):
 
 
 def fetch_downtime_by_date_ranges(machine, date_ranges, downtime_threshold=5, machine_parts=None):
+    """
+    Retrieve downtime metrics for a machine over specified time windows.
+
+    Iterates over each (start, end) datetime pair in `date_ranges`, converts them
+    to epoch timestamps, and calls `calculate_downtime` to compute total downtime
+    (in minutes) exceeding the given threshold. Also computes the total potential
+    operating minutes for each interval.
+
+    Parameters
+    ----------
+    machine : str
+        Identifier of the machine to analyze.
+    date_ranges : list of tuple(datetime.datetime, datetime.datetime)
+        List of (start, end) intervals over which to fetch downtime data.
+    downtime_threshold : int, optional
+        Minimum contiguous minutes of inactivity to count as downtime.
+        Defaults to 5 minutes.
+    machine_parts : Any, optional
+        Additional machine-part configuration to pass through to
+        `calculate_downtime`. Defaults to None.
+
+    Returns
+    -------
+    list of dict
+        A list of results, one per interval, each containing:
+          - 'start' (datetime.datetime): interval start
+          - 'end' (datetime.datetime): interval end
+          - 'downtime' (float): total downtime in minutes
+          - 'potential_minutes' (int): total possible operating minutes in the interval
+
+    Raises
+    ------
+    RuntimeError
+        If any database or calculation error occurs during processing. The
+        original exception message will be included.
+    """
     downtime_results = []
     try:
         with connections['prodrpt-md'].cursor() as cursor:
@@ -3087,6 +3937,27 @@ def calculate_potential_minutes(start, end):
 
 
 def calculate_percentage_week(potential_minutes):
+    """
+    Format a duration in minutes as a percentage of a full work week.
+
+    If the provided `potential_minutes` equals a full week (7200 minutes),
+    returns a string indicating “Full Week.” Otherwise, computes the percentage
+    of the full week that `potential_minutes` represents, rounded to the nearest
+    whole percent, and returns it alongside the original minute count.
+
+    Parameters
+    ----------
+    potential_minutes : int
+        The number of minutes to compare against a full work week (7200 minutes).
+
+    Returns
+    -------
+    str
+        A formatted string in one of two forms:
+          - "{potential_minutes} (Full Week)" if equal to 7200.
+          - "{potential_minutes} ({percentage}%)" otherwise, where
+            `percentage` is the integer percentage of 7200.
+    """
     full_week_minutes = 7200
     if potential_minutes == full_week_minutes:
         return f"{potential_minutes} (Full Week)"
@@ -3095,6 +3966,34 @@ def calculate_percentage_week(potential_minutes):
 
 
 def fetch_production_by_date_ranges(machine, machine_parts, date_ranges):
+    """
+    Sum total production for a machine over specified time intervals.
+
+    Iterates through each (start, end) tuple in `date_ranges`, converts them
+    to epoch timestamps, and accumulates the production counts returned by
+    `calculate_total_produced`.
+
+    Parameters
+    ----------
+    machine : str
+        The identifier of the machine whose production is measured.
+    machine_parts : Any
+        Configuration or filter details for specific machine parts, passed to
+        `calculate_total_produced`.
+    date_ranges : list of tuple(datetime.datetime, datetime.datetime)
+        A sequence of (start, end) intervals defining the periods to query.
+
+    Returns
+    -------
+    int or float
+        The aggregated production count across all provided intervals.
+
+    Raises
+    ------
+    RuntimeError
+        If a database error or calculation failure occurs, with the original
+        exception message included.
+    """
     total_production = 0
     try:
         with connections['prodrpt-md'].cursor() as cursor:

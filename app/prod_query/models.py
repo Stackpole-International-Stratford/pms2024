@@ -8,6 +8,35 @@ from django.core.exceptions import ValidationError
 
 
 class Weekly_Production_Goal(models.Model):
+    """
+    Define a weekly production target for a given part.
+
+    Fields
+    ------
+    part_number : str
+        Identifier of the part (e.g., "555-22").
+    week : int
+        ISO week number (1–53) for which this goal applies.
+    year : int
+        Four-digit year of the goal.
+    goal : int
+        Target production quantity for that week.
+
+    Methods
+    -------
+    __str__()
+        Returns a human-readable description in the format:
+        "{part_number}, week of: YYYY-MM-DD" where the date is the Sunday
+        of the specified ISO week and year.
+
+    Meta
+    ----
+    ordering : list
+        Default ordering by descending year, then descending week.
+    unique_together : tuple (commented out)
+        Intended to enforce one record per (part_number, week, year), but
+        currently disabled due to a migration conflict.
+    """
     part_number = models.CharField(max_length=20)
     week = models.IntegerField()
     year = models.IntegerField()
@@ -33,6 +62,36 @@ class Weekly_Production_Goal(models.Model):
 
 
 class OAMachineTargets(models.Model):
+    """
+    Store production targets for machines, with support for soft deletion and comment validation.
+
+    Fields
+    ------
+    machine_id : str
+        Identifier of the machine.
+    effective_date_unix : int
+        Unix epoch timestamp when this target takes effect.
+    target : int
+        Production target value.
+    line : str, optional
+        Production line identifier (nullable).
+    part : str, optional
+        Part identifier associated with this target (nullable).
+    comment : str, optional
+        Free-form comment; must not exceed 100 words.
+    isDeleted : bool
+        Soft-delete flag (False = visible, True = hidden).
+    created_at : datetime
+        Timestamp when the record was created (auto-populated).
+
+    Methods
+    -------
+    clean()
+        Ensures that `comment`, if provided, does not exceed 100 words.
+    __str__()
+        Returns a human-readable summary:
+        "Machine {machine_id}, Target {target}, Line {line}, Effective {effective_date_unix}".
+    """
     machine_id = models.CharField(max_length=50)
     effective_date_unix = models.BigIntegerField()
     target = models.IntegerField()

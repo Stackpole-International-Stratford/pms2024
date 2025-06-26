@@ -4,6 +4,14 @@ from django.core.exceptions import ValidationError
 from django.forms.widgets import DateInput, TimeInput
 
 class WeeklyProdDate(forms.Form):
+  """
+  Form for selecting a production date, typically used to filter or generate weekly reports.
+
+  Fields
+  ------
+  date : datetime.date
+      The chosen date, rendered as an HTML <input type="date"> widget.
+  """
   date = forms.DateField(widget = DateInput(
             attrs={
                 'class': '', 
@@ -122,6 +130,18 @@ class MachineInquiryForm(forms.Form):
 
 
 class ShiftTotalsForm(forms.Form):
+    """
+    Form for specifying a machine and date range to calculate shift totals.
+
+    Fields
+    ------
+    machine_number : str
+        Identifier of the machine to aggregate shift data for.
+    start_date : datetime.date
+        The start date of the period (rendered as an HTML <input type="date">).
+    end_date : datetime.date
+        The end date of the period (rendered as an HTML <input type="date">).
+    """
     machine_number = forms.CharField(label='Machine Number', max_length=100)
     start_date = forms.DateTimeField(label='Start Date', widget=forms.DateTimeInput(attrs={'type': 'date'}))
     end_date = forms.DateTimeField(label='End Date', widget=forms.DateTimeInput(attrs={'type': 'date'}))
