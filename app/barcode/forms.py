@@ -1,6 +1,13 @@
 from django import forms
 
 class BarcodeScanForm(forms.Form):
+    """Form for entering a single barcode scan.
+
+    Attributes:
+        barcode (str): The scanned barcode string. Renders as a text input
+            with autofocus enabled and is not required (can be empty).
+
+    """
     barcode = forms.CharField(widget=forms.TextInput(attrs={'autofocus': 'autofocus'}), required=False)
 
     def clean_barcode(self):
@@ -8,6 +15,12 @@ class BarcodeScanForm(forms.Form):
         return data
 
 class BatchBarcodeScanForm(forms.Form):
+    """Form for entering multiple barcode scans in a batch.
+
+    Attributes:
+        barcodes (str): Newline-separated barcode strings. Renders as a textarea
+            and is optional (can be left empty).
+    """
     barcodes = forms.CharField(widget=forms.Textarea(), required=False)
 
     def clean_barcodes(self):
@@ -15,6 +28,17 @@ class BatchBarcodeScanForm(forms.Form):
         return data
 
 class UnlockCodeForm(forms.Form):
+    """Form for submitting an unlock code along with employee identification and a reason.
+
+    Fields:
+        employee_id (str): The ID of the employee entering the unlock code (3–10 chars).
+        unlock_code (str): The three‐character unlock code provided after a duplicate scan.
+        reason (str): A radio‐select choice indicating why the duplicate occurred.
+        other_reason (str): An optional free‐text reason, required if "Other" is selected.
+
+    Validation:
+        - Ensures `other_reason` is non‐empty when `reason == 'other'`.
+    """
     REASON_CHOICES = [
         ('a', 'Unsure, part scrapped'),
         ('b', 'One part scanned twice'),
