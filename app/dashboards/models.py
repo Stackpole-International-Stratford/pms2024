@@ -3,6 +3,17 @@ from django.db import models
 # Create your models here.
 
 class ShiftPoint(models.Model):
+    """A set of display messages (“shift points”) for a given TV number.
+
+    Each `ShiftPoint` holds up to four text strings that are shown in sequence
+    on the designated display (identified by `tv_number`). If no `points` are
+    provided, a default list of four placeholder messages is populated on save.
+
+    Attributes:
+        tv_number (int): The identifier of the TV/display.
+        points (List[str]): A JSON list of up to four text messages for the shift.
+        last_updated (datetime): Timestamp auto‐updated whenever the record is saved.
+    """
     tv_number = models.IntegerField()
     points = models.JSONField(default=list)  # Storing points as a list of strings
     last_updated = models.DateTimeField(auto_now=True)

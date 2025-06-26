@@ -39,6 +39,22 @@ class sup_downForm(forms.Form):
 
 
 def pms_index_view(request):
+    """Render the PMDSData12 index page, collecting metadata from each installed app.
+
+    Iterates over `settings.INSTALLED_APPS`, skipping Django internals and specified
+    middleware/apps. For each remaining app, it attempts to import `<app>.app_info` and,
+    if a `get_app_info()` function is present, calls it and collects its result.
+    Finally, renders `index_pms.html` with:
+      - `main_heading`: "PMDSData12 Index"
+      - `title`: "Index - pmdsdata12"
+      - `app_infos`: List of metadata objects returned by each app's `get_app_info()`.
+
+    Args:
+        request (HttpRequest): The incoming request object.
+
+    Returns:
+        HttpResponse: The rendered index page with the collected app information.
+    """
     context = {}
     context["main_heading"] = "PMDSData12 Index"
     context["title"] = "Index - pmdsdata12"
@@ -73,6 +89,20 @@ def dashboard_index_view(request):
 
 
 def stamp_shift_start():
+    """Compute the Unix timestamps and durations for the current 8-hour shift.
+
+    Determines which 8-hour shift block the local time falls into:
+      - 06:00–14:00
+      - 14:00–22:00
+      - 22:00–06:00 (overnight)
+
+    Returns:
+        tuple:
+            u (int): Unix timestamp at the start of the current shift.
+            shift_time (int): Number of seconds elapsed since the shift started.
+            shift_left (int): Number of seconds remaining until the shift ends.
+            shift_end (int): Unix timestamp at the end of the current shift.
+    """
     stamp = int(time.time())
     tm = time.localtime(stamp)
     hour1 = tm[3]
@@ -104,6 +134,26 @@ def stamp_shift_start():
 
 
 def stamp_shift_start_3():
+    """Calculate the start, elapsed, remaining, and end times for 8-hour shifts.
+
+    This uses a three-shift schedule with local start times at:
+      - 07:00–15:00
+      - 15:00–23:00
+      - 23:00–07:00 (overnight)
+
+    It determines the current shift based on the local hour, then computes:
+      - `u`: Unix timestamp at the shift’s start
+      - `shift_time`: seconds elapsed since `u`
+      - `shift_left`: seconds remaining until the 8-hour shift ends
+      - `shift_end`: Unix timestamp at the shift’s end
+
+    Returns:
+        tuple[int, int, int, int]:
+            u (int): Shift start timestamp.
+            shift_time (int): Seconds elapsed in current shift.
+            shift_left (int): Seconds remaining in current shift.
+            shift_end (int): Shift end timestamp.
+    """
     stamp = int(time.time())
     tm = time.localtime(stamp)
     hour1 = tm[3]
@@ -157,6 +207,37 @@ below applies to all these dashboard views
 # args csrf token and form
 """
 def get_line_prod(line_spec, line_target, parts, shift_start, shift_time):
+    """Compute current and predicted production metrics for each machine and operation.
+
+    Queries the GFxPRoduction table to get counts over two intervals:
+      1. The last 5 minutes (for short‐term rate/color coding).
+      2. Since the start of the shift (for cumulative and prediction).
+
+    It then:
+      - Calculates `prod_last_five` and `prod_now` per machine (applying any scale factor).
+      - Estimates `predicted_production` for the 8-hour shift based on current rate.
+      - Determines a `cell_colour` based on how the last‐five‐minute output compares to the per-machine target.
+      - Aggregates predicted production by `operation`.
+
+    Args:
+        line_spec (list of tuple): Machine specifications. Each tuple is:
+            (asset, sources, machine_rate, operation[, scale]) where:
+            - asset (str): identifier on the dashboard,
+            - sources (iterable): list of machine IDs in the DB,
+            - machine_rate (int): number of machines contributing to the line’s target,
+            - operation (int): index for grouping results,
+            - scale (float, optional): multiplier for counts (default=1).
+        line_target (int | float): Total production goal for the entire line over the shift.
+        parts (str): SQL fragment for `AND Part IN (…)` or empty string for no filter.
+        shift_start (int): Unix timestamp marking the start of the current shift.
+        shift_time (int): Seconds elapsed since `shift_start`.
+
+    Returns:
+        tuple:
+            machine_production (list of tuple): One tuple per machine:
+                (asset, prod_now, cell_colour, predicted_production, operation, machine_rate)
+            operation_production (list of int): Predicted production aggregated by operation index.
+    """
     cursor = connections['prodrpt-md'].cursor()
 
     sql =  'SELECT Machine, COUNT(*) '
@@ -255,6 +336,42 @@ def get_line_prod(line_spec, line_target, parts, shift_start, shift_time):
 
 # this version returns an expanded OP structure with colors
 def get_line_prod2(line_spec, line_target, parts, shift_start, shift_time):
+    """Compute detailed production metrics with color‐coding for machines and operations.
+
+    Retrieves counts from the GFxPRoduction table for both:
+      - The last 5 minutes (for real‐time color thresholds), and
+      - Since the shift start (for cumulative and prediction).
+
+    For each machine in `line_spec`, it calculates:
+      1. `prod_last_five` and `prod_now` (applying an optional scale factor).
+      2. A `predicted_production` value for the full 8‐hour shift based on current rate.
+      3. A `cell_colour` based on how the last‐five‐minute output compares to the per‐machine target.
+
+    Then aggregates predicted production by `operation` and applies color thresholds
+    at the operation level to produce an “expanded OP” structure.
+
+    Args:
+        line_spec (list of tuple):
+            Each tuple defines a machine:
+               (asset, source, machine_rate, operation[, scale])
+        line_target (int | float):
+            Total production goal across all machines for the shift.
+        parts (str):
+            SQL fragment for filtering `Part IN (…)`, or empty string for no filter.
+        shift_start (int):
+            Unix timestamp marking the shift’s start.
+        shift_time (int):
+            Seconds elapsed since `shift_start`.
+
+    Returns:
+        tuple:
+            machine_production (list of tuple):
+                One entry per machine:
+                (asset, prod_now, cell_colour, predicted_production, operation, machine_rate)
+            coloured_op_production (list of tuple):
+                Indexed by operation, each value is:
+                (aggregated_predicted_production, color) for that operation.
+    """
     cursor = connections['prodrpt-md'].cursor()
 
     sql =  'SELECT Machine, COUNT(*) '
@@ -358,6 +475,32 @@ def get_line_prod2(line_spec, line_target, parts, shift_start, shift_time):
 
 @cache_page(5)
 def cell_track_9341(request, target):
+    """Display real-time and predictive production metrics for cell 9341 (and 0455) with caching.
+
+    Retrieves shift timing, production targets, and site variables, then:
+      1. Computes the current shift start, elapsed, remaining, and end times.
+      2. Fetches last-5-minute and cumulative production for part family "50-9341" 
+         using `get_line_prod2()`, and logs shift counts via `log_shift_times()`.
+      3. Computes per-operation actual output and OEE metrics with `compute_op_actual_and_oee()`.
+      4. Repeats steps 2–3 for part family "50-0455".
+      5. Handles optional date/shift history submission via `sup_downForm`.
+      6. Stores run rate and computes color codes for overall cell performance.
+      7. Renders the appropriate template (`dashboards/cell_track_9341.html`) based on `target`.
+
+    Caching:
+        The page is cached for 5 seconds to reduce database load under rapid refresh.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request containing session and POST data.
+        target (str): Display mode indicator (e.g. 'tv', 'mobile') to select the template styling.
+
+    Returns:
+        HttpResponse: Rendered dashboard page with context containing:
+            - 'codes', 'codes_60': per-machine production tuples
+            - 'op', 'op_60': per-operation production/color tuples
+            - 'op_actual', 'op_oee', 'op_actual_60', 'op_oee_60': actual/output and OEE metrics
+            - Shift timing, run rate, WIP lists, color codes, and history form args.
+    """
     tic = time.time()  # track the execution time
     context = {}  # data sent to template
     context['page_title'] = '9341 Tracking'
@@ -515,6 +658,35 @@ def cell_track_9341(request, target):
 
 @cache_page(5)
 def cell_track_1467(request, template):
+    """Display real-time and cumulative production metrics for cell 1467 with short-term caching.
+
+    This view performs the following steps:
+      1. Retrieves the shift start and elapsed times via `stamp_shift_start()`.
+      2. Reads the production target for part family "50-1467" from `request.site_variables`.
+      3. Defines the line specification for machines 644–649.
+      4. Calls `get_line_prod()` to fetch last-5-minute and shift-to-date counts, plus predictions.
+      5. Logs shift counts via `log_shift_times()`.
+      6. Assembles context variables:
+         - `codes`: per-machine production tuples
+         - `actual_counts`: time-series data for charting
+         - `op`: per-operation aggregated production
+         - `wip`: work-in-progress list (empty by default)
+         - `args`: form arguments for history lookup
+         - `runrate`: stored run-rate value
+         - `elapsed`: view execution time
+      7. On POST, captures date/shift for history and renders a redirect template.
+      8. Otherwise, renders the specified dashboard template under `dashboards/`.
+
+    Caching:
+        The output is cached for 5 seconds via `@cache_page(5)` to reduce load under frequent reloads.
+
+    Args:
+        request (HttpRequest): Incoming request, including session and POST data.
+        template (str): Filename of the dashboard template (e.g. 'cell_track_1467.html').
+
+    Returns:
+        HttpResponse: The rendered dashboard page or a history‐redirect page on POST.
+    """
     tic = time.time()  # track the execution time
     context = {}  # data sent to template
 
@@ -564,6 +736,33 @@ def cell_track_1467(request, template):
 
 @cache_page(5)
 def cell_track_trilobe(request, template):
+    """Display real-time and predictive production and OEE metrics for the Trilobe cell line.
+
+    Caches the view for 5 seconds to reduce load under frequent refresh.
+
+    Workflow:
+      1. Reads four production targets from `request.site_variables`:
+         - `target_production_trilobe_sinter`
+         - `target_production_trilobe_optimized`
+         - `target_production_trilobe_trilobe`
+         - `target_production_trilobe_optimized` (again, if configured)
+      2. Uses `stamp_shift_start_3()` to determine the current 8-hour shift start, elapsed time, etc.
+      3. For each of four column specifications (`line_spec_col_1` through `line_spec_col_4`):
+         a. Calls `get_line_prod()` to fetch last-5-minute and shift-to-date counts plus predictions.  
+         b. Logs shift counts via `log_shift_times()`.  
+         c. Computes per-operation actual output and OEE metrics via `compute_op_actual_and_oee()`.  
+         d. Populates context keys:
+             - `codes_colN`, `actual_counts_colN`, `op_colN`, `op_actual_colN`, `op_oee_colN`, `wip_colN`
+      4. On POST, captures `date_st` and `shift` into the session and renders a history-redirect template.
+      5. Measures total execution time and passes it in context.
+
+    Args:
+        request (HttpRequest): The incoming request, including session, site variables, and POST data.
+        template (str): The name of the dashboard template to render (e.g. `'cell_track_trilobe.html'`).
+
+    Returns:
+        HttpResponse: The rendered dashboard page with context containing production metrics, OEE, timing, and history form.
+    """
     tic = time.time()  # track the execution time
     context = {}  # data sent to template
 
@@ -946,6 +1145,25 @@ def cell_track_trilobe(request, template):
 
 
 def track_graph_track(request, index):
+    """Generate and display a time-series production graph for a single machine during the shift.
+
+    This view:
+    1. Sets a human-readable description in `session['track_track']`.
+    2. Looks up the machine’s rate and part family (`prt`) from a hard-coded list based on `index`.
+    3. Computes the effective per-second production rate from the 8-hour target.
+    4. Stores the machine asset in several session keys (`asset1_area`, etc.).
+    5. Determines the current shift window using `session['shift_start']` and a fixed 8-hour duration.
+    6. Calls `track_data(request, end_time, start_time, prt, rate)` to retrieve the graph points.
+    7. Renders the `"dashboards/graph_track_track.html"` template with the context key `'GList'`.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request, which must include
+            `session['shift_start']` (Unix timestamp for shift start).
+        index (str): The machine identifier to track (used to select rate and part).
+
+    Returns:
+        HttpResponse: Renders the graph template with context `{'GList': gr_list}`.
+    """
     prt = '50-9341'
     request.session['track_track'] = 'Shift Track for Machine ' + str(index)
 
@@ -1079,6 +1297,17 @@ def Graph_Data(t, u, machine, tmp, multiplier):
 
 
 def stamp_pdate4(stamp):
+    """Format a Unix timestamp into a zero-padded 'HH:MM' time string.
+
+    Converts the given Unix timestamp to local time and returns the hour and
+    minute, each left-padded with a '0' if necessary, in the format 'HH:MM'.
+
+    Args:
+        stamp (int): Unix timestamp (seconds since epoch).
+
+    Returns:
+        str: Local time formatted as 'HH:MM'.
+    """
     tm = time.localtime(stamp)
     ma = ''
     da = ''
@@ -1122,6 +1351,35 @@ from .models import ShiftPoint
 
 @login_required(login_url="login")
 def list_and_update_shift_points(request):
+    """Display, add, update, or delete ShiftPoint entries based on TV number selection.
+
+    **GET**:
+        - Renders a list of all `ShiftPoint` objects.
+        - If `tv_number` is provided in the query string, highlights the selected entry.
+    
+    **POST**:
+        - **add_tv**:  
+          Creates a new `ShiftPoint` with default points, assigning the next available `tv_number`,  
+          then redirects to select the newly created entry.
+        - **update_tv**:  
+          Updates the `points` list of the specified `ShiftPoint` (by `update_tv_number`),  
+          saving any changes and redirecting with a confirmation flag.
+        - **delete_tv**:  
+          Deletes the specified `ShiftPoint`, then decrements the `tv_number` of all subsequent entries  
+          to maintain a continuous sequence, and redirects back to the list view.
+
+    Args:
+        request (HttpRequest): Incoming request, optionally containing:
+            - `GET['tv_number']`: TV number of the entry to select.
+            - `POST['add_tv']`, `POST['update_tv_number']`, or `POST['delete_tv_number']`.
+
+    Returns:
+        HttpResponse: Renders `dashboards/list_and_update_shift_points.html` with context:
+            - `shift_points`: all `ShiftPoint` objects.
+            - `selected_shift_point`: the currently selected entry (if any).
+            - `selected_tv_number`: the selected TV number.
+            - `new_tv_number`: the number assigned to a newly created entry (if added).
+    """
     selected_tv_number = request.GET.get('tv_number')
     shift_points = ShiftPoint.objects.all()
     selected_shift_point = None
@@ -1177,6 +1435,21 @@ def list_and_update_shift_points(request):
 
 
 def display_shift_points(request, tv_number):
+    """Render the list of shift points for a specific TV number.
+
+    Retrieves the `ShiftPoint` instance matching the provided `tv_number`, extracts its
+    `points` list, and renders the `display_shift_points.html` template with both the
+    model instance and the list of points.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request.
+        tv_number (int): The TV number identifying which `ShiftPoint` to display.
+
+    Returns:
+        HttpResponse: Renders `dashboards/display_shift_points.html` with context:
+            - `shift_point`: the `ShiftPoint` instance
+            - `shift_points`: list of strings representing the shift points
+    """
     shift_point = get_object_or_404(ShiftPoint, tv_number=tv_number)
     shift_points = shift_point.points
     return render(request, 'dashboards/display_shift_points.html', {'shift_point': shift_point, 'shift_points': shift_points})
@@ -1204,6 +1477,18 @@ LINE_TO_MACHINES = {
 
 
 def get_db_connection():
+    """Establish and return a MySQL database connection using configured settings.
+
+    Reads the hostname, username, password, and database name from Django settings
+    (`NEW_HOST`, `DAVE_USER`, `DAVE_PASSWORD`, `DAVE_DB`) and opens a connection
+    via MySQLdb.
+
+    Returns:
+        MySQLdb.connections.Connection: A new MySQL database connection.
+
+    Raises:
+        MySQLdb.Error: If the connection cannot be established.
+    """
     return MySQLdb.connect(
         host=settings.NEW_HOST,
         user=settings.DAVE_USER,
@@ -1213,6 +1498,26 @@ def get_db_connection():
 
 
 def fetch_pie_chart_data(machine):
+    """Retrieve 24-hour production and reject counts with percentage breakdown and color coding.
+
+    Connects to the GFxPRoduction table to count “good” and “reject” entries for the given
+    machine (and its “REJ” suffix) over the last 24 hours. Computes the overall total,
+    the percentage share of each category, and chooses a Bootstrap text color class
+    based on the reject rate.
+
+    Args:
+        machine (str): Identifier of the machine whose production to analyze.
+
+    Returns:
+        dict: {
+            "total" (int): Sum of good + reject counts,
+            "grades" (dict[str, int]): {"Good": good_count, "Reject": reject_count},
+            "percentages" (dict[str, float]): {"Good": good_pct, "Reject": reject_pct},
+            "failures_total" (int): Same as reject_count,
+            "reject_color" (str): Bootstrap text class based on reject_pct
+                ("text-success" if <2.5%, "text-warning" if <5%, else "text-danger")
+        }
+    """
     now = datetime.now()
     cutoff = now.timestamp() - 24 * 3600
     conn = get_db_connection()
@@ -1264,6 +1569,43 @@ def fetch_pie_chart_data(machine):
 
 
 def fetch_weekly_data_for_machine(machine):
+    """Retrieve 7-day production and reject statistics for a machine in 8-hour intervals.
+
+    This function:
+      1. Defines the start of the 7-day window (midnight 7 days ago).
+      2. Iterates over each day and 8-hour block (00:00–08:00, 08:00–16:00, 16:00–24:00),
+         skipping any blocks that start in the future.
+      3. For each block, queries the GFxPRoduction table for both the machine’s “good”
+         records and its rejects (machine identifier suffixed with "REJ").
+      4. Builds a `breakdown` list of dictionaries containing:
+         - `"interval_start"`: formatted block start time
+         - `"interval_end"`: formatted block end time
+         - `"total_count"`: sum of good + rejects
+         - `"grade_counts"`: nested dict with `"Good"` and `"Reject"` each as
+            `"count (percentage%)"`
+      5. Rolls up totals across all blocks to compute:
+         - `total_count_last_7_days`
+         - `grade_counts_last_7_days` with formatted `"count (percentage%)"` per category
+
+    Args:
+        machine (str): Identifier of the machine to analyze.
+
+    Returns:
+        dict: {
+            "asset": machine,
+            "total_count_last_7_days": int,
+            "grade_counts_last_7_days": {
+                "Good": "count (pct%)",
+                "Reject": "count (pct%)"
+            },
+            "breakdown_data": list of {
+                "interval_start": str,
+                "interval_end": str,
+                "total_count": int,
+                "grade_counts": {"Good": str, "Reject": str}
+            }
+        }
+    """
     now = datetime.now()
     start_dt = (now - timedelta(days=7)).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -1334,6 +1676,27 @@ def fetch_weekly_data_for_machine(machine):
 
 
 def rejects_dashboard(request, line):
+    """Display a rejects‐focused dashboard for a specified production line.
+
+    Looks up the list of machine identifiers for the given `line` from `LINE_TO_MACHINES`,
+    then for each machine:
+      1. Fetches weekly production and reject breakdown via `fetch_weekly_data_for_machine()`.
+      2. Fetches 24-hour pie chart data via `fetch_pie_chart_data()`.
+      3. Embeds the pie data into the weekly stats.
+
+    The aggregated data is JSON-encoded and passed to the `"dashboards/rejects_dashboard.html"` template.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request.
+        line (str): Key identifying the production line (e.g. `"10R80"`).
+
+    Returns:
+        HttpResponse: Renders the rejects dashboard template with context:
+            `{"json_data": <pretty-printed JSON of per-machine stats>}`.
+
+    Raises:
+        Http404: If `line` is not defined in `LINE_TO_MACHINES`.
+    """
     """
     Renders the dashboard for a given line (e.g. 10R80),
     which internally shows machines defined in LINE_TO_MACHINES[line].
@@ -1357,6 +1720,25 @@ def rejects_dashboard(request, line):
 
 
 def rejects_dashboard_finder(request):
+    """Render a line‐selection page or redirect to the rejects dashboard for that line.
+
+    On **GET**:
+      - Displays a list of available production lines (keys of `LINE_TO_MACHINES`) 
+        via the `"dashboards/rejects_dashboard_finder.html"` template.
+
+    On **POST**:
+      - Reads the selected `line` from `request.POST`.
+      - If valid, redirects to the `rejects_dashboard_by_line` view, passing `line` as a URL argument.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request, which on POST should include
+            a `"line"` form field matching one of the available lines.
+
+    Returns:
+        HttpResponse: 
+          - On GET, renders the finder template with context `{"lines": lines}`.
+          - On valid POST, returns an `HttpResponseRedirect` to the line’s rejects dashboard.
+    """
     lines = list(LINE_TO_MACHINES.keys())   # ["10R80", "AB1V", …]
     if request.method == "POST":
         chosen = request.POST.get("line")
@@ -1393,6 +1775,27 @@ machines_requiring_part_list = [
     ]
 
 def log_shift_times(shift_start, shift_time, actual_counts, part_list):
+    """Calculate per-machine completion percentages against shift targets.
+
+    Converts the shift start timestamp to local datetime, computes elapsed time,
+    and for each machine in `actual_counts`, retrieves its raw shift target via
+    `get_machine_target()`. If `part_list` is provided and the machine requires it,
+    uses the raw target directly; otherwise scales the target by elapsed time
+    over an 8-hour shift. Returns each machine’s actual count as a percentage
+    of its target or "N/A" if no valid target exists.
+
+    Args:
+        shift_start (int): Unix timestamp marking the beginning of the shift.
+        shift_time (int): Seconds elapsed since `shift_start`.
+        actual_counts (list[tuple[str, int]]): List of `(machine_id, count)` pairs.
+        part_list (list[str] | None): List of part numbers for machines that need
+            a part-specific target lookup; use `None` if not applicable.
+
+    Returns:
+        list[tuple[str, int | str]]: For each machine, a tuple of
+        `(machine_id, percentage)` where `percentage` is an integer
+        percent of target completion or `"N/A"` if no target was found.
+    """
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
 
@@ -2643,6 +3046,33 @@ def get_cycle_time_seconds(
     part: Optional[Union[str, List[str]]] = None,
     as_of_epoch: Optional[int] = None,
 ) -> Optional[float]:
+    """Retrieve the cycle time (seconds per part) for a machine, optionally across multiple parts.
+
+    If `part` is a list of part numbers, this function calls itself for each part and
+    returns the maximum cycle time among them. Otherwise, it queries the
+    `OAMachineTargets` model for the most recent target (by `effective_date_unix`)
+    where `machine_id` matches and `effective_date_unix` is on or before `as_of_epoch`.
+
+    For single-part lookups:
+      - If `part` is provided, filters targets by that part.
+      - If `part` is `None` or omitted, filters for entries where `part__isnull=True`.
+      - Returns `None` if no valid target row is found or if `row.target <= 0`.
+      - Otherwise computes `seconds = _SECONDS_PER_WEEK_7200 / row.target`.
+
+    Debug prints can be enabled by uncommenting the `print` calls; e.g., for
+    `machine_id == "1703L"`.
+
+    Args:
+        machine_id (str): Identifier of the machine to look up in `OAMachineTargets`.
+        part (str | list[str], optional): A single part number or a list of parts.
+            If a list, the max cycle time across those parts is returned.
+        as_of_epoch (int, optional): Unix timestamp cutoff; only targets with
+            `effective_date_unix <= as_of_epoch` are considered. Defaults to now.
+
+    Returns:
+        float | None: The cycle time in seconds (seconds per part), or `None` if
+        no valid target is found.
+    """
     """
     If `part` is a list of strings, return the *max* cycle time among those parts.
     Otherwise, behave exactly as before. Adds debug prints when machine_id == "1703L".
@@ -2842,6 +3272,49 @@ ALIASES: Dict[str, List[str]] = {
 
 
 def dashboard_current_shift(request, pages: str):
+    """Render a live‐updating shift dashboard for one or two programs with efficiency coloring.
+
+    Splits the `pages` argument on “&” to allow one or two program names (e.g. “programA” or
+    “programA&programB”), validates against the `PAGES` configuration, and returns a
+    400‐BadRequest if the format is invalid or if any program is unknown.
+
+    For each requested program, this view:
+      1. Determines the 8-hour shift boundaries in Eastern Time (day/afternoon/night)
+         based on a program-specific base hour.
+      2. Converts those boundaries to UTC timestamps for database queries.
+      3. Builds a set of machines (including expanded sources for any aliases) and
+         captures their part groupings.
+      4. Runs two SQL aggregations against `GFxPRoduction` to get per-machine, per-part
+         counts for the full shift and the last 5 minutes.
+      5. Calls `compute_part_durations_for_machine` to fetch part run durations over both intervals.
+      6. Annotates each “cell” in the program template with:
+         - Cumulative and recent piece counts
+         - Cycle time(s) and “smart” targets
+         - Shift-long and 5-min efficiencies
+         - A color code based on recent efficiency
+      7. Constructs alias cells by summing metrics across their source machines, applying
+         the same efficiency and coloring logic.
+      8. Pads each operation line to a uniform width, filters part runs to declared parts,
+         then computes per-operation totals and efficiencies (excluding machines with no target),
+         adding a “recent_efficiency” and “color” for each operation.
+      9. Collects all program objects into `all_programs`, then renders
+         `dashboards/dashboard_renewed.html` with context:
+         ```python
+         {
+             "pages": pages,
+             "programs": all_programs
+         }
+         ```
+
+    Args:
+        request (HttpRequest): The incoming request, containing session and timezone context.
+        pages (str): A single program name or two names joined by "&" indicating which
+                     program dashboards to render.
+
+    Returns:
+        HttpResponse: Renders the renewed dashboard template with JSON-ready program data,
+                      or returns HttpResponseBadRequest for invalid input.
+    """
     """
     pages: either "programA" or "programA&programB"
     We split on "&", ensure 1 or 2 valid program names, run the annotation logic
