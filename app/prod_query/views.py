@@ -4014,6 +4014,26 @@ def fetch_production_by_date_ranges(machine, machine_parts, date_ranges):
 
 
 def calculate_percentage_downtime(downtime, potential_minutes):
+    """
+    Calculate and format the downtime percentage relative to potential operating minutes.
+
+    Divides `downtime` by `potential_minutes` to compute the percentage of time the
+    machine was down. If `potential_minutes` is zero, returns "0%" to avoid
+    division by zero. The resulting percentage is rounded to the nearest integer.
+
+    Parameters
+    ----------
+    downtime : int or float
+        Total downtime in minutes.
+    potential_minutes : int or float
+        Total potential operating minutes for the period.
+
+    Returns
+    -------
+    str
+        The downtime percentage as a string with a percent sign, e.g. "25%".
+        Returns "0%" if `potential_minutes` is zero.
+    """
     if potential_minutes == 0:
         return "0%"
     percentage = (downtime / potential_minutes) * 100
@@ -4021,6 +4041,29 @@ def calculate_percentage_downtime(downtime, potential_minutes):
 
 
 def get_machine_part_numbers(machine_id, line_name, lines):
+    """
+    Retrieve the part numbers associated with a specific machine on a given production line.
+
+    Parameters
+    ----------
+    machine_id : int
+        The unique identifier of the machine whose part numbers are being requested.
+    line_name : str
+        The name of the production line to search.
+    lines : list of dict
+        A list of line definitions, where each dict has keys:
+        - 'line' (str): the line name
+        - 'operations' (list of dict): each with keys:
+            • 'op' (str)
+            • 'machines' (list of dict), each machine dict containing:
+                - 'number' (int)
+                - optional 'part_numbers' (list)
+
+    Returns
+    -------
+    list or None
+        The list of part numbers for the matching machine if present; otherwise None.
+    """
     for line in lines:
         if line['line'] == line_name:  # Match the correct line
             for operation in line['operations']:
@@ -4032,6 +4075,45 @@ def get_machine_part_numbers(machine_id, line_name, lines):
 
 
 def get_month_details(selected_date, machine, line_name, lines):
+    """
+    Gather monthly performance data for a specific machine on a production line.
+
+    This function computes:
+      1. The UTC‐based start and end datetimes for the month containing `selected_date`,
+         using `get_month_start_and_end`.
+      2. A series of Sunday-through-Friday intervals spanning that month,
+         via `get_sunday_to_friday_ranges`.
+      3. Downtime metrics for each interval (total downtime, potential minutes),
+         formatted with `calculate_percentage_week` and `calculate_percentage_downtime`.
+      4. Production counts over the same intervals, using part numbers (if any)
+         retrieved by `get_machine_part_numbers`.
+
+    Parameters
+    ----------
+    selected_date : datetime.datetime
+        A reference date within the target month.
+    machine : str
+        Identifier of the machine to analyze.
+    line_name : str
+        The name of the production line where the machine operates.
+    lines : list of dict
+        Production-line definitions, each with keys:
+          - 'line': line name
+          - 'operations': list of {'op': ..., 'machines': [{'number': ..., 'part_numbers': [...]}, ...]}
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+          - 'first_day' (datetime.datetime): the computed month-start datetime.
+          - 'last_day'  (datetime.datetime): the computed month-end datetime.
+          - 'ranges'    (list of dict): each element for an interval with keys:
+                • 'start', 'end' (datetime.datetime)
+                • 'downtime' (float): total downtime minutes
+                • 'potential_minutes' (str): formatted minutes (and percentage of full week)
+                • 'percentage_downtime' (str): formatted downtime percentage
+                • 'produced' (int or float): total production count
+    """
     first_day, last_day = get_month_start_and_end(selected_date)
     ranges = get_sunday_to_friday_ranges(first_day, last_day)
 
@@ -4068,6 +4150,36 @@ def get_month_details(selected_date, machine, line_name, lines):
 
 
 def get_machine_target(machine_id, selected_date_unix, line_name):
+    """
+    Retrieve the applicable target value for a machine on a specific line as of a given timestamp.
+
+    This function queries the `OAMachineTargets` model for entries matching
+    the provided `machine_id` and `line_name`, ordered by their `effective_date_unix`.
+    It then selects the latest entry whose `effective_date_unix` is less than or equal
+    to `selected_date_unix`. If a later entry exists after the selected date, it is skipped.
+
+    Parameters
+    ----------
+    machine_id : int
+        The primary key of the machine whose target is requested.
+    selected_date_unix : int
+        A Unix-epoch timestamp (in seconds) representing the reference date.
+    line_name : str
+        The production line identifier to filter target entries.
+
+    Returns
+    -------
+    Any or None
+        The `target` value from the matching `OAMachineTargets` entry, or `None`
+        if no applicable entry is found or if an error occurs.
+
+    Notes
+    -----
+    - If multiple entries share the same `effective_date_unix`, the first in
+      ascending order is chosen.
+    - Errors during database access are caught and logged; in such cases, `None`
+      is returned.
+    """
     try:
         # Fetch all target entries for the given machine and line
         all_targets = OAMachineTargets.objects.filter(
@@ -4188,6 +4300,32 @@ def calculate_totals(grouped_results):
 
 
 def calculate_a_and_p_averages(p_values, a_values, downtime_percentages):
+    """
+    Compute rounded averages for P, A, and downtime percentages after removing the most recent entry.
+
+    This function mutates the input lists by popping the last element from `p_values` and `a_values` (if present),
+    then calculates:
+      - `average_p`: the rounded mean of the remaining `p_values` (or 0 if list is empty),
+      - `average_a`: the rounded mean of the remaining `a_values` (or 0 if list is empty),
+      - `average_downtime`: the rounded mean of `downtime_percentages` as an integer (or 0 if list is empty).
+
+    Parameters
+    ----------
+    p_values : list of numbers
+        A list of numeric P values. The last element will be removed before averaging.
+    a_values : list of numbers
+        A list of numeric A values. The last element will be removed before averaging.
+    downtime_percentages : list of numbers
+        A list of downtime percentage values. No elements are removed before averaging.
+
+    Returns
+    -------
+    dict
+        A dictionary with keys:
+          - 'average_p' (int):       Rounded average of the truncated `p_values`.
+          - 'average_a' (int):       Rounded average of the truncated `a_values`.
+          - 'average_downtime' (int): Rounded average of `downtime_percentages`.
+    """
     # Pop the last number off the lists if they are not empty
     if p_values:
         p_values.pop()
@@ -4206,6 +4344,46 @@ def calculate_a_and_p_averages(p_values, a_values, downtime_percentages):
 
 
 def calculate_line_totals(grouped_results):
+    """
+    Aggregate per-operation metrics into line-level totals for each date block.
+
+    Iterates through a dictionary of grouped results (keyed by date blocks),
+    sums up targets, production counts, downtime, potential minutes, and scrap;
+    collects individual operation P/A/downtime percentages, computes their
+    averages (dropping the most recent value), and recalculates the line-level
+    adjusted target. Inserts or updates a `line_totals` entry in each operations
+    dict with these aggregated metrics.
+
+    Parameters
+    ----------
+    grouped_results : dict
+        A mapping where each key is a date block (e.g., a string or date) and
+        each value is another dict of operations. Each operation dict must
+        include a `"totals"` sub-dict with:
+          - 'total_target' (numeric)
+          - 'total_produced' (numeric)
+          - 'total_downtime' (numeric)
+          - 'total_potential_minutes' (numeric)
+          - 'average_p_value' (string percentage, e.g. "75%")
+          - 'average_a_value' (string percentage)
+          - 'average_downtime_percentage' (string percentage)
+        Optionally, a pre-existing `'line_totals'` entry to read scrap totals.
+
+    Returns
+    -------
+    dict
+        The same `grouped_results` dict, but with each inner operations dict
+        updated to include a `'line_totals'` dict containing:
+          - total_target (numeric)
+          - total_adjusted_target (numeric, recalculated)
+          - total_produced (numeric)
+          - total_downtime (numeric)
+          - total_potential_minutes (numeric)
+          - average_downtime_percentage (string, e.g. "12%")
+          - average_p_value (string, e.g. "80%")
+          - average_a_value (string, e.g. "85%")
+          - total_scrap_amount (numeric)
+    """
     for date_block, operations in grouped_results.items():
         line_totals = {
             'total_target': 0,
@@ -4298,6 +4476,47 @@ def calculate_line_totals(grouped_results):
 
 
 def calculate_monthly_totals(grouped_results):
+    """
+    Aggregate line-level totals into a single monthly summary with recalculated averages.
+
+    Iterates through a mapping of date blocks to their `line_totals` dict (as populated by
+    `calculate_line_totals`), summing raw metrics (target, produced, downtime, potential minutes,
+    scrap) and collecting percentage values for downtime, P, A, and Q. Computes:
+      - `average_downtime_percentage`, `average_p_value`, `average_a_value`, `average_q_value`
+        as rounded means of their respective lists.
+      - `total_adjusted_target` by applying `calculate_adjusted_target` to the summed
+        `total_target` with the monthly average downtime percentage.
+
+    Parameters
+    ----------
+    grouped_results : dict
+        A mapping where each key is a date block and each value is an operations-dict
+        containing a `line_totals` sub-dict with keys:
+          - total_target (numeric)
+          - total_produced (numeric)
+          - total_downtime (numeric)
+          - total_potential_minutes (numeric)
+          - average_downtime_percentage (string, e.g. "12%")
+          - average_p_value (string, e.g. "80%")
+          - average_a_value (string, e.g. "85%")
+          - q_value (string, e.g. "95%")
+          - total_scrap_amount (numeric, optional)
+
+    Returns
+    -------
+    dict
+        A dictionary with keys:
+          - total_target (numeric)
+          - total_produced (numeric)
+          - total_downtime (numeric)
+          - total_potential_minutes (numeric)
+          - total_scrap_amount (numeric)
+          - average_downtime_percentage (string, e.g. "10%")
+          - average_p_value (string, e.g. "75%")
+          - average_a_value (string, e.g. "80%")
+          - average_q_value (string, e.g. "92.50%")
+          - total_adjusted_target (numeric)
+    """
     monthly_totals = {
         'total_target': 0,
         # Remove direct summation of adjusted targets here as well
@@ -4383,6 +4602,40 @@ def calculate_monthly_totals(grouped_results):
 
 
 def total_scrap_for_line(scrap_line, start_date, end_date):
+    """
+    Retrieve and sum scrap records for a specific production line over a date range.
+
+    Executes a raw SQL query against the 'prodrpt-md' database’s `tkb_scrap` table to fetch
+    all rows where `scrap_line` matches the given identifier and `date_current` falls between
+    `start_date` and `end_date` (inclusive). Returns the total scrap amount and the detailed
+    row data.
+
+    Parameters
+    ----------
+    scrap_line : str
+        The production line identifier to filter scrap records.
+    start_date : date or datetime or str
+        The lower bound of the date_current filter (inclusive). Should be in a format accepted
+        by the database for a BETWEEN query.
+    end_date : date or datetime or str
+        The upper bound of the date_current filter (inclusive). Should be in a format accepted
+        by the database for a BETWEEN query.
+
+    Returns
+    -------
+    dict
+        A dictionary with:
+          - 'total_scrap_amount' (numeric): Sum of the `scrap_amount` field for all matching rows.
+          - 'scrap_data' (list of dict): A list of row dictionaries, each containing:
+                'Id', 'Scrap Part', 'Scrap Operation', 'Scrap Category',
+                'Scrap Amount', 'Scrap Line', 'Total Cost', 'Date', 'Date Current'.
+
+    Raises
+    ------
+    RuntimeError
+        If any database error or other exception occurs during query execution, with
+        a message prefixed by "Error fetching scrap data:".
+    """
     try:
         query = """
             SELECT Id, scrap_part, scrap_operation, scrap_category, scrap_amount, scrap_line, 
@@ -4420,29 +4673,121 @@ def total_scrap_for_line(scrap_line, start_date, end_date):
 
 
 def calculate_p(total_produced, total_adjusted_target, downtime_percentage):
+    """
+    Compute the performance (P) percentage for a line or operation.
+
+    Special cases:
+      - If nothing was produced and downtime is 100%, returns 100 (full downtime).
+      - If the adjusted target is zero, returns 0 to avoid division by zero.
+
+    Otherwise, calculates:
+      P = (total_produced / total_adjusted_target) * 100, rounded to the nearest integer.
+
+    Parameters
+    ----------
+    total_produced : numeric
+        The actual number of units produced.
+    total_adjusted_target : numeric
+        The target production adjusted for downtime.
+    downtime_percentage : str
+        The downtime percentage string (e.g. "25%").
+
+    Returns
+    -------
+    int
+        The performance percentage as an integer.
+    """
     if total_produced == 0 and downtime_percentage.strip('%') == "100":
         return 100  # Special case: 100% downtime means P should be 100%
     if total_adjusted_target == 0:
         return 0  # Avoid division by zero
-    return round((total_produced / total_adjusted_target) * 100)  # Convert to percentage
-
+    return round((total_produced / total_adjusted_target) * 100)
 
 
 def calculate_A(total_potential_minutes, downtime_minutes):
+    """
+    Compute the availability (A) percentage for a line or operation.
+
+    Calculates:
+      A = ((total_potential_minutes - downtime_minutes) / total_potential_minutes) * 100,
+      rounded to the nearest integer and returned as a percentage string.
+
+    Special case:
+      - If total_potential_minutes is zero, returns "0%" to avoid division by zero.
+
+    Parameters
+    ----------
+    total_potential_minutes : numeric
+        The total number of minutes the line could potentially run.
+    downtime_minutes : numeric
+        The total number of minutes the line was down.
+
+    Returns
+    -------
+    str
+        The availability percentage as a string with a "%" suffix.
+    """
     if total_potential_minutes == 0:
         return "0%"  # Avoid division by zero
     a_value = round(((total_potential_minutes - downtime_minutes) / total_potential_minutes) * 100)
-    return f"{a_value}%"  # Return percentage as a string
+    return f"{a_value}%"
 
 
 def calculate_Q(total_produced_last_op, scrap_total):
+    """
+    Compute the quality (Q) percentage for the last operation.
+
+    Calculates:
+      Q = (total_produced_last_op / (total_produced_last_op + scrap_total)) * 100,
+      rounded to two decimal places and returned as a percentage string.
+
+    Special case:
+      - If both produced and scrap totals are zero, returns "0%".
+
+    Parameters
+    ----------
+    total_produced_last_op : numeric
+        The count of units successfully produced by the last operation.
+    scrap_total : numeric
+        The count of units scrapped.
+
+    Returns
+    -------
+    str
+        The quality percentage as a string with a "%" suffix, rounded to two decimals.
+    """
     if total_produced_last_op + scrap_total == 0:
         return "0%"
     q_value = round((total_produced_last_op / (total_produced_last_op + scrap_total) * 100), 2)
     return f"{q_value}%"
 
 
+
 def get_total_produced_last_op_for_block(operations):
+    """
+    Determine the production count from the last operation in a block.
+
+    This function inspects an `operations` dict—where keys are operation identifiers
+    and values are sub-dicts potentially containing a `'totals'` entry—and returns
+    the `total_produced` value for the highest‐ordered operation. It excludes the
+    special `'line_totals'` key, sorts remaining operation keys numerically when
+    possible (falling back to lexicographical order), and retrieves the production
+    count from that final operation's totals.
+
+    Parameters
+    ----------
+    operations : dict
+        A mapping of operation identifiers (str) to data dicts. Each data dict
+        may include a `'totals'` dict with a `'total_produced'` numeric field.
+
+    Returns
+    -------
+    int
+        The `total_produced` from the last-sorted operation, or 0 if:
+          - there are no valid operations,
+          - the chosen operation lacks a `'totals'` or `'total_produced'`,
+          - any error occurs during processing.
+    """
     try:
         valid_operations = [op for op in operations.keys() if op != 'line_totals']
         if valid_operations:
@@ -4544,6 +4889,20 @@ def get_all_lines(lines):
 
 
 def get_month_and_year(date_str):
+    """
+    Convert an ISO-formatted date string into a human-readable "Month Year" string.
+
+    Parameters
+    ----------
+    date_str : str
+        A date in "YYYY-MM-DD" format.
+
+    Returns
+    -------
+    str or None
+        The formatted month and year (e.g., "June 2025") if `date_str` is valid;
+        otherwise, returns None for invalid or unparsable dates.
+    """
     try:
         date = datetime.strptime(date_str, '%Y-%m-%d')
         return date.strftime('%B %Y')  # Format to "Month Year"
@@ -4552,6 +4911,45 @@ def get_month_and_year(date_str):
 
 
 def oa_byline2(request):
+    """
+    Render and process the by-line overview for a selected production line and date.
+
+    Supports both GET and POST:
+      - GET: Displays the form with all available lines and no pre-selected values.
+      - POST: 
+        • Reads `date` (YYYY-MM-DD) and `line` from the submitted form.
+        • Validates that the selected date is not in the future.
+        • On valid input, calls `get_line_details(selected_date, selected_line, lines)`
+          to populate production metrics and adds them to the context.
+        • Formats the selected date into a “Month Year” string via `get_month_and_year`
+          for use in titles.
+        • On error (invalid or future date), sets `context['error']` accordingly.
+        • Persists `selected_date` and `selected_line` in the context for form re-population.
+
+    Context Keys
+    ------------
+    lines : list
+        All available production lines for selection.
+    selected_date : str or datetime.date
+        The date chosen by the user (string on first POST, `date` object after parsing).
+    selected_line : str
+        The line identifier chosen by the user.
+    error : str, optional
+        Error message if date parsing fails or the date is in the future.
+    month_year : str, optional
+        Human-readable “Month Year” for the selected date, e.g. "June 2025".
+    [plus any keys returned by `get_line_details`]
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request. On POST, `request.POST` must contain `date` and `line`.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/oa_display_v3.html' with the assembled context.
+    """
     context = {'lines': get_all_lines(lines)}  # Load all available lines
     if request.method == 'POST':
         selected_date_str = request.POST.get('date')
@@ -5143,6 +5541,45 @@ def deep_dive(request):
 
 
 def oa_drilldown(request):
+    """
+    Render the drill-down page or return line-metric aggregates for a date range.
+
+    GET:
+        - Renders 'prod_query/oa_drilldown.html' with:
+            • lines: list of available production lines.
+
+    POST (expects AJAX JSON response):
+        - Expects form data:
+            • start_date (YYYY-MM-DD)
+            • end_date   (YYYY-MM-DD)
+            • line       (line identifier)
+        - Validates:
+            • line is provided
+            • both dates are provided, not in the future, and start ≤ end
+        - On validation failure returns JsonResponse({'error': <message>}, status=400).
+        - Generates weekly time blocks (Sunday–Friday) between the dates.
+        - Fetches and aggregates metrics for the selected line over those blocks.
+        - Computes average downtime per machine and recalculates adjusted targets.
+        - Calculates A and P values per machine.
+        - Returns JsonResponse({
+              'aggregated_metrics': [ ... per-machine dicts ... ],
+              'average_downtime': {machine_id: downtime%, ...}
+          }, status=200).
+        - On unexpected errors, logs to console and returns JsonResponse({'error': <msg>}, status=500).
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP request object. On POST, should include 'start_date', 'end_date', and 'line' in request.POST.
+
+    Returns
+    -------
+    django.http.HttpResponse or django.http.JsonResponse
+        - On GET: renders the drill-down template.
+        - On POST success: JSON with aggregated metrics and downtime.
+        - On POST validation errors: JSON error with status 400.
+        - On server errors: JSON error with status 500.
+    """
     context = {'lines': get_all_lines(lines)}  # Load all available lines
 
     if request.method == 'POST':
@@ -5563,6 +6000,41 @@ def fetch_press_prdowntime1_entries(assetnum, called4helptime, completedtime):
 
 
 def compute_overlap_label(detail_start, detail_end, pr_entries):
+    """
+    Identify how a given detail interval overlaps with any PR entry interval.
+
+    Iterates through a list of PR entries (each with `start_time`, optional `end_time`,
+    and `idnumber`), and determines if the detail interval [detail_start, detail_end)
+    overlaps with a PR interval. The first matching overlap type is returned along
+    with the corresponding PR’s ID.
+
+    Overlap types:
+      - "WITHIN PR":   detail interval is entirely inside the PR interval.
+      - "CONTAINS PR": detail interval entirely encompasses the PR interval.
+      - "OVERLAP LEFT": detail starts before the PR and ends inside it.
+      - "OVERLAP RIGHT": detail starts inside the PR and ends after it.
+      - "No Overlap":  no overlap with any PR interval.
+
+    Parameters
+    ----------
+    detail_start : datetime.datetime
+        Start timestamp of the detail interval.
+    detail_end : datetime.datetime
+        End timestamp of the detail interval.
+    pr_entries : list of dict
+        Each dict represents a PR event and must contain:
+          - 'start_time' (datetime.datetime): PR start.
+          - 'end_time' (datetime.datetime or None): PR end (None treated as ongoing).
+          - 'idnumber' (any, optional): identifier for the PR.
+
+    Returns
+    -------
+    dict
+        A dictionary with:
+          - 'overlap' (str): one of the overlap type strings.
+          - 'pr_id'    (same type as idnumber or None): the matched PR’s idnumber, or None
+                         if there is no overlap.
+    """
     for pr in pr_entries:
         pr_start = pr['start_time']
         # If pr_end is None, treat it as an ongoing event by using datetime.max
@@ -6176,6 +6648,42 @@ def summarize_contiguous_intervals(intervals, downtime_details, human_readable_f
 
 
 def press_runtime_wrapper(request):
+    """
+    Display press OEE data by machine over a specified date range.
+
+    Supports both GET (via query params) and POST form submissions:
+      - Reads `start_date`, `end_date`, and `machine_id` (comma-separated) from
+        request.POST or request.GET (defaults to machine "272").
+      - Parses dates and, if equal, subtracts 24h from start to ensure at least one block.
+      - Generates custom time blocks between the dates.
+      - For each machine and time block:
+          • Fetches press changeover records.
+          • Retrieves production counts and raw downtime details.
+          • Fetches PR downtime entries and annotates overlaps.
+          • Aggregates downtime events (splitting overlap vs. non-overlap).
+          • Calculates running intervals, targets, and production by part.
+          • Summarizes contiguous run blocks.
+      - Optionally attaches Statistical Process Monitoring chart data.
+      - Populates `machines_data` with per-machine, per-block data:
+          • part_numbers_data, downtime_entries, downtime_events, running_events.
+      - Renders 'prod_query/press_oee.html' with:
+          • machines_data: dict keyed by machine ID
+          • start_date, end_date, machine_id: for form persistence
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        HTTP request with optional POST or GET parameters:
+          - start_date (YYYY-MM-DD)
+          - end_date   (YYYY-MM-DD)
+          - machine_id (comma-separated IDs, default "272")
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the OEE dashboard template with collected press runtime and
+        downtime data for the specified machines and date range.
+    """
     # Get parameters from POST or, if not provided, from GET (with defaults)
     start_date_str = request.POST.get('start_date') or request.GET.get('start_date', '')
     end_date_str = request.POST.get('end_date') or request.GET.get('end_date', '')
@@ -6347,6 +6855,40 @@ def press_runtime_wrapper(request):
 
 
 def press_runtime_wrapper2(request):
+    """
+    Display press OEE data for a fixed set of machines over a specified date range.
+
+    Handles both GET (URL params) and POST (form submission):
+      - Reads `start_date` and `end_date` from query parameters, overridden by POST data if present.
+      - Uses a hard-coded list of machines ['272','273','277','278'].
+      - Parses dates and adjusts start if equal to end (subtracts 24h).
+      - Generates custom time blocks between dates; on error renders with an error message.
+      - For each machine and block:
+          • Fetches changeover records.
+          • Retrieves production counts and downtime details.
+          • Fetches PR downtime entries and annotates overlap.
+          • Aggregates downtime events (splitting overlap vs. non-overlap).
+          • Calculates running intervals, per-interval production, and targets.
+          • Summarizes contiguous running intervals.
+      - Populates `machines_data` with per-machine dicts:
+          • `part_numbers_data`, `downtime_entries`, `downtime_events`, `running_events`.
+      - Renders `'prod_query/press_oee2.html'` with:
+          • `machines_data`
+          • `start_date`, `end_date` for form re-population
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        HTTP request object. May include:
+          - GET or POST `start_date` (YYYY-MM-DD)
+          - GET or POST `end_date`   (YYYY-MM-DD)
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders the OEE dashboard template with collected press runtime and downtime
+        data for the four predefined machines and the specified date range.
+    """
     # First, try to get dates from the URL (GET parameters)
     start_date_str = request.GET.get('start_date', '')
     end_date_str = request.GET.get('end_date', '')
@@ -6589,6 +7131,43 @@ def aggregate_machine_groups(machines_data, group_definitions):
 
 
 def press_runtime_wrapper3(request):
+    """
+    Compute and display detailed OEE metrics for multiple press machines over a date range.
+
+    Only handles POST requests with form fields:
+      - `start_date` (YYYY-MM-DD)
+      - `end_date`   (YYYY-MM-DD)
+
+    Workflow:
+      1. Parse and validate `start_date` and `end_date` (if equal, subtract 24h from start).
+      2. Generate custom time blocks between the dates.
+      3. For each block and each machine in ['272','273','277','278']:
+         a. Fetch changeover records and append to `part_numbers_data`.
+         b. Retrieve production counts and raw downtime intervals.
+         c. Fetch PR downtime entries, annotate overlap vs. non-overlap.
+         d. Build `downtime_events` for intervals >5 minutes.
+         e. Calculate running intervals, per-interval production, targets, and down-time splits.
+         f. Summarize contiguous run intervals; append to `running_events`.
+      4. After all blocks, compute per-machine totals:
+         - uptime, planned vs. unplanned downtime, potential minutes,
+           weighted cycle time, parts produced, target, A, P, and overall OEE.
+      5. Aggregate defined machine groups (e.g., '1500T' = ['272','273']).
+      6. Prepare `sorted_machines_data` in the desired display order.
+
+    Context passed to template:
+      - `sorted_machines_data`: list of `{machine: id, data: {...}}`, including group entries.
+      - `start_date`, `end_date`: strings for form persistence.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The HTTP POST request containing `start_date` and `end_date`.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        Renders 'prod_query/press_oee3.html' with the computed metrics context.
+    """
     # Get parameters from POST (or default values)
     start_date_str = request.POST.get('start_date', '')
     end_date_str = request.POST.get('end_date', '')
@@ -8688,6 +9267,39 @@ def annotate_targets(qs):
 
 @login_required(login_url='/login/')
 def targets_list(request):
+    """
+    Display a paginated list of active OEE machine targets for authorized managers.
+
+    Access Control
+    --------------
+    - User must be authenticated.
+    - User must belong to the “oee_target_managers” group.
+      Otherwise, returns a simple Access Denied page with a 5-second meta-refresh back to “/”.
+
+    Behavior
+    --------
+    - Queries `OAMachineTargets` for non-deleted entries (`isDeleted=False`),
+      ordered by most recent `effective_date_unix` and then by `machine_id`.
+    - Counts total results.
+    - Retrieves the first `PAGE_SIZE` entries (for initial page).
+    - Calls `annotate_targets` to add any computed fields to the page’s queryset.
+    - Renders the ‘prod_query/targets_list.html’ template with:
+        • `targets`:   the current page’s targets,
+        • `offset`:    the page size (for “load more” logic),
+        • `total`:     total number of results,
+        • `page_size`: the constant `PAGE_SIZE`.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP request.
+
+    Returns
+    -------
+    django.http.HttpResponse
+        - On success: HTML page listing targets.
+        - On unauthorized access: HTML page with message and auto-redirect.
+    """
     if not request.user.groups.filter(name="oee_target_managers").exists():
         # simple HTML with a 5-second meta refresh back to “/”
         html = """
@@ -8720,6 +9332,36 @@ def targets_list(request):
 
 
 def targets_load_more_ajax(request):
+    """
+    Serve the next page of OEE machine targets via AJAX for infinite scroll or “load more.”
+
+    Expects a query parameter:
+      - `offset` (int): The number of records already loaded; defaults to 0.
+
+    Workflow:
+      1. Parse `offset` from `request.GET`.
+      2. Query `OAMachineTargets` where `isDeleted=False`, ordered by newest `effective_date_unix`
+         then `machine_id`.
+      3. Slice the queryset from `offset` to `offset + PAGE_SIZE`.
+      4. Call `annotate_targets` to enrich each target with computed fields.
+      5. Render the `_targets_rows.html` partial with the new batch.
+      6. Determine if more records remain (`has_more`).
+      7. Return a JSON response containing:
+         - `html`: rendered HTML for the new rows,
+         - `has_more`: boolean indicating whether additional pages exist.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The AJAX request, with optional `?offset=` in the query string.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON object with:
+          - `html` (str): HTML fragment for the next batch of rows.
+          - `has_more` (bool): True if further pages are available.
+    """
     # expects ?offset=<int>
     offset = int(request.GET.get('offset', 0))
     qs_all = OAMachineTargets.objects.filter(isDeleted=False) \
@@ -8735,6 +9377,28 @@ def targets_load_more_ajax(request):
     return JsonResponse({'html': html, 'has_more': has_more})
 
 def _parse_date_to_unix(date_str):
+    """
+    Parse a date string as EST midnight and convert it to a UTC Unix timestamp.
+
+    Interprets the input `date_str` (in "YYYY-MM-DD" format) as 00:00:00
+    in the America/New_York timezone, then converts that moment to UTC
+    and returns the corresponding Unix timestamp (seconds since the epoch).
+
+    Parameters
+    ----------
+    date_str : str
+        Date in "YYYY-MM-DD" format, representing midnight EST.
+
+    Returns
+    -------
+    int
+        The Unix timestamp (UTC) for that EST-midnight.
+
+    Raises
+    ------
+    ValueError
+        If `date_str` is not in the "YYYY-MM-DD" format or is otherwise invalid.
+    """
     """Treat user’s date as EST‐midnight, convert to UTC timestamp."""
     eff_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     est = ZoneInfo("America/New_York")
@@ -8745,6 +9409,36 @@ def _parse_date_to_unix(date_str):
 
 @require_POST
 def target_create_ajax(request):
+    """
+    Create a new OEE machine target via AJAX.
+
+    Expects a POST request with a JSON body containing:
+      - machine (int or str):        The machine identifier.
+      - line (str):                  The production line identifier.
+      - part (str, optional):        The part identifier (may be empty).
+      - cycle_time (float or str):   The cycle time in seconds (or parsable to float).
+      - effective_date (str):        The target’s effective date in "YYYY-MM-DD" format.
+      - comment (str, optional):     Any user comment.
+
+    Workflow:
+      1. Parse and validate the JSON payload.
+      2. Convert `effective_date` to a UTC Unix timestamp at EST midnight via `_parse_date_to_unix`.
+      3. Compute the target value as `int(7200*60 / cycle_time)` (assuming a 2-hour run at the given cycle).
+      4. Create an `OAMachineTargets` record with the provided fields.
+      5. Return JSON `{'success': True, 'id': <new_record_id>}` on success.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - On success: `{'success': True, 'id': <int>}` with HTTP 200.
+        - On failure: `{'success': False, 'error': <message>}` with HTTP 400.
+
+    Raises
+    ------
+    ValueError, KeyError, RuntimeError
+        If JSON is invalid, required fields are missing, or conversion errors occur;
+        these are caught and returned as JSON errors.
+    """
     try:
         data = json.loads(request.body)
         machine = data['machine']
@@ -8773,6 +9467,44 @@ def target_create_ajax(request):
 
 @require_POST
 def target_edit_ajax(request, pk):
+    """
+    Edit an existing OEE machine target via AJAX.
+
+    Expects a POST request with a JSON body containing:
+      - machine (int or str):        The new machine identifier.
+      - line (str):                  The new production line identifier.
+      - part (str):                  The new part identifier.
+      - cycle_time (float or str):   The cycle time in seconds (or parsable to float).
+      - effective_date (str):        The target’s effective date in "YYYY-MM-DD" format.
+      - comment (str, optional):     Any user comment.
+
+    Workflow:
+      1. Parse and validate the JSON payload.
+      2. Convert `effective_date` to a UTC Unix timestamp at EST midnight via `_parse_date_to_unix`.
+      3. Compute the updated target value as `int(7200*60 / cycle_time)` (assuming a 2-hour run).
+      4. Retrieve the `OAMachineTargets` record by primary key `pk`.
+      5. Update its fields (`machine_id`, `line`, `part`, `target`, `effective_date_unix`, `comment`).
+      6. Call `full_clean()` to run model validators, then `save()`.
+      7. Return JSON `{'success': True}` on success.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP POST request containing the JSON payload.
+    pk : int
+        Primary key of the `OAMachineTargets` record to update.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        - On success: `{'success': True}` with HTTP 200.
+        - On failure: `{'success': False, 'error': <message>}` with HTTP 400.
+
+    Raises
+    ------
+    ValueError, KeyError, ObjectDoesNotExist, ValidationError
+        Any exceptions are caught and returned as JSON errors.
+    """
     try:
         data = json.loads(request.body)
         machine = data['machine']
@@ -8803,6 +9535,35 @@ def target_edit_ajax(request, pk):
 
 @require_POST
 def target_delete_ajax(request, pk):
+    """
+    Soft-delete an OEE machine target via AJAX by marking it as deleted.
+
+    Expects:
+      - HTTP POST.
+      - URL parameter `pk` identifying the `OAMachineTargets` record.
+
+    Workflow:
+      1. Retrieve the `OAMachineTargets` instance with primary key `pk`.
+      2. Set its `isDeleted` flag to True.
+      3. Save only the `isDeleted` field.
+      4. Return JSON `{'success': True}` on success.
+
+    Error Handling:
+      - If no matching record exists, returns HTTP 404 with `{'success': False, 'error': 'Not found'}`.
+      - Any other exception returns HTTP 400 with `{'success': False, 'error': <message>}`.
+
+    Parameters
+    ----------
+    request : django.http.HttpRequest
+        The incoming HTTP POST request.
+    pk : int
+        The primary key of the `OAMachineTargets` to delete.
+
+    Returns
+    -------
+    django.http.JsonResponse
+        JSON with `success` boolean and optional `error` message.
+    """
     try:
         obj = OAMachineTargets.objects.get(pk=pk)
         obj.isDeleted = True
