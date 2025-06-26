@@ -54,6 +54,28 @@ from .models import FormType, Form, FormQuestion
 from django.forms import modelformset_factory
 
 def form_create_view(request, form_id=None):
+    """Create or edit a Form and its associated questions.
+
+    - If `form_id` is provided, loads the existing `Form` instance for editing.
+    - Otherwise, reads `form_type` from `request.GET` and, if present, selects that type.
+    - Dynamically looks up the corresponding Django `Form` class and question formset class.
+    - On GET: renders the form and a formset of non‐expired questions (ordered by JSON `order`).
+    - On POST: validates and saves the main form, then iterates the question formset:
+        - Saves or updates each question, skipping those marked `DELETE`.
+        - Deletes any existing question instance flagged for removal.
+      Redirects to the edit view on success.
+    - If no valid `form_type` is specified, renders a type‐selection page.
+    - If the `form_type` has no registered form classes, renders an error template.
+
+    Args:
+        request (HttpRequest): The incoming HTTP request (GET or POST).
+        form_id (int, optional): Primary key of an existing `Form` to edit; if omitted, creates a new `Form`.
+
+    Returns:
+        HttpResponse: 
+            - On success: redirect to `'form_edit'` for the saved `Form`.
+            - On GET or invalid POST: rendered template `'forms/form_create.html'` or `'forms/select_form_type.html'`.
+    """
     form_instance = None
     form_type = None
     if form_id:
@@ -147,6 +169,22 @@ from django.utils.timezone import now
 import datetime
 
 def find_and_tag_expired_questions():
+    """Scan all FormQuestion entries and mark those past their expiry date.
+
+    Iterates through every `FormQuestion` instance, reads the `question` JSON field
+    for an `expiry_date` (ISO‐formatted string), and:
+      - If `expiry_date` < today, sets `question['expired'] = True`.
+      - Otherwise, ensures `question['expired'] = False`.
+    Invalid or missing `expiry_date` values are skipped. Each question with an
+    updated flag is saved back to the database.
+
+    Side Effects:
+        Updates the `expired` key in the `question` JSONField of `FormQuestion`
+        records and saves the model.
+
+    Returns:
+        None
+    """
     """
     Finds and tags all expired questions based on their expiry_date field.
     """
@@ -183,6 +221,27 @@ def find_and_tag_expired_questions():
 
 def find_deleted_forms(form_type_id):
     """
+    Retrieve the IDs of all forms of a given type that have been marked as deleted.
+
+    Queries the `Form` model for any instances whose `form_type_id` matches the
+    provided value and whose `metadata.deleted` flag is `True`, then returns
+    their primary key IDs.
+
+    Args:
+        form_type_id (int):
+            The database ID of the form type whose deleted forms you want to find.
+
+    Returns:
+        List[int]:
+            A list of integer IDs corresponding to `Form` instances that have
+            `metadata.deleted == True`.
+
+    Example:
+        >>> # Suppose forms with IDs 3, 7, and 9 are deleted for form type 2
+        >>> find_deleted_forms(2)
+        [3, 7, 9]
+    """
+    """
     Find and return the IDs of all forms for the specified form type
     that have 'deleted: true' in their metadata.
     """
@@ -202,6 +261,41 @@ def find_deleted_forms(form_type_id):
 
 
 def find_forms_view(request):
+    """
+    Display a list of forms for a selected form type, excluding those marked as deleted,
+    and pass along user permissions for rendering.
+
+    This view will first tag any expired questions via `find_and_tag_expired_questions()`,
+    then look for a `form_type` query parameter in the request. If provided, it will:
+
+      1. Retrieve the corresponding `FormType` (404 if not found).
+      2. Use `find_deleted_forms()` to get IDs of forms whose metadata has `deleted=True`.
+      3. Query `Form` objects of that type, excluding deleted ones, ordered by newest first.
+      4. Build the set of all metadata keys present across those forms.
+      5. Determine whether the authenticated user belongs to the
+         “LPA Managers” or “Quality Engineer” groups.
+      6. Render `forms/find_forms.html` with:
+         - `form_type`: the selected `FormType` instance
+         - `forms`: the filtered & ordered form queryset
+         - `metadata_keys`: a set of all metadata keys
+         - `is_lpa_manager`, `is_quality_engineer`, `is_authenticated`
+
+    If no `form_type` is specified, it retrieves all `FormType` instances and renders
+    `forms/select_form_type.html` with the same permission flags.
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request, possibly carrying a `form_type` GET parameter.
+
+    Returns:
+        django.http.HttpResponse:
+            - If `form_type` is provided and valid, renders the form list template.
+            - Otherwise, renders the form-type selection template.
+
+    Raises:
+        Http404:
+            If a `form_type` ID is provided but does not correspond to any `FormType`.
+    """
 
     # Check and tag expired questions
     find_and_tag_expired_questions()
@@ -289,6 +383,43 @@ from .models import Form, FormQuestion, FormType
 import json
 
 def bulk_form_and_question_create_view(request):
+    """
+    Handle bulk creation of a new "OIS" form together with its questions from JSON input.
+
+    This view accepts POST submissions containing:
+      - `data_json`: a JSON string with the form properties under `"form"` 
+        and a list of question definitions under `"questions"`.
+      - `delete_existing`: an optional checkbox; if checked, any pre-existing 
+        questions on the newly created form will be removed before adding the new ones.
+
+    On POST:
+      1. Parse `data_json` into a dict, returning an error in the form if parsing fails.
+      2. Extract form metadata (part number, operation, machine, etc.) and create 
+         a new `Form` instance of type `"OIS"`.
+      3. If `delete_existing` is true, delete any existing questions for that form.
+      4. Iterate over the provided questions, assign an `order` (defaulting to the 
+         index if none provided), and create each `FormQuestion` linked to the form.
+      5. Redirect to the form’s edit page on success.
+
+    On GET:
+      Renders the bulk-upload template so the user can paste or upload their JSON.
+
+    Args:
+        request (django.http.HttpRequest):
+            The HTTP request object. On POST, expects `data_json` and optional 
+            `delete_existing` in `request.POST`.
+
+    Returns:
+        django.http.HttpResponse:
+            - On GET: renders `"forms/bulk_question_create.html"`.
+            - On POST with invalid JSON: re-renders the same template with an `error` 
+              message and the original `data_json` for correction.
+            - On successful POST: redirects to the `"form_edit"` view for the new form.
+
+    Raises:
+        FormType.DoesNotExist:
+            If the `"OIS"` FormType cannot be found in the database.
+    """
     if request.method == 'POST':
         data_json = request.POST.get('data_json')
         delete_existing = request.POST.get('delete_existing') == 'on'
@@ -403,6 +534,37 @@ import datetime
 import json
 
 def form_questions_view(request, form_id):
+    """
+    Display and process answer forms for a given Form instance.
+
+    This view retrieves the specified Form by `form_id`, determines its
+    template based on the associated FormType, and dynamically builds an
+    answer formset for each question in the form. Questions are sorted
+    by their `order` metadata. The operator number is persisted via cookie.
+    On GET, it initializes blank answer forms; on POST, it validates and
+    saves submitted answers, then redirects back to the same view.
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request, which may be GET or POST. On POST,
+            must include `operator_number` and formset data.
+        form_id (int):
+            The primary key of the `Form` whose questions are to be answered.
+
+    Returns:
+        django.http.HttpResponse:
+            - On GET: renders the form questions template specific to the
+              FormType with an empty answer formset.
+            - On POST with valid data: saves answers and redirects back.
+            - On POST with missing operator number or invalid formset:
+              re-renders the template with error messages.
+
+    Raises:
+        Http404:
+            If no `Form` exists with the given `form_id`.
+        ValueError:
+            If the FormType’s name is not mapped to an answer form class.
+    """
     # Get the form instance and its form type
     form_instance = get_object_or_404(Form, id=form_id)
     form_type = form_instance.form_type
@@ -534,6 +696,37 @@ import pprint
 from datetime import timedelta
 
 def view_records(request, form_id):
+    """
+    Display a timestamped table of all answers submitted for a given Form.
+
+    This view retrieves the specified Form and its associated questions, then
+    gathers every FormAnswer for each question. Each answer’s UTC timestamp
+    is converted to EST (UTC–5), formatted as "YYYY-MM-DD HH:MM", and used
+    to group answers by submission. The most recent 48 unique submission
+    timestamps (newest first) are selected as columns. The resulting data
+    structure aligns each question (row) with its answer or a blank cell
+    for each timestamp. Finally, the view renders `forms/view_records.html`
+    with:
+      - `form_instance`: the Form being viewed
+      - `submission_timestamps`: list of EST-formatted timestamp strings
+      - `submission_data`: list of dicts containing question metadata and
+        aligned answer entries for rendering the table.
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request.
+        form_id (int):
+            The primary key of the `Form` whose answer history should be shown.
+
+    Returns:
+        django.http.HttpResponse:
+            Renders the `forms/view_records.html` template populated with
+            `form_instance`, `submission_timestamps`, and `submission_data`.
+
+    Raises:
+        Http404:
+            If no `Form` exists with the given `form_id`.
+    """
     # Fetch the form instance and its questions
     form_instance = get_object_or_404(Form, id=form_id)
     questions = form_instance.questions.all()
@@ -603,6 +796,41 @@ def view_records(request, form_id):
 
 
 def form_by_metadata_view(request):
+    """
+    Lookup a Form by metadata and render its question answer interface, handling submissions.
+
+    This view expects three GET parameters: `formtype`, `operation`, and `part_number`. If any
+    are missing, it renders an error template. Otherwise, it retrieves the matching Form, selects
+    the appropriate template and answer form class based on its FormType, filters out expired
+    questions, and sorts them by their `order` metadata.
+
+    On GET:
+      - Reads an optional `machine` parameter.
+      - Builds an empty formset pre-populated with each question for answer entry.
+      - Renders the form template with `question_form_pairs`, any existing operator cookie, and no error.
+
+    On POST:
+      - Reads `operator_number` and `machine` from the POST data.
+      - Captures a common timestamp for all submitted answers.
+      - Validates the formset and operator; if valid, creates a `FormAnswer` for each answered question
+        using the common timestamp, then redirects back to the same metadata-filtered URL.
+      - If invalid or missing operator, re-renders the template with an error message.
+
+    Args:
+        request (django.http.HttpRequest):
+            The HTTP request carrying metadata filters and, on POST, answer data.
+    
+    Returns:
+        django.http.HttpResponse:
+            - Renders the appropriate form template with question form pairs and context.
+            - Redirects back to the metadata-filtered URL on successful submission.
+
+    Raises:
+        Http404:
+            If no Form matches the provided `formtype`, `operation`, and `part_number`.
+        ValueError:
+            If the FormType’s name has no corresponding answer form class defined.
+    """
     # Extract query parameters
     form_type_id = request.GET.get('formtype')
     operation = request.GET.get('operation')
@@ -700,6 +928,29 @@ from django.urls import reverse
 from .models import Form
 
 def smart_form_redirect_view(request, form_id):
+    """
+    Redirect to the appropriate form-answer interface based on metadata if possible.
+
+    Retrieves the Form by `form_id`. If its metadata contains both `operation` and
+    `part_number`, and a Form with the same form_type, operation, and part_number
+    exists, redirects to the metadata-based URL (`form_by_metadata`). Otherwise,
+    falls back to the standard ID-based questions view (`form_questions`).
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request.
+        form_id (int):
+            The primary key of the Form to inspect for metadata-based redirect.
+
+    Returns:
+        django.http.HttpResponseRedirect:
+            A redirect to the metadata-filtered form URL if matching metadata is found,
+            otherwise a redirect to the ID-based questions view.
+
+    Raises:
+        Http404:
+            If no Form exists with the given `form_id`.
+    """
     form_instance = get_object_or_404(Form, id=form_id)
     
     form_type_id = form_instance.form_type_id
@@ -728,6 +979,30 @@ def smart_form_redirect_view(request, form_id):
 
 
 def lpa_closeout_view(request):
+    """
+    Handle LPA closeout submissions and display outstanding LPA answers needing closeout.
+
+    On POST:
+      1. Retrieves `answer_id`, `closeout_notes`, and `closeout_date` from the form.
+      2. Validates and parses `closeout_date` in YYYY-MM-DD format.
+      3. If valid, loads the corresponding `FormAnswer`, updates its JSON `answer` field
+         with `closed_out`, `closeout_date`, and optional `closeout_notes`, then saves.
+      4. Redirects back to the same view to refresh the listing.
+
+    On GET:
+      1. Queries for all `FormAnswer` instances of form type ID 15 where
+         `"answer": "No"` and `"closed_out": True` is not present.
+      2. Passes these outstanding LPA answers to the `forms/lpa_closeout.html` template.
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request, either GET to list answers or POST to submit closeout data.
+
+    Returns:
+        django.http.HttpResponse:
+            - On GET: renders `"forms/lpa_closeout.html"` with context `{'lpa_answers': lpa_answers}`.
+            - On POST: redirects to `'lpa_closeout'` (refreshing the page), regardless of success or invalid date.
+    """
     from datetime import datetime
     if request.method == 'POST':
         # Process closeout submission
@@ -783,6 +1058,29 @@ def lpa_closeout_view(request):
 
 
 def closed_lpas_view(request):
+    """
+    Display and edit previously closed-out LPA answers.
+
+    On POST:
+      1. Retrieves `answer_id`, `closeout_notes`, and `closeout_date` from the submitted form.
+      2. Validates `closeout_date` in YYYY-MM-DD format.
+      3. If valid, updates the corresponding `FormAnswer` JSON `answer` field with the new
+         `closeout_date` and `closeout_notes`, then saves.
+      4. Redirects back to the same view to refresh the listing. Invalid dates simply reload.
+
+    On GET:
+      1. Queries for all `FormAnswer` instances of form type ID 15 where `"closed_out": True`.
+      2. Passes these to `forms/closed_lpas.html` for display and potential editing.
+
+    Args:
+        request (django.http.HttpRequest):
+            The HTTP request, either GET for listing or POST for editing an existing closeout.
+
+    Returns:
+        django.http.HttpResponse:
+            - On GET: renders `"forms/closed_lpas.html"` with context `{'closed_answers': closed_answers}`.
+            - On POST: redirects to `'closed_lpas'`, regardless of date validity.
+    """
     from datetime import datetime
     if request.method == 'POST':
         # Handle editing closeout notes and date
@@ -840,6 +1138,34 @@ from django.shortcuts import get_object_or_404
 from .models import Form, FormQuestion
 
 def create_form_copy_view(request, form_id):
+    """
+    Create a duplicate of an existing Form (identified by `form_id`) along with all its questions,
+    allowing new metadata values for name, part number, and operation.
+
+    On POST:
+      1. Validates presence of `name`, `part_number`, and `operation` in `request.POST`.
+      2. Creates a new `Form` instance using the original form’s type and metadata,
+         overriding only the provided `part_number` and `operation` and setting the new `name`.
+      3. Copies each `FormQuestion` from the original form into the new form.
+      4. Returns a JSON success message with status 200.
+
+    On other methods:
+      - Returns a JSON error with status 405.
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request. Must be POST to perform the copy.
+        form_id (int):
+            The primary key of the existing `Form` to duplicate.
+
+    Returns:
+        django.http.JsonResponse:
+            - On success (POST): `{'message': 'Successfully created a copy of the form: <name>.'}`, status=200.
+            - On missing fields: `{'error': 'All fields (name, part_number, operation) are required.'}`, status=400.
+            - On original form not found: `{'error': 'Original form not found.'}`, status=404.
+            - On creation or copy failure: appropriate `{'error': <message>}`, status=500.
+            - On non-POST requests: `{'error': 'Invalid request method.'}`, status=405.
+    """
     """
     View to create a copy of a form and its questions with new metadata.
     """
@@ -913,6 +1239,34 @@ from .forms import LPAQuestionForm
 
 @csrf_exempt
 def process_selected_forms(request):
+    """
+    Handle bulk addition of a custom question to one or more Forms via AJAX.
+
+    This view supports:
+      - POST: Accepts a list of `form_ids[]`, question parameters (`question_text`,
+        `what_to_look_for`, `recommended_action`, `typed_answer`, `expiry_date`),
+        and creates a new `FormQuestion` on each specified Form.
+      - GET: Renders and returns the HTML for the question-creation modal form.
+
+    Args:
+        request (django.http.HttpRequest):
+            - On POST: expects `form_ids[]` (one or comma-separated list), plus
+              `question_text` (required), `what_to_look_for`, `recommended_action`,
+              `typed_answer` ('true' or 'false'), and `expiry_date` (YYYY-MM-DD or None).
+            - On GET: no parameters; returns the rendered `LPAQuestionForm` HTML.
+
+    Returns:
+        django.http.JsonResponse:
+            - POST:
+                * 200: `{"message": "Question added successfully!", "form_ids": [...]}` on success.
+                * 400: `{"error": "No forms selected."}` or `{"error": "Question text is required."}`
+                  for missing inputs.
+                * 404: `{"error": "Form with ID <id> not found."}` if any form_id is invalid.
+                * 500: `{"error": "Failed to create question for form <id>."}` on unexpected errors.
+            - GET:
+                * 200: `{"form_html": "<rendered form markup>"}` for inclusion in a modal.
+                * 400: `{"error": "Invalid request method"}` for non-GET/POST methods.
+    """
     if request.method == "POST":
         print("[DEBUG] Received POST request")
 
@@ -1003,6 +1357,26 @@ from .models import Form
 
 @csrf_exempt
 def process_form_deletion(request):
+    """
+    Mark a Form as deleted by setting its `metadata['deleted']` flag to True.
+
+    This view handles AJAX POST requests to “soft delete” a form. It looks for
+    a `form_id` in `request.POST`, retrieves the corresponding `Form`, updates
+    its `metadata` JSON field with `"deleted": True`, and saves. It returns a JSON
+    response indicating success or an appropriate error.
+
+    Args:
+        request (django.http.HttpRequest):
+            The incoming HTTP request. On POST expects a `form_id` parameter.
+    
+    Returns:
+        django.http.JsonResponse:
+            - 200: `{"message": "Form <form_id> marked as deleted successfully!"}` on success.
+            - 400: `{"error": "Form ID not provided."}` if `form_id` is missing.
+            - 404: `{"error": "Form with ID <form_id> not found."}` if no matching Form exists.
+            - 500: `{"error": "An error occurred while marking the form as deleted."}` for unexpected failures.
+            - 400 for non-POST requests: `{"error": "Invalid request method."}`.
+    """
     if request.method == "POST":
         form_id = request.POST.get("form_id")
         if not form_id:
@@ -1042,6 +1416,39 @@ def process_form_deletion(request):
 
 
 def na_answers_view(request):
+    """
+    List and process "N/A" answers for LPA forms, allowing AJAX-driven marking as dealt.
+
+    On GET:
+      1. Calculates a three-year cutoff from now.
+      2. Retrieves all FormAnswer records for form type ID 15 with `"answer": "N/A"` and
+         `created_at` within the last three years.
+      3. Excludes questions containing certain substrings.
+      4. Renders `forms/na_answers_list.html` with the filtered answers under `'na_answers'`.
+
+    On POST:
+      1. Reads `answer_id` from `request.POST`.
+      2. Fetches the corresponding FormAnswer (404 if missing).
+      3. If its `"answer"` field equals `"N/A"`, updates it to `"N/A-Dealt"` and saves.
+      4. If the request is AJAX (`X-Requested-With: XMLHttpRequest`), returns
+         `JsonResponse({"status": "success", "message": "Updated successfully!"})`.
+      5. Otherwise, redirects to the `"na_answers_list"` view.
+
+    Args:
+        request (django.http.HttpRequest):
+            - GET: no parameters.
+            - POST: expects `answer_id` in form data.
+
+    Returns:
+        django.http.HttpResponse:
+            - GET: renders the list template with context `{'na_answers': filtered_na_answers}`.
+            - POST (AJAX): JSON success response.
+            - POST (non-AJAX): redirect to `"na_answers_list"`.
+
+    Raises:
+        Http404:
+            If a POST `answer_id` does not correspond to any FormAnswer.
+    """
     if request.method == "POST":
         answer_id = request.POST.get("answer_id")
         form_answer = get_object_or_404(FormAnswer, id=answer_id)
@@ -1100,6 +1507,40 @@ def na_answers_view(request):
 
 
 def na_dealt_answers_view(request):
+    """
+    Display answers previously marked as 'N/A-Dealt' and allow recovering them back to 'N/A'.
+
+    On GET:
+        1. Computes a cutoff of three years ago.
+        2. Retrieves all FormAnswer instances for form type ID 15 where
+           `"answer": "N/A-Dealt"` and `created_at` is within the last three years.
+        3. Optimizes query with `select_related` and orders by newest first.
+        4. Renders `forms/na_dealt_answers_list.html` with context
+           `{'na_dealt_answers': na_dealt_answers}`.
+
+    On POST:
+        1. Reads `answer_id` from `request.POST`.
+        2. Fetches the corresponding FormAnswer (404 if not found).
+        3. If its `"answer"` value is `"N/A-Dealt"`, updates it to `"N/A"` and saves.
+        4. If the request is AJAX (`X-Requested-With: XMLHttpRequest`), returns
+           `JsonResponse({"status": "success", "message": "Recovered successfully!"})`.
+        5. Otherwise, redirects to the `"na_dealt_answers_list"` view.
+
+    Args:
+        request (django.http.HttpRequest):
+            - GET: no parameters.
+            - POST: expects `answer_id` in form data.
+
+    Returns:
+        django.http.HttpResponse or JsonResponse:
+            - GET: renders the list template with the `na_dealt_answers` context.
+            - POST (AJAX): JSON success response.
+            - POST (non-AJAX): redirect to `"na_dealt_answers_list"`.
+
+    Raises:
+        Http404:
+            If a POST `answer_id` does not correspond to any FormAnswer.
+    """
     """View to list answers marked as 'N/A-Dealt' and allow recovering them back to 'N/A'."""
     if request.method == "POST":
         answer_id = request.POST.get("answer_id")
