@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import F
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import ScrapForm, FeatEntry, SupervisorAuthorization
+from .models import ScrapForm, FeatEntry, SupervisorAuthorization, NewScrapSystemScrapEntry, NewScrapSystemScrapCategory
 import json
 from .models import Feat
 from django.contrib.auth.decorators import login_required
@@ -16,8 +16,9 @@ import os
 import importlib.util
 import inspect
 import re
-
-
+from decimal import Decimal
+from django.contrib import messages
+from django.utils.safestring import mark_safe
 
 
 def index(request):
@@ -1223,3 +1224,58 @@ def add_new_epv(request):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
+
+
+
+# =============================================================================
+# =============================================================================
+# ======================= New Scrap System ====================================
+# =============================================================================
+# =============================================================================
+
+
+
+
+def _build_cascade_dict():
+    """
+    Returns a nested dict:
+        {
+          "PART-123": {
+              "OpA": {
+                  "Cat-X": "3.25",
+                  "Cat-Y": "1.90",
+              },
+              "OpB": { ... }
+          },
+          ...
+        }
+    All costs are strings so JSON serialises cleanly.
+    """
+    cascade = {}
+    for row in (
+        NewScrapSystemScrapCategory.objects
+        .values("part_number", "operation", "category", "cost")
+        .order_by("part_number", "operation", "category")
+    ):
+        cascade \
+            .setdefault(row["part_number"], {}) \
+            .setdefault(row["operation"], {})[row["category"]] = str(row["cost"])
+    return cascade
+# -----------------------------------------------------------------
+def scrap_entry_view(request):
+    """Same POST logic as before … trimmed here for brevity …"""
+    if request.method == "POST":
+        # -------------- unchanged POST block ----------------------
+        # … your existing save loop goes here …
+        # ----------------------------------------------------------
+        return redirect("scrap_entry")
+
+    # -----------  GET -----------
+    context = {
+        # safestring so the JSON appears literally inside the template
+        "cascade_json": mark_safe(json.dumps(_build_cascade_dict())),
+    }
+    return render(request, "quality/new_scrap_entry.html", context)

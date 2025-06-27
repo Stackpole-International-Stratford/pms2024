@@ -1,0 +1,149 @@
+{% extends "parent.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-4">
+
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+      {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      New Scrap System – Scrap Entry
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate id="scrapForm">
+        {% csrf_token %}
+
+        <!-- MACHINE once -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Machine</label>
+          <input type="text" name="machine" class="form-control" required>
+        </div>
+
+        <hr>
+
+        <!-- rows go here -->
+        <div id="rows">
+
+          <!-- PROTOTYPE ROW -->
+          <div class="scrap-row border rounded p-3 mb-3">
+
+            <!-- Part -->
+            <div class="mb-2">
+              <label class="form-label">Part&nbsp;Number</label>
+              <select name="part_number" class="form-select part-select" required></select>
+            </div>
+
+            <!-- Operation -->
+            <div class="mb-2">
+              <label class="form-label">Operation</label>
+              <select name="operation" class="form-select op-select" required disabled></select>
+            </div>
+
+            <!-- Category -->
+            <div class="mb-2">
+              <label class="form-label">Category</label>
+              <select name="category" class="form-select cat-select" required disabled></select>
+            </div>
+
+            <!-- Qty -->
+            <div class="mb-2">
+              <label class="form-label">Quantity</label>
+              <input type="number" name="quantity" class="form-control" min="0" required>
+            </div>
+
+            <!-- auto-filled $/unit (editable if you want) -->
+            <div class="mb-2">
+              <label class="form-label">Unit&nbsp;Cost</label>
+              <input type="number" step="0.01" name="unit_cost" class="form-control unit-cost">
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-outline-secondary mb-3" id="addRow">
+          + Add another category
+        </button>
+
+        <button type="submit" class="btn btn-success">Submit Scrap</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// ----------  bootstrap the cascade dict from Django  ----------
+const cascade = {{ cascade_json }};   // part → op → cat → cost
+
+// ----------  helper to (re)build a select  ----------
+function fillSelect(select, list, firstLabel) {
+  select.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = "";
+  ph.text  = firstLabel;
+  select.appendChild(ph);
+  list.forEach(v => {
+      const o = document.createElement("option");
+      o.value = o.text = v;
+      select.appendChild(o);
+  });
+  select.disabled = list.length === 0;
+}
+
+// ----------  initialise ONE .scrap-row  ----------
+function initRow(row) {
+  const partSel = row.querySelector(".part-select");
+  const opSel   = row.querySelector(".op-select");
+  const catSel  = row.querySelector(".cat-select");
+  const costInp = row.querySelector(".unit-cost");
+
+  // build Part list once
+  if (!partSel.dataset.initialised) {
+      fillSelect(partSel, Object.keys(cascade), "-- pick part --");
+      partSel.dataset.initialised = "1";
+  }
+
+  partSel.onchange = () => {
+      const ops = partSel.value ? Object.keys(cascade[partSel.value]) : [];
+      fillSelect(opSel, ops, "-- pick op --");
+      fillSelect(catSel, [], "-- pick cat --");
+      costInp.value = "";
+  };
+
+  opSel.onchange = () => {
+      const cats = (partSel.value && opSel.value)
+                   ? Object.keys(cascade[partSel.value][opSel.value])
+                   : [];
+      fillSelect(catSel, cats, "-- pick cat --");
+      costInp.value = "";
+  };
+
+  catSel.onchange = () => {
+      const cost = (partSel.value && opSel.value && catSel.value)
+                   ? cascade[partSel.value][opSel.value][catSel.value]
+                   : "";
+      costInp.value = cost;   // auto-fill – still editable if operator must override
+  };
+}
+
+// ----------  make the first row live ----------
+initRow(document.querySelector(".scrap-row"));
+
+// ----------  “Add another category” ----------
+document.getElementById("addRow").addEventListener("click", () => {
+    const rows = document.getElementById("rows");
+    const proto = rows.querySelector(".scrap-row:last-child");
+    const clone = proto.cloneNode(true);
+
+    // wipe inputs
+    clone.querySelectorAll("input").forEach(i => i.value="");
+    clone.querySelectorAll("select").forEach(s => { s.innerHTML=""; s.disabled=true; });
+
+    rows.appendChild(clone);
+    initRow(clone);
+});
+</script>
+{% endblock %}

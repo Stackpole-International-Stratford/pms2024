@@ -1,5 +1,7 @@
 from django.db import models
 from plant.models.setupfor_models import Part  # Importing the Part model
+from decimal import Decimal
+from django.core.exceptions import ValidationError
 
 class SupervisorAuthorization(models.Model):
     supervisor_id = models.CharField(max_length=256)
@@ -219,3 +221,49 @@ class NewScrapSystemScrapCategory(models.Model):
 
     def __str__(self):
         return f"{self.part_number} – {self.operation} – {self.category}: {self.cost}"
+    
+
+
+class NewScrapSystemScrapEntry(models.Model):
+    """New Scrap System – every line the operator submits"""
+    created_at   = models.DateTimeField(auto_now_add=True)
+    machine      = models.CharField("New Scrap System Machine", max_length=100)
+
+    # free-text so the view can copy them straight from the operator;
+    # switch to FK if you have master tables
+    part_number  = models.CharField("New Scrap System Part #",  max_length=100)
+    operation    = models.CharField("New Scrap System Operation", max_length=100)
+    category     = models.CharField("New Scrap System Category",  max_length=100)
+
+    quantity     = models.PositiveIntegerField("New Scrap System Qty")
+    unit_cost    = models.DecimalField("New Scrap System $/unit", max_digits=10, decimal_places=2)
+    total_cost   = models.DecimalField("New Scrap System Total $", max_digits=12, decimal_places=2,
+                                       editable=False)
+
+    class Meta:
+        db_table = "new_scrap_system_scrap_entry"
+        verbose_name = "New Scrap System Scrap Entry"
+        verbose_name_plural = "New Scrap System Scrap Entries"
+        ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        # If price wasn’t filled in the form, pull it from the master price table
+        if self.unit_cost in (None, 0):
+            price = (
+                NewScrapSystemScrapCategory.objects
+                .filter(part_number=self.part_number,
+                        operation=self.operation,
+                        category=self.category)
+                .values_list("cost", flat=True)
+                .first()
+            )
+            if price is None:
+                raise ValidationError("No unit cost found for this part/operation/category.")
+            self.unit_cost = price
+
+        self.total_cost = (self.unit_cost or Decimal("0")) * self.quantity
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d} | {self.machine} | {self.part_number} | " \
+               f"{self.operation} | {self.category} × {self.quantity} = {self.total_cost}"
