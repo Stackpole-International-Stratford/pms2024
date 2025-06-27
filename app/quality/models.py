@@ -173,3 +173,49 @@ class RedRabbitsEntry(models.Model):
 
 
 
+
+
+
+
+
+# =================================================================
+# =================================================================
+# ================ New Scrap System Models ========================
+# =================================================================
+# =================================================================
+
+
+
+class NewScrapSystemScrapCategory(models.Model):
+    """New Scrap System – a single record tying Part #, Operation, Category & Cost"""
+    part_number = models.CharField(
+        "New Scrap System Part Number",
+        max_length=100,
+        help_text="Enter the part number (free-form)"
+    )
+    operation = models.CharField(
+        "New Scrap System Operation",
+        max_length=100,
+        help_text="Enter the operation name"
+    )
+    category = models.CharField(
+        "New Scrap System Category",
+        max_length=100,
+        help_text="Enter the scrap category"
+    )
+    cost = models.DecimalField(
+        "New Scrap System Cost",
+        max_digits=10,
+        decimal_places=2,
+        help_text="Enter the cost for this part/operation/category"
+    )
+
+    class Meta:
+        verbose_name = "New Scrap System Scrap Category"
+        verbose_name_plural = "New Scrap System Scrap Categories"
+        db_table = "new_scrap_system_scrap_category"
+        unique_together = ("part_number", "operation", "category")
+        ordering = ["part_number", "operation", "category"]
+
+    def __str__(self):
+        return f"{self.part_number} – {self.operation} – {self.category}: {self.cost}"
