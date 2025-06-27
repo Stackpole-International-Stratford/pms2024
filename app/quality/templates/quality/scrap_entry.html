@@ -3,6 +3,24 @@
 {% block title %}Scrap Entry{% endblock %}
 
 {% block content %}
+<style>
+  /* target just the filter row inputs */
+  #scrap-table thead tr:nth-child(2) .form-control {
+    /* adjust min-height to ~2× the normal line-height */
+    min-height: 3rem;
+  }
+  /* make the two filter-row inputs taller */
+#scrap-table thead tr:nth-child(2) .form-control {
+  min-height: 3rem;
+}
+
+/* make the machine & qty inputs taller for fat fingers */
+.scrap-entry-form .entry-item input[name="machine"],
+.scrap-entry-form .entry-item input[name="quantity"] {
+  min-height: 3rem;
+}
+</style>
+
 <div class="container my-4">
   <h1 class="mb-4">Submit Scrap</h1>
   <div class="table-responsive">
