@@ -47,7 +47,7 @@ OUTPUT_DIR = "docs/apid_forms"
 
 # Compose argv for pdoc: pretend the user ran:
 #   pdoc --html -o docs/apid_forms <MODULES...>
-new_argv = ["pdoc", "--html", "-o", OUTPUT_DIR] + MODULES
+new_argv = ["pdoc", "-o", OUTPUT_DIR] + MODULES
 
 print(f"[DEBUG] Final sys.argv for pdoc: {new_argv!r}")
 
