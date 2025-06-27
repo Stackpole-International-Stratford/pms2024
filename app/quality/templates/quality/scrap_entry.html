@@ -33,7 +33,7 @@
               <input type="number" name="quantity"
                      class="form-control form-control-sm mr-2"
                      placeholder="Qty" min="1" required>
-              <button type="submit" class="btn btn-primary btn-sm">
+              <button type="submit" class="btn btn-dark btn-sm">
                 Submit
               </button>
             </form>
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(r => r.json())
       .then(json => {
         if (json.success) {
-          alert(`Saved! Total cost: $${json.total_cost}`);
+          alert('Saved! Thank you');
           form.reset();
         } else {
           alert('Error: ' + json.error);
