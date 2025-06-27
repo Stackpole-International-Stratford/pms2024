@@ -35,6 +35,7 @@ urlpatterns = [
     path('quality/', include('quality.urls')),
     path('plant/', include('plant.urls')),
     path('forms/', include('forms.urls')),
+    path('documentation/', include('documentation.urls')),
 
     # Custom login URL
     path('login/', login_view, name='login'),
