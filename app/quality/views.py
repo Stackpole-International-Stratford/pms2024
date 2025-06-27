@@ -19,6 +19,8 @@ import re
 from decimal import Decimal
 from django.contrib import messages
 from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_POST
+from django.core.exceptions import ValidationError
 
 
 def index(request):
@@ -1237,3 +1239,46 @@ def add_new_epv(request):
 # =============================================================================
 
 
+def scrap_entry(request):
+    # pull in all categories — this is what the table will show
+    categories = NewScrapSystemScrapCategory.objects.all()
+    return render(request, 'quality/scrap_entry.html', {
+        'categories': categories
+    })
+
+@require_POST
+def create_scrap_entry(request):
+    machine     = request.POST.get('machine', '').strip()
+    quantity    = request.POST.get('quantity')
+    part_number = request.POST.get('part_number')
+    operation   = request.POST.get('operation')
+    category    = request.POST.get('category')
+
+    if not machine:
+        return JsonResponse({'success': False, 'error': 'Machine is required.'}, status=400)
+
+    try:
+        qty = int(quantity)
+        if qty <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Quantity must be a positive integer.'}, status=400)
+
+    try:
+        entry = NewScrapSystemScrapEntry(
+            machine=machine,
+            part_number=part_number,
+            operation=operation,
+            category=category,
+            quantity=qty
+        )
+        entry.save()  # your save() will fill in unit_cost & total_cost
+    except ValidationError as e:
+        return JsonResponse({'success': False, 'error': e.message}, status=400)
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Scrap entry recorded.',
+        'total_cost': str(entry.total_cost),
+        'created_at': entry.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+    })

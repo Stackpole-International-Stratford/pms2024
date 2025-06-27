@@ -57,5 +57,8 @@ urlpatterns = [
     path('edit_<str:column_name>/', edit_column, name='edit_column'),
     path('add_new_epv/', add_new_epv, name='add_new_epv'),
 
+    path('scrap-entry/', scrap_entry, name='scrap_entry'),
+    path('scrap-entry/create/', create_scrap_entry, name='create_scrap_entry'),
+
 
 ]
