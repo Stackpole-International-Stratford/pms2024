@@ -10,19 +10,44 @@
     min-height: 3rem;
   }
   /* make the two filter-row inputs taller */
-#scrap-table thead tr:nth-child(2) .form-control {
-  min-height: 3rem;
-}
+  #scrap-table thead tr:nth-child(2) .form-control {
+    min-height: 3rem;
+  }
 
-/* make the machine & qty inputs taller for fat fingers */
-.scrap-entry-form .entry-item input[name="machine"],
-.scrap-entry-form .entry-item input[name="quantity"] {
-  min-height: 3rem;
-}
+  /* make the machine & qty inputs taller for fat fingers */
+  .scrap-entry-form .entry-item input[name="machine"],
+  .scrap-entry-form .entry-item input[name="quantity"] {
+    min-height: 3rem;
+  }
+
+  /* palette of recent combos */
+  #combo-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  #combo-palette .combo-btn {
+    background-color: #ffc107;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  #combo-palette .combo-btn:hover {
+    background-color: #e0a800;
+  }
 </style>
 
 <div class="container my-4">
   <h1 class="mb-4">Submit Scrap</h1>
+
+  <!-- Recent combos palette -->
+  <div id="combo-palette" aria-label="Recent part/operation shortcuts">
+    <!-- Buttons inserted here by JS -->
+  </div>
+
   <div class="table-responsive">
     <table id="scrap-table" class="table table-striped table-bordered">
       <thead class="thead-dark">
@@ -110,7 +135,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // FILTERING
+  // -- FILTERING --
   const filterPart = document.getElementById('filter-part');
   const filterOp   = document.getElementById('filter-operation');
   const filterCat  = document.getElementById('filter-category');
@@ -131,7 +156,63 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   [filterPart, filterOp, filterCat].forEach(el => el.addEventListener('input', filterTable));
 
-  // DYNAMIC ROWS + AJAX
+  // -- RECENT COMBOS COOKIE STORAGE & PALETTE --
+  const paletteDiv = document.getElementById('combo-palette');
+  const COOKIE_NAME = 'recentCombos';
+  const MAX_COMBOS = 10;
+
+  function getCombosFromCookie() {
+    const match = document.cookie.match(new RegExp('(^| )' + COOKIE_NAME + '=([^;]+)'));
+    if (!match) return [];
+    try {
+      return JSON.parse(decodeURIComponent(match[2]));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setCombosCookie(arr) {
+    const val = encodeURIComponent(JSON.stringify(arr));
+    // set cookie for 30 days
+    document.cookie = COOKIE_NAME + '=' + val + ';path=/;max-age=' + (30*24*60*60);
+  }
+
+  function saveCombo(part, op) {
+    let combos = getCombosFromCookie();
+    // remove existing same combo
+    combos = combos.filter(c => !(c.part === part && c.op === op));
+    // add to front
+    combos.unshift({ part, op });
+    // cap length
+    if (combos.length > MAX_COMBOS) combos = combos.slice(0, MAX_COMBOS);
+    setCombosCookie(combos);
+    renderPalette();
+  }
+
+  function renderPalette() {
+    const combos = getCombosFromCookie();
+    paletteDiv.innerHTML = '';
+    combos.forEach(c => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'combo-btn';
+      btn.textContent = `${c.part} – ${c.op}`;
+      btn.addEventListener('click', () => {
+        filterPart.value = c.part;
+        filterOp.value   = c.op;
+        filterTable();
+      });
+      paletteDiv.appendChild(btn);
+    });
+    if (combos.length === 0) {
+      paletteDiv.textContent = 'No recent combos.';
+    }
+  }
+
+  // initialize palette on load
+  renderPalette();
+
+  // -- DYNAMIC ROWS & AJAX SUBMIT, plus saving combos --
   document.querySelectorAll('.scrap-entry-form').forEach(form => {
     const list = form.querySelector('.entry-list');
 
@@ -190,6 +271,8 @@ document.addEventListener('DOMContentLoaded', function() {
           alert('Errors:\n' + errs.join('\n'));
         } else {
           alert('All entries recorded!');
+          // save this part/operation combo
+          saveCombo(part, op);
           // reset to single blank row
           const first = list.querySelector('.entry-item');
           list.innerHTML = '';
