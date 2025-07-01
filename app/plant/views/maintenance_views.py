@@ -97,10 +97,15 @@ def delete_downtime_entry(request):
     except (ValueError, KeyError):
         return HttpResponseBadRequest("Invalid payload")
 
+    # fetch only non-deleted events
     try:
         e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
     except MachineDowntimeEvent.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
+
+    # ✏️ NEW: ensure no open participants
+    if DowntimeParticipation.objects.filter(event=e, leave_epoch__isnull=True).exists():
+        return HttpResponseForbidden("Cannot delete until all participants have left.")
 
     # soft-delete
     e.is_deleted = True
@@ -108,6 +113,7 @@ def delete_downtime_entry(request):
     e.save(update_fields=['is_deleted', 'deleted_at'])
 
     return JsonResponse({'status': 'ok'})
+
 
 
 

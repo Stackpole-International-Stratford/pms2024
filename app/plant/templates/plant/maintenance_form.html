@@ -526,7 +526,7 @@
       bootstrap.Modal.getInstance(editModalEl).hide();
       tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
     })
-    .catch(()=>alert('Error deleting entry.'));
+    .catch(()=>alert('Error deleting entry. Have all participants left the job?'));
   });
 
   // ─── OPEN CLOSE-OUT MODAL ───────────────────────────────────────────
