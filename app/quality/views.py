@@ -21,6 +21,7 @@ from django.contrib import messages
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 
 
 def index(request):
@@ -1240,11 +1241,23 @@ def add_new_epv(request):
 
 
 def scrap_entry(request):
-    # pull in all categories — this is what the table will show
-    categories = NewScrapSystemScrapCategory.objects.all()
+    total = NewScrapSystemScrapCategory.objects.count()
+    first_batch = NewScrapSystemScrapCategory.objects.order_by(
+        'part_number','operation','category'
+    )[:300]
     return render(request, 'quality/scrap_entry.html', {
-        'categories': categories
+        'initial_categories': first_batch,
+        'total_count': total,
     })
+
+def ajax_categories(request):
+    offset = int(request.GET.get('offset', 0))
+    limit  = int(request.GET.get('limit', 300))
+    qs = NewScrapSystemScrapCategory.objects.order_by(
+        'part_number','operation','category'
+    )[offset:offset+limit]
+    results = list(qs.values('part_number','operation','category'))
+    return JsonResponse({'results': results})
 
 @require_POST
 def create_scrap_entry(request):

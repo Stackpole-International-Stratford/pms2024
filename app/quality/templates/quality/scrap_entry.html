@@ -1,86 +1,40 @@
 {% extends "parent.html" %}
-
 {% block title %}Scrap Entry{% endblock %}
 
 {% block content %}
 <style>
-  /* target just the filter row inputs */
-  #scrap-table thead tr:nth-child(2) .form-control {
-    /* adjust min-height to ~2× the normal line-height */
-    min-height: 3rem;
-  }
-  /* make the two filter-row inputs taller */
-  #scrap-table thead tr:nth-child(2) .form-control {
-    min-height: 3rem;
-  }
-
-  /* make the machine & qty inputs taller for fat fingers */
-  .scrap-entry-form .entry-item input[name="machine"],
-  .scrap-entry-form .entry-item input[name="quantity"] {
-    min-height: 3rem;
-  }
-
-  /* palette of recent combos */
-  #combo-palette {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-  #combo-palette .combo-btn {
-    background-color: #ffc107;
-    border: none;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-  #combo-palette .combo-btn:hover {
-    background-color: #e0a800;
-  }
+  /* bigger filter inputs */
+  #scrap-table thead tr:nth-child(2) .form-control { min-height: 3rem; }
+  /* fat-finger inputs */
+  .scrap-entry-form input[name="machine"],
+  .scrap-entry-form input[name="quantity"] { min-height: 3rem; }
+  /* palette */
+  #combo-palette { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+  .combo-btn { background:#ffc107; border:none; padding:.5rem .75rem; border-radius:.25rem; cursor:pointer; }
+  .combo-btn:hover { background:#e0a800; }
 </style>
 
 <div class="container my-4">
   <h1 class="mb-4">Submit Scrap</h1>
-
-  <!-- Recent combos palette -->
-  <div id="combo-palette" aria-label="Recent part/operation shortcuts">
-    <!-- Buttons inserted here by JS -->
-  </div>
+  <!-- recent combos -->
+  <div id="combo-palette" aria-label="Recent combos"></div>
 
   <div class="table-responsive">
     <table id="scrap-table" class="table table-striped table-bordered">
       <thead class="thead-dark">
         <tr>
-          <th>Part Number</th>
-          <th>Operation</th>
-          <th>Category</th>
-          <th>Actions</th>
+          <th>Part Number</th><th>Operation</th><th>Category</th><th>Actions</th>
         </tr>
         <tr>
-          <th>
-            <input type="text"
-                   id="filter-part"
-                   class="form-control form-control-sm"
-                   placeholder="Filter Part">
-          </th>
-          <th>
-            <input type="text"
-                   id="filter-operation"
-                   class="form-control form-control-sm"
-                   placeholder="Filter Operation">
-          </th>
-          <th>
-            <input type="text"
-                   id="filter-category"
-                   class="form-control form-control-sm"
-                   placeholder="Filter Category">
-          </th>
+          <th><input id="filter-part"    class="form-control form-control-sm" placeholder="Filter Part"></th>
+          <th><input id="filter-operation" class="form-control form-control-sm" placeholder="Filter Operation"></th>
+          <th><input id="filter-category" class="form-control form-control-sm" placeholder="Filter Category"></th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for cat in categories %}
+        {# render only the first 300 #}
+        {% for cat in initial_categories %}
         <tr>
           <td class="td-part">{{ cat.part_number }}</td>
           <td class="td-operation">{{ cat.operation }}</td>
@@ -94,99 +48,73 @@
               <div class="entry-list">
                 <div class="entry-item row gx-2 gy-1 align-items-center mb-1">
                   <div class="col-auto">
-                    <input type="text"
-                           name="machine"
-                           class="form-control form-control-sm"
-                           placeholder="Machine"
-                           required>
+                    <input type="text"  name="machine"  class="form-control form-control-sm" placeholder="Machine" required>
                   </div>
                   <div class="col-auto">
-                    <input type="number"
-                           name="quantity"
-                           class="form-control form-control-sm"
-                           placeholder="Qty"
-                           min="1"
-                           required>
+                    <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" min="1" required>
                   </div>
                   <div class="col-auto">
-                    <button type="button"
-                            class="btn btn-dark btn-sm btn-add">+</button>
-                    <button type="button"
-                            class="btn btn-secondary btn-sm btn-remove">−</button>
+                    <button type="button" class="btn btn-dark btn-sm btn-add">+</button>
+                    <button type="button" class="btn btn-secondary btn-sm btn-remove">−</button>
                   </div>
                   <div class="col-auto">
-                    <button type="submit"
-                            class="btn btn-warning btn-sm">Submit</button>
+                    <button type="submit" class="btn btn-warning btn-sm">Submit</button>
                   </div>
                 </div>
               </div>
             </form>
           </td>
         </tr>
-        {% empty %}
-        <tr>
-          <td colspan="4" class="text-center">No categories defined.</td>
-        </tr>
         {% endfor %}
+        {# loading indicator for the rest #}
+        <tr id="loading-row">
+          <td colspan="4" class="text-center">Loading…</td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // -- FILTERING --
+document.addEventListener('DOMContentLoaded', function(){
+  // — FILTERING —
   const filterPart = document.getElementById('filter-part');
   const filterOp   = document.getElementById('filter-operation');
   const filterCat  = document.getElementById('filter-category');
-  const rows       = document.querySelectorAll('#scrap-table tbody tr');
 
   function filterTable() {
     const pv = filterPart.value.trim().toLowerCase();
     const ov = filterOp.value.trim().toLowerCase();
     const cv = filterCat.value.trim().toLowerCase();
-    rows.forEach(row => {
-      const p = row.querySelector('.td-part');
-      if (!p) return;
-      const t1 = p.textContent.trim().toLowerCase();
+    document.querySelectorAll('#scrap-table tbody tr').forEach(row => {
+      const pCell = row.querySelector('.td-part');
+      if (!pCell) return;
+      const t1 = pCell.textContent.trim().toLowerCase();
       const t2 = row.querySelector('.td-operation').textContent.trim().toLowerCase();
       const t3 = row.querySelector('.td-category').textContent.trim().toLowerCase();
       row.style.display = (t1.includes(pv) && t2.includes(ov) && t3.includes(cv)) ? '' : 'none';
     });
   }
-  [filterPart, filterOp, filterCat].forEach(el => el.addEventListener('input', filterTable));
 
-  // -- RECENT COMBOS COOKIE STORAGE & PALETTE --
-  const paletteDiv = document.getElementById('combo-palette');
+  filterPart.addEventListener('input', filterTable);
+  filterOp.addEventListener('input', filterTable);
+  filterCat.addEventListener('input', filterTable);
+
+  // — RECENT-COMBO PALETTE / COOKIE HELPERS —
+  const paletteDiv  = document.getElementById('combo-palette');
   const COOKIE_NAME = 'recentCombos';
-  const MAX_COMBOS = 10;
+  const MAX_COMBOS  = 10;
 
   function getCombosFromCookie() {
-    const match = document.cookie.match(new RegExp('(^| )' + COOKIE_NAME + '=([^;]+)'));
-    if (!match) return [];
-    try {
-      return JSON.parse(decodeURIComponent(match[2]));
-    } catch (e) {
-      return [];
-    }
+    const m = document.cookie.match(new RegExp('(^| )' + COOKIE_NAME + '=([^;]+)'));
+    if (!m) return [];
+    try { return JSON.parse(decodeURIComponent(m[2])); }
+    catch { return []; }
   }
 
   function setCombosCookie(arr) {
-    const val = encodeURIComponent(JSON.stringify(arr));
-    // set cookie for 30 days
-    document.cookie = COOKIE_NAME + '=' + val + ';path=/;max-age=' + (30*24*60*60);
-  }
-
-  function saveCombo(part, op) {
-    let combos = getCombosFromCookie();
-    // remove existing same combo
-    combos = combos.filter(c => !(c.part === part && c.op === op));
-    // add to front
-    combos.unshift({ part, op });
-    // cap length
-    if (combos.length > MAX_COMBOS) combos = combos.slice(0, MAX_COMBOS);
-    setCombosCookie(combos);
-    renderPalette();
+    const v = encodeURIComponent(JSON.stringify(arr));
+    document.cookie = COOKIE_NAME + '=' + v + ';path=/;max-age=' + (30*24*60*60);
   }
 
   function renderPalette() {
@@ -209,82 +137,168 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // initialize palette on load
+  function saveCombo(part, op) {
+    let combos = getCombosFromCookie();
+    combos = combos.filter(c => !(c.part === part && c.op === op));
+    combos.unshift({ part, op });
+    if (combos.length > MAX_COMBOS) combos = combos.slice(0, MAX_COMBOS);
+    setCombosCookie(combos);
+    renderPalette();
+  }
+
   renderPalette();
 
-  // -- DYNAMIC ROWS & AJAX SUBMIT, plus saving combos --
-  document.querySelectorAll('.scrap-entry-form').forEach(form => {
-    const list = form.querySelector('.entry-list');
+  // — CHUNKED LOADING CONFIG —
+  const chunkSize = 300;
+  let offset      = {{ initial_categories|length }};
+  const total     = {{ total_count }};
+  const ajaxUrl   = "{% url 'ajax_categories' %}";
+  const tbody     = document.querySelector('#scrap-table tbody');
+  const loadingRow = document.getElementById('loading-row');
 
-    function updateRemoveBtns() {
-      const items = list.querySelectorAll('.entry-item');
-      items.forEach(i => {
-        i.querySelector('.btn-remove').disabled = (items.length === 1);
-      });
+  // — HELPER TO ENABLE/DISABLE REMOVE BUTTONS —
+  function updateRemoveBtns(list) {
+    const items = list.querySelectorAll('.entry-item');
+    items.forEach(item => {
+      item.querySelector('.btn-remove').disabled = (items.length === 1);
+    });
+  }
+
+  // — STREAM IN REMAINING BATCHES —
+  function loadChunk() {
+    if (offset >= total) {
+      loadingRow.remove();
+      return;
     }
+    fetch(`${ajaxUrl}?offset=${offset}&limit=${chunkSize}`)
+      .then(r => r.json())
+      .then(data => {
+        loadingRow.remove();
+        data.results.forEach(cat => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="td-part">${cat.part_number}</td>
+            <td class="td-operation">${cat.operation}</td>
+            <td class="td-category">${cat.category}</td>
+            <td>
+              <form class="scrap-entry-form p-2 border rounded"
+                    data-part-number="${cat.part_number}"
+                    data-operation="${cat.operation}"
+                    data-category="${cat.category}">
+                <div class="entry-list">
+                  <div class="entry-item row gx-2 gy-1 align-items-center mb-1">
+                    <div class="col-auto">
+                      <input type="text" name="machine" class="form-control form-control-sm" placeholder="Machine" required>
+                    </div>
+                    <div class="col-auto">
+                      <input type="number" name="quantity" class="form-control form-control-sm" placeholder="Qty" min="1" required>
+                    </div>
+                    <div class="col-auto">
+                      <button type="button" class="btn btn-dark btn-sm btn-add">+</button>
+                      <button type="button" class="btn btn-secondary btn-sm btn-remove">−</button>
+                    </div>
+                    <div class="col-auto">
+                      <button type="submit" class="btn btn-warning btn-sm">Submit</button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+        offset += data.results.length;
+        if (offset < total) {
+          tbody.appendChild(loadingRow);
+          loadChunk();
+        }
+      });
+  }
 
-    list.addEventListener('click', e => {
-      const item = e.target.closest('.entry-item');
-      if (!item) return;
-      if (e.target.classList.contains('btn-add')) {
+  loadChunk();
+
+  // — CSRF HELPER —
+  function getCSRF() {
+    let t = null;
+    document.cookie.split(';').forEach(c => {
+      const [k,v] = c.trim().split('=');
+      if (k === 'csrftoken') t = decodeURIComponent(v);
+    });
+    return t;
+  }
+  const csrftoken = getCSRF();
+
+  // — EVENT DELEGATION ON THE TABLE —
+  const table = document.getElementById('scrap-table');
+
+  // add/remove row buttons
+  table.addEventListener('click', function(e) {
+    const addBtn = e.target.closest('.btn-add');
+    const remBtn = e.target.closest('.btn-remove');
+    if (addBtn || remBtn) {
+      const item = (addBtn||remBtn).closest('.entry-item');
+      const list = item.parentElement;
+      if (addBtn) {
         const clone = item.cloneNode(true);
         clone.querySelector('input[name="machine"]').value = '';
-        clone.querySelector('input[name="quantity"]').value = '';
+        clone.querySelector('input[name="quantity"]').value  = '';
         list.insertBefore(clone, item.nextSibling);
-        updateRemoveBtns();
       }
-      if (e.target.classList.contains('btn-remove') && list.children.length > 1) {
+      if (remBtn && list.children.length > 1) {
         item.remove();
-        updateRemoveBtns();
       }
-    });
+      updateRemoveBtns(list);
+    }
+  });
 
-    updateRemoveBtns();
+  // form submissions
+  table.addEventListener('submit', function(e) {
+    const form = e.target.closest('.scrap-entry-form');
+    if (!form) return;
+    e.preventDefault();
 
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const token = form.querySelector('[name="csrfmiddlewaretoken"]').value;
-      const url   = "{% url 'create_scrap_entry' %}";
-      const part  = form.dataset.partNumber;
-      const op    = form.dataset.operation;
-      const cat   = form.dataset.category;
-      const items = form.querySelectorAll('.entry-item');
+    const url   = "{% url 'create_scrap_entry' %}";
+    const part  = form.dataset.partNumber;
+    const op    = form.dataset.operation;
+    const cat   = form.dataset.category;
+    const list  = form.querySelector('.entry-list');
+    const items = list.querySelectorAll('.entry-item');
 
-      Promise.all(Array.from(items).map(item => {
-        const data = new FormData();
-        data.append('csrfmiddlewaretoken', token);
-        data.append('part_number', part);
-        data.append('operation',    op);
-        data.append('category',     cat);
-        data.append('machine',      item.querySelector('[name="machine"]').value.trim());
-        data.append('quantity',     item.querySelector('[name="quantity"]').value);
+    Promise.all(Array.from(items).map(item => {
+      const data = new FormData();
+      data.append('part_number', part);
+      data.append('operation',    op);
+      data.append('category',     cat);
+      data.append('machine',      item.querySelector('[name="machine"]').value.trim());
+      data.append('quantity',     item.querySelector('[name="quantity"]').value);
 
-        return fetch(url, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': token },
-          body: data
-        }).then(r => r.json());
-      }))
-      .then(results => {
-        const errs = results.filter(r => !r.success).map(r => r.error);
-        if (errs.length) {
-          alert('Errors:\n' + errs.join('\n'));
-        } else {
-          alert('All entries recorded!');
-          // save this part/operation combo
-          saveCombo(part, op);
-          // reset to single blank row
-          const first = list.querySelector('.entry-item');
-          list.innerHTML = '';
-          list.appendChild(first);
-          first.querySelector('[name="machine"]').value = '';
-          first.querySelector('[name="quantity"]').value = '';
-          updateRemoveBtns();
-        }
-      })
-      .catch(() => alert('An unexpected error occurred.'));
+      return fetch(url, {
+        method:  'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+        body:    data
+      }).then(r => r.json());
+    }))
+    .then(results => {
+      const errs = results.filter(r => !r.success).map(r => r.error);
+      if (errs.length) {
+        alert('Errors:\n' + errs.join('\n'));
+      } else {
+        alert('All entries recorded!');
+        saveCombo(part, op);
+        // reset to a single blank row
+        const first = list.querySelector('.entry-item');
+        list.innerHTML = '';
+        list.appendChild(first);
+        first.querySelector('[name="machine"]').value = '';
+        first.querySelector('[name="quantity"]').value = '';
+        updateRemoveBtns(list);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('An unexpected error occurred: ' + (err.message||err));
     });
   });
+
 });
 </script>
 {% endblock %}
