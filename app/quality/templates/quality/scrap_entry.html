@@ -76,34 +76,37 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', function() {
   // — FILTERING —
-  const filterPart = document.getElementById('filter-part');
-  const filterOp   = document.getElementById('filter-operation');
-  const filterCat  = document.getElementById('filter-category');
+  const filterPart = document.getElementById('filter-part'),
+        filterOp   = document.getElementById('filter-operation'),
+        filterCat  = document.getElementById('filter-category');
 
   function filterTable() {
-    const pv = filterPart.value.trim().toLowerCase();
-    const ov = filterOp.value.trim().toLowerCase();
-    const cv = filterCat.value.trim().toLowerCase();
+    const pv = filterPart.value.trim().toLowerCase(),
+          ov = filterOp.value.trim().toLowerCase(),
+          cv = filterCat.value.trim().toLowerCase();
+
     document.querySelectorAll('#scrap-table tbody tr').forEach(row => {
       const pCell = row.querySelector('.td-part');
       if (!pCell) return;
-      const t1 = pCell.textContent.trim().toLowerCase();
-      const t2 = row.querySelector('.td-operation').textContent.trim().toLowerCase();
-      const t3 = row.querySelector('.td-category').textContent.trim().toLowerCase();
-      row.style.display = (t1.includes(pv) && t2.includes(ov) && t3.includes(cv)) ? '' : 'none';
+      const t1 = pCell.textContent.trim().toLowerCase(),
+            t2 = row.querySelector('.td-operation').textContent.trim().toLowerCase(),
+            t3 = row.querySelector('.td-category').textContent.trim().toLowerCase();
+      row.style.display = (t1.includes(pv) && t2.includes(ov) && t3.includes(cv))
+        ? ''
+        : 'none';
     });
   }
 
-  filterPart.addEventListener('input', filterTable);
-  filterOp.addEventListener('input', filterTable);
-  filterCat.addEventListener('input', filterTable);
+  [filterPart, filterOp, filterCat].forEach(el => 
+    el.addEventListener('input', filterTable)
+  );
 
   // — RECENT-COMBO PALETTE / COOKIE HELPERS —
-  const paletteDiv  = document.getElementById('combo-palette');
-  const COOKIE_NAME = 'recentCombos';
-  const MAX_COMBOS  = 10;
+  const paletteDiv  = document.getElementById('combo-palette'),
+        COOKIE_NAME = 'recentCombos',
+        MAX_COMBOS  = 10;
 
   function getCombosFromCookie() {
     const m = document.cookie.match(new RegExp('(^| )' + COOKIE_NAME + '=([^;]+)'));
@@ -122,8 +125,8 @@ document.addEventListener('DOMContentLoaded', function(){
     paletteDiv.innerHTML = '';
     combos.forEach(c => {
       const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'combo-btn';
+      btn.type        = 'button';
+      btn.className   = 'combo-btn';
       btn.textContent = `${c.part} – ${c.op}`;
       btn.addEventListener('click', () => {
         filterPart.value = c.part;
@@ -148,15 +151,14 @@ document.addEventListener('DOMContentLoaded', function(){
 
   renderPalette();
 
-  // — CHUNKED LOADING CONFIG —
-  const chunkSize = 300;
-  let offset      = {{ initial_categories|length }};
-  const total     = {{ total_count }};
-  const ajaxUrl   = "{% url 'ajax_categories' %}";
-  const tbody     = document.querySelector('#scrap-table tbody');
+  // — CHUNKED LOADING —
+  const chunkSize  = 300;
+  let   offset     = {{ initial_categories|length }};
+  const total      = {{ total_count }};
+  const ajaxUrl    = "{% url 'ajax_categories' %}";
+  const tbody      = document.querySelector('#scrap-table tbody');
   const loadingRow = document.getElementById('loading-row');
 
-  // — HELPER TO ENABLE/DISABLE REMOVE BUTTONS —
   function updateRemoveBtns(list) {
     const items = list.querySelectorAll('.entry-item');
     items.forEach(item => {
@@ -164,7 +166,6 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
-  // — STREAM IN REMAINING BATCHES —
   function loadChunk() {
     if (offset >= total) {
       loadingRow.remove();
@@ -220,37 +221,35 @@ document.addEventListener('DOMContentLoaded', function(){
   function getCSRF() {
     let t = null;
     document.cookie.split(';').forEach(c => {
-      const [k,v] = c.trim().split('=');
+      const [k, v] = c.trim().split('=');
       if (k === 'csrftoken') t = decodeURIComponent(v);
     });
     return t;
   }
   const csrftoken = getCSRF();
 
-  // — EVENT DELEGATION ON THE TABLE —
+  // — EVENT DELEGATION (only for buttons & form) —
   const table = document.getElementById('scrap-table');
 
-  // add/remove row buttons
+  // only handle clicks on add/remove buttons
   table.addEventListener('click', function(e) {
-    const addBtn = e.target.closest('.btn-add');
-    const remBtn = e.target.closest('.btn-remove');
-    if (addBtn || remBtn) {
-      const item = (addBtn||remBtn).closest('.entry-item');
-      const list = item.parentElement;
-      if (addBtn) {
-        const clone = item.cloneNode(true);
-        clone.querySelector('input[name="machine"]').value = '';
-        clone.querySelector('input[name="quantity"]').value  = '';
-        list.insertBefore(clone, item.nextSibling);
-      }
-      if (remBtn && list.children.length > 1) {
-        item.remove();
-      }
-      updateRemoveBtns(list);
+    const btn = e.target;
+    if (!btn.matches('.btn-add, .btn-remove')) return;
+    const item = btn.closest('.entry-item');
+    const list = item.parentElement;
+
+    if (btn.matches('.btn-add')) {
+      const clone = item.cloneNode(true);
+      clone.querySelector('input[name="machine"]').value  = '';
+      clone.querySelector('input[name="quantity"]').value = '';
+      list.insertBefore(clone, item.nextSibling);
+    } else if (btn.matches('.btn-remove') && list.children.length > 1) {
+      item.remove();
     }
+    updateRemoveBtns(list);
   });
 
-  // form submissions
+  // only handle submit on our forms
   table.addEventListener('submit', function(e) {
     const form = e.target.closest('.scrap-entry-form');
     if (!form) return;
@@ -284,11 +283,11 @@ document.addEventListener('DOMContentLoaded', function(){
       } else {
         alert('All entries recorded!');
         saveCombo(part, op);
-        // reset to a single blank row
+        // reset to one blank row
         const first = list.querySelector('.entry-item');
         list.innerHTML = '';
         list.appendChild(first);
-        first.querySelector('[name="machine"]').value = '';
+        first.querySelector('[name="machine"]').value  = '';
         first.querySelector('[name="quantity"]').value = '';
         updateRemoveBtns(list);
       }
@@ -298,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function(){
       alert('An unexpected error occurred: ' + (err.message||err));
     });
   });
-
 });
 </script>
+
 {% endblock %}
