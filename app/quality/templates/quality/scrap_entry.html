@@ -23,7 +23,6 @@
     {% endfor %}
   {% endif %}
 
-
   <div class="card mb-4">
     <div class="card-header">
       Record Scrap Entry
@@ -31,105 +30,166 @@
     <div class="card-body">
       <form method="post" id="scrap-form">
         {% csrf_token %}
-        <div class="row">
-          <!-- Part Number -->
-          <div class="col-md-3">
-            <div class="form-group">
-              <label for="id_part_number">Part Number</label>
-              <select
-                id="id_part_number"
-                name="part_number"
-                class="form-control"
-                size="5"
-              >
-                {% for pn in part_numbers %}
-                  <option value="{{ pn }}"
-                    {% if pn == selected_part_number %}selected{% endif %}>
-                    {{ pn }}
-                  </option>
-                {% endfor %}
-              </select>
+        <div class="row gx-3">
+          {# Part Number #}
+          <div class="col-6 col-md-3 d-flex flex-column">
+            <label class="form-label">Part Number</label>
+            <input type="hidden" name="part_number" id="input_part" value="{{ selected_part_number }}">
+            <div class="text-center mb-1">
+              <button type="button"
+                      class="btn btn-light scroll-btn scroll-up"
+                      data-target="list_part">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1
+                           1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="list_part" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+              {% for pn in part_numbers %}
+                <a href="#"
+                   class="list-group-item list-group-item-action {% if pn == selected_part_number %}active{% endif %}"
+                   data-value="{{ pn }}">
+                  {{ pn }}
+                </a>
+              {% endfor %}
+            </div>
+            <div class="text-center mt-1">
+              <button type="button"
+                      class="btn btn-light scroll-btn scroll-down"
+                      data-target="list_part">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
+                           4h9.592a1 1 0 0 1 .753 1.659l-4.796
+                           5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <!-- Machine -->
-          <div class="col-md-3">
-            <div class="form-group">
-              <label for="id_machine">Machine</label>
-              <select
-                id="id_machine"
-                name="machine"
-                class="form-control"
-                size="5"
-              >
-                {% for m in machines %}
-                  <option value="{{ m.asset_number }}"
-                    {% if m.asset_number == selected_machine %}selected{% endif %}>
-                    {{ m.asset_name|default:m.asset_number }}
-                  </option>
-                {% endfor %}
-              </select>
+          {# Machine #}
+          <div class="col-6 col-md-3 d-flex flex-column">
+            <label class="form-label">Machine</label>
+            <input type="hidden" name="machine" id="input_machine" value="{{ selected_machine }}">
+            <div class="text-center mb-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_machine">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753
+                           1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1
+                           0 0 0-1.506 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="list_machine" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+              {% for m in machines %}
+                <a href="#"
+                   class="list-group-item list-group-item-action {% if m.asset_number == selected_machine %}active{% endif %}"
+                   data-value="{{ m.asset_number }}">
+                  {{ m.asset_name|default:m.asset_number }}
+                </a>
+              {% endfor %}
+            </div>
+            <div class="text-center mt-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_machine">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
+                           4h9.592a1 1 0 0 1 .753 1.659l-4.796
+                           5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <!-- Operation -->
-          <div class="col-md-2">
-            <div class="form-group">
-              <label for="id_operation">Operation</label>
-              <select
-                id="id_operation"
-                name="operation"
-                class="form-control"
-                size="5"
-              >
-                {% for op in operations %}
-                  <option value="{{ op }}"
-                    {% if op == selected_operation %}selected{% endif %}>
-                    {{ op }}
-                  </option>
-                {% endfor %}
-              </select>
+          {# Operation #}
+          <div class="col-6 col-md-2 d-flex flex-column">
+            <label class="form-label">Operation</label>
+            <input type="hidden" name="operation" id="input_op" value="{{ selected_operation }}">
+            <div class="text-center mb-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_op">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753
+                           1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1
+                           0 0 0-1.506 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="list_op" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+              {% for op in operations %}
+                <a href="#"
+                   class="list-group-item list-group-item-action {% if op == selected_operation %}active{% endif %}"
+                   data-value="{{ op }}">
+                  {{ op }}
+                </a>
+              {% endfor %}
+            </div>
+            <div class="text-center mt-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_op">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
+                           4h9.592a1 1 0 0 1 .753 1.659l-4.796
+                           5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <!-- Category -->
-          <div class="col-md-2">
-            <div class="form-group">
-              <label for="id_category">Category</label>
-              <select
-                id="id_category"
-                name="category"
-                class="form-control"
-                size="5"
-              >
-                {% for cat in categories %}
-                  <option value="{{ cat }}"
-                    {% if cat == selected_category %}selected{% endif %}>
-                    {{ cat }}
-                  </option>
-                {% endfor %}
-              </select>
+          {# Category #}
+          <div class="col-6 col-md-2 d-flex flex-column">
+            <label class="form-label">Category</label>
+            <input type="hidden" name="category" id="input_cat" value="{{ selected_category }}">
+            <div class="text-center mb-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_cat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753
+                           1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1
+                           0 0 0-1.506 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="list_cat" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+              {% for cat in categories %}
+                <a href="#"
+                   class="list-group-item list-group-item-action {% if cat == selected_category %}active{% endif %}"
+                   data-value="{{ cat }}">
+                  {{ cat }}
+                </a>
+              {% endfor %}
+            </div>
+            <div class="text-center mt-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_cat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
+                           4h9.592a1 1 0 0 1 .753        1.659l-4.796
+                           5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <!-- Quantity -->
-          <div class="col-md-2">
-            <div class="form-group">
-              <label for="id_quantity">Quantity</label>
-              <input
-                type="number"
-                min="1"
-                id="id_quantity"
-                name="quantity"
-                class="form-control"
-                value="{{ quantity }}"
-              >
-            </div>
+          {# Quantity #}
+          <div class="col-12 col-md-2">
+            <label for="id_quantity" class="form-label">Quantity</label>
+            <input
+              type="number"
+              min="1"
+              id="id_quantity"
+              name="quantity"
+              class="form-control"
+              value="{{ quantity }}"
+            >
           </div>
         </div>
 
         <div class="d-flex justify-content-end mt-3">
-          <button type="submit" class="btn btn-warning">Submit</button>
+          <button type="submit" class="btn btn-dark">Submit</button>
         </div>
       </form>
     </div>
@@ -137,107 +197,116 @@
 </div>
 
 <style>
-  /* Increase font size for better readability */
-  #scrap-form label {
-    font-size: 1.1rem;
-  }
-  #scrap-form .form-control {
+  .list-group-item {
     font-size: 1.25rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding: .75rem 1rem;
+    cursor: pointer;
   }
-  /* Make the scroll-wheel selects a bit taller */
-  #scrap-form select[size] {
-    line-height: 1.5;
-  }
-  #scrap-form button {
-    font-size: 1.25rem;
+  .scroll-btn {
+    width: 100%;
   }
 </style>
 
 <script>
-  const ajaxPopulate = (url, params, target) => {
-    fetch(url + "?" + new URLSearchParams(params), {
-      credentials: "same-origin"
-    })
+  // scroll helpers
+  const SCROLL_AMOUNT = 35;       // px per tick
+  const SCROLL_INTERVAL = 60;    // ms between ticks
+
+  document.querySelectorAll('.scroll-btn').forEach(btn => {
+    let timer;
+    const targetId = btn.dataset.target;
+    const container = document.getElementById(targetId);
+
+    const start = (dir) => {
+      if (timer) clearInterval(timer);
+      timer = setInterval(() => {
+        container.scrollTop += dir * SCROLL_AMOUNT;
+      }, SCROLL_INTERVAL);
+    };
+    const stop = () => {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    btn.addEventListener('mousedown', () => start(btn.classList.contains('scroll-down') ? 1 : -1));
+    btn.addEventListener('mouseup',   stop);
+    btn.addEventListener('mouseleave',stop);
+    btn.addEventListener('touchstart',e => { e.preventDefault(); start(btn.classList.contains('scroll-down') ? 1 : -1); });
+    btn.addEventListener('touchend',   stop);
+  });
+
+  // previous wireListClicks / ajaxList / clear code unchanged...
+  function wireListClicks(listId, inputId, callback) {
+    const list = document.getElementById(listId);
+    const hidden = document.getElementById(inputId);
+    list.addEventListener('click', e => {
+      if (!e.target.matches('.list-group-item')) return;
+      list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+      e.target.classList.add('active');
+      hidden.value = e.target.dataset.value;
+      callback(e.target.dataset.value);
+    });
+  }
+  function ajaxList(url, params, listId, inputId) {
+    fetch(url + '?' + new URLSearchParams(params), { credentials: 'same-origin' })
       .then(r => r.json())
       .then(json => {
-        target.innerHTML = "";
+        const list = document.getElementById(listId);
+        const hidden = document.getElementById(inputId);
+        list.innerHTML = '';
+        hidden.value = '';
         json.results.forEach(item => {
-          const opt = document.createElement("option");
-          if (typeof item === "object") {
-            opt.value = item.asset_number;
-            opt.textContent = item.asset_name || item.asset_number;
-          } else {
-            opt.value = opt.textContent = item;
-          }
-          target.appendChild(opt);
+          const val = item.asset_number || item;
+          const txt = item.asset_name   || item;
+          const a   = document.createElement('a');
+          a.href     = '#';
+          a.className= 'list-group-item list-group-item-action';
+          a.dataset.value = val;
+          a.textContent   = txt;
+          list.appendChild(a);
         });
       });
-  };
+  }
+  function clear(listId, inputId) {
+    document.getElementById(listId).innerHTML = '';
+    document.getElementById(inputId).value = '';
+  }
 
-  const partSel    = document.getElementById("id_part_number");
-  const machineSel = document.getElementById("id_machine");
-  const opSel      = document.getElementById("id_operation");
-  const catSel     = document.getElementById("id_category");
-
-  partSel.addEventListener("change", () => {
-    machineSel.innerHTML = "";
-    opSel.innerHTML      = "";
-    catSel.innerHTML     = "";
-    if (partSel.value) {
-      ajaxPopulate(
-        "{% url 'get_machines' %}",
-        { part_number: partSel.value },
-        machineSel
-      );
-    }
+  wireListClicks('list_part','input_part', pn => {
+    clear('list_machine','input_machine');
+    clear('list_op','input_op');
+    clear('list_cat','input_cat');
+    ajaxList("{% url 'get_machines' %}", { part_number: pn }, 'list_machine','input_machine');
   });
-
-  machineSel.addEventListener("change", () => {
-    opSel.innerHTML  = "";
-    catSel.innerHTML = "";
-    if (machineSel.value) {
-      ajaxPopulate(
-        "{% url 'get_operations' %}",
-        {
-          part_number: partSel.value,
-          machine:     machineSel.value
-        },
-        opSel
-      );
-    }
+  wireListClicks('list_machine','input_machine', mc => {
+    clear('list_op','input_op');
+    clear('list_cat','input_cat');
+    ajaxList("{% url 'get_operations' %}", {
+      part_number: document.getElementById('input_part').value,
+      machine:     mc
+    }, 'list_op','input_op');
   });
-
-  opSel.addEventListener("change", () => {
-    catSel.innerHTML = "";
-    if (opSel.value) {
-      ajaxPopulate(
-        "{% url 'get_categories' %}",
-        {
-          part_number: partSel.value,
-          machine:     machineSel.value,
-          operation:   opSel.value
-        },
-        catSel
-      );
-    }
+  wireListClicks('list_op','input_op', op => {
+    clear('list_cat','input_cat');
+    ajaxList("{% url 'get_categories' %}", {
+      part_number: document.getElementById('input_part').value,
+      machine:     document.getElementById('input_machine').value,
+      operation:   op
+    }, 'list_cat','input_cat');
   });
-</script>
+  wireListClicks('list_cat','input_cat', () => { /* done */ });
 
-<script>
-  // remove all .alert after 3 seconds
+  // auto-dismiss alerts after 3s
   setTimeout(() => {
-    document.querySelectorAll('.alert').forEach(alert => {
-      // Bootstrap 5: trigger its close() if available
-      if (bootstrap && bootstrap.Alert) {
-        bootstrap.Alert.getOrCreateInstance(alert).close();
+    document.querySelectorAll('.alert').forEach(el => {
+      if (window.bootstrap && bootstrap.Alert) {
+        bootstrap.Alert.getOrCreateInstance(el).close();
       } else {
-        // fallback
-        alert.remove();
+        el.remove();
       }
     });
   }, 3000);
 </script>
-
 {% endblock %}
