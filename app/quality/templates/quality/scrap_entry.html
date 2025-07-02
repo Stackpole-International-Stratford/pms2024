@@ -46,7 +46,7 @@
                 </svg>
               </button>
             </div>
-            <div id="list_part" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+            <div id="list_part" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
               {% for pn in part_numbers %}
                 <a href="#"
                    class="list-group-item list-group-item-action {% if pn == selected_part_number %}active{% endif %}"
@@ -83,7 +83,7 @@
                 </svg>
               </button>
             </div>
-            <div id="list_machine" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+            <div id="list_machine" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
               {% for m in machines %}
                 <a href="#"
                    class="list-group-item list-group-item-action {% if m.asset_number == selected_machine %}active{% endif %}"
@@ -118,7 +118,7 @@
                 </svg>
               </button>
             </div>
-            <div id="list_op" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+            <div id="list_op" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
               {% for op in operations %}
                 <a href="#"
                    class="list-group-item list-group-item-action {% if op == selected_operation %}active{% endif %}"
@@ -153,7 +153,7 @@
                 </svg>
               </button>
             </div>
-            <div id="list_cat" class="list-group flex-grow-1" style="overflow:hidden; max-height:200px;">
+            <div id="list_cat" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
               {% for cat in categories %}
                 <a href="#"
                    class="list-group-item list-group-item-action {% if cat == selected_category %}active{% endif %}"
