@@ -8,9 +8,21 @@
 
   {% if messages %}
     {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+      <div
+        class="alert alert-{{ msg.tags }} alert-dismissible fade show"
+        role="alert"
+      >
+        {{ msg }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+          aria-label="Close"
+        ></button>
+      </div>
     {% endfor %}
   {% endif %}
+
 
   <div class="card mb-4">
     <div class="card-header">
@@ -116,16 +128,30 @@
           </div>
         </div>
 
-        <button type="submit" class="btn btn-warning mt-3">Submit</button>
+        <div class="d-flex justify-content-end mt-3">
+          <button type="submit" class="btn btn-warning">Submit</button>
+        </div>
       </form>
     </div>
   </div>
 </div>
 
 <style>
-  /* ensure the large selects scroll nicely */
-  select[size] {
-    overflow-y: auto;
+  /* Increase font size for better readability */
+  #scrap-form label {
+    font-size: 1.1rem;
+  }
+  #scrap-form .form-control {
+    font-size: 1.25rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  /* Make the scroll-wheel selects a bit taller */
+  #scrap-form select[size] {
+    line-height: 1.5;
+  }
+  #scrap-form button {
+    font-size: 1.25rem;
   }
 </style>
 
@@ -156,7 +182,6 @@
   const catSel     = document.getElementById("id_category");
 
   partSel.addEventListener("change", () => {
-    // clear downstream lists
     machineSel.innerHTML = "";
     opSel.innerHTML      = "";
     catSel.innerHTML     = "";
@@ -199,4 +224,20 @@
     }
   });
 </script>
+
+<script>
+  // remove all .alert after 3 seconds
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(alert => {
+      // Bootstrap 5: trigger its close() if available
+      if (bootstrap && bootstrap.Alert) {
+        bootstrap.Alert.getOrCreateInstance(alert).close();
+      } else {
+        // fallback
+        alert.remove();
+      }
+    });
+  }, 3000);
+</script>
+
 {% endblock %}

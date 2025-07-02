@@ -1266,7 +1266,7 @@ def scrap_entry(request):
                 if iqty <= 0:
                     raise ValueError
             except (ValueError, TypeError):
-                messages.error(request, "Quantity must be a positive integer.")
+                messages.error(request, "Did you forget to enter a quantity?")
             else:
                 try:
                     entry = NewScrapSystemScrapEntry(
