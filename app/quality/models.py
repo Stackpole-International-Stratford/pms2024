@@ -2,6 +2,7 @@ from django.db import models
 from plant.models.setupfor_models import Part  # Importing the Part model
 from decimal import Decimal
 from django.core.exceptions import ValidationError
+from plant.models.setupfor_models import Asset
 
 class SupervisorAuthorization(models.Model):
     supervisor_id = models.CharField(max_length=256)
@@ -188,33 +189,22 @@ class RedRabbitsEntry(models.Model):
 
 
 
+
 class NewScrapSystemScrapCategory(models.Model):
-    """New Scrap System – a single record tying Part #, Operation, Category & Cost"""
-    part_number = models.CharField(
-        "New Scrap System Part Number",
-        max_length=100,
-        help_text="Enter the part number (free-form)"
-    )
-    operation = models.CharField(
-        "New Scrap System Operation",
-        max_length=100,
-        help_text="Enter the operation name"
-    )
-    category = models.CharField(
-        "New Scrap System Category",
-        max_length=100,
-        help_text="Enter the scrap category"
-    )
-    cost = models.DecimalField(
-        "New Scrap System Cost",
-        max_digits=10,
-        decimal_places=2,
-        help_text="Enter the cost for this part/operation/category"
+    part_number = models.CharField("Part Number", max_length=100)
+    operation   = models.CharField("Operation",    max_length=100)
+    category    = models.CharField("Category",     max_length=100)
+    cost        = models.DecimalField("Cost", max_digits=10, decimal_places=2)
+
+    # ← here’s the new bit
+    machines = models.ManyToManyField(
+        Asset,
+        blank=True,
+        related_name="scrap_categories",
+        verbose_name="Associated Machines",
     )
 
     class Meta:
-        verbose_name = "New Scrap System Scrap Category"
-        verbose_name_plural = "New Scrap System Scrap Categories"
         db_table = "new_scrap_system_scrap_category"
         unique_together = ("part_number", "operation", "category")
         ordering = ["part_number", "operation", "category"]
