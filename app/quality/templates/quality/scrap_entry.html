@@ -12,102 +12,133 @@
     {% endfor %}
   {% endif %}
 
-  <form method="post" id="scrap-form">
-    {% csrf_token %}
-    <div class="row">
-      <!-- Part Number -->
-      <div class="col-md-3">
-        <div class="form-group">
-          <label for="id_part_number">Part Number</label>
-          <select id="id_part_number" name="part_number" class="form-control">
-            <option value="">-- Select part --</option>
-            {% for pn in part_numbers %}
-              <option value="{{ pn }}"
-                {% if pn == selected_part_number %}selected{% endif %}>
-                {{ pn }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <!-- Machine -->
-      <div class="col-md-3">
-        <div class="form-group">
-          <label for="id_machine">Machine</label>
-          <select id="id_machine" name="machine" class="form-control">
-            <option value="">-- Select machine --</option>
-            {% for m in machines %}
-              <option value="{{ m.asset_number }}"
-                {% if m.asset_number == selected_machine %}selected{% endif %}>
-                {{ m.asset_name|default:m.asset_number }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <!-- Operation -->
-      <div class="col-md-2">
-        <div class="form-group">
-          <label for="id_operation">Operation</label>
-          <select id="id_operation" name="operation" class="form-control">
-            <option value="">-- Select operation --</option>
-            {% for op in operations %}
-              <option value="{{ op }}"
-                {% if op == selected_operation %}selected{% endif %}>
-                {{ op }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <!-- Category -->
-      <div class="col-md-2">
-        <div class="form-group">
-          <label for="id_category">Category</label>
-          <select id="id_category" name="category" class="form-control">
-            <option value="">-- Select category --</option>
-            {% for cat in categories %}
-              <option value="{{ cat }}"
-                {% if cat == selected_category %}selected{% endif %}>
-                {{ cat }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <!-- Quantity -->
-      <div class="col-md-2">
-        <div class="form-group">
-          <label for="id_quantity">Quantity</label>
-          <input
-            type="number"
-            min="1"
-            id="id_quantity"
-            name="quantity"
-            class="form-control"
-            value="{{ quantity }}"
-          >
-        </div>
-      </div>
+  <div class="card mb-4">
+    <div class="card-header">
+      Record Scrap Entry
     </div>
+    <div class="card-body">
+      <form method="post" id="scrap-form">
+        {% csrf_token %}
+        <div class="row">
+          <!-- Part Number -->
+          <div class="col-md-3">
+            <div class="form-group">
+              <label for="id_part_number">Part Number</label>
+              <select
+                id="id_part_number"
+                name="part_number"
+                class="form-control"
+                size="5"
+              >
+                {% for pn in part_numbers %}
+                  <option value="{{ pn }}"
+                    {% if pn == selected_part_number %}selected{% endif %}>
+                    {{ pn }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
 
-    <button type="submit" class="btn btn-primary mt-2">Submit</button>
-  </form>
+          <!-- Machine -->
+          <div class="col-md-3">
+            <div class="form-group">
+              <label for="id_machine">Machine</label>
+              <select
+                id="id_machine"
+                name="machine"
+                class="form-control"
+                size="5"
+              >
+                {% for m in machines %}
+                  <option value="{{ m.asset_number }}"
+                    {% if m.asset_number == selected_machine %}selected{% endif %}>
+                    {{ m.asset_name|default:m.asset_number }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Operation -->
+          <div class="col-md-2">
+            <div class="form-group">
+              <label for="id_operation">Operation</label>
+              <select
+                id="id_operation"
+                name="operation"
+                class="form-control"
+                size="5"
+              >
+                {% for op in operations %}
+                  <option value="{{ op }}"
+                    {% if op == selected_operation %}selected{% endif %}>
+                    {{ op }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Category -->
+          <div class="col-md-2">
+            <div class="form-group">
+              <label for="id_category">Category</label>
+              <select
+                id="id_category"
+                name="category"
+                class="form-control"
+                size="5"
+              >
+                {% for cat in categories %}
+                  <option value="{{ cat }}"
+                    {% if cat == selected_category %}selected{% endif %}>
+                    {{ cat }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Quantity -->
+          <div class="col-md-2">
+            <div class="form-group">
+              <label for="id_quantity">Quantity</label>
+              <input
+                type="number"
+                min="1"
+                id="id_quantity"
+                name="quantity"
+                class="form-control"
+                value="{{ quantity }}"
+              >
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-warning mt-3">Submit</button>
+      </form>
+    </div>
+  </div>
 </div>
 
+<style>
+  /* ensure the large selects scroll nicely */
+  select[size] {
+    overflow-y: auto;
+  }
+</style>
+
 <script>
-  const ajaxPopulate = (url, params, target, placeholder) => {
-    fetch(url + "?" + new URLSearchParams(params),
-          { credentials: "same-origin" })
+  const ajaxPopulate = (url, params, target) => {
+    fetch(url + "?" + new URLSearchParams(params), {
+      credentials: "same-origin"
+    })
       .then(r => r.json())
       .then(json => {
-        target.innerHTML = `<option value="">-- ${placeholder} --</option>`;
+        target.innerHTML = "";
         json.results.forEach(item => {
-          let opt = document.createElement("option");
+          const opt = document.createElement("option");
           if (typeof item === "object") {
             opt.value = item.asset_number;
             opt.textContent = item.asset_name || item.asset_number;
@@ -125,35 +156,46 @@
   const catSel     = document.getElementById("id_category");
 
   partSel.addEventListener("change", () => {
-    machineSel.innerHTML = "<option>-- Select machine --</option>";
-    opSel.innerHTML      = "<option>-- Select operation --</option>";
-    catSel.innerHTML     = "<option>-- Select category --</option>";
+    // clear downstream lists
+    machineSel.innerHTML = "";
+    opSel.innerHTML      = "";
+    catSel.innerHTML     = "";
     if (partSel.value) {
-      ajaxPopulate("{% url 'get_machines' %}",
-                  { part_number: partSel.value },
-                  machineSel, "Select machine");
+      ajaxPopulate(
+        "{% url 'get_machines' %}",
+        { part_number: partSel.value },
+        machineSel
+      );
     }
   });
 
   machineSel.addEventListener("change", () => {
-    opSel.innerHTML  = "<option>-- Select operation --</option>";
-    catSel.innerHTML = "<option>-- Select category --</option>";
+    opSel.innerHTML  = "";
+    catSel.innerHTML = "";
     if (machineSel.value) {
-      ajaxPopulate("{% url 'get_operations' %}",
-                  { part_number: partSel.value,
-                    machine:     machineSel.value },
-                  opSel, "Select operation");
+      ajaxPopulate(
+        "{% url 'get_operations' %}",
+        {
+          part_number: partSel.value,
+          machine:     machineSel.value
+        },
+        opSel
+      );
     }
   });
 
   opSel.addEventListener("change", () => {
-    catSel.innerHTML = "<option>-- Select category --</option>";
+    catSel.innerHTML = "";
     if (opSel.value) {
-      ajaxPopulate("{% url 'get_categories' %}",
-                  { part_number: partSel.value,
-                    machine:     machineSel.value,
-                    operation:   opSel.value },
-                  catSel, "Select category");
+      ajaxPopulate(
+        "{% url 'get_categories' %}",
+        {
+          part_number: partSel.value,
+          machine:     machineSel.value,
+          operation:   opSel.value
+        },
+        catSel
+      );
     }
   });
 </script>
