@@ -2,7 +2,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Feat
 from .forms import FeatForm
-from plant.models.setupfor_models import Part
+from plant.models.setupfor_models import Part, Asset
 from django.db import transaction  
 from django.db.models import F
 from django.http import JsonResponse
@@ -22,6 +22,7 @@ from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.views.decorators.http import require_http_methods
 
 
 def index(request):
@@ -1240,58 +1241,138 @@ def add_new_epv(request):
 # =============================================================================
 
 
+@require_http_methods(["GET", "POST"])
 def scrap_entry(request):
-    total = NewScrapSystemScrapCategory.objects.count()
-    first_batch = NewScrapSystemScrapCategory.objects.order_by(
-        'part_number','operation','category'
-    )[:300]
-    return render(request, 'quality/scrap_entry.html', {
-        'initial_categories': first_batch,
-        'total_count': total,
-    })
+    # — pull posted values (or blank for GET) —
+    sel_part     = request.POST.get("part_number", "").strip()  if request.method=="POST" else ""
+    sel_machine  = request.POST.get("machine",     "").strip()  if request.method=="POST" else ""
+    sel_op       = request.POST.get("operation",   "").strip()  if request.method=="POST" else ""
+    sel_cat      = request.POST.get("category",    "").strip()  if request.method=="POST" else ""
+    qty          = request.POST.get("quantity",    "").strip()  if request.method=="POST" else ""
 
-def ajax_categories(request):
-    offset = int(request.GET.get('offset', 0))
-    limit  = int(request.GET.get('limit', 300))
-    qs = NewScrapSystemScrapCategory.objects.order_by(
-        'part_number','operation','category'
-    )[offset:offset+limit]
-    results = list(qs.values('part_number','operation','category'))
-    return JsonResponse({'results': results})
+    # — handle submission —
+    if request.method == "POST":
+        if not sel_part:
+            messages.error(request, "Please select a part number.")
+        elif not sel_machine:
+            messages.error(request, "Please select a machine.")
+        elif not sel_op:
+            messages.error(request, "Please select an operation.")
+        elif not sel_cat:
+            messages.error(request, "Please select a category.")
+        else:
+            try:
+                iqty = int(qty)
+                if iqty <= 0:
+                    raise ValueError
+            except (ValueError, TypeError):
+                messages.error(request, "Quantity must be a positive integer.")
+            else:
+                try:
+                    entry = NewScrapSystemScrapEntry(
+                        machine     = sel_machine,
+                        part_number = sel_part,
+                        operation   = sel_op,
+                        category    = sel_cat,
+                        quantity    = iqty,
+                    )
+                    entry.save()  # fills unit_cost & total_cost internally
+                    messages.success(
+                        request,
+                        f"Scrap recorded! Thank you"
+                    )
+                    qty = ""   # clear qty but keep selections
+                except ValidationError as e:
+                    messages.error(request, e.messages[0])
 
-@require_POST
-def create_scrap_entry(request):
-    machine     = request.POST.get('machine', '').strip()
-    quantity    = request.POST.get('quantity')
-    part_number = request.POST.get('part_number')
-    operation   = request.POST.get('operation')
-    category    = request.POST.get('category')
+    # — build master list of part numbers —
+    part_numbers = (
+        NewScrapSystemScrapCategory.objects
+        .order_by("part_number")
+        .values_list("part_number", flat=True)
+        .distinct()
+    )
 
-    if not machine:
-        return JsonResponse({'success': False, 'error': 'Machine is required.'}, status=400)
+    # — if a part is selected, pull its machines —
+    machines = (
+        Asset.objects
+        .filter(scrap_categories__part_number=sel_part)
+        .distinct()
+    ) if sel_part else []
 
-    try:
-        qty = int(quantity)
-        if qty <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Quantity must be a positive integer.'}, status=400)
+    # — if machine chosen, pull its operations for that part —
+    operations = (
+        NewScrapSystemScrapCategory.objects
+        .filter(part_number=sel_part, machines__asset_number=sel_machine)
+        .order_by("operation")
+        .values_list("operation", flat=True)
+        .distinct()
+    ) if (sel_part and sel_machine) else []
 
-    try:
-        entry = NewScrapSystemScrapEntry(
-            machine=machine,
-            part_number=part_number,
-            operation=operation,
-            category=category,
-            quantity=qty
+    # — if operation chosen, pull its categories —
+    categories = (
+        NewScrapSystemScrapCategory.objects
+        .filter(
+            part_number=sel_part,
+            machines__asset_number=sel_machine,
+            operation=sel_op
         )
-        entry.save()  # your save() will fill in unit_cost & total_cost
-    except ValidationError as e:
-        return JsonResponse({'success': False, 'error': e.message}, status=400)
+        .order_by("category")
+        .values_list("category", flat=True)
+        .distinct()
+    ) if (sel_part and sel_machine and sel_op) else []
 
-    return JsonResponse({
-        'success': True,
-        'message': 'Scrap entry recorded.',
-        'total_cost': str(entry.total_cost),
-        'created_at': entry.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+    return render(request, "quality/scrap_entry.html", {
+        "part_numbers":       part_numbers,
+        "machines":           machines,
+        "operations":         operations,
+        "categories":         categories,
+        "selected_part_number": sel_part,
+        "selected_machine":     sel_machine,
+        "selected_operation":   sel_op,
+        "selected_category":    sel_cat,
+        "quantity":             qty,
     })
+
+
+# — tiny AJAX endpoints — 
+
+def get_machines(request):
+    pn = request.GET.get("part_number", "")
+    qs = Asset.objects.filter(scrap_categories__part_number=pn).distinct() if pn else []
+    data = [
+        {"asset_number": m.asset_number, "asset_name": m.asset_name}
+        for m in qs
+    ]
+    return JsonResponse({"results": data})
+
+
+def get_operations(request):
+    pn = request.GET.get("part_number", "")
+    mc = request.GET.get("machine", "")
+    qs = (
+        NewScrapSystemScrapCategory.objects
+        .filter(part_number=pn, machines__asset_number=mc)
+        .order_by("operation")
+        .values_list("operation", flat=True)
+        .distinct()
+    ) if (pn and mc) else []
+    return JsonResponse({"results": list(qs)})
+
+
+def get_categories(request):
+    pn = request.GET.get("part_number", "")
+    mc = request.GET.get("machine", "")
+    op = request.GET.get("operation", "")
+    qs = (
+        NewScrapSystemScrapCategory.objects
+        .filter(
+            part_number=pn,
+            machines__asset_number=mc,
+            operation=op
+        )
+        .order_by("category")
+        .values_list("category", flat=True)
+        .distinct()
+    ) if (pn and mc and op) else []
+    return JsonResponse({"results": list(qs)})
