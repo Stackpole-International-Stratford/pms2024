@@ -238,6 +238,8 @@ class ScrapSubmission(models.Model):
     machine         = models.CharField(max_length=100)
     operation_name  = models.CharField(max_length=256)
     category_name   = models.CharField(max_length=100)
+    operator_number = models.CharField(max_length=50)
+
 
     quantity        = models.PositiveIntegerField()
     unit_cost       = models.DecimalField(max_digits=10, decimal_places=2)

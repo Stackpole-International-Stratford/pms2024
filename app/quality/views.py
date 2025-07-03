@@ -1242,10 +1242,11 @@ def add_new_epv(request):
 
 def scrap_entry(request):
     """
-    GET: Render the “Add & Submit All” interface.
-    POST: Bulk-create ScrapSubmission rows from the `entries` JSON.
+    GET:  Render the “Add & Submit All” interface.
+    POST: Bulk-create ScrapSubmission rows from the `entries` JSON,
+          including a shared operator_number.
     """
-    # Master list of part numbers for the dropdown
+    # 1) Master list of part numbers
     part_numbers = list(
         ScrapSystemOperation.objects
             .order_by('part_number')
@@ -1253,22 +1254,65 @@ def scrap_entry(request):
             .distinct()
     )
 
-    # For re-rendering the form if you want to keep one entry filled in:
-    sel_pn = sel_mc = sel_op = sel_cat = ''
-    sel_qty = ''      # ← start off blank, not "1"
+    # 2) Form-state defaults (for re-render on validation errors)
+    sel_pn        = ''
+    sel_mc        = ''
+    sel_op        = ''
+    sel_cat       = ''
+    sel_operator  = ''   # ← your new operator field
+    sel_qty       = ''   # ← start blank
 
-    machines = []
+    machines   = []
     operations = []
     categories = []
 
     if request.method == 'POST':
-        # Read the hidden JSON array of entries
+        # --- pull back the operator number (single field) ---
+        sel_operator = request.POST.get('operator', '').strip()
+
+        # --- repopulate any dropdowns so they stay visible ---
+        sel_pn = request.POST.get('part_number', '').strip()
+        if sel_pn:
+            machines = (
+                Asset.objects
+                     .filter(scrapsystemoperation__part_number=sel_pn)
+                     .order_by('asset_number')
+                     .values_list('asset_number', flat=True)
+                     .distinct()
+            )
+
+        sel_mc = request.POST.get('machine', '').strip()
+        if sel_pn and sel_mc:
+            operations = list(
+                ScrapSystemOperation.objects
+                    .filter(part_number=sel_pn, assets__asset_number=sel_mc)
+                    .order_by('operation')
+                    .values_list('operation', flat=True)
+                    .distinct()
+            )
+
+        sel_op = request.POST.get('operation', '').strip()
+        if sel_pn and sel_mc and sel_op:
+            qs = ScrapSystemOperation.objects.filter(
+                part_number=sel_pn,
+                operation=sel_op,
+                assets__asset_number=sel_mc
+            )
+            if qs.exists():
+                categories = list(
+                    qs.first()
+                      .scrap_categories
+                      .values_list('name', flat=True)
+                )
+
+        # 3) pull in the JSON array of “added” rows
         raw_entries = request.POST.get('entries', '[]')
         try:
             entries = json.loads(raw_entries)
         except json.JSONDecodeError:
             entries = []
 
+        # 4) Validation: need at least one entry
         if not entries:
             messages.error(request, "No entries to submit. Please Add at least one row.")
         else:
@@ -1280,14 +1324,14 @@ def scrap_entry(request):
                 category  = e.get('category')
                 qty_str   = e.get('qty')
 
-                # Validate presence
-                if not all([part, machine, operation, category, qty_str]):
+                # presence check
+                if not all([part, machine, operation, category, qty_str, sel_operator]):
                     messages.warning(request,
-                        f"Entry #{idx} is missing fields—skipped."
+                        f"Entry #{idx} missing data or operator—skipped."
                     )
                     continue
 
-                # Parse quantity
+                # parse qty
                 try:
                     qty = int(qty_str)
                     if qty < 1:
@@ -1298,7 +1342,7 @@ def scrap_entry(request):
                     )
                     continue
 
-                # Look up the operation row
+                # find matching ScrapSystemOperation
                 sso = (
                     ScrapSystemOperation.objects
                         .filter(
@@ -1314,7 +1358,7 @@ def scrap_entry(request):
                     )
                     continue
 
-                # Pick the latest asset by number
+                # latest Asset
                 asset = (
                     Asset.objects
                          .filter(asset_number=machine)
@@ -1327,7 +1371,7 @@ def scrap_entry(request):
                     )
                     continue
 
-                # Pick the latest category by name
+                # latest Category
                 cat = (
                     ScrapCategory.objects
                                  .filter(name=category)
@@ -1340,46 +1384,45 @@ def scrap_entry(request):
                     )
                     continue
 
-                # Compute costs
+                # compute & save
                 unit_cost  = sso.cost
                 total_cost = unit_cost * qty
 
-                # Create the submission
                 ScrapSubmission.objects.create(
                     scrap_system_operation=sso,
                     asset=asset,
                     scrap_category=cat,
 
-                    part_number    = part,
-                    machine        = machine,
-                    operation_name = operation,
-                    category_name  = category,
+                    part_number     = part,
+                    machine         = machine,
+                    operation_name  = operation,
+                    category_name   = category,
+                    operator_number = sel_operator,
 
                     quantity   = qty,
                     unit_cost  = unit_cost,
-                    total_cost = total_cost
+                    total_cost = total_cost,
                 )
                 created += 1
 
             if created:
-                messages.success(request, f"{created} scrap entr{'y' if created==1 else 'ies'} recorded.")
+                messages.success(request, f"{created} scrap entr{'y' if created == 1 else 'ies'} recorded.")
+                return redirect('scrap_entry')
             else:
                 messages.error(request, "No valid entries were recorded.")
 
-            # Redirect to clear the form & table
-            return redirect('scrap_entry')
-
-    # On GET (or POST with errors), render the empty or half-filled form
+    # 5) FINAL render (GET or POST with errors)
     return render(request, 'quality/scrap_entry.html', {
-        'part_numbers':          part_numbers,
-        'machines':              machines,
-        'operations':            operations,
-        'categories':            categories,
-        'selected_part_number':  sel_pn,
-        'selected_machine':      sel_mc,
-        'selected_operation':    sel_op,
-        'selected_category':     sel_cat,
-        'quantity':              sel_qty,
+        'part_numbers':         part_numbers,
+        'machines':             machines,
+        'operations':           operations,
+        'categories':           categories,
+        'selected_part_number': sel_pn,
+        'selected_machine':     sel_mc,
+        'selected_operation':   sel_op,
+        'selected_category':    sel_cat,
+        'selected_operator':    sel_operator,
+        'quantity':             sel_qty,
     })
 
 def get_machines(request):
