@@ -64,7 +64,7 @@
           </div>
 
           {# Machine #}
-          <div class="col-6 col-md-3 d-flex flex-column">
+          <div class="col-6 col-md-2 d-flex flex-column">
             <label class="form-label">Machine</label>
             <input type="hidden" name="machine" id="input_machine" value="{{ selected_machine }}">
             <div class="text-center mb-1">
@@ -134,7 +134,7 @@
           </div>
 
           {# Category #}
-          <div class="col-6 col-md-2 d-flex flex-column">
+          <div class="col-6 col-md-6 d-flex flex-column">
             <label class="form-label">Category</label>
             <input type="hidden" name="category" id="input_cat" value="{{ selected_category }}">
             <div class="text-center mb-1">
@@ -148,7 +148,7 @@
                 </svg>
               </button>
             </div>
-            <div id="list_cat" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
+            <div id="list_cat" class="list-group flex-grow-1" style="overflow:auto; max-height:300px;">
               {% for cat in categories %}
                 <a href="#"
                    class="list-group-item list-group-item-action {% if cat == selected_category %}active{% endif %}"
