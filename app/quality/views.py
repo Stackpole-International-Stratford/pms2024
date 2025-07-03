@@ -1243,9 +1243,9 @@ def add_new_epv(request):
 def scrap_entry(request):
     """
     Display the scrap-entry form and handle ScrapSubmission creation,
-    including denormalized part/machine/operation/category fields.
+    without redirect so that form selections persist even on success.
     """
-    # Always load distinct part numbers for the first dropdown
+    # 1) Master list of part numbers
     part_numbers = (
         ScrapSystemOperation.objects
         .order_by('part_number')
@@ -1253,52 +1253,79 @@ def scrap_entry(request):
         .distinct()
     )
 
-    # Initialize form-state defaults
-    selected_part_number = ''
-    selected_machine     = ''
-    selected_operation   = ''
-    selected_category    = ''
-    quantity             = 1
+    # 2) Initialize all form state & dependent lists
+    sel_pn = sel_mc = sel_op = sel_cat = ''
+    sel_qty = '1'
+
+    machines = []
+    operations = []
+    categories = []
 
     if request.method == 'POST':
-        # Pull posted values (or fall back to defaults)
-        selected_part_number = request.POST.get('part_number', '').strip()
-        selected_machine     = request.POST.get('machine', '').strip()
-        selected_operation   = request.POST.get('operation', '').strip()
-        selected_category    = request.POST.get('category', '').strip()
-        quantity             = request.POST.get('quantity', '1').strip()
+        # Pull posted values
+        sel_pn  = request.POST.get('part_number', '').strip()
+        sel_mc  = request.POST.get('machine',      '').strip()
+        sel_op  = request.POST.get('operation',    '').strip()
+        sel_cat = request.POST.get('category',     '').strip()
+        sel_qty = request.POST.get('quantity',     '1').strip()
 
-        # Basic presence check
-        if not all([selected_part_number, selected_machine, selected_operation, selected_category, quantity]):
+        # Repopulate dependent dropdowns/lists (so the template can show them)
+        if sel_pn:
+            machines = (
+                Asset.objects
+                .filter(scrapsystemoperation__part_number=sel_pn)
+                .distinct()
+            )
+        if sel_pn and sel_mc:
+            operations = (
+                ScrapSystemOperation.objects
+                .filter(part_number=sel_pn, assets__asset_number=sel_mc)
+                .order_by('operation')
+                .values_list('operation', flat=True)
+                .distinct()
+            )
+        if sel_pn and sel_mc and sel_op:
+            try:
+                sso = ScrapSystemOperation.objects.get(
+                    part_number=sel_pn,
+                    operation=sel_op,
+                    assets__asset_number=sel_mc
+                )
+                categories = sso.scrap_categories.all().values_list('name', flat=True)
+            except ScrapSystemOperation.DoesNotExist:
+                categories = []
+
+        # Validate presence
+        if not all([sel_pn, sel_mc, sel_op, sel_cat, sel_qty]):
             messages.error(request, "Please fill out all fields.")
         else:
             try:
                 # Parse quantity
-                qty_int = int(quantity)
+                qty_int = int(sel_qty)
 
-                # Look up the related objects
+                # Fetch FK objects
                 operation = ScrapSystemOperation.objects.get(
-                    part_number=selected_part_number,
-                    operation=selected_operation,
-                    assets__asset_number=selected_machine
+                    part_number=sel_pn,
+                    operation=sel_op,
+                    assets__asset_number=sel_mc
                 )
-                asset    = Asset.objects.get(asset_number=selected_machine)
-                category = ScrapCategory.objects.get(name=selected_category)
+                asset    = Asset.objects.get(asset_number=sel_mc)
+                category = ScrapCategory.objects.get(name=sel_cat)
 
                 # Compute costs
                 unit_cost  = operation.cost
                 total_cost = unit_cost * qty_int
 
-                # Create the denormalized submission row
+                # Create denormalized submission
                 ScrapSubmission.objects.create(
                     scrap_system_operation=operation,
                     asset=asset,
                     scrap_category=category,
 
-                    part_number    = selected_part_number,
-                    machine        = selected_machine,
-                    operation_name = selected_operation,
-                    category_name  = selected_category,
+                    part_number    = sel_pn,
+                    machine        = sel_mc,
+                    operation_name = sel_op,
+                    category_name  = sel_cat,
 
                     quantity   = qty_int,
                     unit_cost  = unit_cost,
@@ -1306,7 +1333,6 @@ def scrap_entry(request):
                 )
 
                 messages.success(request, "Scrap entry recorded successfully.")
-                return redirect(reverse('scrap_entry'))
 
             except ValueError:
                 messages.error(request, "Quantity must be a number.")
@@ -1317,19 +1343,18 @@ def scrap_entry(request):
             except ScrapCategory.DoesNotExist:
                 messages.error(request, "Selected scrap category not found.")
 
-    # Render (on GET or if validation failed)
-    context = {
-        'part_numbers':          part_numbers,
-        'machines':              [],  # filled via AJAX endpoints
-        'operations':            [],
-        'categories':            [],
-        'selected_part_number':  selected_part_number,
-        'selected_machine':      selected_machine,
-        'selected_operation':    selected_operation,
-        'selected_category':     selected_category,
-        'quantity':              quantity,
-    }
-    return render(request, 'quality/scrap_entry.html', context)
+    # 3) Render the template with whatever state we have (GET, error, or success)
+    return render(request, 'quality/scrap_entry.html', {
+        'part_numbers':         part_numbers,
+        'machines':             machines,
+        'operations':           operations,
+        'categories':           categories,
+        'selected_part_number': sel_pn,
+        'selected_machine':     sel_mc,
+        'selected_operation':   sel_op,
+        'selected_category':    sel_cat,
+        'quantity':             sel_qty,
+    })
 
 
 def get_machines(request):
