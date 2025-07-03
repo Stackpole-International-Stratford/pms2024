@@ -21,7 +21,7 @@
         {% csrf_token %}
         
         {# Operator #}
-          <div class="col-12 col-md-2 d-flex flex-column">
+          <div class="col-12 col-md-4 d-flex flex-column">
             <label for="id_operator" class="form-label">Operator #</label>
             <input type="text" id="id_operator" name="operator"
                    class="form-control" value="{{ selected_operator }}"
@@ -167,10 +167,10 @@
               </button>
             </div>
           </div>
-
+        </div>
 
           {# Quantity + Add button #}
-          <div class="col-12 col-md-2 d-flex flex-column">
+          <div class="col-12 col-md-4 d-flex flex-column">
             <label for="id_quantity" class="form-label">Quantity</label>
             <div class="d-flex">
               <input type="number" min="1" id="id_quantity" name="quantity"
@@ -178,8 +178,6 @@
               <button type="button" id="add-entry" class="btn btn-warning">Add</button>
             </div>
           </div>
-
-        </div>
 
         {# Entries table #}
         <div class="mt-4">
@@ -203,7 +201,7 @@
 
       {# your CSS #}
       <style>
-        .list-group-item { font-size:1.25rem; padding:.75rem 1rem; cursor:pointer; }
+
         .scroll-btn { width:100%; }
         .list-group-item.active {
           background-color:#000 !important;
