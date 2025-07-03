@@ -8,41 +8,29 @@
 
   {% if messages %}
     {% for msg in messages %}
-      <div
-        class="alert alert-{{ msg.tags }} alert-dismissible fade show"
-        role="alert"
-      >
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
         {{ msg }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     {% endfor %}
   {% endif %}
 
   <div class="card mb-4">
-    <div class="card-header">
-      Record Scrap Entry
-    </div>
+    <div class="card-header">Record Scrap Entry</div>
     <div class="card-body">
       <form method="post" id="scrap-form">
         {% csrf_token %}
         <div class="row gx-3">
+
           {# Part Number #}
           <div class="col-6 col-md-3 d-flex flex-column">
             <label class="form-label">Part Number</label>
             <input type="hidden" name="part_number" id="input_part" value="{{ selected_part_number }}">
             <div class="text-center mb-1">
-              <button type="button"
-                      class="btn btn-light scroll-btn scroll-up"
-                      data-target="list_part">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
-                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1
-                           1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+              <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_part">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 4.86L2.451 10.341C1.885 10.986 2.345 12 3.204 12h9.592c.859 0 1.319-1.014.753-1.659L8.753 4.86a1 1 0 0 0-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -56,14 +44,10 @@
               {% endfor %}
             </div>
             <div class="text-center mt-1">
-              <button type="button"
-                      class="btn btn-light scroll-btn scroll-down"
-                      data-target="list_part">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
-                           4h9.592a1 1 0 0 1 .753 1.659l-4.796
-                           5.48a1 1 0 0 1-1.506 0z"/>
+              <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_part">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592c.859 0 1.319 1.013.753 1.658L8.753 11.14a1 1 0 0 1-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -75,30 +59,26 @@
             <input type="hidden" name="machine" id="input_machine" value="{{ selected_machine }}">
             <div class="text-center mb-1">
               <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_machine">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
-                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753
-                           1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1
-                           0 0 0-1.506 0z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 4.86L2.451 10.341C1.885 10.986 2.345 12 3.204 12h9.592c.859 0 1.319-1.014.753-1.659L8.753 4.86a1 1 0 0 0-1.506 0z"/>
                 </svg>
               </button>
             </div>
             <div id="list_machine" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
               {% for m in machines %}
                 <a href="#"
-                   class="list-group-item list-group-item-action {% if m.asset_number == selected_machine %}active{% endif %}"
-                   data-value="{{ m.asset_number }}">
-                  {{ m.asset_name|default:m.asset_number }}
+                   class="list-group-item list-group-item-action {% if m == selected_machine %}active{% endif %}"
+                   data-value="{{ m }}">
+                  {{ m }}
                 </a>
               {% endfor %}
             </div>
             <div class="text-center mt-1">
               <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_machine">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
-                           4h9.592a1 1 0 0 1 .753 1.659l-4.796
-                           5.48a1 1 0 0 1-1.506 0z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592c.859 0 1.319 1.013.753 1.658L8.753 11.14a1 1 0 0 1-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -110,11 +90,9 @@
             <input type="hidden" name="operation" id="input_op" value="{{ selected_operation }}">
             <div class="text-center mb-1">
               <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_op">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
-                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753
-                           1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1
-                           0 0 0-1.506 0z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 4.86L2.451 10.341C1.885 10.986 2.345 12 3.204 12h9.592c.859 0 1.319-1.014.753-1.659L8.753 4.86a1 1 0 0 0-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -129,11 +107,9 @@
             </div>
             <div class="text-center mt-1">
               <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_op">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
-                           4h9.592a1 1 0 0 1 .753 1.659l-4.796
-                           5.48a1 1 0 0 1-1.506 0z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592c.859 0 1.319 1.013.753 1.658L8.753 11.14a1 1 0 0 1-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -145,11 +121,9 @@
             <input type="hidden" name="category" id="input_cat" value="{{ selected_category }}">
             <div class="text-center mb-1">
               <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_cat">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-up-fill" viewBox="0 0 16 16">
-                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753
-                           1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1
-                           0 0 0-1.506 0z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 4.86L2.451 10.341C1.885 10.986 2.345 12 3.204 12h9.592c.859 0 1.319-1.014.753-1.659L8.753 4.86a1 1 0 0 0-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -164,11 +138,9 @@
             </div>
             <div class="text-center mt-1">
               <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_cat">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204
-                           4h9.592a1 1 0 0 1 .753        1.659l-4.796
-                           5.48a1 1 0 0 1-1.506 0z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592c.859 0 1.319 1.013.753 1.658L8.753 11.14a1 1 0 0 1-1.506 0z"/>
                 </svg>
               </button>
             </div>
@@ -177,15 +149,10 @@
           {# Quantity #}
           <div class="col-12 col-md-2">
             <label for="id_quantity" class="form-label">Quantity</label>
-            <input
-              type="number"
-              min="1"
-              id="id_quantity"
-              name="quantity"
-              class="form-control"
-              value="{{ quantity }}"
-            >
+            <input type="number" min="1" id="id_quantity" name="quantity"
+                   class="form-control" value="{{ quantity }}">
           </div>
+
         </div>
 
         <div class="d-flex justify-content-end mt-3">
@@ -205,42 +172,45 @@
   .scroll-btn {
     width: 100%;
   }
+  /* Active highlight: pure black */
+  .list-group-item.active {
+    background-color: #000 !important;
+    border-color:     #000 !important;
+    color:            #fff !important;
+  }
+  /* Hover/focus: also pure black */
+  .list-group-item-action:hover,
+  .list-group-item-action:focus {
+    background-color: #000 !important;
+    border-color:     #000 !important;
+    color:            #fff !important;
+  }
 </style>
 
-<script>
-  // scroll helpers
-  const SCROLL_AMOUNT = 35;       // px per tick
-  const SCROLL_INTERVAL = 60;    // ms between ticks
+{% endblock content %}
 
+{% block extra_scripts %}
+<script>
+  const GET_MACHINES_URL   = "{% url 'get_machines' %}";
+  const GET_OPERATIONS_URL = "{% url 'get_operations' %}";
+  const GET_CATEGORIES_URL = "{% url 'get_categories' %}";
+
+  const SCROLL_AMOUNT = 35, SCROLL_INTERVAL = 60;
   document.querySelectorAll('.scroll-btn').forEach(btn => {
     let timer;
-    const targetId = btn.dataset.target;
-    const container = document.getElementById(targetId);
-
-    const start = (dir) => {
+    const container = document.getElementById(btn.dataset.target);
+    const start = dir => {
       if (timer) clearInterval(timer);
-      timer = setInterval(() => {
-        container.scrollTop += dir * SCROLL_AMOUNT;
-      }, SCROLL_INTERVAL);
+      timer = setInterval(() => container.scrollTop += dir * SCROLL_AMOUNT, SCROLL_INTERVAL);
     };
-    const stop = () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-    };
-
+    const stop = () => { clearInterval(timer); timer = null; };
     btn.addEventListener('mousedown', () => start(btn.classList.contains('scroll-down') ? 1 : -1));
-    btn.addEventListener('mouseup',   stop);
-    btn.addEventListener('mouseleave',stop);
-    btn.addEventListener('touchstart',e => { e.preventDefault(); start(btn.classList.contains('scroll-down') ? 1 : -1); });
-    btn.addEventListener('touchend',   stop);
+    ['mouseup','mouseleave','touchend'].forEach(evt => btn.addEventListener(evt, stop));
+    btn.addEventListener('touchstart', e => { e.preventDefault(); start(btn.classList.contains('scroll-down') ? 1 : -1); });
   });
 
-  // previous wireListClicks / ajaxList / clear code unchanged...
   function wireListClicks(listId, inputId, callback) {
-    const list = document.getElementById(listId);
-    const hidden = document.getElementById(inputId);
+    const list = document.getElementById(listId), hidden = document.getElementById(inputId);
     list.addEventListener('click', e => {
       if (!e.target.matches('.list-group-item')) return;
       list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
@@ -249,26 +219,23 @@
       callback(e.target.dataset.value);
     });
   }
+
   function ajaxList(url, params, listId, inputId) {
-    fetch(url + '?' + new URLSearchParams(params), { credentials: 'same-origin' })
-      .then(r => r.json())
-      .then(json => {
-        const list = document.getElementById(listId);
-        const hidden = document.getElementById(inputId);
-        list.innerHTML = '';
-        hidden.value = '';
-        json.results.forEach(item => {
-          const val = item.asset_number || item;
-          const txt = item.asset_name   || item;
-          const a   = document.createElement('a');
-          a.href     = '#';
-          a.className= 'list-group-item list-group-item-action';
+    fetch(`${url}?${new URLSearchParams(params)}`, { credentials: 'same-origin' })
+      .then(r => r.json()).then(json => {
+        const list = document.getElementById(listId), hidden = document.getElementById(inputId);
+        list.innerHTML = ''; hidden.value = '';
+        json.results.forEach(val => {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'list-group-item list-group-item-action';
           a.dataset.value = val;
-          a.textContent   = txt;
+          a.textContent = val;
           list.appendChild(a);
         });
       });
   }
+
   function clear(listId, inputId) {
     document.getElementById(listId).innerHTML = '';
     document.getElementById(inputId).value = '';
@@ -278,35 +245,28 @@
     clear('list_machine','input_machine');
     clear('list_op','input_op');
     clear('list_cat','input_cat');
-    ajaxList("{% url 'get_machines' %}", { part_number: pn }, 'list_machine','input_machine');
+    ajaxList(GET_MACHINES_URL, { part_number: pn }, 'list_machine','input_machine');
   });
   wireListClicks('list_machine','input_machine', mc => {
     clear('list_op','input_op');
     clear('list_cat','input_cat');
-    ajaxList("{% url 'get_operations' %}", {
+    ajaxList(GET_OPERATIONS_URL, {
       part_number: document.getElementById('input_part').value,
       machine:     mc
     }, 'list_op','input_op');
   });
   wireListClicks('list_op','input_op', op => {
     clear('list_cat','input_cat');
-    ajaxList("{% url 'get_categories' %}", {
+    ajaxList(GET_CATEGORIES_URL, {
       part_number: document.getElementById('input_part').value,
       machine:     document.getElementById('input_machine').value,
       operation:   op
     }, 'list_cat','input_cat');
   });
-  wireListClicks('list_cat','input_cat', () => { /* done */ });
+  wireListClicks('list_cat','input_cat', () => {});
 
-  // auto-dismiss alerts after 3s
   setTimeout(() => {
-    document.querySelectorAll('.alert').forEach(el => {
-      if (window.bootstrap && bootstrap.Alert) {
-        bootstrap.Alert.getOrCreateInstance(el).close();
-      } else {
-        el.remove();
-      }
-    });
+    document.querySelectorAll('.alert').forEach(el => bootstrap.Alert.getOrCreateInstance(el).close());
   }, 3000);
 </script>
-{% endblock %}
+{% endblock extra_scripts %}

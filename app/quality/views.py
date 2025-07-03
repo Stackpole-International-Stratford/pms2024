@@ -1243,21 +1243,22 @@ def add_new_epv(request):
 def scrap_entry(request):
     """
     Display the scrap-entry form and handle ScrapSubmission creation,
-    without redirect so that form selections persist even on success.
+    with machines/operations/categories as simple lists of strings
+    so we only ever deal in asset_numbers, operation names, and category names.
     """
     # 1) Master list of part numbers
-    part_numbers = (
+    part_numbers = list(
         ScrapSystemOperation.objects
-        .order_by('part_number')
-        .values_list('part_number', flat=True)
-        .distinct()
+            .order_by('part_number')
+            .values_list('part_number', flat=True)
+            .distinct()
     )
 
-    # 2) Initialize all form state & dependent lists
+    # 2) Initialize form state
     sel_pn = sel_mc = sel_op = sel_cat = ''
     sel_qty = '1'
 
-    machines = []
+    machines   = []
     operations = []
     categories = []
 
@@ -1269,81 +1270,99 @@ def scrap_entry(request):
         sel_cat = request.POST.get('category',     '').strip()
         sel_qty = request.POST.get('quantity',     '1').strip()
 
-        # Repopulate dependent dropdowns/lists (so the template can show them)
+        # --- REPOPULATE DEPENDENT LISTS AS LISTS OF STRINGS ---
         if sel_pn:
-            machines = (
+            machines = list(
                 Asset.objects
-                .filter(scrapsystemoperation__part_number=sel_pn)
-                .distinct()
+                     .filter(scrapsystemoperation__part_number=sel_pn)
+                     .order_by('asset_number')
+                     .values_list('asset_number', flat=True)
+                     .distinct()
             )
-        if sel_pn and sel_mc:
-            operations = (
-                ScrapSystemOperation.objects
-                .filter(part_number=sel_pn, assets__asset_number=sel_mc)
-                .order_by('operation')
-                .values_list('operation', flat=True)
-                .distinct()
-            )
-        if sel_pn and sel_mc and sel_op:
-            try:
-                sso = ScrapSystemOperation.objects.get(
-                    part_number=sel_pn,
-                    operation=sel_op,
-                    assets__asset_number=sel_mc
-                )
-                categories = sso.scrap_categories.all().values_list('name', flat=True)
-            except ScrapSystemOperation.DoesNotExist:
-                categories = []
 
-        # Validate presence
+        if sel_pn and sel_mc:
+            operations = list(
+                ScrapSystemOperation.objects
+                    .filter(part_number=sel_pn, assets__asset_number=sel_mc)
+                    .order_by('operation')
+                    .values_list('operation', flat=True)
+                    .distinct()
+            )
+
+        if sel_pn and sel_mc and sel_op:
+            qs = ScrapSystemOperation.objects.filter(
+                part_number=sel_pn,
+                operation=sel_op,
+                assets__asset_number=sel_mc
+            )
+            if qs.exists():
+                # category names as strings
+                categories = list(
+                    qs.first()
+                      .scrap_categories
+                      .values_list('name', flat=True)
+                )
+
+        # 3) VALIDATION & SAVE
         if not all([sel_pn, sel_mc, sel_op, sel_cat, sel_qty]):
             messages.error(request, "Please fill out all fields.")
         else:
+            # parse quantity
             try:
-                # Parse quantity
                 qty_int = int(sel_qty)
-
-                # Fetch FK objects
-                operation = ScrapSystemOperation.objects.get(
+            except ValueError:
+                messages.error(request, "Quantity must be a number.")
+            else:
+                # fetch operation
+                operation = ScrapSystemOperation.objects.filter(
                     part_number=sel_pn,
                     operation=sel_op,
                     assets__asset_number=sel_mc
-                )
-                asset    = Asset.objects.get(asset_number=sel_mc)
-                category = ScrapCategory.objects.get(name=sel_cat)
+                ).first()
+                if not operation:
+                    messages.error(request, "Invalid part–operation–machine combination.")
+                else:
+                    # pick latest asset by id
+                    asset = (
+                        Asset.objects
+                             .filter(asset_number=sel_mc)
+                             .order_by('-id')
+                             .first()
+                    )
+                    if not asset:
+                        messages.error(request, "Selected machine not found.")
+                    else:
+                        # pick latest category by id
+                        category = (
+                            ScrapCategory.objects
+                                         .filter(name=sel_cat)
+                                         .order_by('-id')
+                                         .first()
+                        )
+                        if not category:
+                            messages.error(request, "Selected scrap category not found.")
+                        else:
+                            # compute and save
+                            unit_cost  = operation.cost
+                            total_cost = unit_cost * qty_int
 
-                # Compute costs
-                unit_cost  = operation.cost
-                total_cost = unit_cost * qty_int
+                            ScrapSubmission.objects.create(
+                                scrap_system_operation=operation,
+                                asset=asset,
+                                scrap_category=category,
 
-                # Create denormalized submission
-                ScrapSubmission.objects.create(
-                    scrap_system_operation=operation,
-                    asset=asset,
-                    scrap_category=category,
+                                part_number    = sel_pn,
+                                machine        = sel_mc,
+                                operation_name = sel_op,
+                                category_name  = sel_cat,
 
-                    part_number    = sel_pn,
-                    machine        = sel_mc,
-                    operation_name = sel_op,
-                    category_name  = sel_cat,
+                                quantity   = qty_int,
+                                unit_cost  = unit_cost,
+                                total_cost = total_cost
+                            )
+                            messages.success(request, "Scrap entry recorded successfully.")
 
-                    quantity   = qty_int,
-                    unit_cost  = unit_cost,
-                    total_cost = total_cost
-                )
-
-                messages.success(request, "Scrap entry recorded successfully.")
-
-            except ValueError:
-                messages.error(request, "Quantity must be a number.")
-            except ScrapSystemOperation.DoesNotExist:
-                messages.error(request, "Invalid part–operation–machine combination.")
-            except Asset.DoesNotExist:
-                messages.error(request, "Selected machine not found.")
-            except ScrapCategory.DoesNotExist:
-                messages.error(request, "Selected scrap category not found.")
-
-    # 3) Render the template with whatever state we have (GET, error, or success)
+    # 4) Render with lists-of-strings
     return render(request, 'quality/scrap_entry.html', {
         'part_numbers':         part_numbers,
         'machines':             machines,
@@ -1358,18 +1377,17 @@ def scrap_entry(request):
 
 
 def get_machines(request):
-    """AJAX: return all machines for a given part_number."""
+    """AJAX: return one machine per asset_number (latest if duplicates), as a list of strings."""
     pn = request.GET.get('part_number')
-    assets = (
+    qs = (
         Asset.objects
-        .filter(scrapsystemoperation__part_number=pn)
-        .distinct()
+             .filter(scrapsystemoperation__part_number=pn)
+             .order_by('asset_number', '-id')
+             .values_list('asset_number', flat=True)
+             .distinct()
     )
-    data = [
-        {'asset_number': a.asset_number, 'asset_name': a.asset_name or a.asset_number}
-        for a in assets
-    ]
-    return JsonResponse({'results': data})
+    # qs is now ['M001', 'M002', …]
+    return JsonResponse({'results': list(qs)})
 
 
 def get_operations(request):
