@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import F
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import ScrapForm, FeatEntry, SupervisorAuthorization
+from .models import ScrapForm, FeatEntry, SupervisorAuthorization, ScrapCategory, ScrapSubmission, ScrapSystemOperation
 import json
 from .models import Feat
 from django.contrib.auth.decorators import login_required
@@ -1240,3 +1240,139 @@ def add_new_epv(request):
 # =============================================================================
 # =============================================================================
 
+def scrap_entry(request):
+    """
+    Display the scrap-entry form and handle ScrapSubmission creation,
+    including denormalized part/machine/operation/category fields.
+    """
+    # Always load distinct part numbers for the first dropdown
+    part_numbers = (
+        ScrapSystemOperation.objects
+        .order_by('part_number')
+        .values_list('part_number', flat=True)
+        .distinct()
+    )
+
+    # Initialize form-state defaults
+    selected_part_number = ''
+    selected_machine     = ''
+    selected_operation   = ''
+    selected_category    = ''
+    quantity             = 1
+
+    if request.method == 'POST':
+        # Pull posted values (or fall back to defaults)
+        selected_part_number = request.POST.get('part_number', '').strip()
+        selected_machine     = request.POST.get('machine', '').strip()
+        selected_operation   = request.POST.get('operation', '').strip()
+        selected_category    = request.POST.get('category', '').strip()
+        quantity             = request.POST.get('quantity', '1').strip()
+
+        # Basic presence check
+        if not all([selected_part_number, selected_machine, selected_operation, selected_category, quantity]):
+            messages.error(request, "Please fill out all fields.")
+        else:
+            try:
+                # Parse quantity
+                qty_int = int(quantity)
+
+                # Look up the related objects
+                operation = ScrapSystemOperation.objects.get(
+                    part_number=selected_part_number,
+                    operation=selected_operation,
+                    assets__asset_number=selected_machine
+                )
+                asset    = Asset.objects.get(asset_number=selected_machine)
+                category = ScrapCategory.objects.get(name=selected_category)
+
+                # Compute costs
+                unit_cost  = operation.cost
+                total_cost = unit_cost * qty_int
+
+                # Create the denormalized submission row
+                ScrapSubmission.objects.create(
+                    scrap_system_operation=operation,
+                    asset=asset,
+                    scrap_category=category,
+
+                    part_number    = selected_part_number,
+                    machine        = selected_machine,
+                    operation_name = selected_operation,
+                    category_name  = selected_category,
+
+                    quantity   = qty_int,
+                    unit_cost  = unit_cost,
+                    total_cost = total_cost
+                )
+
+                messages.success(request, "Scrap entry recorded successfully.")
+                return redirect(reverse('scrap_entry'))
+
+            except ValueError:
+                messages.error(request, "Quantity must be a number.")
+            except ScrapSystemOperation.DoesNotExist:
+                messages.error(request, "Invalid part–operation–machine combination.")
+            except Asset.DoesNotExist:
+                messages.error(request, "Selected machine not found.")
+            except ScrapCategory.DoesNotExist:
+                messages.error(request, "Selected scrap category not found.")
+
+    # Render (on GET or if validation failed)
+    context = {
+        'part_numbers':          part_numbers,
+        'machines':              [],  # filled via AJAX endpoints
+        'operations':            [],
+        'categories':            [],
+        'selected_part_number':  selected_part_number,
+        'selected_machine':      selected_machine,
+        'selected_operation':    selected_operation,
+        'selected_category':     selected_category,
+        'quantity':              quantity,
+    }
+    return render(request, 'quality/scrap_entry.html', context)
+
+
+def get_machines(request):
+    """AJAX: return all machines for a given part_number."""
+    pn = request.GET.get('part_number')
+    assets = (
+        Asset.objects
+        .filter(scrapsystemoperation__part_number=pn)
+        .distinct()
+    )
+    data = [
+        {'asset_number': a.asset_number, 'asset_name': a.asset_name or a.asset_number}
+        for a in assets
+    ]
+    return JsonResponse({'results': data})
+
+
+def get_operations(request):
+    """AJAX: return all operations for part_number + machine."""
+    pn = request.GET.get('part_number')
+    mc = request.GET.get('machine')
+    ops = (
+        ScrapSystemOperation.objects
+        .filter(part_number=pn, assets__asset_number=mc)
+        .order_by('operation')
+        .values_list('operation', flat=True)
+        .distinct()
+    )
+    return JsonResponse({'results': list(ops)})
+
+
+def get_categories(request):
+    """AJAX: return all scrap categories for PN + machine + operation."""
+    pn = request.GET.get('part_number')
+    mc = request.GET.get('machine')
+    op = request.GET.get('operation')
+    try:
+        sso = ScrapSystemOperation.objects.get(
+            part_number=pn,
+            operation=op,
+            assets__asset_number=mc
+        )
+        cats = sso.scrap_categories.all().values_list('name', flat=True)
+        return JsonResponse({'results': list(cats)})
+    except ScrapSystemOperation.DoesNotExist:
+        return JsonResponse({'results': []})

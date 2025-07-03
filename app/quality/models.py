@@ -214,31 +214,37 @@ class ScrapSystemOperation(models.Model):
 
 
 class ScrapSubmission(models.Model):
-    # which defined part/operation was scrapped
+    # keep the FKs for referential integrity
     scrap_system_operation = models.ForeignKey(
         ScrapSystemOperation,
         on_delete=models.CASCADE,
         related_name='submissions'
     )
-    # which machine reported it
     asset = models.ForeignKey(
         Asset,
         on_delete=models.CASCADE,
         related_name='scrap_submissions'
     )
-    # which scrap category applies
     scrap_category = models.ForeignKey(
         ScrapCategory,
         on_delete=models.CASCADE,
         related_name='scrap_submissions'
     )
 
-    unit_cost   = models.DecimalField(max_digits=10, decimal_places=2)
-    total_cost  = models.DecimalField(max_digits=12, decimal_places=2)
-    created_at  = models.DateTimeField(auto_now_add=True)
+    # denormalized fields for easy reporting
+    part_number     = models.CharField(max_length=100)
+    machine         = models.CharField(max_length=100)
+    operation_name  = models.CharField(max_length=256)
+    category_name   = models.CharField(max_length=100)
+
+    quantity        = models.PositiveIntegerField()
+    unit_cost       = models.DecimalField(max_digits=10, decimal_places=2)
+    total_cost      = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at      = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return (
-            f"Scrap of {self.scrap_system_operation.part_number} "
-            f"on {self.asset.asset_number} – {self.scrap_category.name}"
+            f"{self.part_number} @ {self.machine} – "
+            f"{self.operation_name}/{self.category_name} "
+            f"(qty {self.quantity})"
         )
