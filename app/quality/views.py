@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import F
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import ScrapForm, FeatEntry, SupervisorAuthorization, NewScrapSystemScrapEntry, NewScrapSystemScrapCategory
+from .models import ScrapForm, FeatEntry, SupervisorAuthorization
 import json
 from .models import Feat
 from django.contrib.auth.decorators import login_required
