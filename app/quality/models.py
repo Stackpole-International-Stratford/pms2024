@@ -189,11 +189,13 @@ class RedRabbitsEntry(models.Model):
 
 
 class ScrapCategory(models.Model):
-    # ‘id’ is created automatically as the primary key
     name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name_plural = "Scrap categories"
     
 
 
