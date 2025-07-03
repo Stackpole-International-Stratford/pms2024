@@ -20,13 +20,13 @@
       <form method="post" id="scrap-form">
         {% csrf_token %}
         
-        {# Operator #}
+      {# Operator #}
           <div class="col-12 col-md-4 d-flex flex-column">
-            <label for="id_operator" class="form-label">Operator #</label>
+        <label for="id_operator" class="form-label">Operator #</label>
             <input type="text" id="id_operator" name="operator"
                    class="form-control" value="{{ selected_operator }}"
                    placeholder="Operator ID">
-          </div>
+      </div>
 
         <div class="row gx-3">
           {# Part Number #}
