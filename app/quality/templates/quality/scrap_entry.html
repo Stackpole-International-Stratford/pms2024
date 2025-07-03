@@ -280,6 +280,9 @@
   const entries=[],
         tableBody=document.querySelector('#entries-table tbody'),
         entriesInput=document.getElementById('entries-json');
+        
+  // before your click‐handler, grab the element:
+  const qtyField = document.getElementById('id_quantity');
 
   document.getElementById('add-entry').addEventListener('click',()=>{
     const part=document.getElementById('input_part').value,
