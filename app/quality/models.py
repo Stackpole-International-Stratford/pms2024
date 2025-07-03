@@ -194,3 +194,19 @@ class ScrapCategory(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+
+class ScrapSystemOperation(models.Model):
+    # an operation can have 0 or many machines...
+    assets = models.ManyToManyField(Asset, blank=True)
+    # ...and 0 or many scrap categories
+    scrap_categories = models.ManyToManyField(ScrapCategory, blank=True)
+
+    part_number = models.CharField(max_length=100)
+    operation   = models.CharField(max_length=256)
+    cost        = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.part_number} – {self.operation}"
