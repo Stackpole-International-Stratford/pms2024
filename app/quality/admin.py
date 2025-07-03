@@ -18,5 +18,10 @@ class ScrapCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    list_display  = ('asset_number', 'asset_name')
-    search_fields = ('asset_number', 'asset_name')
+    """Full CRUD for Assets in the Admin."""
+    list_display    = ('asset_number', 'asset_name')
+    search_fields   = ('asset_number', 'asset_name')
+    list_filter     = ('asset_name',)
+    ordering        = ('asset_number',)
+    list_editable   = ('asset_name',)
+    fields          = ('asset_number', 'asset_name')
