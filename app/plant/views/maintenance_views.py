@@ -1827,3 +1827,13 @@ def quick_add(request):
         'downtime_codes_json':  json.dumps(downtime_codes_list),
         'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
     })
+
+
+
+
+
+def hello_view(request):
+    if request.method == 'GET':
+        print("Hello there")  # This will print to your server's console
+        return HttpResponse("Hello from the server!")
+    return HttpResponse(status=405)  # Method Not Allowed
