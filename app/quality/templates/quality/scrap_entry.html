@@ -69,41 +69,6 @@
             </div>
           </div>
 
-          {# Machine #}
-          <div class="col-6 col-md-2 d-flex flex-column">
-            <label class="form-label">Machine</label>
-            <input type="hidden" name="machine" id="input_machine" value="{{ selected_machine }}">
-            <div class="text-center mb-1">
-              <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_machine">
-                <!-- up caret SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                     class="bi bi-caret-up-fill" viewBox="0 0 16 16">
-                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 
-                   1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 
-                   1 0 0 0-1.506 0z"/>
-                </svg>
-              </button>
-            </div>
-            <div id="list_machine" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
-              {% for m in machines %}
-                <a href="#"
-                   class="list-group-item list-group-item-action {% if m == selected_machine %}active{% endif %}"
-                   data-value="{{ m }}">{{ m }}</a>
-              {% endfor %}
-            </div>
-            <div class="text-center mt-1">
-              <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_machine">
-                <!-- down caret SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                     class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 
-                   2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 
-                   5.48a1 1 0 0 1-1.506 0z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
           {# Operation #}
           <div class="col-6 col-md-2 d-flex flex-column">
             <label class="form-label">Operation</label>
@@ -128,6 +93,41 @@
             </div>
             <div class="text-center mt-1">
               <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_op">
+                <!-- down caret SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                  <path d="M7.247 11.14 2.451 5.658C1.885 5.013 
+                   2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 
+                   5.48a1 1 0 0 1-1.506 0z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {# Machine #}
+          <div class="col-6 col-md-2 d-flex flex-column">
+            <label class="form-label">Machine</label>
+            <input type="hidden" name="machine" id="input_machine" value="{{ selected_machine }}">
+            <div class="text-center mb-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-up" data-target="list_machine">
+                <!-- up caret SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-caret-up-fill" viewBox="0 0 16 16">
+                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 
+                   1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 
+                   1 0 0 0-1.506 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="list_machine" class="list-group flex-grow-1" style="overflow:auto; max-height:200px;">
+              {% for m in machines %}
+                <a href="#"
+                   class="list-group-item list-group-item-action {% if m == selected_machine %}active{% endif %}"
+                   data-value="{{ m }}">{{ m }}</a>
+              {% endfor %}
+            </div>
+            <div class="text-center mt-1">
+              <button type="button" class="btn btn-light scroll-btn scroll-down" data-target="list_machine">
                 <!-- down caret SVG -->
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                      class="bi bi-caret-down-fill" viewBox="0 0 16 16">
@@ -233,7 +233,7 @@
   const GET_OPERATIONS_URL = "{% url 'get_operations' %}";
   const GET_CATEGORIES_URL = "{% url 'get_categories' %}";
 
-  // Scroll helpers
+  // Scroll helpers (unchanged)…
   const SCROLL_AMOUNT = 35, SCROLL_INTERVAL = 60;
   document.querySelectorAll('.scroll-btn').forEach(btn => {
     let timer;
@@ -249,7 +249,8 @@
   });
 
   function wireListClicks(listId, inputId, callback) {
-    const list = document.getElementById(listId), hidden = document.getElementById(inputId);
+    const list = document.getElementById(listId),
+          hidden = document.getElementById(inputId);
     list.addEventListener('click', e => {
       if (!e.target.matches('.list-group-item')) return;
       list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
@@ -262,7 +263,8 @@
   function ajaxList(url, params, listId, inputId) {
     fetch(`${url}?${new URLSearchParams(params)}`, { credentials: 'same-origin' })
       .then(r => r.json()).then(json => {
-        const list = document.getElementById(listId), hidden = document.getElementById(inputId);
+        const list = document.getElementById(listId),
+              hidden = document.getElementById(inputId);
         list.innerHTML = ''; hidden.value = '';
         json.results.forEach(val => {
           const a = document.createElement('a');
@@ -280,32 +282,46 @@
     document.getElementById(inputId).value = '';
   }
 
-  // wire cascading selects
-  wireListClicks('list_part','input_part', pn => {
-    clear('list_machine','input_machine');
-    clear('list_op','input_op');
-    clear('list_cat','input_cat');
-    ajaxList(GET_MACHINES_URL, { part_number: pn }, 'list_machine','input_machine');
-  });
-  wireListClicks('list_machine','input_machine', mc => {
-    clear('list_op','input_op');
-    clear('list_cat','input_cat');
-    ajaxList(GET_OPERATIONS_URL, {
-      part_number: document.getElementById('input_part').value,
-      machine: mc
-    }, 'list_op','input_op');
-  });
-  wireListClicks('list_op','input_op', op => {
-    clear('list_cat','input_cat');
-    ajaxList(GET_CATEGORIES_URL, {
-      part_number: document.getElementById('input_part').value,
-      machine: document.getElementById('input_machine').value,
-      operation: op
-    }, 'list_cat','input_cat');
-  });
-  wireListClicks('list_cat','input_cat', () => {});
+  // wire cascading selects: Part → Operation → Machine → Category
 
-  // entries accumulation
+  // 1) Pick a Part → load Operations
+  wireListClicks('list_part', 'input_part', pn => {
+    clear('list_op', 'input_op');
+    clear('list_machine', 'input_machine');
+    clear('list_cat', 'input_cat');
+    ajaxList(GET_OPERATIONS_URL,
+             { part_number: pn },
+             'list_op', 'input_op');
+  });
+
+  // 2) Pick an Operation → load Machines
+  wireListClicks('list_op', 'input_op', op => {
+    clear('list_machine', 'input_machine');
+    clear('list_cat', 'input_cat');
+    ajaxList(GET_MACHINES_URL,
+             {
+               part_number: document.getElementById('input_part').value,
+               operation:   op
+             },
+             'list_machine', 'input_machine');
+  });
+
+  // 3) Pick a Machine → load Categories
+  wireListClicks('list_machine', 'input_machine', mc => {
+    clear('list_cat', 'input_cat');
+    ajaxList(GET_CATEGORIES_URL,
+             {
+               part_number: document.getElementById('input_part').value,
+               operation:   document.getElementById('input_op').value,
+               machine:     mc
+             },
+             'list_cat', 'input_cat');
+  });
+
+  // 4) Pick a Category → just select it
+  wireListClicks('list_cat', 'input_cat', () => {});
+
+  // entries accumulation (unchanged)…
   const entries       = [],
         tableBody     = document.querySelector('#entries-table tbody'),
         entriesInput  = document.getElementById('entries-json'),
@@ -325,7 +341,6 @@
     }
     entries.push({ part, machine, operation, category, qty, operator: opn });
     renderEntries();
-    // clear only the quantity
     qtyField.value = '';
   });
 
@@ -352,9 +367,10 @@
     });
   }
 
-  // auto-dismiss alerts
+  // auto-dismiss alerts (unchanged)…
   setTimeout(() => document.querySelectorAll('.alert').forEach(el =>
     bootstrap.Alert.getOrCreateInstance(el).close()
   ), 3000);
 </script>
+
 {% endblock extra_scripts %}

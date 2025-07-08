@@ -1425,32 +1425,44 @@ def scrap_entry(request):
         'quantity':             sel_qty,
     })
 
-def get_machines(request):
-    """AJAX: return one machine per asset_number (latest if duplicates), as a list of strings."""
-    pn = request.GET.get('part_number')
-    qs = (
-        Asset.objects
-             .filter(scrapsystemoperation__part_number=pn)
-             .order_by('asset_number', '-id')
-             .values_list('asset_number', flat=True)
-             .distinct()
-    )
-    # qs is now ['M001', 'M002', …]
-    return JsonResponse({'results': list(qs)})
-
-
 def get_operations(request):
-    """AJAX: return all operations for part_number + machine."""
+    """
+    AJAX: return all operations for a given part_number.
+    If machine is provided, only operations valid on that machine.
+    """
     pn = request.GET.get('part_number')
-    mc = request.GET.get('machine')
+    mc = request.GET.get('machine')  # may be None
+
+    qs = ScrapSystemOperation.objects.filter(part_number=pn)
+    if mc:
+        qs = qs.filter(assets__asset_number=mc)
+
     ops = (
-        ScrapSystemOperation.objects
-        .filter(part_number=pn, assets__asset_number=mc)
-        .order_by('operation')
-        .values_list('operation', flat=True)
-        .distinct()
+        qs.order_by('operation')
+          .values_list('operation', flat=True)
+          .distinct()
     )
     return JsonResponse({'results': list(ops)})
+
+
+def get_machines(request):
+    """
+    AJAX: return one machine per asset_number (latest if duplicates) for a part.
+    If operation is provided, only machines that perform that operation.
+    """
+    pn = request.GET.get('part_number')
+    op = request.GET.get('operation')  # may be None
+
+    qs = Asset.objects.filter(scrapsystemoperation__part_number=pn)
+    if op:
+        qs = qs.filter(scrapsystemoperation__operation=op)
+
+    machines = (
+        qs.order_by('asset_number', '-id')
+          .values_list('asset_number', flat=True)
+          .distinct()
+    )
+    return JsonResponse({'results': list(machines)})
 
 
 def get_categories(request):
