@@ -1,6 +1,39 @@
+from datetime import timedelta
 from django.contrib import admin
-from .models import ScrapSystemOperation, ScrapCategory
+from django.utils import timezone
+from .models import ScrapSubmission, ScrapSystemOperation, ScrapCategory
 from plant.models.setupfor_models import Asset
+
+@admin.register(ScrapSubmission)
+class ScrapSubmissionAdmin(admin.ModelAdmin):
+    list_display   = (
+        'part_number',
+        'machine',
+        'operation_name',
+        'category_name',
+        'quantity',
+        'came_from_op',
+        'created_at',
+    )
+    date_hierarchy = 'created_at'
+    # add part_number and operation_name here:
+    list_filter    = (
+        'part_number',
+        'machine',
+        'operation_name',
+        'scrap_category',
+    )
+    search_fields  = (
+        'part_number',
+        'machine',
+        'operation_name',
+        'category_name',
+        'came_from_op',
+    )
+
+    def get_queryset(self, request):
+        cutoff = timezone.now() - timedelta(days=90)
+        return super().get_queryset(request).filter(created_at__gte=cutoff)
 
 
 @admin.register(ScrapSystemOperation)
@@ -18,7 +51,6 @@ class ScrapCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    """Full CRUD for Assets in the Admin."""
     list_display    = ('asset_number', 'asset_name')
     search_fields   = ('asset_number', 'asset_name')
     list_filter     = ('asset_name',)

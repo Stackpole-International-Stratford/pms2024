@@ -238,6 +238,12 @@ class ScrapSubmission(models.Model):
     machine         = models.CharField(max_length=100)
     operation_name  = models.CharField(max_length=256)
     category_name   = models.CharField(max_length=100)
+    came_from_op = models.CharField(
+        max_length=256,
+        blank=True,
+        default='',
+        help_text='Optional: operation where this scrap originated'
+    )
     operator_number = models.CharField(max_length=50)
 
 
