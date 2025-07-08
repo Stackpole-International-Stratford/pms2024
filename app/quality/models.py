@@ -242,8 +242,10 @@ class ScrapSubmission(models.Model):
         max_length=256,
         blank=True,
         default='',
+        null=False,
         help_text='Optional: operation where this scrap originated'
     )
+
     operator_number = models.CharField(max_length=50)
 
 
