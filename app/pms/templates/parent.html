@@ -36,50 +36,298 @@
     
       </style>
 
-      
-<style>
-  /* Modern, sleek “warning” button */
+ 
+      <style>
+  /* Base button style */
+  .btn,
+  .btn-outline-primary, .btn-outline-secondary, .btn-outline-success,
+  .btn-outline-danger, .btn-outline-warning, .btn-outline-info,
+  .btn-outline-light, .btn-outline-dark {
+    padding: 0.5rem 1.25rem !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+    transition: background 0.3s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  /* —— Filled variants —— */
+
+  .btn-primary {
+    background: linear-gradient(180deg, #3385ff 0%, #0056b3 100%) !important;
+    border: none !important;
+    color: #fff !important;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #5a9bff 0%, #0056b3 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-primary:active {
+    transform: translateY(0) !important;
+    background: linear-gradient(180deg, #0056b3 0%, #004085 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-secondary {
+    background: linear-gradient(180deg, #9fa5ab 0%, #6c757d 100%) !important;
+    border: none !important;
+    color: #fff !important;
+  }
+  .btn-secondary:hover {
+    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #b0b6bb 0%, #6c757d 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-secondary:active {
+    transform: translateY(0) !important;
+    background: linear-gradient(180deg, #6c757d 0%, #565e64 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-success {
+    background: linear-gradient(180deg, #68d17c 0%, #28a745 100%) !important;
+    border: none !important;
+    color: #fff !important;
+  }
+  .btn-success:hover {
+    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #85e891 0%, #28a745 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-success:active {
+    transform: translateY(0) !important;
+    background: linear-gradient(180deg, #218838 0%, #1c7430 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-danger {
+    background: linear-gradient(180deg, #ff6b7d 0%, #dc3545 100%) !important;
+    border: none !important;
+    color: #fff !important;
+  }
+  .btn-danger:hover {
+    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #ff7a8b 0%, #dc3545 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-danger:active {
+    transform: translateY(0) !important;
+    background: linear-gradient(180deg, #bd2130 0%, #a71d2a 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
   .btn-warning {
     background: linear-gradient(180deg, #FFB347 0%, #FF9900 100%) !important;
     border: none !important;
     color: #fff !important;
-    padding: 0.5rem 1.25rem !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-    transition: background 0.3s ease, box-shadow 0.15s ease, transform 0.15s ease;
   }
   .btn-warning:hover {
-    background: linear-gradient(180deg, #FFC163 0%, #FF9900 100%) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20) !important;
+    background: linear-gradient(180deg, #FFC163 0%, #FF9900 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
   }
   .btn-warning:active {
-    background: linear-gradient(180deg, #E58F00 0%, #D27F00 100%) !important;
     transform: translateY(0) !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10) !important;
+    background: linear-gradient(180deg, #E58F00 0%, #D27F00 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
   }
 
-  /* Modern, sleek “dark” button */
+  .btn-info {
+    background: linear-gradient(180deg, #86e3f8 0%, #17a2b8 100%) !important;
+    border: none !important;
+    color: #fff !important;
+  }
+  .btn-info:hover {
+    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #a1ecfd 0%, #17a2b8 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-info:active {
+    transform: translateY(0) !important;
+    background: linear-gradient(180deg, #117a8b 0%, #0f6571 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-light {
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%) !important;
+    border: none !important;
+    color: #000 !important;
+  }
+  .btn-light:hover {
+    transform: translateY(-1px) !important;
+    background: linear-gradient(180deg, #fefefe 0%, #f8f9fa 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important;
+  }
+  .btn-light:active {
+    transform: translateY(0) !important;
+    background: linear-gradient(180deg, #e2e6ea 0%, #dae0e5 100%) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+  }
+
   .btn-dark {
     background: linear-gradient(180deg, #495057 0%, #343A40 100%) !important;
     border: none !important;
     color: #fff !important;
-    padding: 0.5rem 1.25rem !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.30) !important;
-    transition: background 0.3s ease, box-shadow 0.15s ease, transform 0.15s ease;
   }
   .btn-dark:hover {
-    background: linear-gradient(180deg, #5C636A 0%, #343A40 100%) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.40) !important;
+    background: linear-gradient(180deg, #5C636A 0%, #343A40 100%) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.40) !important;
   }
   .btn-dark:active {
+    transform: translateY(0) !important;
+    background: #23272B !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.20) !important;
+  }
+
+  /* —— Outline variants —— */
+
+  /* Generic outline hover/active reuses filled gradients */
+  .btn-outline-primary {
+    color: #007bff !important;
+    background: transparent !important;
+    border: 1px solid #007bff !important;
+  }
+  .btn-outline-primary:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #3385ff 0%, #0056b3 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-outline-primary:active {
+    color: #fff !important;
+    background: linear-gradient(180deg, #0056b3 0%, #004085 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-outline-secondary {
+    color: #6c757d !important;
+    background: transparent !important;
+    border: 1px solid #6c757d !important;
+  }
+  .btn-outline-secondary:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #9fa5ab 0%, #6c757d 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-outline-secondary:active {
+    color: #fff !important;
+    background: linear-gradient(180deg, #6c757d 0%, #565e64 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-outline-success {
+    color: #28a745 !important;
+    background: transparent !important;
+    border: 1px solid #28a745 !important;
+  }
+  .btn-outline-success:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #68d17c 0%, #28a745 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-outline-success:active {
+    color: #fff !important;
+    background: linear-gradient(180deg, #218838 0%, #1c7430 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-outline-danger {
+    color: #dc3545 !important;
+    background: transparent !important;
+    border: 1px solid #dc3545 !important;
+  }
+  .btn-outline-danger:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #ff6b7d 0%, #dc3545 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-outline-danger:active {
+    color: #fff !important;
+    background: linear-gradient(180deg, #bd2130 0%, #a71d2a 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-outline-warning {
+    color: #ff9900 !important;
+    background: transparent !important;
+    border: 1px solid #ff9900 !important;
+  }
+  .btn-outline-warning:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #FFB347 0%, #FF9900 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-outline-warning:active {
+    color: #fff !important;
+    background: linear-gradient(180deg, #E58F00 0%, #D27F00 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-outline-info {
+    color: #17a2b8 !important;
+    background: transparent !important;
+    border: 1px solid #17a2b8 !important;
+  }
+  .btn-outline-info:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #86e3f8 0%, #17a2b8 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.20) !important;
+  }
+  .btn-outline-info:active {
+    color: #fff !important;
+    background: linear-gradient(180deg, #117a8b 0%, #0f6571 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+  }
+
+  .btn-outline-light {
+    color: #f8f9fa !important;
+    background: transparent !important;
+    border: 1px solid #f8f9fa !important;
+    box-shadow: none !important;
+  }
+  .btn-outline-light:hover {
+    color: #000 !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important;
+  }
+  .btn-outline-light:active {
+    color: #000 !important;
+    background: linear-gradient(180deg, #e2e6ea 0%, #dae0e5 100%) !important;
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+  }
+
+  .btn-outline-dark {
+    color: #343a40 !important;
+    background: transparent !important;
+    border: 1px solid #343a40 !important;
+  }
+  .btn-outline-dark:hover {
+    color: #fff !important;
+    background: linear-gradient(180deg, #5C636A 0%, #343A40 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.40) !important;
+  }
+  .btn-outline-dark:active {
+    color: #fff !important;
     background: #23272B !important;
     transform: translateY(0) !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.20) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.20) !important;
   }
 </style>
+
 
 
       
