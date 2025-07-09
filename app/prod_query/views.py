@@ -4678,9 +4678,9 @@ def compute_overlap_label(detail_start, detail_end, pr_entries):
 
         # Determine the type of overlap and return along with the idnumber
         if detail_start >= pr_start and detail_end <= pr_end:
-            return {"overlap": "WITHIN PR", "pr_id": pr_id}
+            return {"overlap": "WITHIN DT", "pr_id": pr_id}
         elif detail_start <= pr_start and detail_end >= pr_end:
-            return {"overlap": "CONTAINS PR", "pr_id": pr_id}
+            return {"overlap": "CONTAINS DT", "pr_id": pr_id}
         elif detail_start < pr_start and detail_end > pr_start and detail_end < pr_end:
             return {"overlap": "OVERLAP LEFT", "pr_id": pr_id}
         elif detail_start > pr_start and detail_start < pr_end and detail_end > pr_end:

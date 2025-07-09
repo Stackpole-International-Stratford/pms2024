@@ -400,7 +400,7 @@
                 <th>End</th>
                 <th>Minutes Down</th>
                 <th>Overlap</th>
-                <th>PR Id</th>
+                <th>DT Event Id</th>
               </tr>
             </thead>
             <tbody id="modal-downtime-events-body">
@@ -1732,7 +1732,7 @@ appendOpTotalsRows();
             prTbody.appendChild(tr);
           });                 
         } else {
-          prTbody.innerHTML = "<tr><td colspan='5'>No PR downtime entries found.</td></tr>";
+          prTbody.innerHTML = "<tr><td colspan='5'>No downtime app entries found.</td></tr>";
         }
         if(machineData.downtime_events && machineData.downtime_events.length > 0) {
           machineData.downtime_events.forEach(function(event) {
