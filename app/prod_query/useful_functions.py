@@ -4,72 +4,51 @@ import os
 from django.utils.dateparse import parse_datetime
 from django.http import JsonResponse
 from plant.models.setupfor_models import SetupFor
+from plant.models.maintenance_models import MachineDowntimeEvent
+import re
+from datetime import datetime
+from django.db.models import Q
 
-def fetch_prdowntime1_entries(assetnum, called4helptime, completedtime):
+
+def fetch_prdowntime1_entries(assetnum: str, called4helptime: str, completedtime: str):
     """
-    Fetches downtime entries based on the given parameters using raw SQL.
-
-    :param assetnum: The asset number of the machine.
-    :param called4helptime: The start of the time window (ISO 8601 format).
-    :param completedtime: The end of the time window (ISO 8601 format).
-    :return: List of rows matching the criteria.
+    Returns a list of (problem, called4helptime, completedtime) tuples
+    pulled from MachineDowntimeEvent, matching exactly the old signature.
     """
-    try:
-        # Parse the dates to ensure they are in datetime format
-        called4helptime = datetime.fromisoformat(called4helptime)
-        completedtime = datetime.fromisoformat(completedtime)
+    # 1) strip trailing letters from the machine identifier
+    assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
 
-        # Dynamically import `get_db_connection` from settings.py
-        settings_path = os.path.join(
-            os.path.dirname(__file__), '../pms/settings.py'
-        )
-        spec = importlib.util.spec_from_file_location("settings", settings_path)
-        settings = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(settings)
-        get_db_connection = settings.get_db_connection
+    # 2) parse the incoming ISO strings into Python datetimes → epochs
+    start_dt = datetime.fromisoformat(called4helptime)
+    end_dt   = datetime.fromisoformat(completedtime)
+    start_ts = int(start_dt.timestamp())
+    end_ts   = int(end_dt.timestamp())
 
-        # Get database connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    # 3) build the same “overlap” filter as the raw SQL did
+    overlap = (
+           (Q(start_epoch__lt=start_ts) &
+            (Q(closeout_epoch__gte=start_ts) | Q(closeout_epoch__isnull=True)))
+        | Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)
+        | ((Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)) &
+           (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+        | (Q(start_epoch__lt=start_ts) &
+           (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+    )
 
-        # Raw SQL query to fetch the required data
-        query = """
-        SELECT problem, called4helptime, completedtime
-        FROM pr_downtime1
-        WHERE assetnum = %s
-        AND (
-            -- Entries that start before the window and bleed into the window
-            (called4helptime < %s AND (completedtime >= %s OR completedtime IS NULL))
-            -- Entries that start within the window
-            OR (called4helptime >= %s AND called4helptime <= %s)
-            -- Entries that start in the window and bleed out
-            OR (called4helptime >= %s AND called4helptime <= %s AND (completedtime > %s OR completedtime IS NULL))
-            -- Entries that bleed both before and after the window
-            OR (called4helptime < %s AND (completedtime > %s OR completedtime IS NULL))
-        )
-        """
+    # 4) filter the ORM queryset exactly as before
+    qs = MachineDowntimeEvent.objects.filter(
+        machine=assetnum,
+        is_deleted=False
+    ).filter(overlap)
 
-        # Execute the query
-        cursor.execute(query, (
-            assetnum,
-            called4helptime, called4helptime,
-            called4helptime, completedtime,
-            called4helptime, completedtime, completedtime,
-            called4helptime, completedtime
-        ))
+    # 5) return [(problem, called_dt, completed_dt), …]
+    results = []
+    for ev in qs:
+        called   = ev.start_at        # datetime.fromtimestamp(ev.start_epoch)
+        completed = ev.closeout_at    # None if no closeout_epoch
+        results.append((ev.comment, called, completed))
 
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the cursor and connection
-        cursor.close()
-        conn.close()
-
-        return rows
-
-    except Exception as e:
-        return {"error": str(e)}
-
+    return results
 
 
 
