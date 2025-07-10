@@ -25,15 +25,6 @@
           <button type="submit" class="btn btn-dark">Submit All</button>
         </div>
 
-
-      {# Operator #}
-        <div class="col-12 col-md-4 d-flex flex-column">
-        <label for="id_operator" class="form-label">Operator #</label>
-        <input type="text" id="id_operator" name="operator"
-                class="form-control" value="{{ selected_operator }}"
-                placeholder="Operator ID">
-      </div>
-
         <div class="row gx-3">
           {# Part Number #}
           <div class="col-6 col-md-2 d-flex flex-column">
@@ -174,6 +165,14 @@
             </div>
           </div>
         </div>
+
+          {# Operator #}
+          <div class="col-12 col-md-4 d-flex flex-column">
+          <label for="id_operator" class="form-label">Operator #</label>
+          <input type="text" id="id_operator" name="operator"
+                  class="form-control" value="{{ selected_operator }}"
+                  placeholder="Operator ID">
+          </div>
 
           {# Quantity + Add button #}
           <div class="col-12 col-md-4 d-flex flex-column">
