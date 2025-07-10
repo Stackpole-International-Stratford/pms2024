@@ -227,11 +227,14 @@ input[type="radio"] {
             <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#clearFormModal">
                 Clear Form
             </button>
-    
+
+
+            {% if not page_locked %}
             <!-- Change Part Button -->
             <button type="button" class="btn btn-secondary ms-2" onclick="goToChangePart()">
                 Change Part
             </button>
+            {% endif %}
     
             <script>
                 function goToChangePart() {

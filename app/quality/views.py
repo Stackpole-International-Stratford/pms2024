@@ -36,15 +36,28 @@ def index(request):
     return render(request, 'quality/index.html', context)
 
 
+LOCKED_PART_NUMBERS = {
+    "50-1467 (A)",
+    "50-1467 (B)",
+    "50-3050",
+}
+
 def final_inspection(request, part_number):
-    # Get the Part object based on the part_number
+    # 1) Look up the Part
     part = get_object_or_404(Part, part_number=part_number)
-    
-    # Get all feats associated with this part
+
+    # 2) Determine if this part should lock the page
+    page_locked = part.part_number in LOCKED_PART_NUMBERS
+
+    # 3) Fetch feats as before
     feats = part.feat_set.all()
 
-    # Pass the feats and part to the template
-    return render(request, 'quality/scrap_form.html', {'part': part, 'feats': feats})
+    # 4) Render, including the new flag
+    return render(request, 'quality/scrap_form.html', {
+        'part': part,
+        'feats': feats,
+        'page_locked': page_locked,
+    })
 
 
 
