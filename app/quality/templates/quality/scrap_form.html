@@ -235,6 +235,27 @@ input[type="radio"] {
                 Change Part
             </button>
             {% endif %}
+
+            
+            {% if page_locked %}
+            <button
+                type="button"
+                class="btn btn-danger ms-2"
+                onclick="alert(
+                'Reminder: these part numbers should remain static:\n\n' +
+                '• 50-1467 (A)\n' +
+                '• 50-1467 (B)\n' +
+                '• 50-3050\n\n' +
+                'There is no reason to change the part.'
+                );"
+            >
+                Do Not Change Part
+            </button>
+            {% endif %}
+
+
+
+
     
             <script>
                 function goToChangePart() {
