@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'plant',
     'quality',
     'forms',
+    'formsTesterAdmin',
 ]
 
 MIDDLEWARE = [

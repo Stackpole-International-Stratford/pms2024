@@ -35,7 +35,7 @@ urlpatterns = [
     path('quality/', include('quality.urls')),
     path('plant/', include('plant.urls')),
     path('forms/', include('forms.urls')),
-
+    path('formsTesterAdmin/', include('formsTesterAdmin.urls')),
     # Custom login URL
     path('login/', login_view, name='login'),
     path('logout/', LogoutView.as_view(next_page='/'), name='logout'),
