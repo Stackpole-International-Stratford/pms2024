@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from .views import *
 
 app_name = "dashboards"
 
@@ -47,4 +48,10 @@ urlpatterns = [
 
     path("dashboard/<str:pages>/", views.dashboard_current_shift, name="dashboard_last_hour"),
     path("<str:pages>/", views.dashboard_current_shift, name="dashboard_last_hour"),
+
+        path(
+        "send_dashboard/<str:pages>/",
+        send_dashboard_email,
+        name="send_dashboard_email",
+    ),
 ]

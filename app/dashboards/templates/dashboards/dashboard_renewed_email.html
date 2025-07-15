@@ -1,0 +1,210 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard — {{ pages }}</title>
+
+  <!-- keep auto-refresh if desired -->
+  <meta http-equiv="refresh" content="5">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+
+<style>
+  /* ── 1) Root scale ─────────────────────────────────────────────────────── */
+  html {
+    font-size: 10px;
+  }
+  @supports (font-size: min(1vh, 1vw)) {
+    html { font-size: min(1vh, 0.52vw); }
+  }
+  body { margin: 0; background: #97a5b1; overflow-x: hidden; }
+
+  /* ── 2) Main container allows wrap ───────────────────────────────────── */
+  .dashboard {
+    display: flex;
+    flex-wrap: wrap;          /* allow columns to wrap */
+    height: 100vh;
+    width: 100vw;
+  }
+  .dash-col {
+    flex: 1 1 300px;          /* grow, shrink, but not below 300px */
+    min-width: 300px;
+    margin: 1vh 0.5vw;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+    border: 0.2rem solid #dee2e6;
+    border-radius: 1.5rem;
+    overflow: hidden;
+  }
+
+  /* ── 3) Program header ─────────────────────────────────────────────── */
+  .dash-hdr {
+    height: 6vh;
+    line-height: 6vh;
+    background: #343a40;
+    color: #fff;
+    font-size: 3rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* ── 4) Operations & machines ──────────────────────────────────────── */
+  .op-row {
+    display: flex;
+    height: 8vh;
+    border-top: 0.15rem solid #bbb;
+  }
+
+  .op-cell {
+    flex: 0 0 6.5vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-right: 0.2rem solid #666;
+    margin-right: 0.3rem;
+    cursor: help;
+  }
+  .op-title { font-size: 2.4rem; font-weight: 650; line-height: 2.4rem; }
+  .op-stat  { font-size: 2rem; }
+
+  .mach-wrap { flex: 1 1 0; display: flex; }
+  .mach-cell {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: help;
+  }
+  .mach-num   { font-size: 2.4rem; font-weight: 600; line-height: 2.4rem; }
+  .mach-count { font-size: 2rem; }
+  .no-mach    { background: #e0e0e0; font-size: 2rem; }
+
+  /* ── 5) Tablet: two columns per row ────────────────────────────────── */
+  @media (max-width: 1200px) {
+    .dash-col {
+      flex: 1 1 45%;          /* two across */
+      min-width: 45%;
+    }
+  }
+
+  /* ── 6) Mobile/small: stack everything ────────────────────────────── */
+  @media (max-width: 800px) {
+    .dash-col {
+      flex: 1 1 100%;         /* one across */
+      min-width: 100%;
+      margin: 1vh auto;
+    }
+    .op-row {
+      flex-direction: column;
+      height: auto;
+    }
+    .op-cell, .mach-cell {
+      flex: 1 1 100%;
+      width: 100% !important;
+      margin: 0.4rem 0;
+    }
+    .op-title, .mach-num { font-size: 2rem; line-height: 2.2rem; }
+    .op-stat,  .mach-count { font-size: 1.8rem; }
+  }
+
+  /* ── 7) Tooltips ──────────────────────────────────────────────────── */
+  .tooltip .tooltip-inner {
+    font-size: 2rem;
+    padding: 0.8rem 1rem;
+    max-width: none;
+  }
+</style>
+
+</head>
+<body>
+<div class="dashboard">
+
+  {% for prog in programs %}
+    <div class="dash-col">
+      <div class="dash-hdr">{{ prog.program }}</div>
+
+      {% for line in prog.lines %}
+        {% for op in line.operations %}
+          <div class="op-row">
+            <!-- op cell -->
+            <div class="op-cell"
+                 style="background: {{ op.color }};"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 title="Shift: red = 0%, yellow = 50 %, green > 85 %">
+              <div class="op-title">{{ op.op }}</div>
+              <div class="op-stat">
+                {{ op.total_produced }}
+                {% if op.efficiency is not None %}
+                  ({{ op.efficiency }} %)
+                {% else %}
+                  (N/A)
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- machine cells -->
+            <div class="mach-wrap">
+              {% if op.machines|length == 0 %}
+                <div class="mach-cell no-mach"
+                     data-bs-toggle="tooltip" data-bs-placement="top"
+                     title="5min: red = 0%, yellow = 50 %, green > 85 %">—</div>
+
+              {% elif op.machines|length == 1 %}
+                {% with m=op.machines.0 %}
+                  <div class="mach-cell"
+                       style="background: {{ m.color }};"
+                       data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="5min: red = 0%, yellow = 50 %, green > 85 %">
+                    <div class="mach-num">{{ m.number }}</div>
+                    <div class="mach-count">
+                      {{ m.count }}
+                      {% if m.efficiency is not None %}
+                        ({{ m.efficiency }} %)
+                      {% else %}
+                        (N/A)
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endwith %}
+
+              {% else %}
+                {% widthratio 100 op.machines|length 1 as perc %}
+                {% for m in op.machines %}
+                  <div class="mach-cell"
+                       style="background: {{ m.color }}; width:{{ perc }}%;"
+                       data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="5min: red = 0%, yellow = 50 %, green > 85 %">
+                    <div class="mach-num">{{ m.number }}</div>
+                    <div class="mach-count">
+                      {{ m.count }}
+                      {% if m.efficiency is not None %}
+                        ({{ m.efficiency }} %)
+                      {% else %}
+                        (N/A)
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+</div>
+
+<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script>
+  document.querySelectorAll('[data-bs-toggle="tooltip"]')
+          .forEach(el => new bootstrap.Tooltip(el));
+</script>
+</body>
+</html>
