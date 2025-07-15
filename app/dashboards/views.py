@@ -3627,36 +3627,60 @@ from django.core.mail import EmailMessage
 from django.utils import timezone
 
 
-def send_dashboard_email(request, pages: str = "8670"):
+def send_all_dashboards(request):
     """
-    Wrapper view that renders the dashboard for `pages`,
-    emails it as HTML to Tyler, and returns a simple HttpResponse.
+    Renders dashboards for the four programs, stitches them into a single
+    email, and sends to Tyler.
     """
-    # 1) Create a fake GET request so that all middleware/auth still apply
+    programs = ["8670", "Area1&Area2", "trilobe", "9341"]
     rf = RequestFactory()
-    fake_req = rf.get(request.get_full_path())
-    # propagate user/session if you need it
-    fake_req.user = getattr(request, "user", None)
-    fake_req.session = getattr(request, "session", None)
 
-    # 2) Call the dashboard view
-    resp = dashboard_current_shift_email(fake_req, pages=pages)
-    if resp.status_code != 200:
-        return HttpResponse(
-            f"Error rendering dashboard (status {resp.status_code})",
-            status=resp.status_code
+    fragments = []
+    for pages in programs:
+        # 1) Fake a GET to our email‐optimized dashboard view
+        fake = rf.get(f"/dashboard/{pages}/")
+        fake.user = getattr(request, "user", None)
+        fake.session = getattr(request, "session", None)
+
+        resp = dashboard_current_shift_email(fake, pages=pages)
+        if resp.status_code != 200:
+            return HttpResponse(f"Error rendering {pages}: {resp.status_code}", status=500)
+
+        html = resp.content.decode("utf-8")
+        # Wrap each fragment with a heading
+        fragments.append(
+            f'''
+            <h2 style="font-family:Arial,sans-serif;
+                       margin:24px 0 8px;
+                       border-bottom:1px solid #ccc;
+                       padding-bottom:4px;">
+              Dashboard — {pages}
+            </h2>
+            {html}
+            '''
         )
 
-    # 3) Extract HTML
-    html_body = resp.content.decode("utf-8")
+    # 2) Combine them into one full HTML document
+    full_html = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>All Dashboards</title>
+      </head>
+      <body style="margin:0;padding:20px;background:#f0f0f0;">
+        {' '.join(fragments)}
+      </body>
+    </html>
+    """
 
-    # 4) Build and send the email
-    subject = f"[Hourly Test] Dashboard {pages} — {timezone.now():%Y-%m-%d %H:%M}"
+    # 3) Send the email
+    subject = f"[Hourly Test] All Dashboards — {timezone.now():%Y-%m-%d %H:%M}"
     msg = EmailMessage(
         subject=subject,
-        body=html_body,
+        body=full_html,
         to=["tyler.careless@johnsonelectric.com"],
-        # from_email will default to DEFAULT_FROM_EMAIL in your settings
     )
     msg.content_subtype = "html"
     try:
@@ -3664,4 +3688,4 @@ def send_dashboard_email(request, pages: str = "8670"):
     except Exception as e:
         return HttpResponse(f"Failed to send email: {e}", status=500)
 
-    return HttpResponse("Email dispatched ✅")
+    return HttpResponse("All dashboards emailed ✅")
