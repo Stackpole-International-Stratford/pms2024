@@ -1,210 +1,151 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard — {{ pages }}</title>
 
-  <!-- keep auto-refresh if desired -->
-  <meta http-equiv="refresh" content="5">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1">
-
-  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
-
-<style>
-  /* ── 1) Root scale ─────────────────────────────────────────────────────── */
-  html {
-    font-size: 10px;
-  }
-  @supports (font-size: min(1vh, 1vw)) {
-    html { font-size: min(1vh, 0.52vw); }
-  }
-  body { margin: 0; background: #97a5b1; overflow-x: hidden; }
-
-  /* ── 2) Main container allows wrap ───────────────────────────────────── */
-  .dashboard {
-    display: flex;
-    flex-wrap: wrap;          /* allow columns to wrap */
-    height: 100vh;
-    width: 100vw;
-  }
-  .dash-col {
-    flex: 1 1 300px;          /* grow, shrink, but not below 300px */
-    min-width: 300px;
-    margin: 1vh 0.5vw;
-    display: flex;
-    flex-direction: column;
-    background: #f8f9fa;
-    border: 0.2rem solid #dee2e6;
-    border-radius: 1.5rem;
-    overflow: hidden;
-  }
-
-  /* ── 3) Program header ─────────────────────────────────────────────── */
-  .dash-hdr {
-    height: 6vh;
-    line-height: 6vh;
-    background: #343a40;
-    color: #fff;
-    font-size: 3rem;
-    font-weight: 700;
-    text-align: center;
-  }
-
-  /* ── 4) Operations & machines ──────────────────────────────────────── */
-  .op-row {
-    display: flex;
-    height: 8vh;
-    border-top: 0.15rem solid #bbb;
-  }
-
-  .op-cell {
-    flex: 0 0 6.5vw;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-right: 0.2rem solid #666;
-    margin-right: 0.3rem;
-    cursor: help;
-  }
-  .op-title { font-size: 2.4rem; font-weight: 650; line-height: 2.4rem; }
-  .op-stat  { font-size: 2rem; }
-
-  .mach-wrap { flex: 1 1 0; display: flex; }
-  .mach-cell {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    cursor: help;
-  }
-  .mach-num   { font-size: 2.4rem; font-weight: 600; line-height: 2.4rem; }
-  .mach-count { font-size: 2rem; }
-  .no-mach    { background: #e0e0e0; font-size: 2rem; }
-
-  /* ── 5) Tablet: two columns per row ────────────────────────────────── */
-  @media (max-width: 1200px) {
-    .dash-col {
-      flex: 1 1 45%;          /* two across */
-      min-width: 45%;
+  <style type="text/css">
+    body {
+      margin: 0; padding: 0;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
     }
-  }
+    table { border-spacing: 0; }
+    td    { padding: 0; }
 
-  /* ── 6) Mobile/small: stack everything ────────────────────────────── */
-  @media (max-width: 800px) {
-    .dash-col {
-      flex: 1 1 100%;         /* one across */
-      min-width: 100%;
-      margin: 1vh auto;
+    /* Mobile stack */
+    @media only screen and (max-width: 600px) {
+      .outer, .outer tr, .outer td { display: block !important; width: 100% !important; }
+      .program-td { display: block !important; width: 100% !important; padding: 10px 0 !important; }
+      .inner, .inner tr, .inner td { display: block !important; width: 100% !important; }
+      .op-row, .machine-row { display: block !important; width: 100% !important; }
+      .op-cell, .machine-cell {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        margin-bottom: 4px;
+      }
     }
-    .op-row {
-      flex-direction: column;
-      height: auto;
-    }
-    .op-cell, .mach-cell {
-      flex: 1 1 100%;
-      width: 100% !important;
-      margin: 0.4rem 0;
-    }
-    .op-title, .mach-num { font-size: 2rem; line-height: 2.2rem; }
-    .op-stat,  .mach-count { font-size: 1.8rem; }
-  }
-
-  /* ── 7) Tooltips ──────────────────────────────────────────────────── */
-  .tooltip .tooltip-inner {
-    font-size: 2rem;
-    padding: 0.8rem 1rem;
-    max-width: none;
-  }
-</style>
-
+  </style>
 </head>
-<body>
-<div class="dashboard">
 
-  {% for prog in programs %}
-    <div class="dash-col">
-      <div class="dash-hdr">{{ prog.program }}</div>
+<body bgcolor="#f0f0f0">
+  {% comment %}
+    Compute width percentage per program: 100 ÷ number_of_programs
+  {% endcomment %}
+  {% widthratio 1 programs|length 100 as colpct %}
 
-      {% for line in prog.lines %}
-        {% for op in line.operations %}
-          <div class="op-row">
-            <!-- op cell -->
-            <div class="op-cell"
-                 style="background: {{ op.color }};"
-                 data-bs-toggle="tooltip" data-bs-placement="top"
-                 title="Shift: red = 0%, yellow = 50 %, green > 85 %">
-              <div class="op-title">{{ op.op }}</div>
-              <div class="op-stat">
-                {{ op.total_produced }}
-                {% if op.efficiency is not None %}
-                  ({{ op.efficiency }} %)
-                {% else %}
-                  (N/A)
-                {% endif %}
-              </div>
-            </div>
+  <!-- outer wrapper -->
+  <table class="outer" width="100%" bgcolor="#f0f0f0" cellpadding="0" cellspacing="0">
+    <tr>
+      {% for prog in programs %}
+      <td class="program-td"
+          align="center"
+          valign="top"
+          style="padding:10px;
+                 width:{{ colpct }}%;
+                 vertical-align: top;">
+        <!-- inner card -->
+        <table class="inner"
+               width="100%"
+               bgcolor="#ffffff"
+               cellpadding="0"
+               cellspacing="0"
+               style="border:1px solid #cccccc;
+                      border-radius:8px;
+                      overflow:hidden;">
+          <!-- header -->
+          <tr>
+            <td align="center"
+                style="background-color:#343a40;
+                       color:#ffffff;
+                       font-size:20px;
+                       font-weight:bold;
+                       padding:10px;">
+              {{ prog.program }}
+            </td>
+          </tr>
 
-            <!-- machine cells -->
-            <div class="mach-wrap">
-              {% if op.machines|length == 0 %}
-                <div class="mach-cell no-mach"
-                     data-bs-toggle="tooltip" data-bs-placement="top"
-                     title="5min: red = 0%, yellow = 50 %, green > 85 %">—</div>
+          {% for line in prog.lines %}
+            {% for op in line.operations %}
+            <tr>
+              <td style="border-top:1px solid #dddddd; padding:8px;">
+                <!-- op + machines table -->
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr class="op-row">
+                    <!-- op cell -->
+                    <td class="op-cell"
+                        valign="top"
+                        style="background-color:{{ op.color }};
+                               padding:10px;
+                               font-size:16px;
+                               font-weight:bold;
+                               color:#000000;
+                               width:30%;">
+                      <div>{{ op.op }}</div>
+                      <div style="font-size:14px; margin-top:4px;">
+                        {{ op.total_produced }}
+                        {% if op.efficiency is not None %}
+                          ({{ op.efficiency }}%)
+                        {% else %}
+                          (N/A)
+                        {% endif %}
+                      </div>
+                    </td>
 
-              {% elif op.machines|length == 1 %}
-                {% with m=op.machines.0 %}
-                  <div class="mach-cell"
-                       style="background: {{ m.color }};"
-                       data-bs-toggle="tooltip" data-bs-placement="top"
-                       title="5min: red = 0%, yellow = 50 %, green > 85 %">
-                    <div class="mach-num">{{ m.number }}</div>
-                    <div class="mach-count">
-                      {{ m.count }}
-                      {% if m.efficiency is not None %}
-                        ({{ m.efficiency }} %)
-                      {% else %}
-                        (N/A)
-                      {% endif %}
-                    </div>
-                  </div>
-                {% endwith %}
+                    <!-- machine cells -->
+                    <td class="machine-row"
+                        valign="top"
+                        style="padding-left:8px; width:70%;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          {% if op.machines|length == 0 %}
+                            <td class="machine-cell"
+                                valign="top"
+                                style="background-color:#e0e0e0;
+                                       padding:10px;
+                                       text-align:center;
+                                       font-size:14px;">
+                              —
+                            </td>
+                          {% else %}
+                            {% for m in op.machines %}
+                              <td class="machine-cell"
+                                  valign="top"
+                                  style="background-color:{{ m.color }};
+                                         padding:8px;
+                                         text-align:center;
+                                         font-size:14px;
+                                         color:#000000;
+                                         {% if not forloop.last %}border-right:1px solid #ffffff;{% endif %}">
+                                <div style="font-weight:bold;">{{ m.number }}</div>
+                                <div style="margin-top:4px;">
+                                  {{ m.count }}
+                                  {% if m.efficiency is not None %}
+                                    ({{ m.efficiency }}%)
+                                  {% else %}
+                                    (N/A)
+                                  {% endif %}
+                                </div>
+                              </td>
+                            {% endfor %}
+                          {% endif %}
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            {% endfor %}
+          {% endfor %}
 
-              {% else %}
-                {% widthratio 100 op.machines|length 1 as perc %}
-                {% for m in op.machines %}
-                  <div class="mach-cell"
-                       style="background: {{ m.color }}; width:{{ perc }}%;"
-                       data-bs-toggle="tooltip" data-bs-placement="top"
-                       title="5min: red = 0%, yellow = 50 %, green > 85 %">
-                    <div class="mach-num">{{ m.number }}</div>
-                    <div class="mach-count">
-                      {{ m.count }}
-                      {% if m.efficiency is not None %}
-                        ({{ m.efficiency }} %)
-                      {% else %}
-                        (N/A)
-                      {% endif %}
-                    </div>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            </div>
-          </div>
-        {% endfor %}
+        </table>
+      </td>
       {% endfor %}
-    </div>
-  {% endfor %}
-
-</div>
-
-<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-<script>
-  document.querySelectorAll('[data-bs-toggle="tooltip"]')
-          .forEach(el => new bootstrap.Tooltip(el));
-</script>
+    </tr>
+  </table>
 </body>
 </html>
