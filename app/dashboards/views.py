@@ -15,11 +15,11 @@ import re
 import pytz
 from django.utils import timezone
 
-import json
+from plant.models.maintenance_models import MachineDowntimeEvent
+from django.test.client import RequestFactory
 from typing import Dict, List, Set, Tuple, Optional, DefaultDict, Union
 
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.db import connections
 import copy
 import math
 
@@ -3244,77 +3244,101 @@ def dashboard_current_shift(request, pages: str):
 # =================================================================================
 # =================================================================================
 
-# match either all digits, or digits + one L or R
 VALID_PATTERN = re.compile(r"^\d+(?:[LR])?$")
 
-def get_stale_machines(
+def render_stale_machines_table(
     threshold_minutes: int = 60,
     max_age_days:   int = 7,
-) -> list[tuple[str,int]]:
+) -> str:
     """
-    1) Finds machines whose last GFxPRoduction.TimeStamp is > threshold_minutes ago,
-       but not older than max_age_days days.
-    2) Limits to IDs that are pure digits or digits+L/R.
-    3) Prints them to the console, marking any with an open downtime event,
-       showing how many minutes they've been down, and sorting so the longest-
-       down machines appear first.
-    4) Returns the stale list for further use.
+    Returns a HTML fragment: a table of all machines whose last production
+    timestamp was > threshold_minutes ago (but ≤ max_age_days old),
+    whose IDs are digits or digits+L/R, sorted by minutes down descending,
+    and indicating any with an open downtime event.
     """
     now_epoch      = int(timezone.now().timestamp())
     cutoff_epoch   = now_epoch - threshold_minutes * 60
     week_ago_epoch = now_epoch - max_age_days * 86400
 
-    # ① Fetch any machines whose latest_ts < cutoff
+    # 1) Fetch candidate machines
     sql = """
-        SELECT Machine, MAX(TimeStamp) AS latest_ts
-        FROM   GFxPRoduction
-        GROUP  BY Machine
-        HAVING MAX(TimeStamp) < %s
+       SELECT Machine, MAX(TimeStamp) AS latest_ts
+       FROM   GFxPRoduction
+       GROUP  BY Machine
+       HAVING MAX(TimeStamp) < %s
     """
     with connections["prodrpt-md"].cursor() as cur:
         cur.execute(sql, [cutoff_epoch])
-        rows = cur.fetchall()  # [(machine:str, latest_ts:int), ...]
+        rows = cur.fetchall()  # [(machine, latest_ts), ...]
 
-    # ② Filter to valid IDs and not older than a week
-    stale = [
-        (m, ts)
-        for m, ts in rows
+    # 2) Filter to valid IDs & not older than a week
+    candidates = [
+        (m, ts) for m, ts in rows
         if VALID_PATTERN.match(m) and ts >= week_ago_epoch
     ]
 
-    # ③ Grab machines with an open downtime event
+    if not candidates:
+        return ""  # nothing to show
+
+    # 3) Detect which have open DT events
     open_machines = set(
         MachineDowntimeEvent.objects
-            .filter(closeout_epoch__isnull=True, is_deleted=False)
-            .values_list("machine", flat=True)
+          .filter(closeout_epoch__isnull=True, is_deleted=False)
+          .values_list("machine", flat=True)
     )
 
-    # ④ Build list with down-minutes, sort descending
-    stale_with_down = [
-        (m, ts, (now_epoch - ts) // 60)
-        for m, ts in stale
+    # 4) Build list with down_mins and sort descending
+    stale = [
+        {
+            "machine":   m,
+            "ts":        ts,
+            "down_mins": int((now_epoch - ts) / 60),
+            "open_dt":   (m in open_machines),
+        }
+        for m, ts in candidates
     ]
-    stale_with_down.sort(key=lambda x: x[2], reverse=True)
+    stale.sort(key=lambda x: x["down_mins"], reverse=True)
 
-    # ⑤ Print
+    # 5) Render HTML
     est = pytz.timezone("America/New_York")
-    if stale_with_down:
-        print(f"⚠️  Machines with no data in the last {threshold_minutes} min "
-              f"(digits or digits+L/R, ≤{max_age_days} d old), longest-down first:")
-        for m, ts, down_mins in stale_with_down:
-            dt = datetime.fromtimestamp(ts, tz=pytz.UTC).astimezone(est)
-            marker = " 🔴 OPEN DT Event" if m in open_machines else ""
-            print(
-                f"  • Machine {m}: last record at {dt:%Y-%m-%d %H:%M:%S %Z} "
-                f"({down_mins} min down){marker}"
-            )
-    else:
-        print(f"✅  All numeric and L/R machines (≤{max_age_days} days old) "
-              f"have data within the last {threshold_minutes} minutes.")
+    rows_html = []
+    for item in stale:
+        dt = datetime.fromtimestamp(item["ts"], tz=pytz.UTC).astimezone(est)
+        rows_html.append(f"""
+          <tr>
+            <td style="padding:4px 8px;border:1px solid #ccc;">{item['machine']}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;">{dt:%Y-%m-%d %H:%M}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;text-align:right;">{item['down_mins']}</td>
+            <td style="padding:4px 8px;border:1px solid #ccc;text-align:center;">
+              {'🟢' if item['open_dt'] else ''}
+            </td>
+          </tr>
+        """)
 
-    # Return original stale list in case you'd like to inspect it
-    return stale
-
+    return f"""
+    <h2 style="font-family:Arial,sans-serif;
+               margin:16px 0 8px;
+               border-bottom:1px solid #444;
+               padding-bottom:4px;">
+      Stale Machines (no parts in the last {threshold_minutes} min)
+    </h2>
+    <table style="font-family:Arial,sans-serif;
+                  border-collapse:collapse;
+                  width:100%;
+                  margin-bottom:16px;">
+      <thead>
+        <tr style="background:#343a40;color:#fff;">
+          <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Machine</th>
+          <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Last Record (EST)</th>
+          <th style="padding:6px 8px;border:1px solid #ccc;text-align:right;">Minutes Down</th>
+          <th style="padding:6px 8px;border:1px solid #ccc;text-align:center;">Open DT Event in App?</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(rows_html)}
+      </tbody>
+    </table>
+    """
 
 def dashboard_current_shift_email(request, pages: str):
     """
@@ -3694,8 +3718,6 @@ def dashboard_current_shift_email(request, pages: str):
         for prog_obj in programs_copy:
             all_programs.append(prog_obj)
 
-    # ── X) Check for stale machines ────────────────────────────────────────
-    get_stale_machines(60, 7)
 
     # ── 15) Render the template with updated efficiency & coloring logic ─────
     context = {
@@ -3707,25 +3729,17 @@ def dashboard_current_shift_email(request, pages: str):
 
 
 
-
-
-
-
-
-
-
-
-
 def send_all_dashboards(request):
     """
     Renders dashboards for the four programs, stitches them into a single
-    email, and sends to Tyler — now with a ProdMon-ping table at the very top.
+    email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
     """
-    # ── A) FETCH PROD-MON STALE PINGS ────────────────────────────────────────
-    stale = get_stale_ping_entries()
+    # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
+    stale_html = render_stale_machines_table(60, 7)
 
-    # build an HTML fragment
-    if not stale:
+    # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
+    stale_pings = get_stale_ping_entries()
+    if not stale_pings:
         ping_html = """
             <h2 style="font-family:Arial,sans-serif;
                        margin:16px 0 8px;
@@ -3744,15 +3758,13 @@ def send_all_dashboards(request):
             </p>
         """
     else:
-        # build rows
         rows = "".join(f"""
             <tr>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
             </tr>
-        """ for e in stale)
-
+        """ for e in stale_pings)
         ping_html = f"""
             <h2 style="font-family:Arial,sans-serif;
                        margin:16px 0 8px;
@@ -3777,11 +3789,10 @@ def send_all_dashboards(request):
             </table>
         """
 
-    # ── B) RENDER EACH DASHBOARD FRAGMENT ────────────────────────────────────
+    # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
     programs = ["8670", "Area1&Area2", "trilobe", "9341"]
     rf = RequestFactory()
     fragments = []
-
     for pages in programs:
         fake = rf.get(f"/dashboard/{pages}/")
         fake.user = getattr(request, "user", None)
@@ -3790,7 +3801,6 @@ def send_all_dashboards(request):
         resp = dashboard_current_shift_email(fake, pages=pages)
         if resp.status_code != 200:
             return HttpResponse(f"Error rendering {pages}: {resp.status_code}", status=500)
-
         html = resp.content.decode("utf-8")
         fragments.append(f'''
             <h2 style="font-family:Arial,sans-serif;
@@ -3802,7 +3812,7 @@ def send_all_dashboards(request):
             {html}
         ''')
 
-    # ── C) COMBINE INTO ONE EMAIL ────────────────────────────────────────────
+    # ── D) COMBINE INTO ONE EMAIL ────────────────────────────────────────────
     full_html = f"""
     <!DOCTYPE html>
     <html>
@@ -3812,32 +3822,19 @@ def send_all_dashboards(request):
         <title>All Dashboards</title>
       </head>
       <body style="margin:0;padding:20px;background:#f0f0f0;">
-
+        {stale_html}
         {ping_html}
-
         {' '.join(fragments)}
-
       </body>
     </html>
     """
 
-    # ── D) SEND EMAIL ────────────────────────────────────────────────────────
+    # ── E) SEND EMAIL ────────────────────────────────────────────────────────
     eastern = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(eastern)
-
-    subject = (
-        "[Hourly Report] All Dashboards — "
-        f"{now_est.strftime('%Y-%m-%d %H:%M')}"
-    )
-    msg = EmailMessage(
-        subject=subject,
-        body=full_html,
-        to=["tyler.careless@johnsonelectric.com"],
-    )
+    subject = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
+    msg = EmailMessage(subject=subject, body=full_html, to=["tyler.careless@johnsonelectric.com"])
     msg.content_subtype = "html"
-    try:
-        msg.send(fail_silently=False)
-    except Exception as e:
-        return HttpResponse(f"Failed to send email: {e}", status=500)
+    msg.send(fail_silently=False)
 
     return HttpResponse("All dashboards emailed ✅")
