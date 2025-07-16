@@ -27,6 +27,7 @@ from django.test import RequestFactory
 from django.http import HttpResponse
 from django.core.mail import EmailMessage
 from plant.views.prodmon_views import get_stale_ping_entries
+from plant.models.maintenance_models import *
 
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
 from django import forms
@@ -3248,18 +3249,22 @@ VALID_PATTERN = re.compile(r"^\d+(?:[LR])?$")
 
 def get_stale_machines(
     threshold_minutes: int = 60,
-    max_age_days: int     = 7,
+    max_age_days:   int = 7,
 ) -> list[tuple[str,int]]:
     """
-    Returns a list of (machine_id, latest_timestamp_epoch) for machines that:
-      - have not logged in the last `threshold_minutes` minutes
-      - whose IDs are either pure digits or digits with one trailing L/R
-      - whose last record is no older than `max_age_days` days ago
+    1) Finds machines whose last GFxPRoduction.TimeStamp is > threshold_minutes ago,
+       but not older than max_age_days days.
+    2) Limits to IDs that are pure digits or digits+L/R.
+    3) Prints them to the console, marking any with an open downtime event,
+       showing how many minutes they've been down, and sorting so the longest-
+       down machines appear first.
+    4) Returns the stale list for further use.
     """
-    now_epoch     = int(timezone.now().timestamp())
-    cutoff_epoch  = now_epoch - threshold_minutes * 60
-    week_ago_epoch= now_epoch - max_age_days * 86400
+    now_epoch      = int(timezone.now().timestamp())
+    cutoff_epoch   = now_epoch - threshold_minutes * 60
+    week_ago_epoch = now_epoch - max_age_days * 86400
 
+    # ① Fetch any machines whose latest_ts < cutoff
     sql = """
         SELECT Machine, MAX(TimeStamp) AS latest_ts
         FROM   GFxPRoduction
@@ -3270,13 +3275,46 @@ def get_stale_machines(
         cur.execute(sql, [cutoff_epoch])
         rows = cur.fetchall()  # [(machine:str, latest_ts:int), ...]
 
-    # filter to only IDs matching our pattern and not older than a week
-    return [
+    # ② Filter to valid IDs and not older than a week
+    stale = [
         (m, ts)
         for m, ts in rows
-        if VALID_PATTERN.match(m)
-           and ts >= week_ago_epoch
+        if VALID_PATTERN.match(m) and ts >= week_ago_epoch
     ]
+
+    # ③ Grab machines with an open downtime event
+    open_machines = set(
+        MachineDowntimeEvent.objects
+            .filter(closeout_epoch__isnull=True, is_deleted=False)
+            .values_list("machine", flat=True)
+    )
+
+    # ④ Build list with down-minutes, sort descending
+    stale_with_down = [
+        (m, ts, (now_epoch - ts) // 60)
+        for m, ts in stale
+    ]
+    stale_with_down.sort(key=lambda x: x[2], reverse=True)
+
+    # ⑤ Print
+    est = pytz.timezone("America/New_York")
+    if stale_with_down:
+        print(f"⚠️  Machines with no data in the last {threshold_minutes} min "
+              f"(digits or digits+L/R, ≤{max_age_days} d old), longest-down first:")
+        for m, ts, down_mins in stale_with_down:
+            dt = datetime.fromtimestamp(ts, tz=pytz.UTC).astimezone(est)
+            marker = " 🔴 OPEN DT Event" if m in open_machines else ""
+            print(
+                f"  • Machine {m}: last record at {dt:%Y-%m-%d %H:%M:%S %Z} "
+                f"({down_mins} min down){marker}"
+            )
+    else:
+        print(f"✅  All numeric and L/R machines (≤{max_age_days} days old) "
+              f"have data within the last {threshold_minutes} minutes.")
+
+    # Return original stale list in case you'd like to inspect it
+    return stale
+
 
 def dashboard_current_shift_email(request, pages: str):
     """
@@ -3657,16 +3695,7 @@ def dashboard_current_shift_email(request, pages: str):
             all_programs.append(prog_obj)
 
     # ── X) Check for stale machines ────────────────────────────────────────
-    stale = get_stale_machines(60)
-    if stale:
-        # pick an EST tz for human‐readable conversion
-        tz_est = pytz.timezone("America/New_York")
-        print("⚠️ Machines with no data in the last 60 min:")
-        for machine, ts in stale:
-            dt = datetime.fromtimestamp(ts, tz=pytz.UTC).astimezone(tz_est)
-            print(f"  • Machine {machine}: last record at {dt.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-    else:
-        print("✅ All machines have data within the last 60 min.")
+    get_stale_machines(60, 7)
 
     # ── 15) Render the template with updated efficiency & coloring logic ─────
     context = {
