@@ -3730,11 +3730,14 @@ def dashboard_current_shift_email(request, pages: str):
 
 
 
-def send_all_dashboards(request):
+def send_all_dashboards(request, pwd):
     """
     Renders dashboards for the four programs, stitches them into a single
     email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
     """
+    if pwd != "1352":
+        # pretend it doesn’t exist
+        raise Http404()
     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
     stale_html = render_stale_machines_table(60, 7)
 

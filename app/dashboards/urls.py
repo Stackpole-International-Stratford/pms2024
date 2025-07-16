@@ -44,7 +44,7 @@ urlpatterns = [
 
 
 
-    path("send_dashboards/", send_all_dashboards, name="send_all_dashboards"),
+    path("send_dashboards/<str:pwd>/", send_all_dashboards, name="send_all_dashboards"),
 
 
     path("dashboard/<str:pages>/", views.dashboard_current_shift, name="dashboard_last_hour"),
