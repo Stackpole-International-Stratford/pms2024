@@ -11,7 +11,7 @@ from django.shortcuts import render, redirect
 import MySQLdb
 from prod_query.models import OAMachineTargets
 from collections import defaultdict
-
+import re
 import pytz
 from django.utils import timezone
 
@@ -3243,7 +3243,40 @@ def dashboard_current_shift(request, pages: str):
 # =================================================================================
 # =================================================================================
 
+# match either all digits, or digits + one L or R
+VALID_PATTERN = re.compile(r"^\d+(?:[LR])?$")
 
+def get_stale_machines(
+    threshold_minutes: int = 60,
+    max_age_days: int     = 7,
+) -> list[tuple[str,int]]:
+    """
+    Returns a list of (machine_id, latest_timestamp_epoch) for machines that:
+      - have not logged in the last `threshold_minutes` minutes
+      - whose IDs are either pure digits or digits with one trailing L/R
+      - whose last record is no older than `max_age_days` days ago
+    """
+    now_epoch     = int(timezone.now().timestamp())
+    cutoff_epoch  = now_epoch - threshold_minutes * 60
+    week_ago_epoch= now_epoch - max_age_days * 86400
+
+    sql = """
+        SELECT Machine, MAX(TimeStamp) AS latest_ts
+        FROM   GFxPRoduction
+        GROUP  BY Machine
+        HAVING MAX(TimeStamp) < %s
+    """
+    with connections["prodrpt-md"].cursor() as cur:
+        cur.execute(sql, [cutoff_epoch])
+        rows = cur.fetchall()  # [(machine:str, latest_ts:int), ...]
+
+    # filter to only IDs matching our pattern and not older than a week
+    return [
+        (m, ts)
+        for m, ts in rows
+        if VALID_PATTERN.match(m)
+           and ts >= week_ago_epoch
+    ]
 
 def dashboard_current_shift_email(request, pages: str):
     """
@@ -3622,6 +3655,18 @@ def dashboard_current_shift_email(request, pages: str):
         # ── 14) Merge each prog_obj into all_programs ─────────────────────────
         for prog_obj in programs_copy:
             all_programs.append(prog_obj)
+
+    # ── X) Check for stale machines ────────────────────────────────────────
+    stale = get_stale_machines(60)
+    if stale:
+        # pick an EST tz for human‐readable conversion
+        tz_est = pytz.timezone("America/New_York")
+        print("⚠️ Machines with no data in the last 60 min:")
+        for machine, ts in stale:
+            dt = datetime.fromtimestamp(ts, tz=pytz.UTC).astimezone(tz_est)
+            print(f"  • Machine {machine}: last record at {dt.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    else:
+        print("✅ All machines have data within the last 60 min.")
 
     # ── 15) Render the template with updated efficiency & coloring logic ─────
     context = {
