@@ -23,6 +23,11 @@ from django.db import connections
 import copy
 import math
 
+from django.test import RequestFactory
+from django.http import HttpResponse
+from django.core.mail import EmailMessage
+from plant.views.prodmon_views import get_stale_ping_entries
+
 # from https://github.com/DaveClark-Stackpole/trakberry/blob/e9fa660e2cdd5ef4d730e0d00d888ad80311cacc/trakberry/forms.py#L57
 from django import forms
 
@@ -3229,6 +3234,17 @@ def dashboard_current_shift(request, pages: str):
 
 
 
+
+
+
+# =================================================================================
+# =================================================================================
+# ============================= Email to Oscar ====================================
+# =================================================================================
+# =================================================================================
+
+
+
 def dashboard_current_shift_email(request, pages: str):
     """
     pages: either "programA" or "programA&programB"
@@ -3621,11 +3637,7 @@ def dashboard_current_shift_email(request, pages: str):
 
 
 
-from django.test import RequestFactory
-from django.http import HttpResponse
-from django.core.mail import EmailMessage
-from django.utils import timezone
-from plant.views.prodmon_views import get_stale_ping_entries
+
 
 
 
