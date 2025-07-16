@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 import MySQLdb
 from prod_query.models import OAMachineTargets
+from .models import *
 from collections import defaultdict
 import re
 import pytz
@@ -3830,10 +3831,24 @@ def send_all_dashboards(request):
     """
 
     # ── E) SEND EMAIL ────────────────────────────────────────────────────────
-    eastern = pytz.timezone("America/New_York")
-    now_est = timezone.now().astimezone(eastern)
-    subject = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
-    msg = EmailMessage(subject=subject, body=full_html, to=["tyler.careless@johnsonelectric.com"])
+    eastern   = pytz.timezone("America/New_York")
+    now_est   = timezone.now().astimezone(eastern)
+    subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
+
+    # pull active recipients from the DB
+    to_emails = list(
+        HourlyProductionReportRecipient.objects
+        .values_list("email", flat=True)
+    )
+
+    if not to_emails:
+        return HttpResponse("No active recipients configured.", status=204)
+
+    msg = EmailMessage(
+        subject=subject,
+        body=full_html,
+        to=to_emails,      # ← now dynamic!
+    )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)
 

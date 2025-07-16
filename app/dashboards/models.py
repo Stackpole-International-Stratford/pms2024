@@ -19,3 +19,15 @@ class ShiftPoint(models.Model):
 
     def __str__(self):
         return f"TV {self.tv_number}"
+    
+
+
+
+class HourlyProductionReportRecipient(models.Model):
+    """
+    A simple email list for the hourly production report.
+    """
+    email      = models.EmailField(unique=True, help_text="Where to send the report")
+    added_at   = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f"{self.email}"
