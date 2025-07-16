@@ -3676,7 +3676,14 @@ def send_all_dashboards(request):
     """
 
     # 3) Send the email
-    subject = f"[Hourly Test] All Dashboards — {timezone.now():%Y-%m-%d %H:%M}"
+    # convert “now” into EST/EDT
+    eastern = pytz.timezone("America/New_York")
+    now_est = timezone.now().astimezone(eastern)
+
+    subject = (
+        "[Hourly Report] All Dashboards — "
+        f"{now_est.strftime('%Y-%m-%d %H:%M')}"
+    )
     msg = EmailMessage(
         subject=subject,
         body=full_html,
