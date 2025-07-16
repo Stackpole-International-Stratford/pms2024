@@ -3625,19 +3625,78 @@ from django.test import RequestFactory
 from django.http import HttpResponse
 from django.core.mail import EmailMessage
 from django.utils import timezone
+from plant.views.prodmon_views import get_stale_ping_entries
+
+
 
 
 def send_all_dashboards(request):
     """
     Renders dashboards for the four programs, stitches them into a single
-    email, and sends to Tyler.
+    email, and sends to Tyler — now with a ProdMon-ping table at the very top.
     """
+    # ── A) FETCH PROD-MON STALE PINGS ────────────────────────────────────────
+    stale = get_stale_ping_entries()
+
+    # build an HTML fragment
+    if not stale:
+        ping_html = """
+            <h2 style="font-family:Arial,sans-serif;
+                       margin:16px 0 8px;
+                       border-bottom:1px solid #444;
+                       padding-bottom:4px;">
+              ProdMon Ping Status
+            </h2>
+            <p style="font-family:Arial,sans-serif;
+                      margin:8px 0;
+                      color:#155724;
+                      background:#d4edda;
+                      padding:10px;
+                      border:1px solid #c3e6cb;
+                      border-radius:4px;">
+              All assets have pinged within the last 15 minutes.
+            </p>
+        """
+    else:
+        # build rows
+        rows = "".join(f"""
+            <tr>
+              <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
+              <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
+              <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
+            </tr>
+        """ for e in stale)
+
+        ping_html = f"""
+            <h2 style="font-family:Arial,sans-serif;
+                       margin:16px 0 8px;
+                       border-bottom:1px solid #444;
+                       padding-bottom:4px;">
+              ProdMon Ping Status
+            </h2>
+            <table style="font-family:Arial,sans-serif;
+                          border-collapse:collapse;
+                          width:100%;
+                          margin-bottom:16px;">
+              <thead>
+                <tr style="background:#343a40;color:#fff;">
+                  <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Asset</th>
+                  <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Last Ping (EST)</th>
+                  <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Since Last Ping</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows}
+              </tbody>
+            </table>
+        """
+
+    # ── B) RENDER EACH DASHBOARD FRAGMENT ────────────────────────────────────
     programs = ["8670", "Area1&Area2", "trilobe", "9341"]
     rf = RequestFactory()
-
     fragments = []
+
     for pages in programs:
-        # 1) Fake a GET to our email‐optimized dashboard view
         fake = rf.get(f"/dashboard/{pages}/")
         fake.user = getattr(request, "user", None)
         fake.session = getattr(request, "session", None)
@@ -3647,9 +3706,7 @@ def send_all_dashboards(request):
             return HttpResponse(f"Error rendering {pages}: {resp.status_code}", status=500)
 
         html = resp.content.decode("utf-8")
-        # Wrap each fragment with a heading
-        fragments.append(
-            f'''
+        fragments.append(f'''
             <h2 style="font-family:Arial,sans-serif;
                        margin:24px 0 8px;
                        border-bottom:1px solid #ccc;
@@ -3657,10 +3714,9 @@ def send_all_dashboards(request):
               Dashboard — {pages}
             </h2>
             {html}
-            '''
-        )
+        ''')
 
-    # 2) Combine them into one full HTML document
+    # ── C) COMBINE INTO ONE EMAIL ────────────────────────────────────────────
     full_html = f"""
     <!DOCTYPE html>
     <html>
@@ -3670,13 +3726,16 @@ def send_all_dashboards(request):
         <title>All Dashboards</title>
       </head>
       <body style="margin:0;padding:20px;background:#f0f0f0;">
+
+        {ping_html}
+
         {' '.join(fragments)}
+
       </body>
     </html>
     """
 
-    # 3) Send the email
-    # convert “now” into EST/EDT
+    # ── D) SEND EMAIL ────────────────────────────────────────────────────────
     eastern = pytz.timezone("America/New_York")
     now_est = timezone.now().astimezone(eastern)
 
