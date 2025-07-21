@@ -5,7 +5,7 @@ import mysql.connector
 # import mysql.connector
 from django.template.loader import render_to_string
 from django.contrib import messages
-
+import re
 
 
 from collections import defaultdict
@@ -16,6 +16,7 @@ from datetime import datetime, date, timedelta
 import time
 from zoneinfo import ZoneInfo
 from django.views.decorators.http import require_POST
+from django.db.models import Q
 
 from .forms import MachineInquiryForm
 from .forms import CycleQueryForm
@@ -34,6 +35,7 @@ from django.utils.dateparse import parse_datetime
 from django.http import JsonResponse
 from plant.models.setupfor_models import SetupFor, AssetCycleTimes
 
+from plant.models.maintenance_models import MachineDowntimeEvent
 
 from .forms import ShiftTotalsForm
 import time
@@ -4676,9 +4678,9 @@ def compute_overlap_label(detail_start, detail_end, pr_entries):
 
         # Determine the type of overlap and return along with the idnumber
         if detail_start >= pr_start and detail_end <= pr_end:
-            return {"overlap": "WITHIN PR", "pr_id": pr_id}
+            return {"overlap": "WITHIN DT", "pr_id": pr_id}
         elif detail_start <= pr_start and detail_end >= pr_end:
-            return {"overlap": "CONTAINS PR", "pr_id": pr_id}
+            return {"overlap": "CONTAINS DT", "pr_id": pr_id}
         elif detail_start < pr_start and detail_end > pr_start and detail_end < pr_end:
             return {"overlap": "OVERLAP LEFT", "pr_id": pr_id}
         elif detail_start > pr_start and detail_start < pr_end and detail_end > pr_end:
@@ -6496,81 +6498,53 @@ def compute_oee_metrics(
     return {"overall": overall_metrics, "lines": lines_metrics}
 
 
-def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
+def fetch_prdowntime1_entries_with_id(assetnum: str, called4helptime: str, completedtime: str):
     """
-    A copy of `fetch_prdowntime1_entries` that also fetches the `idnumber` column.
-    
-    :param assetnum: The asset number of the machine.
-    :param called4helptime: The start of the time window (ISO 8601 format).
-    :param completedtime: The end of the time window (ISO 8601 format).
-    :return: List of rows matching the criteria, each row shaped like:
-             [idnumber, problem, called4helptime, completedtime].
+    Exactly the same signature and return-value as before—
+    returns a list of (idnumber, problem, called4helptime, completedtime)
+    pulled from the Django model instead of raw SQL.
     """
-    import re
-    import datetime, os, importlib
-    from datetime import datetime
+    # 1) normalize the machine identifier
+    assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
 
-    try:
-        # Strip trailing letters from assetnum (e.g., "1703R" or "1703L" becomes "1703")
-        assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
+    # 2) parse the ISO-8601 strings into Python datetimes and then to epochs
+    start_dt = datetime.fromisoformat(called4helptime)
+    end_dt   = datetime.fromisoformat(completedtime)
+    start_ts = int(start_dt.timestamp())
+    end_ts   = int(end_dt.timestamp())
 
-        # Parse the dates to ensure they are in datetime format.
-        called4helptime = datetime.fromisoformat(called4helptime)
-        completedtime = datetime.fromisoformat(completedtime)
+    # 3) build the “overlap” Q object exactly as your SQL did
+    overlap = (
+        # starts before window & ends in-or-after it (or never closed out)
+        (Q(start_epoch__lt=start_ts) &
+         (Q(closeout_epoch__gte=start_ts) | Q(closeout_epoch__isnull=True)))
+        |
+        # starts inside window
+        Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)
+        |
+        # starts inside & ends after window (or never closed out)
+        (Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts) &
+         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+        |
+        # spans the entire window
+        (Q(start_epoch__lt=start_ts) &
+         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+    )
 
-        # Dynamically import `get_db_connection` from settings.py.
-        settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
-        spec = importlib.util.spec_from_file_location("settings", settings_path)
-        settings = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(settings)
-        get_db_connection = settings.get_db_connection
+    # 4) fetch from the ORM
+    qs = MachineDowntimeEvent.objects.filter(
+        machine=assetnum,
+        is_deleted=False
+    ).filter(overlap)
 
-        # Get database connection.
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    # 5) turn each model instance into the 4-tuple your old code expected
+    rows = []
+    for ev in qs:
+        called   = ev.start_at                    # datetime.fromtimestamp(ev.start_epoch)
+        completed = ev.closeout_at                # None if closeout_epoch is null
+        rows.append((ev.id, ev.comment, called, completed))
 
-        # Raw SQL query to fetch the required data, now including `idnumber`.
-        query = """
-        SELECT
-            idnumber,
-            problem,
-            called4helptime,
-            completedtime
-        FROM pr_downtime1
-        WHERE assetnum = %s
-          AND (
-            -- Entries that start before the window and bleed into the window.
-            (called4helptime < %s AND (completedtime >= %s OR completedtime IS NULL))
-            -- Entries that start within the window.
-            OR (called4helptime >= %s AND called4helptime <= %s)
-            -- Entries that start in the window and bleed out.
-            OR (called4helptime >= %s AND called4helptime <= %s AND (completedtime > %s OR completedtime IS NULL))
-            -- Entries that bleed both before and after the window.
-            OR (called4helptime < %s AND (completedtime > %s OR completedtime IS NULL))
-          )
-        """
-
-        # Execute the query.
-        cursor.execute(query, (
-            assetnum,
-            called4helptime, called4helptime,
-            called4helptime, completedtime,
-            called4helptime, completedtime, completedtime,
-            called4helptime, completedtime
-        ))
-
-        # Fetch all rows.
-        rows = cursor.fetchall()
-
-        # Close the cursor and connection.
-        cursor.close()
-        conn.close()
-
-        return rows
-
-    except Exception as e:
-        return {"error": str(e)}
-
+    return rows
 
 def get_parts_for_machine(lines, line_name, machine_id):
     """
