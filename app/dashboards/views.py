@@ -3768,144 +3768,14 @@ def dashboard_current_shift_email(request, pages: str):
 
 
 
-# def send_all_dashboards(request, pwd):
-#     """
-#     Renders dashboards for the four programs, stitches them into a single
-#     email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
-#     """
-#     if pwd != "1352":
-#         # pretend it doesn’t exist
-#         raise Http404()
-#     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
-#     stale_html = render_stale_machines_table(60, 7)
-
-#     # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
-#     stale_pings = get_stale_ping_entries()
-#     if not stale_pings:
-#         ping_html = """
-#             <h2 style="font-family:Arial,sans-serif;
-#                        margin:16px 0 8px;
-#                        border-bottom:1px solid #444;
-#                        padding-bottom:4px;">
-#               ProdMon Ping Status
-#             </h2>
-#             <p style="font-family:Arial,sans-serif;
-#                       margin:8px 0;
-#                       color:#155724;
-#                       background:#d4edda;
-#                       padding:10px;
-#                       border:1px solid #c3e6cb;
-#                       border-radius:4px;">
-#               All assets have pinged within the last 15 minutes.
-#             </p>
-#         """
-#     else:
-#         rows = "".join(f"""
-#             <tr>
-#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
-#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
-#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
-#             </tr>
-#         """ for e in stale_pings)
-#         ping_html = f"""
-#             <h2 style="font-family:Arial,sans-serif;
-#                        margin:16px 0 8px;
-#                        border-bottom:1px solid #444;
-#                        padding-bottom:4px;">
-#               ProdMon Ping Status
-#             </h2>
-#             <table style="font-family:Arial,sans-serif;
-#                           border-collapse:collapse;
-#                           width:100%;
-#                           margin-bottom:16px;">
-#               <thead>
-#                 <tr style="background:#343a40;color:#fff;">
-#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Asset</th>
-#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Last Ping (EST)</th>
-#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Since Last Ping</th>
-#                 </tr>
-#               </thead>
-#               <tbody>
-#                 {rows}
-#               </tbody>
-#             </table>
-#         """
-
-#     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
-#     programs = ["8670", "Area1&Area2", "trilobe", "9341"]
-#     rf = RequestFactory()
-#     fragments = []
-#     for pages in programs:
-#         fake = rf.get(f"/dashboard/{pages}/")
-#         fake.user = getattr(request, "user", None)
-#         fake.session = getattr(request, "session", None)
-
-#         resp = dashboard_current_shift_email(fake, pages=pages)
-#         if resp.status_code != 200:
-#             return HttpResponse(f"Error rendering {pages}: {resp.status_code}", status=500)
-#         html = resp.content.decode("utf-8")
-#         fragments.append(f'''
-#             <h2 style="font-family:Arial,sans-serif;
-#                        margin:24px 0 8px;
-#                        border-bottom:1px solid #ccc;
-#                        padding-bottom:4px;">
-#               Dashboard — {pages}
-#             </h2>
-#             {html}
-#         ''')
-
-#     # ── D) COMBINE INTO ONE EMAIL ────────────────────────────────────────────
-#     full_html = f"""
-#     <!DOCTYPE html>
-#     <html>
-#       <head>
-#         <meta charset="utf-8" />
-#         <meta name="viewport" content="width=device-width,initial-scale=1" />
-#         <title>All Dashboards</title>
-#       </head>
-#       <body style="margin:0;padding:20px;background:#f0f0f0;">
-#         {stale_html}
-#         {ping_html}
-#         {' '.join(fragments)}
-#       </body>
-#     </html>
-#     """
-
-#     # ── E) SEND EMAIL ────────────────────────────────────────────────────────
-#     eastern   = pytz.timezone("America/New_York")
-#     now_est   = timezone.now().astimezone(eastern)
-#     subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
-
-#     # pull active recipients from the DB
-#     to_emails = list(
-#         HourlyProductionReportRecipient.objects
-#         .values_list("email", flat=True)
-#     )
-
-#     if not to_emails:
-#         return HttpResponse("No active recipients configured.", status=204)
-
-#     msg = EmailMessage(
-#         subject=subject,
-#         body=full_html,
-#         to=to_emails,      # ← now dynamic!
-#     )
-#     msg.content_subtype = "html"
-#     msg.send(fail_silently=False)
-
-#     return HttpResponse("All dashboards emailed ✅")
-
-
-
 def send_all_dashboards(request, pwd):
     """
     Renders dashboards for the four programs, stitches them into a single
-    email—and for testing, only sends to Tyler.
+    email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
     """
     if pwd != "1352":
         # pretend it doesn’t exist
         raise Http404()
-
     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
     stale_html = render_stale_machines_table(60, 7)
 
@@ -4006,15 +3876,22 @@ def send_all_dashboards(request, pwd):
     now_est   = timezone.now().astimezone(eastern)
     subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
 
-    # For testing, override recipients to Tyler only
-    to_emails = ["tyler.careless@johnsonelectric.com"]
+    # pull active recipients from the DB
+    to_emails = list(
+        HourlyProductionReportRecipient.objects
+        .values_list("email", flat=True)
+    )
+
+    if not to_emails:
+        return HttpResponse("No active recipients configured.", status=204)
 
     msg = EmailMessage(
         subject=subject,
         body=full_html,
-        to=to_emails,
+        to=to_emails,      # ← now dynamic!
     )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)
 
-    return HttpResponse("All dashboards emailed to Tyler ✅")
+    return HttpResponse("All dashboards emailed ✅")
+
