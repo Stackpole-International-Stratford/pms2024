@@ -3336,7 +3336,7 @@ def render_stale_machines_table(
             if cat == "Scheduled Down":
                 dot = "🟡"
             else:
-                dot = "🟢"
+                dot = "🔴"
             label = f" ({cat}: {times_str})"
         else:
             dot = label = ""
