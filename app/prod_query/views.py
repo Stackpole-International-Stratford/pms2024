@@ -6498,52 +6498,53 @@ def compute_oee_metrics(
     return {"overall": overall_metrics, "lines": lines_metrics}
 
 
-def fetch_prdowntime1_entries_with_id(assetnum: str, called4helptime: str, completedtime: str):
+def fetch_prdowntime1_entries_with_id(assetnum: str,
+                                      called4helptime: str,
+                                      completedtime: str):
     """
-    Exactly the same signature and return-value as before—
-    returns a list of (idnumber, problem, called4helptime, completedtime)
-    pulled from the Django model instead of raw SQL.
+    Returns a list of 5-tuples:
+      (id, comment, category, start_at: datetime, closeout_at: datetime or None)
+    matching any MachineDowntimeEvent overlapping the given window.
     """
     # 1) normalize the machine identifier
     assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
 
-    # 2) parse the ISO-8601 strings into Python datetimes and then to epochs
+    # 2) parse the ISO-8601 window into epochs
     start_dt = datetime.fromisoformat(called4helptime)
     end_dt   = datetime.fromisoformat(completedtime)
     start_ts = int(start_dt.timestamp())
     end_ts   = int(end_dt.timestamp())
 
-    # 3) build the “overlap” Q object exactly as your SQL did
+    # 3) rebuild your “overlap” Q exactly as before
     overlap = (
-        # starts before window & ends in-or-after it (or never closed out)
         (Q(start_epoch__lt=start_ts) &
          (Q(closeout_epoch__gte=start_ts) | Q(closeout_epoch__isnull=True)))
         |
-        # starts inside window
         Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)
         |
-        # starts inside & ends after window (or never closed out)
         (Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts) &
          (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
         |
-        # spans the entire window
         (Q(start_epoch__lt=start_ts) &
          (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
     )
 
-    # 4) fetch from the ORM
-    qs = MachineDowntimeEvent.objects.filter(
-        machine=assetnum,
-        is_deleted=False
-    ).filter(overlap)
+    qs = (
+        MachineDowntimeEvent.objects
+        .filter(machine=assetnum, is_deleted=False)
+        .filter(overlap)
+        .order_by('start_epoch')
+    )
 
-    # 5) turn each model instance into the 4-tuple your old code expected
     rows = []
     for ev in qs:
-        called   = ev.start_at                    # datetime.fromtimestamp(ev.start_epoch)
-        completed = ev.closeout_at                # None if closeout_epoch is null
-        rows.append((ev.id, ev.comment, called, completed))
-
+        rows.append((
+            ev.id,              # idnumber
+            ev.comment,         # problem/comment
+            ev.category,        # new Scheduled vs. Unplanned flag
+            ev.start_at,        # datetime.fromtimestamp(ev.start_epoch)
+            ev.closeout_at      # datetime or None
+        ))
     return rows
 
 def get_parts_for_machine(lines, line_name, machine_id):
@@ -6949,66 +6950,93 @@ def calculate_downtime_events(cursor, machine_number, start_timestamp, end_times
     return downtime_seconds, downtime_events
 
 
-def get_pr_downtime_entries(machine_number, start_time, end_time):
-    import datetime, os, importlib, json
-    """Fetches and processes PR downtime entries for a machine."""
-    pr_entries = fetch_prdowntime1_entries_with_id(machine_number, start_time.isoformat(), end_time.isoformat())
+def get_pr_downtime_entries(machine_number: str,
+                            start_time: datetime,
+                            end_time: datetime):
+    """
+    Fetches the raw tuples from fetch_prdowntime1_entries_with_id(),
+    then unpacks them into dicts with the keys your other helpers expect:
+      idnumber, problem, category, start_time, end_time, minutes_down.
+    """
+    pr_rows = fetch_prdowntime1_entries_with_id(
+        machine_number,
+        start_time.isoformat(),
+        end_time.isoformat()
+    )
+
     pr_downtime_entries = []
-    for entry in pr_entries:
-        pr_id = entry[0]
-        problem = entry[1]
-        called = entry[2]
-        completed = entry[3] if len(entry) > 3 else None
+    for pr_id, problem, category, called, completed in pr_rows:
+        # normalize to datetime if a string slipped through
+        dt_called = (
+            called
+            if isinstance(called, datetime)
+            else (datetime.fromisoformat(called) if called else None)
+        )
+        dt_completed = (
+            completed
+            if isinstance(completed, datetime)
+            else (datetime.fromisoformat(completed) if completed else None)
+        )
 
-        try:
-            dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
-        except Exception:
-            dt_called = None
-        try:
-            dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
-        except Exception:
-            dt_completed = None
+        # compute minutes_down only when we have both endpoints
+        if dt_called and dt_completed:
+            delta = dt_completed - dt_called
+            minutes_down = int(delta.total_seconds() // 60)
+        else:
+            minutes_down = None
 
-        minutes_down = int((dt_completed - dt_called).total_seconds() / 60) if dt_called and dt_completed else "N/A"
-        pr_entry = {
-            "idnumber": pr_id,
-            "problem": problem,
-            "start_time": dt_called,
-            "end_time": dt_completed,
+        pr_downtime_entries.append({
+            "idnumber":    pr_id,
+            "problem":     problem,
+            "category":    category,
+            "start_time":  dt_called,
+            "end_time":    dt_completed,
             "minutes_down": minutes_down,
-        }
-        pr_downtime_entries.append(pr_entry)
+        })
+
     return pr_downtime_entries
 
-
 def calculate_planned_downtime(downtime_events, pr_downtime_entries):
-    import datetime, os, importlib, json
     """
-    Calculates planned downtime as the sum of downtime event minutes
-    that do not overlap any PR downtime entry and are longer than 240 minutes.
+    Sum only the overlap (in minutes) between your production-gap events
+    (downtime_events) and any PR entries whose category == "Scheduled Down".
     """
-    planned_downtime_minutes = 0
-    pr_intervals = []
+    planned = 0
+
     for pr in pr_downtime_entries:
-        if pr["start_time"] and pr["end_time"]:
-            pr_intervals.append((pr["start_time"], pr["end_time"]))
-    
-    for event in downtime_events:
-        dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
-        dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
-        overlap_found = any(dt_event_start < pr_end and pr_start < dt_event_end for pr_start, pr_end in pr_intervals)
-        if not overlap_found and event["minutes_down"] > 240:
-            planned_downtime_minutes += event["minutes_down"]
-    return planned_downtime_minutes
+        if pr.get("category") != "Scheduled Down":
+            continue
+        pr_start = pr.get("start_time")
+        pr_end   = pr.get("end_time")
+        if not pr_start or not pr_end:
+            continue
+
+        # for each production-gap event, add only the minutes they overlap the PR window
+        for ev in downtime_events:
+            ev_start = (ev["start"] 
+                        if isinstance(ev["start"], datetime) 
+                        else datetime.strptime(ev["start"], "%Y-%m-%d %H:%M"))
+            ev_end   = (ev["end"] 
+                        if isinstance(ev["end"], datetime) 
+                        else datetime.strptime(ev["end"], "%Y-%m-%d %H:%M"))
+
+            # compute intersection
+            overlap_start = max(pr_start, ev_start)
+            overlap_end   = min(pr_end,   ev_end)
+            if overlap_end > overlap_start:
+                mins = int((overlap_end - overlap_start).total_seconds() // 60)
+                planned += mins
+
+    return planned
 
 
 def calculate_unplanned_downtime(total_downtime_minutes, planned_downtime_minutes):
     """
-    Calculates unplanned downtime as the difference between total downtime
-    and planned downtime.
+    Unplanned = total downtime minus planned downtime,
+    but never negative.
     """
-    return total_downtime_minutes - planned_downtime_minutes
-
+    unplanned = total_downtime_minutes - planned_downtime_minutes
+    return max(0, unplanned)
 
 
 
