@@ -81,9 +81,9 @@
 
         <h5>Important Notes</h5>
         <ul>
-          <li><strong>Planned vs. Unplanned Downtime:</strong> This page distinguishes between planned and unplanned downtime, which improves the accuracy of the underlying Availability and Performance metrics. <strong>Planned downtime is considered</strong> any downtime event over 4 hours that does not overlap with a <code>PR_downtime entry</code>.</li>
+          <li><strong>Planned vs. Unplanned Downtime:</strong> This page distinguishes between planned and unplanned downtime, which improves the accuracy of the underlying Availability and Performance metrics. <strong>Planned downtime is considered</strong> any downtime event in the maintenance app with within the category <code>Scheduled Down</code>.</li>
           <li><strong>Downtime:</strong> Gaps over 5 minutes between produced parts, allowing us to capture both micro and macro stoppages.</li>
-          <li><strong>Targets:</strong> Are adjusted to match the selected time range and are based on a 5‑day (7200‑minute) baseline week from the database table (<code>prod_query_oamachinetargets</code>).</li>
+          <li><strong>Targets:</strong> Come from ideal cycle times stored in this table <code>prod_query_oamachinetargets</code>.</li>
           <li><strong>Weekends (Friday 11 pm – Sunday 11 pm):</strong> Automatically excluded from the calculations.</li>
           <li><strong>PPT (Planned Production Time):</strong> Total potential minutes in the selected range minus planned downtime.</li>
           <li><strong>Operating Time (Runtime):</strong> Total potential minutes minus all downtime (planned + unplanned), representing the actual time the machine was running.</li>
