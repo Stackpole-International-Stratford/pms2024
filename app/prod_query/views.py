@@ -6996,33 +6996,43 @@ def get_pr_downtime_entries(machine_number: str,
 
     return pr_downtime_entries
 
-def calculate_planned_downtime(downtime_events, pr_downtime_entries):
+def calculate_planned_downtime(downtime_events, pr_downtime_entries, block_end):
     """
     Sum only the overlap (in minutes) between your production-gap events
     (downtime_events) and any PR entries whose category == "Scheduled Down".
+    If a PR entry has no end_time, it’s assumed to run until block_end.
+    
+    :param downtime_events: list of dicts with "start" and "end" (either datetime or "%Y-%m-%d %H:%M" strings)
+    :param pr_downtime_entries: list of dicts with "category", "start_time" (datetime), and optional "end_time" (datetime or None)
+    :param block_end: datetime marking the end of your GFX window
+    :returns: total planned downtime in minutes (int)
     """
     planned = 0
 
     for pr in pr_downtime_entries:
+        # only consider scheduled-down entries
         if pr.get("category") != "Scheduled Down":
             continue
+
         pr_start = pr.get("start_time")
-        pr_end   = pr.get("end_time")
-        if not pr_start or not pr_end:
+        if not pr_start:
+            # no valid start → skip
             continue
 
-        # for each production-gap event, add only the minutes they overlap the PR window
-        for ev in downtime_events:
-            ev_start = (ev["start"] 
-                        if isinstance(ev["start"], datetime) 
-                        else datetime.strptime(ev["start"], "%Y-%m-%d %H:%M"))
-            ev_end   = (ev["end"] 
-                        if isinstance(ev["end"], datetime) 
-                        else datetime.strptime(ev["end"], "%Y-%m-%d %H:%M"))
+        # if still open, treat as running until block_end
+        pr_end = pr.get("end_time") or block_end
 
-            # compute intersection
+        for ev in downtime_events:
+            # normalize event start/end to datetime
+            ev_start = ev["start"] if isinstance(ev["start"], datetime) \
+                       else datetime.strptime(ev["start"], "%Y-%m-%d %H:%M")
+            ev_end   = ev["end"]   if isinstance(ev["end"], datetime) \
+                       else datetime.strptime(ev["end"],   "%Y-%m-%d %H:%M")
+
+            # compute overlap window
             overlap_start = max(pr_start, ev_start)
             overlap_end   = min(pr_end,   ev_end)
+
             if overlap_end > overlap_start:
                 mins = int((overlap_end - overlap_start).total_seconds() // 60)
                 planned += mins
@@ -7530,7 +7540,7 @@ def fetch_combined_oee_production_data(request):
                     # print(f"[DEBUG] ---- Machine {machine_number}: Added {len(downtime_events)} downtime events")
 
                     # Calculate planned downtime.
-                    planned = calculate_planned_downtime(downtime_events, pr_entries)
+                    planned = calculate_planned_downtime(downtime_events, pr_entries, block_end)
                     machine_data["planned_downtime_minutes"] += planned
                     op_total_planned_downtime += planned
                     line_total_planned_downtime += planned
