@@ -6391,7 +6391,7 @@ def compute_oee_metrics(
     
       1. Planned Production Time (PPT) = total_potential_minutes - planned_downtime
       2. Run Time = PPT - (unplanned_downtime)
-      3. ideal_cycle_time = PPT / target_parts  (target_parts is overall_total_target or per-line target)
+      3. ideal_cycle_time = potential minutes / target_parts  (target_parts is overall_total_target or per-line target)
       4. Availability = run_time / PPT
       5. Performance = (ideal_cycle_time * actual_parts) / run_time
       6. Quality = (total produced - scrap) / total produced
@@ -6415,7 +6415,7 @@ def compute_oee_metrics(
     # Overall metrics calculations
     overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
     overall_run_time = overall_ppt - (overall_unplanned_downtime_minutes)
-    overall_ideal_cycle_time = overall_ppt / overall_total_target if overall_total_target > 0 else 0.0
+    overall_ideal_cycle_time = overall_total_potential_minutes / overall_total_target if overall_total_target > 0 else 0.0
 
 
     overall_runtime = overall_total_potential_minutes - overall_planned_downtime_minutes - overall_unplanned_downtime_minutes
@@ -6456,7 +6456,7 @@ def compute_oee_metrics(
         
         ppt = potential - planned_downtime
         run_time = ppt - (unplanned_downtime)
-        ideal_cycle_time = ppt / target if target > 0 else 0.0
+        ideal_cycle_time = potential / target if target > 0 else 0.0
         
 
         runtime = potential - unplanned_downtime - planned_downtime
@@ -7090,7 +7090,7 @@ def compute_machine_oee(machine_data, queried_minutes):
         # adjusted_target = target * uptime_ratio
         # adjusted_target = target / ((unplanned_downtime + planned_downtime) / potential)
 
-    ideal_cycle_time = ppt / target if target > 0 else 0.0
+    ideal_cycle_time = potential / target if target > 0 else 0.0
     adjusted_target = run_time / ideal_cycle_time if ideal_cycle_time > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 1.0
     # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
