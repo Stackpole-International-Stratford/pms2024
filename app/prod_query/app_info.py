@@ -1,6 +1,6 @@
 def get_app_info():
     return {
         'name': 'Prod-Query',
-        'description': 'Variables management application',
+        'description': 'Production Tools, graphs & OEE pages',
         'url': '/prod-query/sub-index'
     }
