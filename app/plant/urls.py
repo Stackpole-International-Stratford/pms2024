@@ -104,7 +104,8 @@ urlpatterns = [
 
 
     path("downtime/participation/<int:pk>/force-leave/", force_leave_participation, name="force_leave_participation",),
-    path('it-signage/', signage_login, name='signage-login'),
+    path('it-signage/<str:pwd>/', signage_login, name='signage-login'),
+
 
     path('maintenance/bulk_add/', maintenance_bulk_form, name='maintenance_bulk_form'),
 

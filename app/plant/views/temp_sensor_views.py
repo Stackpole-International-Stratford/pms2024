@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout, login, get_user_model
 from django.shortcuts      import redirect
 from django.contrib        import messages
+from django.http          import Http404
 
 
 
@@ -298,21 +299,25 @@ def temp_display(request):
 
 
 
-def signage_login(request):
-    # 1) kill any existing session
+def signage_login(request, pwd):
+    # if they didn’t supply the exact hard-coded pwd, 404 it
+    if pwd != '1352':
+        raise Http404
+
+    # 1) log out anyone currently signed in
     logout(request)
 
-    # 2) look up the signage user
+    # 2) fetch the itsignage user
     User = get_user_model()
     try:
         user = User.objects.get(username='itsignage')
     except User.DoesNotExist:
         messages.error(request, "‘itsignage’ account not found.")
-        return redirect('login')           # or wherever makes sense
+        return redirect('login')
 
-    # 3) tell django which auth-backend we’re using, then log them in
+    # 3) force-login that user
     user.backend = 'django.contrib.auth.backends.ModelBackend'
     login(request, user)
 
-    # 4) send them to your temp-display
+    # 4) send them to temp-display
     return redirect('temp-display')
