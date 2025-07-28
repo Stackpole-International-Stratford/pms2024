@@ -4,417 +4,185 @@
 {% block title %}Forms for {{ form_type.name }}{% endblock %}
 
 {% block extra_head %}
-    <style>
-        /* Make filters sticky */
-        .sticky-filters {
-            top: 0;
-            z-index: 1000;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        /* Hide the "Hello" button by default */
-        #helloButton {
-            display: none;
-        }
-    </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 {% endblock %}
 
 {% block content %}
-    <!-- Navbar with Back Button -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm mb-3">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'forms_index' %}">
-                <button type="button" class="btn btn-outline-dark">Back</button>
-            </a>
-        </div>
-    </nav>
-
-    <div class="container mt-5">
-        <!-- Logo centered above the title -->
-        <div class="text-center mb-3">
-            <img src="{% static 'images/JE_Logo_PNG.png' %}" alt="JE Logo" style="height: 50px;">
-        </div>
-
-        <h1>Forms for {{ form_type.name }}</h1>
-        <hr>
-
-        <!-- Dynamic Sticky Filters -->
-        <div class="sticky-filters mb-3" id="dynamicFilters"></div>
-
-        <!-- Buttons visible only to LPA Managers -->
-        {% if is_lpa_manager %}
-            <!-- Create a new form button -->
-            <a href="{% url 'form_create' %}?form_type={{ form_type.id }}" class="btn btn-dark mb-3">Create a new form for {{ form_type.name }}</a>
-
-            <!-- The "Hello" button (initially hidden) -->
-            <button id="helloButton" class="btn btn-secondary mb-3">Add Question to Selected Forms</button>
-        {% endif %}
-
-        <!-- Forms Table -->
-        {% if forms %}
-        <table class="table table-striped" id="formsTable">
-            <thead>
-                <tr>
-                    {% if is_lpa_manager %}
-                    <th scope="col">
-                        <input type="checkbox" id="selectAllCheckbox">
-                        Select
-                    </th>
-                    {% endif %}
-                    <th scope="col">Form Name</th>
-                    <th scope="col">Creation Date</th>
-                    <th scope="col">Metadata</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for form in forms %}
-                <tr class="form-row"
-                    {% for key, value in form.metadata.items %}
-                    data-{{ key }}="{{ value }}"
-                    {% endfor %}
-                >
-                    {% if is_lpa_manager %}
-                    <td>
-                        <input type="checkbox" class="form-checkbox" value="{{ form.id }}">
-                    </td>
-                    {% endif %}
-                    <td class="form-name">{{ form.name }}</td>
-                    <td>{{ form.created_at|date:"Y-m-d H:i" }}</td>
-                    <td>
-                        <ul class="form-metadata">
-                            {% for key, value in form.metadata.items %}
-                            <li><strong>{{ key }}:</strong> {{ value }}</li>
-                            {% endfor %}
-                        </ul>
-                    </td>
-                    <td>
-                        {% if is_lpa_manager or is_quality_engineer %}
-                            <!-- Manage Form Button -->
-                            <a href="{% url 'form_edit' form.id %}" class="btn btn-warning">Manage Form</a>
-                        {% endif %}
-                    
-                        <!-- Conditionally route the "Go to Form" button -->
-                        {% if user.is_authenticated %}
-                            <!-- Normal behavior for logged-in users -->
-                            <a href="{% url 'smart_form' form.id %}" class="btn btn-dark ml-2">Go to Form</a>
-                        {% else %}
-                            <!-- Redirect to login for unauthenticated users -->
-                            <a href="{% url 'login' %}?next={% url 'smart_form' form.id %}" class="btn btn-dark ml-2">Go to Form</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p>No forms available for this type.</p>
-        {% endif %}
+  <!-- ─────────── Navbar ─────────── -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm mb-3">
+    <div class="container">
+      <a class="navbar-brand" href="{% url 'forms_index' %}">
+        <button class="btn btn-outline-dark">Back</button>
+      </a>
     </div>
+  </nav>
+
+  <div class="container mt-5">
+    <!-- Logo + Title -->
+    <div class="text-center mb-3">
+      <img src="{% static 'images/JE_Logo_PNG.png' %}"
+           alt="JE Logo"
+           style="height:50px;">
+    </div>
+    <h1>Forms for {{ form_type.name }}</h1>
+    <hr>
+
+    <!-- ─────────── Filters ─────────── -->
+    <form method="get" class="row g-2 mb-3">
+      {# keep the form_type in the querystring #}
+      <input type="hidden" name="form_type" value="{{ form_type.id }}"/>
+
+      <div class="col-6 col-md-3">
+        <label for="part_number" class="form-label">Part Number</label>
+        <select id="part_number"
+                name="part_number"
+                class="form-select">
+          <option value="">All Part Number</option>
+          {% for pn in metadata_values.part_number %}
+            <option value="{{ pn }}"
+              {% if pn == selected_part_number %}selected{% endif %}>
+              {{ pn }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <label for="operation" class="form-label">Operation</label>
+        <select id="operation"
+                name="operation"
+                class="form-select">
+          <option value="">All Operation</option>
+          {% for op in metadata_values.operation %}
+            <option value="{{ op }}"
+              {% if op == selected_operation %}selected{% endif %}>
+              {{ op }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-auto align-self-end">
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </div>
+    </form>
+
+    <!-- ─────────── Manager Buttons ─────────── -->
+    {% if is_lpa_manager %}
+      <a href="{% url 'form_create' %}?form_type={{ form_type.id }}"
+         class="btn btn-dark mb-3">
+        Create a New Form for {{ form_type.name }}
+      </a>
+      <button id="helloButton"
+              class="btn btn-secondary mb-3"
+              style="display:none;">
+        Add Question to Selected Forms
+      </button>
+    {% endif %}
+
+    <!-- ─────────── Forms Table ─────────── -->
+    {% if forms %}
+      <table class="table table-striped" id="formsTable">
+        <thead>
+          <tr>
+            {% if is_lpa_manager %}
+              <th scope="col">
+                <input type="checkbox" id="selectAllCheckbox">
+                Select
+              </th>
+            {% endif %}
+            <th>Form Name</th>
+            <th>Creation Date</th>
+            <th>Metadata</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for form in forms %}
+            <tr>
+              {% if is_lpa_manager %}
+                <td>
+                  <input type="checkbox"
+                         class="form-checkbox"
+                         value="{{ form.id }}">
+                </td>
+              {% endif %}
+              <td>{{ form.name }}</td>
+              <td>{{ form.created_at|date:"Y-m-d H:i" }}</td>
+              <td>
+                <ul class="mb-0">
+                  {% for key, value in form.metadata.items %}
+                    <li><strong>{{ key }}:</strong> {{ value }}</li>
+                  {% endfor %}
+                </ul>
+              </td>
+              <td>
+                {% if is_lpa_manager or is_quality_engineer %}
+                  <a href="{% url 'form_edit' form.id %}"
+                     class="btn btn-warning btn-sm">
+                    Manage
+                  </a>
+                {% endif %}
+                {% if is_authenticated %}
+                  <a href="{% url 'smart_form' form.id %}"
+                     class="btn btn-dark btn-sm ms-1">
+                    Go to Form
+                  </a>
+                {% else %}
+                  <a href="{% url 'login' %}?next={% url 'smart_form' form.id %}"
+                     class="btn btn-dark btn-sm ms-1">
+                    Go to Form
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No forms available for this type.</p>
+    {% endif %}
+  </div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
-    <!-- CSRF helper for AJAX POST in Django -->
-    <script>
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.startsWith(name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(function(){
+      const checkboxes     = $('.form-checkbox');
+      const helloButton    = $('#helloButton');
+      const selectAllCheck = $('#selectAllCheckbox');
+
+      // Toggle “Add Question” button
+      function updateHello() {
+        const anyChecked = checkboxes.is(':checked');
+        helloButton.toggle(anyChecked);
+      }
+
+      // Select All logic
+      selectAllCheck.on('change', function(){
+        checkboxes.prop('checked', this.checked);
+        updateHello();
+      });
+
+      checkboxes.on('change', function(){
+        // If any box is unchecked, uncheck “select all”
+        if (!this.checked) selectAllCheck.prop('checked', false);
+        // If all are checked, check “select all”
+        else if (checkboxes.filter(':checked').length === checkboxes.length) {
+          selectAllCheck.prop('checked', true);
         }
+        updateHello();
+      });
 
-        const csrftoken = getCookie('csrftoken');
-
-        // Set up CSRF token for all AJAX requests
-        $.ajaxSetup({
-            beforeSend: function (xhr, settings) {
-                if (!/^((GET|HEAD|OPTIONS|TRACE)$)/i.test(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
-    </script>
-
-    <script>
-        $(document).ready(function () {
-            const rows = $('#formsTable tbody .form-row');
-            const metadataMap = {};
-    
-            // Build metadata map for filter dropdowns
-            rows.each(function () {
-                const row = $(this);
-                $.each(this.dataset, function (key, value) {
-                    if (!metadataMap[key]) {
-                        metadataMap[key] = new Set();
-                    }
-                    metadataMap[key].add(value);
-                });
-            });
-    
-            const orderedKeys = ['part_number', 'operation'];
-            const dynamicKeys = Object.keys(metadataMap).filter(key => !orderedKeys.includes(key));
-            const finalKeys = orderedKeys.concat(dynamicKeys);
-    
-            const filtersDiv = $('#dynamicFilters');
-    
-            // Create filter dropdowns dynamically
-            finalKeys.forEach(key => {
-                const values = Array.from(metadataMap[key]).sort();
-                const filterHtml = `
-                    <div class="form-group">
-                        <label for="${key}Filter" class="form-label">${key.charAt(0).toUpperCase() + key.slice(1)}</label>
-                        <select id="${key}Filter" class="form-select">
-                            <option value="">All ${key.charAt(0).toUpperCase() + key.slice(1)}</option>
-                            ${
-                                values
-                                    .map(value => `<option value="${value}">${value}</option>`)
-                                    .join('')
-                            }
-                        </select>
-                    </div>
-                `;
-                filtersDiv.append(filterHtml);
-            });
-    
-            // Update filter options dynamically based on visible rows
-            function updateFilterOptions() {
-                finalKeys.forEach(key => {
-                    const filter = $(`#${key}Filter`);
-                    const selectedValue = filter.val();
-                    const possibleValues = new Set();
-    
-                    rows.filter(':visible').each(function () {
-                        possibleValues.add($(this).data(key));
-                    });
-    
-                    const optionsHtml = [
-                        `<option value="">All ${key.charAt(0).toUpperCase() + key.slice(1)}</option>`
-                    ];
-                    Array.from(possibleValues).sort().forEach(value => {
-                        optionsHtml.push(
-                            `<option value="${value}" ${
-                                value === selectedValue ? 'selected' : ''
-                            }>${value}</option>`
-                        );
-                    });
-    
-                    filter.html(optionsHtml.join(''));
-                });
-            }
-    
-            // Called after filtering or any checkbox change to keep "Select All" in sync
-            function updateSelectAllCheckbox() {
-                const visibleCheckboxes = $('.form-checkbox:visible');
-                const selectAll = $('#selectAllCheckbox');
-    
-                // If no visible rows, disable and uncheck
-                if (visibleCheckboxes.length === 0) {
-                    selectAll.prop('checked', false);
-                    selectAll.prop('disabled', true);
-                    return;
-                }
-    
-                // If all visible checkboxes are checked, selectAll is checked too
-                selectAll.prop('disabled', false);
-                const allChecked = visibleCheckboxes.filter(':checked').length === visibleCheckboxes.length;
-                selectAll.prop('checked', allChecked);
-            }
-    
-            // Filter rows based on selected dropdown values
-            function applyFilters() {
-                const selectedFilters = {};
-                $('.form-select').each(function () {
-                    const filterKey = this.id.replace('Filter', '');
-                    const filterValue = $(this).val();
-                    if (filterValue) {
-                        selectedFilters[filterKey] = filterValue;
-                    }
-                });
-    
-                rows.show().each(function () {
-                    const row = $(this);
-                    let match = true;
-    
-                    $.each(selectedFilters, function (key, value) {
-                        if (row.data(key) !== value) {
-                            match = false;
-                        }
-                    });
-    
-                    if (!match) {
-                        row.hide();
-                    }
-                });
-    
-                // Update filter options after applying filters
-                updateFilterOptions();
-                // Update the Select All checkbox state after filtering
-                updateSelectAllCheckbox();
-            }
-    
-            // Trigger filters on change
-            $('.form-select').on('change', applyFilters).trigger('change');
-    
-            {% if is_lpa_manager %}
-            // Only add the below logic if the user is an LPA manager
-            $(document).ready(function () {
-                const helloButton = $('#helloButton');
-                const checkboxes = $('.form-checkbox');
-                const selectAllCheckbox = $('#selectAllCheckbox');
-    
-                // Toggle "Hello" button visibility based on whether at least one checkbox is checked
-                function toggleHelloButton() {
-                    helloButton.toggle(checkboxes.filter(':checked').length > 0);
-                }
-    
-                // Listen for individual checkbox changes
-                checkboxes.on('change', function () {
-                    toggleHelloButton();
-                    updateSelectAllCheckbox(); // Keep the "Select All" in sync
-                });
-    
-                // When "Select All" is changed, check/uncheck only visible checkboxes
-                selectAllCheckbox.on('change', function () {
-                    const visibleCheckboxes = checkboxes.filter(':visible');
-                    visibleCheckboxes.prop('checked', this.checked);
-                    toggleHelloButton();
-                });
-    
-                // Initially update the hello button & select all
-                toggleHelloButton();
-                updateSelectAllCheckbox();
-    
-                // Load the form into the modal
-                helloButton.on('click', function () {
-                    const selectedFormIDs = checkboxes
-                        .filter(':checked')
-                        .map(function () { return $(this).val(); })
-                        .get();
-    
-                    if (selectedFormIDs.length === 0) {
-                        alert('Please select at least one form.');
-                        return;
-                    }
-    
-                    // AJAX GET request to load the form
-                    $.ajax({
-                        url: "{% url 'process_selected_forms' %}",  // Adjust the URL name
-                        method: "GET",
-                        data: { form_type: 'LPA' },  // Dynamically pass the form type if needed
-                        success: function (response) {
-                            $('#questionFormContainer').html(response.form_html);
-                            $('#questionModal').modal('show');
-                        },
-                        error: function () {
-                            alert('Failed to load the form. Please try again.');
-                        }
-                    });
-                });
-    
-                // Handle form submission
-                $('#saveQuestionButton').on('click', function () {
-                    const selectedFormIDs = checkboxes
-                        .filter(':checked')
-                        .map(function () { return $(this).val(); })
-                        .get();
-    
-                    const formData = $('#questionForm').serializeArray();
-                    formData.push({ name: 'form_ids[]', value: selectedFormIDs });
-    
-                    // AJAX POST request to save the form data
-                    $.ajax({
-                        url: "{% url 'process_selected_forms' %}",
-                        method: "POST",
-                        data: formData,
-                        success: function (response) {
-                            alert(response.message);
-                            $('#questionModal').modal('hide');
-                        },
-                        error: function (xhr) {
-                            alert('Error: ' + (xhr.responseJSON?.error || 'Failed to save the question.'));
-                        }
-                    });
-                });
-            });
-            {% endif %}
-        });
-    </script>
-    
-    
-
-<!-- Bootstrap Modal for Adding Questions -->
-<div class="modal fade" id="questionModal" tabindex="-1" aria-labelledby="questionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="questionModalLabel">Add a New Question for Selected Forms</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="questionFormContainer">
-                <!-- The question_form.html content will be injected here via AJAX -->
-            </div>
-            <div class="modal-footer">
-                <!-- Button to close the modal -->
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <!-- Button to save the question (referenced by your JS) -->
-                <button type="button" class="btn btn-dark" id="saveQuestionButton">Save Question</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-<script>
-    $(document).ready(function () {
-        {% if is_lpa_manager and user.is_authenticated %}
-        // Loop through each form row and add the button beside existing buttons
-        $('#formsTable tbody .form-row').each(function () {
-            const formId = $(this).find('.form-checkbox').val(); // Get the form ID
-            const actionsCell = $(this).find('td:last-child'); // Target the actions cell
-
-            // Create the new button
-            const newButton = $('<button>')
-                .addClass('btn btn-danger ml-2') // Bootstrap styling
-                .text('Delete') // Text for the button
-                .attr('data-form-id', formId) // Store the form ID in a data attribute
-                .on('click', function () {
-                    if (confirm('Are you sure you want to delete this form?')) {
-                        // Send the form ID to the backend when the button is clicked
-                        $.ajax({
-                            url: "{% url 'process_form_deletion' %}", // Backend URL
-                            method: "POST",
-                            data: { form_id: formId },
-                            headers: {
-                                "X-CSRFToken": getCookie('csrftoken'), // Add CSRF token for security
-                            },
-                            success: function (response) {
-                                alert('Form marked as deleted successfully!');
-                                console.log(response.message); // Optional logging
-                            },
-                            error: function (xhr) {
-                                alert('Error: ' + (xhr.responseJSON?.error || 'Failed to delete the form.'));
-                            }
-                        });
-                    }
-                });
-
-            // Append the new button to the actions cell
-            actionsCell.append(newButton);
-        });
-        {% endif %}
+      // Hook up your “Add Question” click here:
+      helloButton.on('click', function(){
+        const ids = checkboxes.filter(':checked')
+                              .map((_,cb)=>cb.value)
+                              .get();
+        // e.g. open a modal, or redirect—whatever your flow requires:
+        console.log('Selected form IDs:', ids);
+      });
     });
-</script>
-
-
-
+  </script>
 {% endblock %}

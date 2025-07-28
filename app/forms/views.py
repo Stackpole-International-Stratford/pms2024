@@ -202,67 +202,81 @@ def find_deleted_forms(form_type_id):
 
 
 def find_forms_view(request):
-
-    # Check and tag expired questions
+    # 1) Tag any expired questions first
     find_and_tag_expired_questions()
 
-    # Get the form type ID from the request
+    # 2) Grab the selected form_type from the querystring
     form_type_id = request.GET.get('form_type')
-
-    if form_type_id:
-        # Fetch the FormType object
-        form_type = get_object_or_404(FormType, id=form_type_id)
-        
-        # Get the IDs of deleted forms
-        deleted_form_ids = find_deleted_forms(form_type_id)
-
-        # Fetch the forms of that form type, excluding deleted forms and ordering by created_at descending
-        forms = Form.objects.filter(
-            form_type_id=form_type_id
-        ).exclude(id__in=deleted_form_ids).order_by('-created_at')
-        
-        # Gather all unique metadata keys across all forms for this form type
-        metadata_keys = set()
-        for form in forms:
-            metadata_keys.update(form.metadata.keys())  # Assuming `metadata` is a dictionary
-
-        # Check if the user is authenticated and part of the "LPA Managers" group
-        is_lpa_manager = False
-        if request.user.is_authenticated:
-            is_lpa_manager = request.user.groups.filter(name="LPA Managers").exists()
-
-        is_quality_engineer = False
-        if request.user.is_authenticated:
-            is_quality_engineer = request.user.groups.filter(name="Quality Engineer").exists()
-
-
-        return render(request, 'forms/find_forms.html', {
-            'form_type': form_type,
-            'forms': forms,
-            'metadata_keys': metadata_keys,
-            'is_lpa_manager': is_lpa_manager,  # Pass this to the template
+    if not form_type_id:
+        # No form_type chosen yet: show the selector page
+        form_types = FormType.objects.all()
+        is_lpa_manager = (
+            request.user.is_authenticated
+            and request.user.groups.filter(name="LPA Managers").exists()
+        )
+        is_quality_engineer = (
+            request.user.is_authenticated
+            and request.user.groups.filter(name="Quality Engineer").exists()
+        )
+        return render(request, 'forms/select_form_type.html', {
+            'form_types': form_types,
+            'is_lpa_manager': is_lpa_manager,
             'is_quality_engineer': is_quality_engineer,
-            'is_authenticated': request.user.is_authenticated,  # Add this
-
+            'is_authenticated': request.user.is_authenticated,
         })
 
-    # If no form type is selected, display the form type selection
-    form_types = FormType.objects.all()
+    # 3) Load the FormType (404 if bad ID)
+    form_type = get_object_or_404(FormType, id=form_type_id)
 
-    # Check if the user is authenticated and part of the "LPA Managers" group
-    is_lpa_manager = False
-    if request.user.is_authenticated:
-        is_lpa_manager = request.user.groups.filter(name="LPA Managers").exists()
+    # 4) Exclude any “deleted” forms
+    deleted_ids = find_deleted_forms(form_type_id)
+    base_qs = Form.objects.filter(form_type_id=form_type_id) \
+                          .exclude(id__in=deleted_ids) \
+                          .order_by('-created_at')
 
-    is_quality_engineer = False
-    if request.user.is_authenticated:
-        is_quality_engineer = request.user.groups.filter(name="Quality Engineer").exists()
+    # 5) Build our filter‐dropdown data from the full set (so options never disappear)
+    metadata_values = {
+        'part_number': sorted({
+            f.metadata.get('part_number')
+            for f in base_qs
+            if f.metadata.get('part_number')
+        }),
+        'operation': sorted({
+            f.metadata.get('operation')
+            for f in base_qs
+            if f.metadata.get('operation')
+        }),
+    }
 
-    return render(request, 'forms/select_form_type.html', {
-        'form_types': form_types,
-        'is_lpa_manager': is_lpa_manager,  # Pass this to the template
-        'is_quality_engineer': is_quality_engineer,  # Pass this to the template
-        'is_authenticated': request.user.is_authenticated,  # Add this
+    # 6) Apply any user‐picked filters
+    part_number = request.GET.get('part_number', '').strip()
+    operation  = request.GET.get('operation', '').strip()
+    forms = base_qs
+    if part_number:
+        forms = forms.filter(metadata__part_number=part_number)
+    if operation:
+        forms = forms.filter(metadata__operation=operation)
+
+    # 7) Role flags for template
+    is_lpa_manager = (
+        request.user.is_authenticated
+        and request.user.groups.filter(name="LPA Managers").exists()
+    )
+    is_quality_engineer = (
+        request.user.is_authenticated
+        and request.user.groups.filter(name="Quality Engineer").exists()
+    )
+
+    # 8) Render page with forms + filter data + selected values
+    return render(request, 'forms/find_forms.html', {
+        'form_type': form_type,
+        'forms': forms,
+        'metadata_values': metadata_values,
+        'selected_part_number': part_number,
+        'selected_operation': operation,
+        'is_lpa_manager': is_lpa_manager,
+        'is_quality_engineer': is_quality_engineer,
+        'is_authenticated': request.user.is_authenticated,
     })
 
 
