@@ -20,8 +20,10 @@ def login_view(request):
         # 4) Debug: print after lowercasing
         # print(f"Login attempt username after lowercase:  '{username}'")
 
+        EXEMPT_USERNAMES = {'tcareless', 'itsignage'}
+
         # 5) Quick format validation: must contain at least one dot
-        if '.' not in username and username != 'tcareless':
+        if '.' not in username and username not in EXEMPT_USERNAMES:
             messages.error(request, "Invalid login credentials. Please try again.")
             return redirect('login')
 
