@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from ..models.tempsensor_models import TempSensorEmailList
 import time
 from django.db.models import Max
+from django.contrib.auth.decorators import login_required
 
 
 
@@ -211,6 +212,7 @@ def delete_temp_sensor_email(request):
 # =========================================================================
 # =========================================================================
 
+@login_required(login_url='login')
 def temp_display(request):
     raw_rows = []
     try:
