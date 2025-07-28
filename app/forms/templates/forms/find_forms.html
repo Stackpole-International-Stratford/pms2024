@@ -2,187 +2,164 @@
 {% load static %}
 
 {% block title %}Forms for {{ form_type.name }}{% endblock %}
-
 {% block extra_head %}
   <meta name="viewport" content="width=device-width, initial-scale=1">
 {% endblock %}
 
 {% block content %}
-  <!-- ─────────── Navbar ─────────── -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm mb-3">
-    <div class="container">
-      <a class="navbar-brand" href="{% url 'forms_index' %}">
-        <button class="btn btn-outline-dark">Back</button>
-      </a>
-    </div>
-  </nav>
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm mb-3">
+  <div class="container">
+    <a class="navbar-brand" href="{% url 'forms_index' %}">
+      <button class="btn btn-outline-dark">Back</button>
+    </a>
+  </div>
+</nav>
 
-  <div class="container mt-5">
-    <!-- Logo + Title -->
-    <div class="text-center mb-3">
-      <img src="{% static 'images/JE_Logo_PNG.png' %}"
-           alt="JE Logo"
-           style="height:50px;">
-    </div>
-    <h1>Forms for {{ form_type.name }}</h1>
-    <hr>
+<div class="container mt-5">
+  <div class="text-center mb-3">
+    <img src="{% static 'images/JE_Logo_PNG.png' %}"
+         alt="JE Logo" style="height:50px;">
+  </div>
+  <h1>Forms for {{ form_type.name }}</h1>
+  <hr>
 
-    <!-- ─────────── Filters ─────────── -->
-    <form method="get" class="row g-2 mb-3">
-      {# keep the form_type in the querystring #}
-      <input type="hidden" name="form_type" value="{{ form_type.id }}"/>
+  {% if is_lpa_manager %}
+    <a href="{% url 'form_create' %}?form_type={{ form_type.id }}"
+       class="btn btn-dark mb-3">
+      Create a New Form
+    </a>
+    <button id="actionButton"
+            class="btn btn-secondary mb-3"
+            style="display:none;">
+      Add Question to Selected
+    </button>
+  {% endif %}
 
-      <div class="col-6 col-md-3">
-        <label for="part_number" class="form-label">Part Number</label>
-        <select id="part_number"
-                name="part_number"
-                class="form-select">
-          <option value="">All Part Number</option>
-          {% for pn in metadata_values.part_number %}
-            <option value="{{ pn }}"
-              {% if pn == selected_part_number %}selected{% endif %}>
-              {{ pn }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <label for="operation" class="form-label">Operation</label>
-        <select id="operation"
-                name="operation"
-                class="form-select">
-          <option value="">All Operation</option>
-          {% for op in metadata_values.operation %}
-            <option value="{{ op }}"
-              {% if op == selected_operation %}selected{% endif %}>
-              {{ op }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="col-auto align-self-end">
-        <button type="submit" class="btn btn-primary">Filter</button>
-      </div>
-    </form>
-
-    <!-- ─────────── Manager Buttons ─────────── -->
-    {% if is_lpa_manager %}
-      <a href="{% url 'form_create' %}?form_type={{ form_type.id }}"
-         class="btn btn-dark mb-3">
-        Create a New Form for {{ form_type.name }}
-      </a>
-      <button id="helloButton"
-              class="btn btn-secondary mb-3"
-              style="display:none;">
-        Add Question to Selected Forms
-      </button>
-    {% endif %}
-
-    <!-- ─────────── Forms Table ─────────── -->
-    {% if forms %}
-      <table class="table table-striped" id="formsTable">
-        <thead>
+  {% if forms %}
+    <table class="table table-striped" id="formsTable">
+      <thead>
+        <tr>
+          {% if is_lpa_manager %}<th><input type="checkbox" id="selectAll"></th>{% endif %}
+          <th>Part Number / Form Name</th>
+          <th>Creation Date</th>
+          <th>Metadata</th>
+          <th>Actions</th>
+        </tr>
+        <tr>
+          {% if is_lpa_manager %}<th></th>{% endif %}
+          <th>
+            <input type="text"
+                   id="filterName"
+                   class="form-control form-control-sm"
+                   placeholder="Filter Name…">
+          </th>
+          <th></th>
+          <th>
+            <input type="text"
+                   id="filterMeta"
+                   class="form-control form-control-sm"
+                   placeholder="Filter by operation/part number…">
+          </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for form in forms %}
           <tr>
             {% if is_lpa_manager %}
-              <th scope="col">
-                <input type="checkbox" id="selectAllCheckbox">
-                Select
-              </th>
+              <td><input type="checkbox" class="row-checkbox" value="{{ form.id }}"></td>
             {% endif %}
-            <th>Form Name</th>
-            <th>Creation Date</th>
-            <th>Metadata</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for form in forms %}
-            <tr>
-              {% if is_lpa_manager %}
-                <td>
-                  <input type="checkbox"
-                         class="form-checkbox"
-                         value="{{ form.id }}">
-                </td>
+            <td class="col-name">{{ form.name }}</td>
+            <td>{{ form.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="col-meta">
+              <ul class="mb-0">
+                {% for key, value in form.metadata.items %}
+                  <li><strong>{{ key }}:</strong> {{ value }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>
+              {% if is_lpa_manager or is_quality_engineer %}
+                <a href="{% url 'form_edit' form.id %}"
+                   class="btn btn-warning btn-sm">Manage</a>
               {% endif %}
-              <td>{{ form.name }}</td>
-              <td>{{ form.created_at|date:"Y-m-d H:i" }}</td>
-              <td>
-                <ul class="mb-0">
-                  {% for key, value in form.metadata.items %}
-                    <li><strong>{{ key }}:</strong> {{ value }}</li>
-                  {% endfor %}
-                </ul>
-              </td>
-              <td>
-                {% if is_lpa_manager or is_quality_engineer %}
-                  <a href="{% url 'form_edit' form.id %}"
-                     class="btn btn-warning btn-sm">
-                    Manage
-                  </a>
-                {% endif %}
-                {% if is_authenticated %}
-                  <a href="{% url 'smart_form' form.id %}"
-                     class="btn btn-dark btn-sm ms-1">
-                    Go to Form
-                  </a>
-                {% else %}
-                  <a href="{% url 'login' %}?next={% url 'smart_form' form.id %}"
-                     class="btn btn-dark btn-sm ms-1">
-                    Go to Form
-                  </a>
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>No forms available for this type.</p>
-    {% endif %}
-  </div>
+              {% if is_authenticated %}
+                <a href="{% url 'smart_form' form.id %}"
+                   class="btn btn-dark btn-sm ms-1">Go to Form</a>
+              {% else %}
+                <a href="{% url 'login' %}?next={% url 'smart_form' form.id %}"
+                   class="btn btn-dark btn-sm ms-1">Go to Form</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No forms available for this type.</p>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script>
-    $(function(){
-      const checkboxes     = $('.form-checkbox');
-      const helloButton    = $('#helloButton');
-      const selectAllCheck = $('#selectAllCheckbox');
+<script>
+  // Cache DOM
+  const table       = document.getElementById('formsTable');
+  const rows        = table ? Array.from(table.tBodies[0].rows) : [];
+  const fName       = document.getElementById('filterName');
+  const fMeta       = document.getElementById('filterMeta');
+  const selectAll   = document.getElementById('selectAll');
+  const checkboxes  = Array.from(document.querySelectorAll('.row-checkbox'));
+  const actionBtn   = document.getElementById('actionButton');
 
-      // Toggle “Add Question” button
-      function updateHello() {
-        const anyChecked = checkboxes.is(':checked');
-        helloButton.toggle(anyChecked);
-      }
+  // Live‐filter function
+  function filterRows() {
+    const nameTerm = fName.value.trim().toLowerCase();
+    const metaTerm = fMeta.value.trim().toLowerCase();
 
-      // Select All logic
-      selectAllCheck.on('change', function(){
-        checkboxes.prop('checked', this.checked);
-        updateHello();
-      });
-
-      checkboxes.on('change', function(){
-        // If any box is unchecked, uncheck “select all”
-        if (!this.checked) selectAllCheck.prop('checked', false);
-        // If all are checked, check “select all”
-        else if (checkboxes.filter(':checked').length === checkboxes.length) {
-          selectAllCheck.prop('checked', true);
-        }
-        updateHello();
-      });
-
-      // Hook up your “Add Question” click here:
-      helloButton.on('click', function(){
-        const ids = checkboxes.filter(':checked')
-                              .map((_,cb)=>cb.value)
-                              .get();
-        // e.g. open a modal, or redirect—whatever your flow requires:
-        console.log('Selected form IDs:', ids);
-      });
+    rows.forEach(row => {
+      const name = row.querySelector('.col-name').textContent.toLowerCase();
+      const meta = row.querySelector('.col-meta').textContent.toLowerCase();
+      const matches = (!nameTerm || name.includes(nameTerm))
+                   && (!metaTerm || meta.includes(metaTerm));
+      row.style.display = matches ? '' : 'none';
     });
-  </script>
+  }
+
+  [fName, fMeta].forEach(el =>
+    el && el.addEventListener('input', filterRows)
+  );
+
+  // “Select all” & action button logic
+  function updateActionBtn() {
+    if (!actionBtn) return;
+    const anyChecked = checkboxes.some(cb => cb.checked);
+    actionBtn.style.display = anyChecked ? 'inline-block' : 'none';
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', e => {
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+      updateActionBtn();
+    });
+  }
+  checkboxes.forEach(cb =>
+    cb.addEventListener('change', () => {
+      if (!cb.checked && selectAll.checked) selectAll.checked = false;
+      if (checkboxes.every(cb2 => cb2.checked)) selectAll.checked = true;
+      updateActionBtn();
+    })
+  );
+
+  // Hook your action:
+  if (actionBtn) {
+    actionBtn.addEventListener('click', () => {
+      const ids = checkboxes
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+      console.log('Selected IDs:', ids);
+      // …open modal or redirect…
+    });
+  }
+</script>
 {% endblock %}

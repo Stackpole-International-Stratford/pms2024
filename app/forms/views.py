@@ -202,83 +202,45 @@ def find_deleted_forms(form_type_id):
 
 
 def find_forms_view(request):
-    # 1) Tag any expired questions first
+    # 1) Tag expired questions
     find_and_tag_expired_questions()
 
-    # 2) Grab the selected form_type from the querystring
+    # 2) Choose form_type or show selector
     form_type_id = request.GET.get('form_type')
     if not form_type_id:
-        # No form_type chosen yet: show the selector page
-        form_types = FormType.objects.all()
-        is_lpa_manager = (
-            request.user.is_authenticated
-            and request.user.groups.filter(name="LPA Managers").exists()
-        )
-        is_quality_engineer = (
-            request.user.is_authenticated
-            and request.user.groups.filter(name="Quality Engineer").exists()
-        )
         return render(request, 'forms/select_form_type.html', {
-            'form_types': form_types,
-            'is_lpa_manager': is_lpa_manager,
-            'is_quality_engineer': is_quality_engineer,
+            'form_types': FormType.objects.all(),
+            'is_lpa_manager': request.user.is_authenticated
+                              and request.user.groups.filter(name="LPA Managers").exists(),
+            'is_quality_engineer': request.user.is_authenticated
+                                   and request.user.groups.filter(name="Quality Engineer").exists(),
             'is_authenticated': request.user.is_authenticated,
         })
 
-    # 3) Load the FormType (404 if bad ID)
+    # 3) Load FormType or 404
     form_type = get_object_or_404(FormType, id=form_type_id)
 
-    # 4) Exclude any “deleted” forms
+    # 4) Fetch all non‐deleted forms for this type
     deleted_ids = find_deleted_forms(form_type_id)
-    base_qs = Form.objects.filter(form_type_id=form_type_id) \
-                          .exclude(id__in=deleted_ids) \
-                          .order_by('-created_at')
+    forms = (Form.objects
+                 .filter(form_type_id=form_type_id)
+                 .exclude(id__in=deleted_ids)
+                 .order_by('-created_at'))
 
-    # 5) Build our filter‐dropdown data from the full set (so options never disappear)
-    metadata_values = {
-        'part_number': sorted({
-            f.metadata.get('part_number')
-            for f in base_qs
-            if f.metadata.get('part_number')
-        }),
-        'operation': sorted({
-            f.metadata.get('operation')
-            for f in base_qs
-            if f.metadata.get('operation')
-        }),
-    }
+    # 5) Role flags
+    is_lpa_manager      = request.user.is_authenticated \
+                          and request.user.groups.filter(name="LPA Managers").exists()
+    is_quality_engineer = request.user.is_authenticated \
+                          and request.user.groups.filter(name="Quality Engineer").exists()
 
-    # 6) Apply any user‐picked filters
-    part_number = request.GET.get('part_number', '').strip()
-    operation  = request.GET.get('operation', '').strip()
-    forms = base_qs
-    if part_number:
-        forms = forms.filter(metadata__part_number=part_number)
-    if operation:
-        forms = forms.filter(metadata__operation=operation)
-
-    # 7) Role flags for template
-    is_lpa_manager = (
-        request.user.is_authenticated
-        and request.user.groups.filter(name="LPA Managers").exists()
-    )
-    is_quality_engineer = (
-        request.user.is_authenticated
-        and request.user.groups.filter(name="Quality Engineer").exists()
-    )
-
-    # 8) Render page with forms + filter data + selected values
+    # 6) Render everything—no filter logic here anymore!
     return render(request, 'forms/find_forms.html', {
         'form_type': form_type,
         'forms': forms,
-        'metadata_values': metadata_values,
-        'selected_part_number': part_number,
-        'selected_operation': operation,
         'is_lpa_manager': is_lpa_manager,
         'is_quality_engineer': is_quality_engineer,
         'is_authenticated': request.user.is_authenticated,
     })
-
 
 
 
