@@ -78,6 +78,8 @@ urlpatterns = [
     path('temp-display/', temp_display, name='temp-display'),
     path("temp-display/emails/add/", add_temp_sensor_email,   name="add-temp-sensor-email"),
     path("temp-display/emails/delete/", delete_temp_sensor_email, name="delete-temp-sensor-email"),
+    
+
 
 
     path('absentee/', absentee_forms, name='absentee_forms'),
@@ -102,9 +104,10 @@ urlpatterns = [
 
 
     path("downtime/participation/<int:pk>/force-leave/", force_leave_participation, name="force_leave_participation",),
-
+    path('it-signage/', signage_login, name='signage-login'),
 
     path('maintenance/bulk_add/', maintenance_bulk_form, name='maintenance_bulk_form'),
 
     path('quick-add/', quick_add, name='quick_add'),
+
 ]

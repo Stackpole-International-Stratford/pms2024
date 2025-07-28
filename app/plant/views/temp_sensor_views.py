@@ -14,6 +14,9 @@ from ..models.tempsensor_models import TempSensorEmailList
 import time
 from django.db.models import Max
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout, login, get_user_model
+from django.shortcuts      import redirect
+from django.contrib        import messages
 
 
 
@@ -283,3 +286,33 @@ def temp_display(request):
         "email_list": email_list,
     })
 
+
+
+
+
+# ==========================================================
+# ==========================================================
+# ================== Easy login IT =========================
+# ==========================================================
+# ==========================================================
+
+
+
+def signage_login(request):
+    # 1) kill any existing session
+    logout(request)
+
+    # 2) look up the signage user
+    User = get_user_model()
+    try:
+        user = User.objects.get(username='itsignage')
+    except User.DoesNotExist:
+        messages.error(request, "‘itsignage’ account not found.")
+        return redirect('login')           # or wherever makes sense
+
+    # 3) tell django which auth-backend we’re using, then log them in
+    user.backend = 'django.contrib.auth.backends.ModelBackend'
+    login(request, user)
+
+    # 4) send them to your temp-display
+    return redirect('temp-display')
