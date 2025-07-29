@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from .views import *
 
 app_name = "dashboards"
 
@@ -43,8 +44,10 @@ urlpatterns = [
 
 
 
+    path("send_dashboards/<str:pwd>/", send_all_dashboards, name="send_all_dashboards"),
 
 
     path("dashboard/<str:pages>/", views.dashboard_current_shift, name="dashboard_last_hour"),
     path("<str:pages>/", views.dashboard_current_shift, name="dashboard_last_hour"),
+
 ]

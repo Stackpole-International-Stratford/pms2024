@@ -33,6 +33,64 @@
             text-decoration: underline;
         }
     </style>
+        <style>
+        /* Glassy default state — slightly more opaque for stability */
+        .list-group-item {
+        position: relative;
+        overflow: hidden;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+        border-radius: 0.75rem;
+
+        background: rgba(255,255,255,0.75);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+
+        border: 1px solid rgba(255,255,255,0.3);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+
+        transition:
+            transform 0.25s ease,
+            box-shadow 0.25s ease,
+            background 0.25s ease,
+            border-color 0.25s ease;
+        }
+
+        /* Brand stripe (black → orange) */
+        .list-group-item::before {
+        content: "";
+        position: absolute;
+        left: 0.5rem;
+        top: 1rem;
+        bottom: 1rem;
+        width: 4px;
+        background: linear-gradient(180deg, #000000 0%, #ff9900 100%);
+        border-radius: 2px;
+        }
+
+        /* Subtle orange glow */
+        .list-group-item::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+            circle at top left,
+            rgba(255,153,0,0.06),
+            transparent 60%
+        );
+        pointer-events: none;
+        }
+
+        /* Hover — gentle lift, slight brighten */
+        .list-group-item:hover {
+        transform: translateY(-2px);
+        background: rgba(255,255,255,0.85);
+        border-color: rgba(255,153,0,0.5);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        }
+
+
+    </style>
 </head>
 <body>
 

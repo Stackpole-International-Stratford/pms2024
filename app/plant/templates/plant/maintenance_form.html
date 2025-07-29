@@ -322,25 +322,16 @@
   const editModalEl   = document.getElementById('editEntryModal');
   const editForm      = document.getElementById('edit-entry-form');
   const edit          = {
-    idInput:    document.getElementById('edit-entry-id'),
+    idInput:         document.getElementById('edit-entry-id'),
     employeeIdInput: document.getElementById('edit-employee-id'),
-    dateInput:  document.getElementById('edit-start-date'),
-    timeInput:  document.getElementById('edit-start-time'),
-    lineSelect:    document.getElementById('edit-line-select'),
-    machineSelect: document.getElementById('edit-machine-select'),
-    catSelect:     document.getElementById('edit-category-select'),
-    subSelect:     document.getElementById('edit-subcategory-select'),
-    descInput:     document.getElementById('edit-description')
+    dateInput:       document.getElementById('edit-start-date'),
+    timeInput:       document.getElementById('edit-start-time'),
+    lineSelect:      document.getElementById('edit-line-select'),
+    machineSelect:   document.getElementById('edit-machine-select'),
+    catSelect:       document.getElementById('edit-category-select'),
+    subSelect:       document.getElementById('edit-subcategory-select'),
+    descInput:       document.getElementById('edit-description')
   };
-
-  // Close-out modal
-  const closeoutOpenBtn = document.getElementById('closeout-open-button');
-  const closeoutModalEl = document.getElementById('closeoutModal');
-  const closeoutEntryId = document.getElementById('closeout-entry-id');
-  const closeoutDate    = document.getElementById('closeout-date');
-  const closeoutTime    = document.getElementById('closeout-time');
-  const closeoutComment = document.getElementById('closeout-comment');
-  const closeoutConfirm = document.getElementById('closeout-confirm');
 
   // Labour-choice modal
   const labourModalEl    = document.getElementById('labourModal');
@@ -417,8 +408,8 @@
       add.catSelect.value
     );
   }
- [ add.lineSelect, add.machineSelect, add.catSelect ]
-   .forEach(el=>el.addEventListener('change', validateAdd));
+  [ add.lineSelect, add.machineSelect, add.catSelect ]
+    .forEach(el=>el.addEventListener('change', validateAdd));
 
   // ─── ROW FILTERING ───────────────────────────────────────────────────
   function filterRows(){
@@ -455,33 +446,30 @@
       labourErrorEl.style.display = '';
       return;
     }
-    labourInput.value     = JSON.stringify(picked);
-    employeeInput.value   = emp;
+    labourInput.value   = JSON.stringify(picked);
+    employeeInput.value = emp;
     form.submit();
   });
 
-  
   // ─── EDIT ROW CLICK ──────────────────────────────────────────────────
   tbody.addEventListener('click', ev=>{
     const tr = ev.target.closest('tr[data-entry-id]');
     if (!tr) return;
 
-    // — Populate the edit form fields —
-    const cells  = tr.cells;
+    const cells    = tr.cells;
     const datetime = cells[0].textContent.trim();
+
     edit.idInput.value         = tr.dataset.entryId;
     edit.employeeIdInput.value = tr.dataset.employeeId;
     edit.dateInput.value       = datetime.slice(0,10);
     edit.timeInput.value       = datetime.slice(11);
     edit.descInput.value       = cells[6].textContent.trim();
 
-    // — Populate the Choices.js selects —
-    const lineVal  = cells[1].textContent.trim();
-    // only grab the first text node (the machine code), ignore the badge spans
+    const lineVal = cells[1].textContent.trim();
     const machVal = cells[2].firstChild.nodeValue.trim();
-    const fullCode = cells[5].textContent.trim();
-    const catCode  = fullCode.split('-')[0];
-    const subCode  = fullCode;
+    const fullCode= cells[5].textContent.trim();
+    const catCode = fullCode.split('-')[0];
+    const subCode = fullCode;
 
     choices.editLine.setChoiceByValue(lineVal);
     edit.lineSelect.value = lineVal;
@@ -504,70 +492,29 @@
       .setChoiceByValue(subCode);
     edit.subSelect.value = subCode;
 
-    // — Show the modal —
     new bootstrap.Modal(editModalEl).show();
   });
 
-
   // ─── DELETE ENTRY ───────────────────────────────────────────────────
-  document.getElementById('delete-button').addEventListener('click', ()=>{
-    if (!confirm('Delete this downtime entry?')) return;
-    const id = edit.idInput.value;
-    fetch("{% url 'delete_downtime_entry' %}", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({ entry_id: id })
-    })
-    .then(r=>r.ok ? r.json() : Promise.reject())
-    .then(()=>{
-      bootstrap.Modal.getInstance(editModalEl).hide();
-      tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
-    })
-    .catch(()=>alert('Error deleting entry.'));
-  });
-
-  // ─── OPEN CLOSE-OUT MODAL ───────────────────────────────────────────
-  closeoutOpenBtn.addEventListener('click', ()=>{
-    closeoutEntryId.value = edit.idInput.value;
-    const now = new Date();
-    closeoutDate.value = now.toISOString().slice(0,10);
-    closeoutTime.value = now.toTimeString().slice(0,5);
-    closeoutComment.value = '';
-    new bootstrap.Modal(closeoutModalEl).show();
-  });
-
-  // ─── CONFIRM CLOSE-OUT ─────────────────────────────────────────────
-  closeoutConfirm.addEventListener('click', ()=>{
-    const id  = closeoutEntryId.value;
-    const d   = closeoutDate.value;
-    const t   = closeoutTime.value;
-    const com = closeoutComment.value.trim();
-    if (!d || !t) return alert('Pick date & time.');
-    if (!com)     return alert('Please describe what you did.');
-
-    fetch("{% url 'closeout_downtime_entry' %}", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken':  document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({
-        entry_id:         id,
-        closeout:         `${d} ${t}`,
-        closeout_comment: com
+  document.getElementById('delete-button')
+    .addEventListener('click', ()=>{
+      if (!confirm('Delete this downtime entry?')) return;
+      const id = edit.idInput.value;
+      fetch("{% url 'delete_downtime_entry' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ entry_id: id })
       })
-    })
-    .then(r=>r.ok ? r.json() : Promise.reject())
-    .then(()=>{
-      bootstrap.Modal.getInstance(closeoutModalEl).hide();
-      bootstrap.Modal.getInstance(editModalEl).hide();
-      tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
-    })
-    .catch(()=>alert('Somebody has assigned themselves to this job. They will close it out'));
-  });
+      .then(r=>r.ok ? r.json() : Promise.reject())
+      .then(()=>{
+        bootstrap.Modal.getInstance(editModalEl).hide();
+        tbody.querySelector(`tr[data-entry-id="${id}"]`)?.remove();
+      })
+      .catch(()=>alert('Error deleting entry. Have all participants left the job?'));
+    });
 
   // ─── INACTIVITY-BASED RELOAD ───────────────────────────────────────
   let inactivityTimer;
@@ -576,7 +523,7 @@
     inactivityTimer = setTimeout(()=>{
       console.log('Reloading after 5 m inactivity');
       location.reload();
-    }, 5*60*1000);
+    }, 5 * 60 * 1000);   // 5 seconds for testing; change to 5 * 60 * 1000 for 5 minutes
   }
   document.addEventListener('click', resetInactivityTimer);
   resetInactivityTimer();
@@ -585,4 +532,5 @@
   filterRows();
 })();
 </script>
+
 {% endblock %}

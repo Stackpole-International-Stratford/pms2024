@@ -5,7 +5,7 @@ import mysql.connector
 # import mysql.connector
 from django.template.loader import render_to_string
 from django.contrib import messages
-
+import re
 
 
 from collections import defaultdict
@@ -16,6 +16,7 @@ from datetime import datetime, date, timedelta
 import time
 from zoneinfo import ZoneInfo
 from django.views.decorators.http import require_POST
+from django.db.models import Q
 
 from .forms import MachineInquiryForm
 from .forms import CycleQueryForm
@@ -34,6 +35,7 @@ from django.utils.dateparse import parse_datetime
 from django.http import JsonResponse
 from plant.models.setupfor_models import SetupFor, AssetCycleTimes
 
+from plant.models.maintenance_models import MachineDowntimeEvent
 
 from .forms import ShiftTotalsForm
 import time
@@ -6047,9 +6049,9 @@ def compute_overlap_label(detail_start, detail_end, pr_entries):
 
         # Determine the type of overlap and return along with the idnumber
         if detail_start >= pr_start and detail_end <= pr_end:
-            return {"overlap": "WITHIN PR", "pr_id": pr_id}
+            return {"overlap": "WITHIN DT", "pr_id": pr_id}
         elif detail_start <= pr_start and detail_end >= pr_end:
-            return {"overlap": "CONTAINS PR", "pr_id": pr_id}
+            return {"overlap": "CONTAINS DT", "pr_id": pr_id}
         elif detail_start < pr_start and detail_end > pr_start and detail_end < pr_end:
             return {"overlap": "OVERLAP LEFT", "pr_id": pr_id}
         elif detail_start > pr_start and detail_start < pr_end and detail_end > pr_end:
@@ -7867,7 +7869,7 @@ def compute_oee_metrics(
     
       1. Planned Production Time (PPT) = total_potential_minutes - planned_downtime
       2. Run Time = PPT - (unplanned_downtime)
-      3. ideal_cycle_time = PPT / target_parts  (target_parts is overall_total_target or per-line target)
+      3. ideal_cycle_time = potential minutes / target_parts  (target_parts is overall_total_target or per-line target)
       4. Availability = run_time / PPT
       5. Performance = (ideal_cycle_time * actual_parts) / run_time
       6. Quality = (total produced - scrap) / total produced
@@ -7891,7 +7893,7 @@ def compute_oee_metrics(
     # Overall metrics calculations
     overall_ppt = overall_total_potential_minutes - overall_planned_downtime_minutes
     overall_run_time = overall_ppt - (overall_unplanned_downtime_minutes)
-    overall_ideal_cycle_time = overall_ppt / overall_total_target if overall_total_target > 0 else 0.0
+    overall_ideal_cycle_time = overall_total_potential_minutes / overall_total_target if overall_total_target > 0 else 0.0
 
 
     overall_runtime = overall_total_potential_minutes - overall_planned_downtime_minutes - overall_unplanned_downtime_minutes
@@ -7932,7 +7934,7 @@ def compute_oee_metrics(
         
         ppt = potential - planned_downtime
         run_time = ppt - (unplanned_downtime)
-        ideal_cycle_time = ppt / target if target > 0 else 0.0
+        ideal_cycle_time = potential / target if target > 0 else 0.0
         
 
         runtime = potential - unplanned_downtime - planned_downtime
@@ -7974,81 +7976,54 @@ def compute_oee_metrics(
     return {"overall": overall_metrics, "lines": lines_metrics}
 
 
-def fetch_prdowntime1_entries_with_id(assetnum, called4helptime, completedtime):
+def fetch_prdowntime1_entries_with_id(assetnum: str,
+                                      called4helptime: str,
+                                      completedtime: str):
     """
-    A copy of `fetch_prdowntime1_entries` that also fetches the `idnumber` column.
-    
-    :param assetnum: The asset number of the machine.
-    :param called4helptime: The start of the time window (ISO 8601 format).
-    :param completedtime: The end of the time window (ISO 8601 format).
-    :return: List of rows matching the criteria, each row shaped like:
-             [idnumber, problem, called4helptime, completedtime].
+    Returns a list of 5-tuples:
+      (id, comment, category, start_at: datetime, closeout_at: datetime or None)
+    matching any MachineDowntimeEvent overlapping the given window.
     """
-    import re
-    import datetime, os, importlib
-    from datetime import datetime
+    # 1) normalize the machine identifier
+    assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
 
-    try:
-        # Strip trailing letters from assetnum (e.g., "1703R" or "1703L" becomes "1703")
-        assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
+    # 2) parse the ISO-8601 window into epochs
+    start_dt = datetime.fromisoformat(called4helptime)
+    end_dt   = datetime.fromisoformat(completedtime)
+    start_ts = int(start_dt.timestamp())
+    end_ts   = int(end_dt.timestamp())
 
-        # Parse the dates to ensure they are in datetime format.
-        called4helptime = datetime.fromisoformat(called4helptime)
-        completedtime = datetime.fromisoformat(completedtime)
+    # 3) rebuild your “overlap” Q exactly as before
+    overlap = (
+        (Q(start_epoch__lt=start_ts) &
+         (Q(closeout_epoch__gte=start_ts) | Q(closeout_epoch__isnull=True)))
+        |
+        Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)
+        |
+        (Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts) &
+         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+        |
+        (Q(start_epoch__lt=start_ts) &
+         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+    )
 
-        # Dynamically import `get_db_connection` from settings.py.
-        settings_path = os.path.join(os.path.dirname(__file__), '../pms/settings.py')
-        spec = importlib.util.spec_from_file_location("settings", settings_path)
-        settings = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(settings)
-        get_db_connection = settings.get_db_connection
+    qs = (
+        MachineDowntimeEvent.objects
+        .filter(machine=assetnum, is_deleted=False)
+        .filter(overlap)
+        .order_by('start_epoch')
+    )
 
-        # Get database connection.
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Raw SQL query to fetch the required data, now including `idnumber`.
-        query = """
-        SELECT
-            idnumber,
-            problem,
-            called4helptime,
-            completedtime
-        FROM pr_downtime1
-        WHERE assetnum = %s
-          AND (
-            -- Entries that start before the window and bleed into the window.
-            (called4helptime < %s AND (completedtime >= %s OR completedtime IS NULL))
-            -- Entries that start within the window.
-            OR (called4helptime >= %s AND called4helptime <= %s)
-            -- Entries that start in the window and bleed out.
-            OR (called4helptime >= %s AND called4helptime <= %s AND (completedtime > %s OR completedtime IS NULL))
-            -- Entries that bleed both before and after the window.
-            OR (called4helptime < %s AND (completedtime > %s OR completedtime IS NULL))
-          )
-        """
-
-        # Execute the query.
-        cursor.execute(query, (
-            assetnum,
-            called4helptime, called4helptime,
-            called4helptime, completedtime,
-            called4helptime, completedtime, completedtime,
-            called4helptime, completedtime
+    rows = []
+    for ev in qs:
+        rows.append((
+            ev.id,              # idnumber
+            ev.comment,         # problem/comment
+            ev.category,        # new Scheduled vs. Unplanned flag
+            ev.start_at,        # datetime.fromtimestamp(ev.start_epoch)
+            ev.closeout_at      # datetime or None
         ))
-
-        # Fetch all rows.
-        rows = cursor.fetchall()
-
-        # Close the cursor and connection.
-        cursor.close()
-        conn.close()
-
-        return rows
-
-    except Exception as e:
-        return {"error": str(e)}
-
+    return rows
 
 def get_parts_for_machine(lines, line_name, machine_id):
     """
@@ -8453,66 +8428,103 @@ def calculate_downtime_events(cursor, machine_number, start_timestamp, end_times
     return downtime_seconds, downtime_events
 
 
-def get_pr_downtime_entries(machine_number, start_time, end_time):
-    import datetime, os, importlib, json
-    """Fetches and processes PR downtime entries for a machine."""
-    pr_entries = fetch_prdowntime1_entries_with_id(machine_number, start_time.isoformat(), end_time.isoformat())
+def get_pr_downtime_entries(machine_number: str,
+                            start_time: datetime,
+                            end_time: datetime):
+    """
+    Fetches the raw tuples from fetch_prdowntime1_entries_with_id(),
+    then unpacks them into dicts with the keys your other helpers expect:
+      idnumber, problem, category, start_time, end_time, minutes_down.
+    """
+    pr_rows = fetch_prdowntime1_entries_with_id(
+        machine_number,
+        start_time.isoformat(),
+        end_time.isoformat()
+    )
+
     pr_downtime_entries = []
-    for entry in pr_entries:
-        pr_id = entry[0]
-        problem = entry[1]
-        called = entry[2]
-        completed = entry[3] if len(entry) > 3 else None
+    for pr_id, problem, category, called, completed in pr_rows:
+        # normalize to datetime if a string slipped through
+        dt_called = (
+            called
+            if isinstance(called, datetime)
+            else (datetime.fromisoformat(called) if called else None)
+        )
+        dt_completed = (
+            completed
+            if isinstance(completed, datetime)
+            else (datetime.fromisoformat(completed) if completed else None)
+        )
 
-        try:
-            dt_called = datetime.datetime.fromisoformat(called) if isinstance(called, str) else called
-        except Exception:
-            dt_called = None
-        try:
-            dt_completed = datetime.datetime.fromisoformat(completed) if (completed and isinstance(completed, str)) else completed
-        except Exception:
-            dt_completed = None
+        # compute minutes_down only when we have both endpoints
+        if dt_called and dt_completed:
+            delta = dt_completed - dt_called
+            minutes_down = int(delta.total_seconds() // 60)
+        else:
+            minutes_down = None
 
-        minutes_down = int((dt_completed - dt_called).total_seconds() / 60) if dt_called and dt_completed else "N/A"
-        pr_entry = {
-            "idnumber": pr_id,
-            "problem": problem,
-            "start_time": dt_called,
-            "end_time": dt_completed,
+        pr_downtime_entries.append({
+            "idnumber":    pr_id,
+            "problem":     problem,
+            "category":    category,
+            "start_time":  dt_called,
+            "end_time":    dt_completed,
             "minutes_down": minutes_down,
-        }
-        pr_downtime_entries.append(pr_entry)
+        })
+
     return pr_downtime_entries
 
-
-def calculate_planned_downtime(downtime_events, pr_downtime_entries):
-    import datetime, os, importlib, json
+def calculate_planned_downtime(downtime_events, pr_downtime_entries, block_end):
     """
-    Calculates planned downtime as the sum of downtime event minutes
-    that do not overlap any PR downtime entry and are longer than 240 minutes.
-    """
-    planned_downtime_minutes = 0
-    pr_intervals = []
-    for pr in pr_downtime_entries:
-        if pr["start_time"] and pr["end_time"]:
-            pr_intervals.append((pr["start_time"], pr["end_time"]))
+    Sum only the overlap (in minutes) between your production-gap events
+    (downtime_events) and any PR entries whose category == "Scheduled Down".
+    If a PR entry has no end_time, it’s assumed to run until block_end.
     
-    for event in downtime_events:
-        dt_event_start = datetime.datetime.strptime(event["start"], "%Y-%m-%d %H:%M")
-        dt_event_end = datetime.datetime.strptime(event["end"], "%Y-%m-%d %H:%M")
-        overlap_found = any(dt_event_start < pr_end and pr_start < dt_event_end for pr_start, pr_end in pr_intervals)
-        if not overlap_found and event["minutes_down"] > 240:
-            planned_downtime_minutes += event["minutes_down"]
-    return planned_downtime_minutes
+    :param downtime_events: list of dicts with "start" and "end" (either datetime or "%Y-%m-%d %H:%M" strings)
+    :param pr_downtime_entries: list of dicts with "category", "start_time" (datetime), and optional "end_time" (datetime or None)
+    :param block_end: datetime marking the end of your GFX window
+    :returns: total planned downtime in minutes (int)
+    """
+    planned = 0
+
+    for pr in pr_downtime_entries:
+        # only consider scheduled-down entries
+        if pr.get("category") != "Scheduled Down":
+            continue
+
+        pr_start = pr.get("start_time")
+        if not pr_start:
+            # no valid start → skip
+            continue
+
+        # if still open, treat as running until block_end
+        pr_end = pr.get("end_time") or block_end
+
+        for ev in downtime_events:
+            # normalize event start/end to datetime
+            ev_start = ev["start"] if isinstance(ev["start"], datetime) \
+                       else datetime.strptime(ev["start"], "%Y-%m-%d %H:%M")
+            ev_end   = ev["end"]   if isinstance(ev["end"], datetime) \
+                       else datetime.strptime(ev["end"],   "%Y-%m-%d %H:%M")
+
+            # compute overlap window
+            overlap_start = max(pr_start, ev_start)
+            overlap_end   = min(pr_end,   ev_end)
+
+            if overlap_end > overlap_start:
+                mins = int((overlap_end - overlap_start).total_seconds() // 60)
+                planned += mins
+
+    return planned
 
 
 def calculate_unplanned_downtime(total_downtime_minutes, planned_downtime_minutes):
     """
-    Calculates unplanned downtime as the difference between total downtime
-    and planned downtime.
+    Unplanned = total downtime minus planned downtime,
+    but never negative.
     """
-    return total_downtime_minutes - planned_downtime_minutes
-
+    unplanned = total_downtime_minutes - planned_downtime_minutes
+    return max(0, unplanned)
 
 
 
@@ -8556,7 +8568,7 @@ def compute_machine_oee(machine_data, queried_minutes):
         # adjusted_target = target * uptime_ratio
         # adjusted_target = target / ((unplanned_downtime + planned_downtime) / potential)
 
-    ideal_cycle_time = ppt / target if target > 0 else 0.0
+    ideal_cycle_time = potential / target if target > 0 else 0.0
     adjusted_target = run_time / ideal_cycle_time if ideal_cycle_time > 0 else 0.0
     availability = run_time / ppt if ppt > 0 else 1.0
     # performance = (ideal_cycle_time * produced) / run_time if run_time > 0 else 0.0
@@ -9006,7 +9018,7 @@ def fetch_combined_oee_production_data(request):
                     # print(f"[DEBUG] ---- Machine {machine_number}: Added {len(downtime_events)} downtime events")
 
                     # Calculate planned downtime.
-                    planned = calculate_planned_downtime(downtime_events, pr_entries)
+                    planned = calculate_planned_downtime(downtime_events, pr_entries, block_end)
                     machine_data["planned_downtime_minutes"] += planned
                     op_total_planned_downtime += planned
                     line_total_planned_downtime += planned

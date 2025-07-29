@@ -261,104 +261,45 @@ def find_deleted_forms(form_type_id):
 
 
 def find_forms_view(request):
-    """
-    Display a list of forms for a selected form type, excluding those marked as deleted,
-    and pass along user permissions for rendering.
-
-    This view will first tag any expired questions via `find_and_tag_expired_questions()`,
-    then look for a `form_type` query parameter in the request. If provided, it will:
-
-      1. Retrieve the corresponding `FormType` (404 if not found).
-      2. Use `find_deleted_forms()` to get IDs of forms whose metadata has `deleted=True`.
-      3. Query `Form` objects of that type, excluding deleted ones, ordered by newest first.
-      4. Build the set of all metadata keys present across those forms.
-      5. Determine whether the authenticated user belongs to the
-         “LPA Managers” or “Quality Engineer” groups.
-      6. Render `forms/find_forms.html` with:
-         - `form_type`: the selected `FormType` instance
-         - `forms`: the filtered & ordered form queryset
-         - `metadata_keys`: a set of all metadata keys
-         - `is_lpa_manager`, `is_quality_engineer`, `is_authenticated`
-
-    If no `form_type` is specified, it retrieves all `FormType` instances and renders
-    `forms/select_form_type.html` with the same permission flags.
-
-    Args:
-        request (django.http.HttpRequest):
-            The incoming HTTP request, possibly carrying a `form_type` GET parameter.
-
-    Returns:
-        django.http.HttpResponse:
-            - If `form_type` is provided and valid, renders the form list template.
-            - Otherwise, renders the form-type selection template.
-
-    Raises:
-        Http404:
-            If a `form_type` ID is provided but does not correspond to any `FormType`.
-    """
-
-    # Check and tag expired questions
+    # 1) Tag expired questions
     find_and_tag_expired_questions()
 
-    # Get the form type ID from the request
+    # 2) Choose form_type or show selector
     form_type_id = request.GET.get('form_type')
-
-    if form_type_id:
-        # Fetch the FormType object
-        form_type = get_object_or_404(FormType, id=form_type_id)
-        
-        # Get the IDs of deleted forms
-        deleted_form_ids = find_deleted_forms(form_type_id)
-
-        # Fetch the forms of that form type, excluding deleted forms and ordering by created_at descending
-        forms = Form.objects.filter(
-            form_type_id=form_type_id
-        ).exclude(id__in=deleted_form_ids).order_by('-created_at')
-        
-        # Gather all unique metadata keys across all forms for this form type
-        metadata_keys = set()
-        for form in forms:
-            metadata_keys.update(form.metadata.keys())  # Assuming `metadata` is a dictionary
-
-        # Check if the user is authenticated and part of the "LPA Managers" group
-        is_lpa_manager = False
-        if request.user.is_authenticated:
-            is_lpa_manager = request.user.groups.filter(name="LPA Managers").exists()
-
-        is_quality_engineer = False
-        if request.user.is_authenticated:
-            is_quality_engineer = request.user.groups.filter(name="Quality Engineer").exists()
-
-
-        return render(request, 'forms/find_forms.html', {
-            'form_type': form_type,
-            'forms': forms,
-            'metadata_keys': metadata_keys,
-            'is_lpa_manager': is_lpa_manager,  # Pass this to the template
-            'is_quality_engineer': is_quality_engineer,
-            'is_authenticated': request.user.is_authenticated,  # Add this
-
+    if not form_type_id:
+        return render(request, 'forms/select_form_type.html', {
+            'form_types': FormType.objects.all(),
+            'is_lpa_manager': request.user.is_authenticated
+                              and request.user.groups.filter(name="LPA Managers").exists(),
+            'is_quality_engineer': request.user.is_authenticated
+                                   and request.user.groups.filter(name="Quality Engineer").exists(),
+            'is_authenticated': request.user.is_authenticated,
         })
 
-    # If no form type is selected, display the form type selection
-    form_types = FormType.objects.all()
+    # 3) Load FormType or 404
+    form_type = get_object_or_404(FormType, id=form_type_id)
 
-    # Check if the user is authenticated and part of the "LPA Managers" group
-    is_lpa_manager = False
-    if request.user.is_authenticated:
-        is_lpa_manager = request.user.groups.filter(name="LPA Managers").exists()
+    # 4) Fetch all non‐deleted forms for this type
+    deleted_ids = find_deleted_forms(form_type_id)
+    forms = (Form.objects
+                 .filter(form_type_id=form_type_id)
+                 .exclude(id__in=deleted_ids)
+                 .order_by('-created_at'))
 
-    is_quality_engineer = False
-    if request.user.is_authenticated:
-        is_quality_engineer = request.user.groups.filter(name="Quality Engineer").exists()
+    # 5) Role flags
+    is_lpa_manager      = request.user.is_authenticated \
+                          and request.user.groups.filter(name="LPA Managers").exists()
+    is_quality_engineer = request.user.is_authenticated \
+                          and request.user.groups.filter(name="Quality Engineer").exists()
 
-    return render(request, 'forms/select_form_type.html', {
-        'form_types': form_types,
-        'is_lpa_manager': is_lpa_manager,  # Pass this to the template
-        'is_quality_engineer': is_quality_engineer,  # Pass this to the template
-        'is_authenticated': request.user.is_authenticated,  # Add this
+    # 6) Render everything—no filter logic here anymore!
+    return render(request, 'forms/find_forms.html', {
+        'form_type': form_type,
+        'forms': forms,
+        'is_lpa_manager': is_lpa_manager,
+        'is_quality_engineer': is_quality_engineer,
+        'is_authenticated': request.user.is_authenticated,
     })
-
 
 
 

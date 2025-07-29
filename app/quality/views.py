@@ -2,12 +2,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Feat
 from .forms import FeatForm
-from plant.models.setupfor_models import Part
+from plant.models.setupfor_models import Part, Asset
 from django.db import transaction  
 from django.db.models import F
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import ScrapForm, FeatEntry, SupervisorAuthorization
+from .models import ScrapForm, FeatEntry, SupervisorAuthorization, ScrapCategory, ScrapSubmission, ScrapSystemOperation
 import json
 from .models import Feat
 from django.contrib.auth.decorators import login_required
@@ -16,8 +16,13 @@ import os
 import importlib.util
 import inspect
 import re
-
-
+from decimal import Decimal
+from django.contrib import messages
+from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_POST
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.views.decorators.http import require_http_methods
 
 
 def index(request):
@@ -2276,3 +2281,255 @@ def add_new_epv(request):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
+
+
+
+# =============================================================================
+# =============================================================================
+# ======================= New Scrap System ====================================
+# =============================================================================
+# =============================================================================
+
+def scrap_entry(request):
+    """
+    GET:  Render the “Add & Submit All” interface.
+    POST: Bulk-create ScrapSubmission rows from the `entries` JSON,
+          including a shared operator_number.
+    """
+    # 1) Master list of part numbers
+    part_numbers = list(
+        ScrapSystemOperation.objects
+            .order_by('part_number')
+            .values_list('part_number', flat=True)
+            .distinct()
+    )
+
+    # 2) Form-state defaults (for re-render on validation errors)
+    sel_pn        = ''
+    sel_mc        = ''
+    sel_op        = ''
+    sel_cat       = ''
+    sel_operator  = ''   # ← your new operator field
+    sel_qty       = ''   # ← start blank
+
+    machines   = []
+    operations = []
+    categories = []
+
+    if request.method == 'POST':
+        # --- pull back the operator number (single field) ---
+        sel_operator = request.POST.get('operator', '').strip()
+
+        # --- repopulate any dropdowns so they stay visible ---
+        sel_pn = request.POST.get('part_number', '').strip()
+        if sel_pn:
+            machines = (
+                Asset.objects
+                     .filter(scrapsystemoperation__part_number=sel_pn)
+                     .order_by('asset_number')
+                     .values_list('asset_number', flat=True)
+                     .distinct()
+            )
+
+        sel_mc = request.POST.get('machine', '').strip()
+        if sel_pn and sel_mc:
+            operations = list(
+                ScrapSystemOperation.objects
+                    .filter(part_number=sel_pn, assets__asset_number=sel_mc)
+                    .order_by('operation')
+                    .values_list('operation', flat=True)
+                    .distinct()
+            )
+
+        sel_op = request.POST.get('operation', '').strip()
+        if sel_pn and sel_mc and sel_op:
+            qs = ScrapSystemOperation.objects.filter(
+                part_number=sel_pn,
+                operation=sel_op,
+                assets__asset_number=sel_mc
+            )
+            if qs.exists():
+                categories = list(
+                    qs.first()
+                      .scrap_categories
+                      .values_list('name', flat=True)
+                )
+
+        # 3) pull in the JSON array of “added” rows
+        raw_entries = request.POST.get('entries', '[]')
+        try:
+            entries = json.loads(raw_entries)
+        except json.JSONDecodeError:
+            entries = []
+
+        # 4) Validation: need at least one entry
+        if not entries:
+            messages.error(request, "No entries to submit. Please Add at least one row.")
+        else:
+            created = 0
+            for idx, e in enumerate(entries, start=1):
+                part      = e.get('part')
+                machine   = e.get('machine')
+                operation = e.get('operation')
+                category  = e.get('category')
+                qty_str   = e.get('qty')
+
+                # presence check
+                if not all([part, machine, operation, category, qty_str, sel_operator]):
+                    messages.warning(request,
+                        f"Entry #{idx} missing data or operator—skipped."
+                    )
+                    continue
+
+                # parse qty
+                try:
+                    qty = int(qty_str)
+                    if qty < 1:
+                        raise ValueError
+                except ValueError:
+                    messages.warning(request,
+                        f"Entry #{idx} has invalid quantity “{qty_str}”—skipped."
+                    )
+                    continue
+
+                # find matching ScrapSystemOperation
+                sso = (
+                    ScrapSystemOperation.objects
+                        .filter(
+                            part_number=part,
+                            operation=operation,
+                            assets__asset_number=machine
+                        )
+                        .first()
+                )
+                if not sso:
+                    messages.warning(request,
+                        f"Entry #{idx} has invalid part/op/machine—skipped."
+                    )
+                    continue
+
+                # latest Asset
+                asset = (
+                    Asset.objects
+                         .filter(asset_number=machine)
+                         .order_by('-id')
+                         .first()
+                )
+                if not asset:
+                    messages.warning(request,
+                        f"Entry #{idx} machine not found—skipped."
+                    )
+                    continue
+
+                # latest Category
+                cat = (
+                    ScrapCategory.objects
+                                 .filter(name=category)
+                                 .order_by('-id')
+                                 .first()
+                )
+                if not cat:
+                    messages.warning(request,
+                        f"Entry #{idx} category not found—skipped."
+                    )
+                    continue
+
+                # compute & save
+                unit_cost  = sso.cost
+                total_cost = unit_cost * qty
+
+                ScrapSubmission.objects.create(
+                    scrap_system_operation=sso,
+                    asset=asset,
+                    scrap_category=cat,
+
+                    part_number     = part,
+                    machine         = machine,
+                    operation_name  = operation,
+                    category_name   = category,
+                    operator_number = sel_operator,
+
+                    quantity   = qty,
+                    unit_cost  = unit_cost,
+                    total_cost = total_cost,
+                )
+                created += 1
+
+            if created:
+                messages.success(request, f"{created} scrap entr{'y' if created == 1 else 'ies'} recorded.")
+                return redirect('scrap_entry')
+            else:
+                messages.error(request, "No valid entries were recorded.")
+
+    # 5) FINAL render (GET or POST with errors)
+    return render(request, 'quality/scrap_entry.html', {
+        'part_numbers':         part_numbers,
+        'machines':             machines,
+        'operations':           operations,
+        'categories':           categories,
+        'selected_part_number': sel_pn,
+        'selected_machine':     sel_mc,
+        'selected_operation':   sel_op,
+        'selected_category':    sel_cat,
+        'selected_operator':    sel_operator,
+        'quantity':             sel_qty,
+    })
+
+def get_operations(request):
+    """
+    AJAX: return all operations for a given part_number.
+    If machine is provided, only operations valid on that machine.
+    """
+    pn = request.GET.get('part_number')
+    mc = request.GET.get('machine')  # may be None
+
+    qs = ScrapSystemOperation.objects.filter(part_number=pn)
+    if mc:
+        qs = qs.filter(assets__asset_number=mc)
+
+    ops = (
+        qs.order_by('operation')
+          .values_list('operation', flat=True)
+          .distinct()
+    )
+    return JsonResponse({'results': list(ops)})
+
+
+def get_machines(request):
+    """
+    AJAX: return one machine per asset_number (latest if duplicates) for a part.
+    If operation is provided, only machines that perform that operation.
+    """
+    pn = request.GET.get('part_number')
+    op = request.GET.get('operation')  # may be None
+
+    qs = Asset.objects.filter(scrapsystemoperation__part_number=pn)
+    if op:
+        qs = qs.filter(scrapsystemoperation__operation=op)
+
+    machines = (
+        qs.order_by('asset_number', '-id')
+          .values_list('asset_number', flat=True)
+          .distinct()
+    )
+    return JsonResponse({'results': list(machines)})
+
+
+def get_categories(request):
+    """AJAX: return all scrap categories for PN + machine + operation."""
+    pn = request.GET.get('part_number')
+    mc = request.GET.get('machine')
+    op = request.GET.get('operation')
+    try:
+        sso = ScrapSystemOperation.objects.get(
+            part_number=pn,
+            operation=op,
+            assets__asset_number=mc
+        )
+        cats = sso.scrap_categories.all().values_list('name', flat=True)
+        return JsonResponse({'results': list(cats)})
+    except ScrapSystemOperation.DoesNotExist:
+        return JsonResponse({'results': []})

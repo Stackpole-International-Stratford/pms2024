@@ -1,5 +1,8 @@
 from django.db import models
 from plant.models.setupfor_models import Part  # Importing the Part model
+from decimal import Decimal
+from django.core.exceptions import ValidationError
+from plant.models.setupfor_models import Asset
 
 class SupervisorAuthorization(models.Model):
     """
@@ -419,3 +422,87 @@ class RedRabbitsEntry(models.Model):
 
 
 
+
+
+
+
+
+# =================================================================
+# =================================================================
+# ================ New Scrap System Models ========================
+# =================================================================
+# =================================================================
+
+
+class ScrapCategory(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Scrap categories"
+    
+
+
+class ScrapSystemOperation(models.Model):
+    # an operation can have 0 or many machines...
+    assets = models.ManyToManyField(Asset, blank=True)
+    # ...and 0 or many scrap categories
+    scrap_categories = models.ManyToManyField(ScrapCategory, blank=True)
+
+    part_number = models.CharField(max_length=100)
+    operation   = models.CharField(max_length=256)
+    cost        = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.part_number} – {self.operation}"
+    
+
+
+class ScrapSubmission(models.Model):
+    # keep the FKs for referential integrity
+    scrap_system_operation = models.ForeignKey(
+        ScrapSystemOperation,
+        on_delete=models.CASCADE,
+        related_name='submissions'
+    )
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name='scrap_submissions'
+    )
+    scrap_category = models.ForeignKey(
+        ScrapCategory,
+        on_delete=models.CASCADE,
+        related_name='scrap_submissions'
+    )
+
+    # denormalized fields for easy reporting
+    part_number     = models.CharField(max_length=100)
+    machine         = models.CharField(max_length=100)
+    operation_name  = models.CharField(max_length=256)
+    category_name   = models.CharField(max_length=100)
+    came_from_op = models.CharField(
+        max_length=256,
+        blank=True,
+        default='',
+        null=False,
+        help_text='Optional: operation where this scrap originated'
+    )
+
+    operator_number = models.CharField(max_length=50)
+
+
+    quantity        = models.PositiveIntegerField()
+    unit_cost       = models.DecimalField(max_digits=10, decimal_places=2)
+    total_cost      = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at      = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return (
+            f"{self.part_number} @ {self.machine} – "
+            f"{self.operation_name}/{self.category_name} "
+            f"(qty {self.quantity})"
+        )
