@@ -3258,13 +3258,14 @@ def render_stale_machines_table(
     timestamp was > threshold_minutes ago (but ≤ max_age_days old),
     whose IDs are digits or digits+L/R, sorted by minutes down descending,
     and indicating any downtime event—showing Scheduled Down in yellow,
-    plus its start/end times in EST if available.
+    plus its start/end times in EST if available, including subcategory.
     """
+    # timestamps in seconds since epoch
     now_epoch      = int(timezone.now().timestamp())
     cutoff_epoch   = now_epoch - threshold_minutes * 60
     week_ago_epoch = now_epoch - max_age_days * 86400
 
-    # 1) Fetch candidate machines
+    # 1) Fetch candidate machines that haven't reported in threshold_minutes
     sql = """
        SELECT Machine, MAX(TimeStamp) AS latest_ts
        FROM   GFxPRoduction
@@ -3275,38 +3276,39 @@ def render_stale_machines_table(
         cur.execute(sql, [cutoff_epoch])
         rows = cur.fetchall()  # [(machine, latest_ts), ...]
 
-    # 2) Filter to valid IDs & not too old
+    # 2) Keep only valid IDs and not older than max_age_days
     candidates = [
         (m, ts) for m, ts in rows
         if VALID_PATTERN.match(m) and ts >= week_ago_epoch
     ]
     if not candidates:
-        return ""  # nothing to show
+        return ""  # no stale machines
 
     machines = [m for m, _ in candidates]
 
-    # 3) Pre‐fetch downtime events overlapping the "stale" period
+    # 3) Pre‑fetch downtime events overlapping the stale window, including subcategory
     ev_qs = MachineDowntimeEvent.objects.filter(
         machine__in=machines,
         is_deleted=False,
-        start_epoch__lte=now_epoch,  # began before now
+        start_epoch__lte=now_epoch,
     ).filter(
         Q(closeout_epoch__isnull=True) | Q(closeout_epoch__gte=week_ago_epoch)
-    ).values("machine", "category", "start_epoch", "closeout_epoch")
+    ).values(
+        "machine", "category", "subcategory", "start_epoch", "closeout_epoch"
+    )
 
     events_by_machine: Dict[str, List[Dict]] = {}
     for ev in ev_qs:
         events_by_machine.setdefault(ev["machine"], []).append(ev)
 
-    # 4) Build stale list, associating each machine with at most one event
+    # 4) For each candidate, pick at most one overlapping event (preferring Scheduled Down)
     stale = []
     for m, ts in candidates:
         chosen = None
         for ev in events_by_machine.get(m, []):
             ev_end = ev["closeout_epoch"] or now_epoch
-            # if event overlaps [ts, now]
+            # event overlaps [ts, now]
             if ev["start_epoch"] <= now_epoch and ev_end >= ts:
-                # prefer Scheduled Down if present
                 if ev["category"] == "Scheduled Down":
                     chosen = ev
                     break
@@ -3316,11 +3318,11 @@ def render_stale_machines_table(
             "machine":   m,
             "ts":        ts,
             "down_mins": int((now_epoch - ts) / 60),
-            "event":     chosen,  # or None
+            "event":     chosen,
         })
     stale.sort(key=lambda x: x["down_mins"], reverse=True)
 
-    # 5) Render HTML rows
+    # 5) Build HTML rows
     est = pytz.timezone("America/New_York")
     rows_html = []
     for item in stale:
@@ -3328,18 +3330,19 @@ def render_stale_machines_table(
         ev = item["event"]
 
         if ev:
-            # format start/end in EST
-            start_dt = datetime.fromtimestamp(ev["start_epoch"], tz=pytz.UTC).astimezone(est)
-            end_epoch = ev["closeout_epoch"] or now_epoch
-            end_dt = datetime.fromtimestamp(end_epoch, tz=pytz.UTC).astimezone(est)
+            start_dt   = datetime.fromtimestamp(ev["start_epoch"], tz=pytz.UTC).astimezone(est)
+            end_epoch  = ev["closeout_epoch"] or now_epoch
+            end_dt     = datetime.fromtimestamp(end_epoch, tz=pytz.UTC).astimezone(est)
+            times_str  = f"{start_dt:%Y-%m-%d %H:%M}–{end_dt:%Y-%m-%d %H:%M}"
+            cat        = ev["category"]
+            sub        = ev.get("subcategory", "")
+            dot        = "🟡" if cat == "Scheduled Down" else "🔴"
 
-            times_str = f"{start_dt:%Y-%m-%d %H:%M}–{end_dt:%Y-%m-%d %H:%M}"
-            cat = ev["category"]
-            if cat == "Scheduled Down":
-                dot = "🟡"
+            # include subcategory if present
+            if sub:
+                label = f" ({cat} / {sub}: {times_str})"
             else:
-                dot = "🔴"
-            label = f" ({cat}: {times_str})"
+                label = f" ({cat}: {times_str})"
         else:
             dot = label = ""
 
@@ -3354,7 +3357,7 @@ def render_stale_machines_table(
           </tr>
         """)
 
-    # 6) Wrap in table
+    # 6) Wrap and return the complete table
     return f"""
     <h2 style="font-family:Arial,sans-serif;
                margin:16px 0 8px;
@@ -3896,4 +3899,3 @@ def send_all_dashboards(request, pwd):
     msg.send(fail_silently=False)
 
     return HttpResponse("All dashboards emailed ✅")
-
