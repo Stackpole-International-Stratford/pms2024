@@ -31,3 +31,28 @@ class HourlyProductionReportRecipient(models.Model):
     added_at   = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f"{self.email}"
+    
+
+
+
+
+class PagesConfig(models.Model):
+    """
+    A singleton model to store the entire PAGES JSON.
+    You’ll keep exactly one row in here.
+    """
+    # A human‑friendly name in case you ever have more than one config
+    name = models.CharField(max_length=50, unique=True, default="PAGES")
+    # JSONField is built‑in in Django 3.1+; if you’re on older Django+Postgres, 
+    # use django.contrib.postgres.fields.JSONField instead.
+    data = models.JSONField(
+        help_text="Paste the entire PAGES JSON object here."
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Pages configuration"
+        verbose_name_plural = "Pages configurations"
+
