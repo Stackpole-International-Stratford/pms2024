@@ -1411,6 +1411,13 @@ def scrap_entry(request):
             else:
                 messages.error(request, "No valid entries were recorded.")
 
+    
+    # compute flag for template
+    is_quality_engineer = (
+        request.user.is_authenticated
+        and request.user.groups.filter(name='Quality Engineer').exists()
+    )
+
     # 5) FINAL render (GET or POST with errors)
     return render(request, 'quality/scrap_entry.html', {
         'part_numbers':         part_numbers,
@@ -1423,7 +1430,12 @@ def scrap_entry(request):
         'selected_category':    sel_cat,
         'selected_operator':    sel_operator,
         'quantity':             sel_qty,
+        'is_quality_engineer':   is_quality_engineer,
+
     })
+
+
+
 
 def get_operations(request):
     """
