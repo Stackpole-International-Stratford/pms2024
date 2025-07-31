@@ -1,0 +1,29 @@
+{% extends 'parent.html' %}
+{% load static %}
+{% block content %}
+<div class="container mt-5">
+  <h1>Upload Excel File</h1>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} mt-3">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="mt-4">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="excelFile" class="form-label">Select Excel file</label>
+      <input
+        class="form-control"
+        type="file"
+        id="excelFile"
+        name="excel_file"
+        accept=".xls,.xlsx"
+        required
+      >
+    </div>
+    <button type="submit" class="btn btn-primary">Upload &amp; Print</button>
+  </form>
+</div>
+{% endblock %}
