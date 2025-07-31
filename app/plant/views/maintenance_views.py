@@ -1840,6 +1840,7 @@ from django.views.decorators.http import require_http_methods
 @require_http_methods(["GET", "POST"])
 def create_workorder(request):
     LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
+    URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
 
     print("=== create_workorder triggered ===")
     print("Request method:", request.method)
@@ -1849,46 +1850,45 @@ def create_workorder(request):
     print("Raw incoming data:", data)
 
     # extract or default
-    equip    = data.get("equip",    "M06325")
+    equip    = data.get("equip",    "022-1")
     reason   = data.get("reason",   "Heat")
-    standard = data.get("standard", "JEMES-101")
+    standard = data.get("standard", "572 DUST CONTAINER")  # pick a real code from your UI
     priority = data.get("priority", "2")
     status   = data.get("status",   "R")
 
-    print(f"Parsed params → equip={equip}, reason={reason}, standard={standard}, "
-          f"priority={priority}, status={status}")
+    print(f"Parsed params → equip={equip}, reason={reason}, "
+          f"standard={standard}, priority={priority}, status={status}")
 
+    # build payload with the corrected Org and STDWOCODE field
     payload = {
-        "WO":             f"M06325 Auto WO from JEMES for overheating",
-        "Org":            "PMDA",
-        "Equipment":      "M06325",
+        "WO":             f"{equip} Tyler Test {reason}",
+        "Org":            "PMDS",          # corrected org code
+        "Equipment":      equip,
         "Type":           "BRKD",
-        "Priority":       "2",
-        "Dept":           "D03",
-        "WOStatus":       "R",
+        "Priority":       priority,
+        "Dept":           "MAINT",
+        "WOStatus":       status,
         "EstTradeDT":     1,
         "Trade":          "MI",
         "EstTradeHours":  1,
         "PeopleRequired": 1,
         "RespDept":       "MT",
-        "tdWOCode":     "JEMES-100",
+        "StandardWO":      standard,        # corrected JSON key + real standard-WO code
     }
 
-    # Show JSON payload
     payload_json = json.dumps(payload)
     print("Constructed JSON payload:", payload_json)
 
-    url = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
     headers = {
         "X-Api-Key":    LITMUS_API_KEY,
         "Content-Type": "application/json",
     }
-
-    print("Target URL:", url)
+    print("Target URL:", URL)
     print("Request headers:", headers)
 
     try:
-        resp = requests.post(url, data=payload_json, headers=headers, timeout=30)
+        # you can also use json=payload instead of data=payload_json
+        resp = requests.post(URL, data=payload_json, headers=headers, timeout=30)
     except Exception as e:
         print(">>> Exception during requests.post:", str(e))
         return JsonResponse(
@@ -1899,17 +1899,15 @@ def create_workorder(request):
     print("HTTP response status code:", resp.status_code)
     print("HTTP response headers:", dict(resp.headers))
 
-    # Try JSON parse
     try:
         result = resp.json()
         print("Response JSON body:", json.dumps(result))
-    except ValueError as ve:
+    except ValueError:
         raw = resp.text
         print("Response body is not JSON, raw text:", raw)
         result = {"raw": raw}
 
     print("=== create_workorder complete ===")
-
     return JsonResponse(
         {"status_code": resp.status_code, "result": result},
         status=resp.status_code
