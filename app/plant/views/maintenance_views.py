@@ -1850,7 +1850,7 @@ def create_workorder(request):
     print("Raw incoming data:", data)
 
     # extract or default
-    equip    = data.get("equip",    "022-1")
+    equip    = data.get("equip",    "1806")
     reason   = data.get("reason",   "Heat")
     standard = data.get("standard", "572 DUST CONTAINER")  # pick a real code from your UI
     priority = data.get("priority", "2")
