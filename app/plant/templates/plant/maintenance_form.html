@@ -92,13 +92,13 @@
                     <button
                       type="button"
                       class="btn btn-sm me-1 {% if e.has_electrician %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                    >E</button>
+                    >ELE</button>
 
                   {% elif code == "MILLWRIGHT" %}
                     <button
                       type="button"
                       class="btn btn-sm me-1 {% if e.has_millwright %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                    >M</button>
+                    >MIL</button>
 
                   {% elif code == "TECH" %}
                     <button
@@ -116,7 +116,7 @@
                     <button
                       type="button"
                       class="btn btn-sm me-1 {% if e.has_plumber %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                    >P</button>
+                    >PLU</button>
 
                   {% elif code == "PLCTECH" %}
                     <button
@@ -128,7 +128,7 @@
                     <button
                       type="button"
                       class="btn btn-sm me-1 {% if e.waiting_for_parts %}btn-dark{% else %}btn-outline-dark{% endif %}"
-                    >WP</button>
+                    >WFP</button>
 
                   {% endif %}
                 {% endfor %}

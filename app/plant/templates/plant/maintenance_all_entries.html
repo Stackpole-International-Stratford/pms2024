@@ -273,7 +273,7 @@ Add New or Update Employee
                               class="btn {% if rolekey in e.current_worker_roles %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
                               data-event-id="{{ e.id }}"
                               data-role="{{ rolekey }}"
-                            >{{ rolekey|slice:":1"|upper }}</button>
+                            >{{ rolekey|slice:":3"|upper }}</button>
                           {% endwith %}
                       {% endfor %}
                     {% else %}
