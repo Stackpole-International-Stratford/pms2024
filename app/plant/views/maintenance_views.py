@@ -1827,3 +1827,90 @@ def quick_add(request):
         'downtime_codes_json':  json.dumps(downtime_codes_list),
         'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
     })
+
+
+
+
+
+import json
+import requests
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+@require_http_methods(["GET", "POST"])
+def create_workorder(request):
+    LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
+
+    print("=== create_workorder triggered ===")
+    print("Request method:", request.method)
+
+    # pull from GET or POST data
+    data = request.GET if request.method == "GET" else request.POST
+    print("Raw incoming data:", data)
+
+    # extract or default
+    equip    = data.get("equip",    "M06325")
+    reason   = data.get("reason",   "Heat")
+    standard = data.get("standard", "JEMES-101")
+    priority = data.get("priority", "2")
+    status   = data.get("status",   "R")
+
+    print(f"Parsed params → equip={equip}, reason={reason}, standard={standard}, "
+          f"priority={priority}, status={status}")
+
+    payload = {
+        "WO":             f"M06325 Auto WO from JEMES for overheating",
+        "Org":            "PMDA",
+        "Equipment":      "M06325",
+        "Type":           "BRKD",
+        "Priority":       "2",
+        "Dept":           "D03",
+        "WOStatus":       "R",
+        "EstTradeDT":     1,
+        "Trade":          "MI",
+        "EstTradeHours":  1,
+        "PeopleRequired": 1,
+        "RespDept":       "MT",
+        "tdWOCode":     "JEMES-100",
+    }
+
+    # Show JSON payload
+    payload_json = json.dumps(payload)
+    print("Constructed JSON payload:", payload_json)
+
+    url = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
+    headers = {
+        "X-Api-Key":    LITMUS_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    print("Target URL:", url)
+    print("Request headers:", headers)
+
+    try:
+        resp = requests.post(url, data=payload_json, headers=headers, timeout=30)
+    except Exception as e:
+        print(">>> Exception during requests.post:", str(e))
+        return JsonResponse(
+            {"error": "Request exception", "details": str(e)},
+            status=500
+        )
+
+    print("HTTP response status code:", resp.status_code)
+    print("HTTP response headers:", dict(resp.headers))
+
+    # Try JSON parse
+    try:
+        result = resp.json()
+        print("Response JSON body:", json.dumps(result))
+    except ValueError as ve:
+        raw = resp.text
+        print("Response body is not JSON, raw text:", raw)
+        result = {"raw": raw}
+
+    print("=== create_workorder complete ===")
+
+    return JsonResponse(
+        {"status_code": resp.status_code, "result": result},
+        status=resp.status_code
+    )
