@@ -81,6 +81,11 @@
                    name="roles" value="imt" id="role_imt">
             <label class="form-check-label" for="role_imt">IMT</label>
           </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox"
+                   name="roles" value="plumber" id="role_plumber">
+            <label class="form-check-label" for="role_plumber">Plumber</label>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -1498,7 +1503,7 @@ function initPersonalFilter(){
           checked: prefs.lines.includes(l),
           kind:    'line'
         })).join('');
-        const ROLE_MAP = ['tech','electrician','millwright', "na", "plctech", "imt"];
+        const ROLE_MAP = ['tech','electrician','millwright', "na", "plctech", "imt", "plumber"];
         const rolesHTML = ROLE_MAP.map(r=> mkChk({
           id:      `ex_role_${r}`,
           label:   r.charAt(0).toUpperCase() + r.slice(1),
