@@ -47,6 +47,8 @@ class MachineDowntimeEvent(models.Model):
         ('MILLWRIGHT',  'Need Millwright'),
         ('PLCTECH',    'Need PLC Technician'),
         ('IMT',        'Need IMT'),
+        ('PLUMBER',     'Need Plumber'),
+        ('WFP',        'Need Parts'),
         ('NA',          'N/A'),
     ]
     labour_types = models.JSONField(

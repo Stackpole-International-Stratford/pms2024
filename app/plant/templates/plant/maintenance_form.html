@@ -91,43 +91,45 @@
                   {% if code == "ELECTRICIAN" %}
                     <button
                       type="button"
-                      class="btn btn-sm me-1
-                        {% if e.has_electrician %}
-                          btn-dark
-                        {% else %}
-                          btn-outline-dark
-                        {% endif %}"
-                    >E</button>
+                      class="btn btn-sm me-1 {% if e.has_electrician %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                    >ELE</button>
+
                   {% elif code == "MILLWRIGHT" %}
                     <button
                       type="button"
-                      class="btn btn-sm me-1
-                        {% if e.has_millwright %}
-                          btn-dark
-                        {% else %}
-                          btn-outline-dark
-                        {% endif %}"
-                    >M</button>
+                      class="btn btn-sm me-1 {% if e.has_millwright %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                    >MIL</button>
+
                   {% elif code == "TECH" %}
                     <button
                       type="button"
-                      class="btn btn-sm me-1
-                        {% if e.has_tech %}
-                          btn-dark
-                        {% else %}
-                          btn-outline-dark
-                        {% endif %}"
+                      class="btn btn-sm me-1 {% if e.has_tech %}btn-dark{% else %}btn-outline-dark{% endif %}"
                     >T</button>
+
                   {% elif code == "OPERATOR" %}
                     <button
                       type="button"
-                      class="btn btn-sm
-                        {% if e.has_operator %}
-                          btn-dark
-                        {% else %}
-                          btn-outline-dark
-                        {% endif %}"
+                      class="btn btn-sm me-1 {% if e.has_operator %}btn-dark{% else %}btn-outline-dark{% endif %}"
                     >O</button>
+
+                  {% elif code == "PLUMBER" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm me-1 {% if e.has_plumber %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                    >PLU</button>
+
+                  {% elif code == "PLCTECH" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm me-1 {% if e.has_plctech %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                    >PLC</button>
+
+                  {% elif code == "WFP" %}
+                    <button
+                      type="button"
+                      class="btn btn-sm me-1 {% if e.waiting_for_parts %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                    >WFP</button>
+
                   {% endif %}
                 {% endfor %}
               </td>
@@ -261,6 +263,22 @@
             <div class="form-check">
               <input class="form-check-input labour-checkbox" type="checkbox" id="labourMillwright"  value="MILLWRIGHT">
               <label class="form-check-label" for="labourMillwright">Need Millwright</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourPLCTech"  value="PLCTECH">
+              <label class="form-check-label" for="labourPLCTech">Need PLCTech</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourIMT"  value="IMT">
+              <label class="form-check-label" for="labourIMT">Need IMT</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourPlumber"  value="PLUMBER">
+              <label class="form-check-label" for="labourPlumber">Need Plumber</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input labour-checkbox" type="checkbox" id="labourWFP"  value="WFP">
+              <label class="form-check-label" for="labourWFP">Waiting for Parts</label>
             </div>
              <div class="form-check">
               <input class="form-check-input labour-checkbox"

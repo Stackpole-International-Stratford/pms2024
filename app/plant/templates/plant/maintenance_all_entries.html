@@ -81,6 +81,11 @@
                    name="roles" value="imt" id="role_imt">
             <label class="form-check-label" for="role_imt">IMT</label>
           </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox"
+                   name="roles" value="plumber" id="role_plumber">
+            <label class="form-check-label" for="role_plumber">Plumber</label>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -268,7 +273,7 @@ Add New or Update Employee
                               class="btn {% if rolekey in e.current_worker_roles %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
                               data-event-id="{{ e.id }}"
                               data-role="{{ rolekey }}"
-                            >{{ rolekey|slice:":1"|upper }}</button>
+                            >{{ rolekey|slice:":3"|upper }}</button>
                           {% endwith %}
                       {% endfor %}
                     {% else %}
@@ -1615,7 +1620,7 @@ function initPersonalFilter(){
           checked: prefs.lines.includes(l),
           kind:    'line'
         })).join('');
-        const ROLE_MAP = ['tech','electrician','millwright', "na", "plctech", "imt"];
+        const ROLE_MAP = ['tech','electrician','millwright', "na", "plctech", "imt", "plumber"];
         const rolesHTML = ROLE_MAP.map(r=> mkChk({
           id:      `ex_role_${r}`,
           label:   r.charAt(0).toUpperCase() + r.slice(1),

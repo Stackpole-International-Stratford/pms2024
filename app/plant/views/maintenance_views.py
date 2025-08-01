@@ -368,6 +368,13 @@ def maintenance_form(request):
                 user__groups__name='maintenance_imt'
             )
         ),
+         has_plumber=Exists(
+            DowntimeParticipation.objects.filter(
+                event=OuterRef('pk'),
+                leave_epoch__isnull=True,
+                user__groups__name='maintenance_plumber'
+            )
+        ),
     ).order_by('-start_epoch')
 
     total    = qs.count()
@@ -420,6 +427,7 @@ MAINT_GROUPS = {
 
     "maintenance_plctech",
     "maintenance_imt",
+    "maintenance_plumber",
 }
 
 def user_has_maintenance_access(user) -> bool:
@@ -501,7 +509,7 @@ def filter_out_operator_only_events(qs):
 
 
 # Define the order in which roles should appear
-ROLE_ORDER = ["electrician", "millwright", "tech", "plctech", "imt"]
+ROLE_ORDER = ["electrician", "millwright", "tech", "plctech", "imt", "plumber"]
 
 
 def group_by_role(workers):
@@ -647,6 +655,8 @@ def list_all_downtime_entries(request):
     allowed_groups = {
         ROLE_TO_GROUP["electrician"],
         ROLE_TO_GROUP["millwright"],
+        ROLE_TO_GROUP["plctech"],
+        ROLE_TO_GROUP["plumber"],
         "maintenance_supervisors",
         "maintenance_managers",
         "maintenance_tech",
@@ -1014,6 +1024,7 @@ ROLE_TO_GROUP = {
 
     "plctech":      "maintenance_plctech",
     "imt":          "maintenance_imt",
+    "plumber":      "maintenance_plumber",
 }
 
 @require_POST
