@@ -281,6 +281,12 @@ Add New or Update Employee
                     {% if e.current_usernames %}
                       – <small>{{ e.current_usernames|join:", " }}</small>
                     {% endif %}
+                    {% if is_eam %}
+                      – <small>isEAM</small>
+                    {% else %}
+                      – <small>isNOTeam</small>
+                    {% endif %}
+
 
                   </span>
                 </div>

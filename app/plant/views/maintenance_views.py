@@ -675,6 +675,15 @@ def list_all_downtime_entries(request):
             "name": c.subcategory
         })
 
+
+    # ← NEW: which groups count as “EAM”?
+    eam_group_names = {
+        ROLE_TO_GROUP["plctech"],     # e.g. "maintenance_plctech"
+        ROLE_TO_GROUP["millwright"],  # e.g. "maintenance_millwright"
+        ROLE_TO_GROUP["electrician"], # e.g. "maintenance_electrician"
+    }
+    is_eam = bool(user_grps & eam_group_names)
+
     # 10) Final render
     return render(request, "plant/maintenance_all_entries.html", {
         "entries":                  entries,
@@ -682,12 +691,15 @@ def list_all_downtime_entries(request):
         "line_priorities":          LinePriority.objects.all(),
         "is_manager":               is_manager,
         "is_supervisor":            is_supervisor,
+        "is_eam":                   is_eam,
         "labour_choices":           labour_choices,
         "active_workers_by_role":   active_by_role,
         "inactive_workers_by_role": inactive_by_role,
         "downtime_codes_json":      mark_safe(json.dumps(list(structured.values()))),
         "lines_json":               mark_safe(json.dumps(prod_lines)),
     })
+
+
 
 @login_required
 def load_more_downtime_entries(request):
