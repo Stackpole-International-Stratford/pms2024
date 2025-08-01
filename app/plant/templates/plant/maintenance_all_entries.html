@@ -363,23 +363,72 @@ Add New or Update Employee
     </div>
   </div>
   <script>
+  (function () {
+    const form    = document.getElementById('generate-wo-form');
+    const modalEl = document.getElementById('generateWorkOrderModal');
+    const getModal = () => bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    // When the lightning "Generate WO" button is clicked, prep the modal
     document.querySelectorAll('.generate-wo-btn').forEach(link => {
       link.addEventListener('click', (e) => {
-        e.preventDefault();        // don't navigate to <a href>
-        e.stopPropagation();       // don't trigger the row click
+        e.preventDefault();    // don't follow the <a> href
+        e.stopPropagation();   // don't trigger row click
 
-        const form = document.getElementById('generate-wo-form');
-        form.action = link.href;   // use the accurate URL already rendered with e.id
+        // Point the form at the specific event URL rendered in the link
+        form.action = link.href;
 
-        // Optional: show machine in the modal
+        // Fill in the machine number in the modal
         const row = link.closest('tr.editable-row');
-        document.getElementById('wo-machine-num').textContent =
-          row.querySelector('td').textContent.split('–')[1].trim();
+        const text = row?.querySelector('td')?.textContent || '';
+        const machine = (text.split('–')[1] || '').trim();
+        document.getElementById('wo-machine-num').textContent = machine;
+
+        // Ensure the modal opens (data-bs-* may handle this already)
+        getModal().show();
       });
     });
 
+    // Submit the modal form via AJAX and show an alert with the result
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); // stay on the same page
 
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(form.action, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+          },
+          body: new FormData(form) // includes csrf token field
+        });
+
+        let data = null;
+        try { data = await res.json(); } catch { /* non-JSON fallback */ }
+
+        if (!res.ok || (data && data.ok === false)) {
+          const msg = (data && data.message) ? data.message : `Failed to generate work order (HTTP ${res.status}).`;
+          alert(msg);
+          return;
+        }
+
+        // Success
+        getModal()?.hide();
+        alert((data && data.message) ? data.message : 'Work order generated.');
+        // If you want to reflect changes immediately, uncomment:
+        // location.reload();
+      } catch (err) {
+        alert(`Could not generate work order: ${err?.message || err}`);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+  })();
   </script>
+
 
 
 {% if is_manager or is_supervisor %}

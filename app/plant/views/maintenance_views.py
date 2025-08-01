@@ -1939,8 +1939,19 @@ def create_workorder(request):
 
 
 @login_required
+@require_POST
 def generate_workorder(request, entry_id):
-    # just log to the server console:
-    print(f"Generate WO for downtime event {entry_id}")
-    # you can return anything; for now we’ll just redirect back
-    return HttpResponse(f"Requested WO for event {entry_id}")
+    try:
+        # Do your actual WO creation here...
+        print(f"Generate WO for downtime event {entry_id}")
+
+        return JsonResponse({
+            "ok": True,
+            "message": f"Work order created for event {entry_id}."
+        })
+    except Exception as e:
+        return JsonResponse({
+            "ok": False,
+            "message": f"Failed to create work order: {e}"
+        }, status=400)
+
