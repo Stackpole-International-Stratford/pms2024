@@ -692,6 +692,7 @@ def list_all_downtime_entries(request):
         ROLE_TO_GROUP["plctech"],     # e.g. "maintenance_plctech"
         ROLE_TO_GROUP["millwright"],  # e.g. "maintenance_millwright"
         ROLE_TO_GROUP["electrician"], # e.g. "maintenance_electrician"
+        ROLE_TO_GROUP["imt"], # e.g. "maintenance_imt"
     }
     is_eam = bool(user_grps & eam_group_names)
 
@@ -1960,7 +1961,7 @@ TRADE_BY_ROLE = {
     "electrician": "ELA",
     "millwright":  "MI",
     "plctech":     "EMTR",
-    # "imt":       "IMT",
+    "imt":       "IMT",
 }
 
 # Event.labour_types (UPPERCASE) → Trade
@@ -1968,7 +1969,7 @@ TRADE_BY_EVENT_CODE = {
     "ELECTRICIAN": "ELA",
     "MILLWRIGHT":  "MI",
     "PLCTECH":     "EMTR",
-    # "IMT":       "IMT",
+    "IMT":       "IMT",
 }
 
 # Trade → Django group name (direct mapping)
@@ -1980,7 +1981,7 @@ GROUP_BY_TRADE = {
 }
 
 # Preferred priority when multiple apply
-TRADE_PRIORITY_TRADES = ["ELA", "EMTR", "MI"]  # electrician > plc tech > millwright
+TRADE_PRIORITY_TRADES = ["EMTR", "IMT", "MI", "ELA",]  # electrician > plc tech > millwright
 
 # Standard WO template to use per trade
 STANDARD_WO_BY_TRADE = {
