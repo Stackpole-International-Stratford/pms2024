@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from datetime import datetime
-from ..models.maintenance_models import MachineDowntimeEvent, LinePriority, DowntimeParticipation, DowntimeCode, DowntimeMachine
+from ..models.maintenance_models import MachineDowntimeEventTEST, LinePriority, DowntimeParticipation, DowntimeCode, DowntimeMachine
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -99,8 +99,8 @@ def delete_downtime_entry(request):
 
     # fetch only non-deleted events
     try:
-        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
+        e = MachineDowntimeEventTEST.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEventTEST.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
     # ✏️ NEW: ensure no open participants
@@ -139,7 +139,7 @@ def closeout_downtime_entry(request):
 
     # 2) fetch event
     event = get_object_or_404(
-        MachineDowntimeEvent,
+        MachineDowntimeEventTEST,
         pk=entry_id,
         is_deleted=False,
         closeout_epoch__isnull=True
@@ -171,7 +171,7 @@ def closeout_downtime_entry(request):
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
     """
-    Returns a page of open MachineDowntimeEvent entries plus:
+    Returns a page of open MachineDowntimeEventTEST entries plus:
       - has_more: whether there are more to load
       - is_guest: true if the user is anonymous (not logged in)
     """
@@ -180,7 +180,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
     page_size = 300
 
     # only live, un‐closed events
-    qs = MachineDowntimeEvent.objects.filter(
+    qs = MachineDowntimeEventTEST.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
     ).order_by('-start_epoch')
@@ -291,7 +291,7 @@ def maintenance_form(request):
 
         # Create or update
         if entry_id:
-            e = get_object_or_404(MachineDowntimeEvent, pk=entry_id, is_deleted=False)
+            e = get_object_or_404(MachineDowntimeEventTEST, pk=entry_id, is_deleted=False)
             e.line         = line
             e.machine      = machine
             e.category     = category_name
@@ -307,7 +307,7 @@ def maintenance_form(request):
                 'labour_types','employee_id'
             ])
         else:
-            MachineDowntimeEvent.objects.create(
+            MachineDowntimeEventTEST.objects.create(
                 line         = line,
                 machine      = machine,
                 category     = category_name,
@@ -323,7 +323,7 @@ def maintenance_form(request):
         return redirect(request.get_full_path())
 
     # GET: render form
-    qs = MachineDowntimeEvent.objects.filter(
+    qs = MachineDowntimeEventTEST.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
     ).annotate(
@@ -434,7 +434,7 @@ def user_has_maintenance_access(user) -> bool:
 
 def annotate_being_worked_on(qs):
     """
-    Takes a MachineDowntimeEvent queryset `qs` and returns it
+    Takes a MachineDowntimeEventTEST queryset `qs` and returns it
     annotated with a boolean `being_worked_on` that’s True
     if any DowntimeParticipation for that event has no leave_epoch.
     """
@@ -490,7 +490,7 @@ from django.db.models import Q
 
 def filter_out_operator_only_events(qs):
     """
-    Given a MachineDowntimeEvent queryset, return a new queryset
+    Given a MachineDowntimeEventTEST queryset, return a new queryset
     with all events whose labour_types == ["OPERATOR"] OR ["NA"] removed.
     """
     # Exclude any event whose labour_types exactly equals ["OPERATOR"] or ["NA"]
@@ -534,7 +534,7 @@ def list_all_downtime_entries(request):
         .values("priority")[:1]
     )
     base_qs = (
-        MachineDowntimeEvent.objects
+        MachineDowntimeEventTEST.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
         .annotate(
             line_priority=Coalesce(
@@ -642,7 +642,7 @@ def list_all_downtime_entries(request):
     is_supervisor = "maintenance_supervisors" in user_grps
 
     # 8) Build the labour_choices list
-    full_choices = MachineDowntimeEvent.LABOUR_CHOICES
+    full_choices = MachineDowntimeEventTEST.LABOUR_CHOICES
     allowed_groups = {
         ROLE_TO_GROUP["electrician"],
         ROLE_TO_GROUP["millwright"],
@@ -699,7 +699,7 @@ def load_more_downtime_entries(request):
 
     # base queryset
     base_qs = (
-        MachineDowntimeEvent.objects
+        MachineDowntimeEventTEST.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
         .order_by("-start_epoch")
         .prefetch_related("participants__user")
@@ -764,7 +764,7 @@ def downtime_history(request, event_id):
     """
     # 1) validate event
     event = get_object_or_404(
-        MachineDowntimeEvent,
+        MachineDowntimeEventTEST,
         pk=event_id,
         is_deleted=False
     )
@@ -837,7 +837,7 @@ def join_downtime_event(request):
         return HttpResponseBadRequest("Invalid payload")
 
     # fetch the event…
-    event = MachineDowntimeEvent.objects.filter(pk=event_id, is_deleted=False).first()
+    event = MachineDowntimeEventTEST.objects.filter(pk=event_id, is_deleted=False).first()
     if not event:
         return HttpResponseBadRequest("Event not found")
 
@@ -1112,8 +1112,8 @@ def maintenance_edit(request):
 
     # Fetch the downtime event
     try:
-        e = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
+        e = MachineDowntimeEventTEST.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEventTEST.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
     # Convert epoch to human-readable local datetime
@@ -1198,8 +1198,8 @@ def maintenance_update_event(request):
 
     # 1) Lookup the event
     try:
-        event = MachineDowntimeEvent.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEvent.DoesNotExist:
+        event = MachineDowntimeEventTEST.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEventTEST.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
     # 2) Derive display names from DowntimeCode model
@@ -1385,7 +1385,7 @@ def machine_history(request):
         return JsonResponse({"error": "Machine parameter is required."}, status=400)
 
     events = (
-        MachineDowntimeEvent.objects
+        MachineDowntimeEventTEST.objects
         .filter(machine=machine, is_deleted=False)
         .order_by("-start_epoch")[:500]
     )
@@ -1698,7 +1698,7 @@ def maintenance_bulk_form(request):
 
         # create one event per machine
         for machine in machines:
-            MachineDowntimeEvent.objects.create(
+            MachineDowntimeEventTEST.objects.create(
                 line         = line,
                 machine      = machine,
                 category     = category_name,
@@ -1795,7 +1795,7 @@ def quick_add(request):
         epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
         # --- single event create ---
-        MachineDowntimeEvent.objects.create(
+        MachineDowntimeEventTEST.objects.create(
             line         = line,
             machine      = machine,
             category     = category_name,
@@ -1825,7 +1825,7 @@ def quick_add(request):
     return render(request, 'plant/quick_add.html', {
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
-        'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
+        'labour_choices':      MachineDowntimeEventTEST.LABOUR_CHOICES,
     })
 
 

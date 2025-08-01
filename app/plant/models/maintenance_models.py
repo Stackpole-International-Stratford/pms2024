@@ -98,7 +98,91 @@ class MachineDowntimeEvent(models.Model):
 
     
 
+class MachineDowntimeEventTEST(models.Model):
+    """
+    Represents a single downtime event on a production line.
+    """
+    line               = models.CharField("Line",         max_length=50)
+    machine            = models.CharField("Machine",      max_length=50)
+    category           = models.TextField("Category")
+    subcategory        = models.TextField(
+        "Subcategory",
+        blank=True,
+        default="",
+        help_text="Optional sub-category"
+    )
+    code               = models.CharField(
+        "Downtime Code",
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Optional, same as subcategory if provided"
+    )
+    start_epoch        = models.BigIntegerField("Start (epoch)")
+    closeout_epoch     = models.BigIntegerField("Closeout (epoch)", null=True, blank=True)
+    comment            = models.TextField("Comment")
 
+    # new soft-delete fields
+    is_deleted         = models.BooleanField(default=False)
+    deleted_at         = models.DateTimeField(null=True, blank=True)
+
+    created_at_UTC     = models.DateTimeField(auto_now_add=True)
+    updated_at_UTC     = models.DateTimeField(auto_now=True)
+
+    # new:
+    LABOUR_CHOICES = [
+        ('ELECTRICIAN', 'Need Electrician'),
+        ('TECH',        'Need Tech'),
+        ('MILLWRIGHT',  'Need Millwright'),
+        ('PLCTECH',    'Need PLC Technician'),
+        ('IMT',        'Need IMT'),
+        ('NA',          'N/A'),
+    ]
+    labour_types = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of labour roles needed (one or more of OPERATOR,ELECTRICIAN,TECH,MILLWRIGHT)"
+    )
+    employee_id = models.TextField(
+        "Employee ID",
+        null=True,
+        blank=True,
+        help_text="(optional) ID of the person who logged this downtime"
+    )
+    closeout_comment = models.TextField(
+        "Close-out Comment",
+        null=True,
+        blank=True,
+        help_text="What the labourer did to fix the issue when closing out",
+    )
+
+    @property
+    def start_at(self) -> _datetime:
+        """
+        Returns the start timestamp as a Python datetime for easy formatting.
+        """
+        return _datetime.fromtimestamp(self.start_epoch)
+
+    def delete(self, using=None, keep_parents=False):
+        """
+        Soft-delete: mark the row as deleted instead of actually deleting.
+        """
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    @property
+    def closeout_at(self):
+        """
+        Returns a datetime if closeout_epoch is set,
+        else None.
+        """
+        if self.closeout_epoch:
+            return datetime.fromtimestamp(self.closeout_epoch)
+        return None
+
+    def __str__(self):
+        return f"{self.code} @ {self.start_epoch} on {self.line}/{self.machine}"
 
 
 class LinePriority(models.Model):
@@ -119,7 +203,7 @@ class LinePriority(models.Model):
 
 class DowntimeParticipation(models.Model):
     event = models.ForeignKey(
-        MachineDowntimeEvent,
+        MachineDowntimeEventTEST,
         related_name='participants',
         on_delete=models.CASCADE
     )
