@@ -1952,34 +1952,53 @@ def create_workorder(request):
 
 
 
-
-
-
 # --- Inline config (can be moved to settings later) -----------------
 LITMUS_API_URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
 LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
 
-# Map our roles to Litmus Trade codes
+# Role → Trade
 TRADE_BY_ROLE = {
     "electrician": "ELA",
     "millwright":  "MI",
     "plctech":     "EMTR",
-    # add more if needed, e.g. "imt": "IMT"
+    # "imt":       "IMT",
 }
 
-# For inferring from event.labour_types (MODEL uses uppercase labels)
+# Event.labour_types (UPPERCASE) → Trade
 TRADE_BY_EVENT_CODE = {
     "ELECTRICIAN": "ELA",
     "MILLWRIGHT":  "MI",
     "PLCTECH":     "EMTR",
-    # "IMT": "IMT",
+    # "IMT":       "IMT",
 }
 
-# Preferred order if user has multiple groups (tweak as you like)
-TRADE_PRIORITY = ["electrician", "plctech", "millwright"]
+# Trade → Django group name (direct mapping you asked for)
+GROUP_BY_TRADE = {
+    "ELA":  "maintenance_electrician",
+    "MI":   "maintenance_millwright",
+    "EMTR": "maintenance_plctech",
+    "IMT":  "maintenance_imt",
+}
 
+# Preferred priority when multiple apply
+TRADE_PRIORITY_TRADES = ["ELA", "EMTR", "MI"]  # electrician > plc tech > millwright
+
+# Standard WO template to use per trade
+STANDARD_WO_BY_TRADE = {
+    "ELA":  "PMS BREAKDOWN (ELA)",
+    "EMTR": "PMS BREAKDOWN (EMTR)",
+    "MI":   "PMS BREAKDOWN (MI)",
+    "IMT":  "PMS BREAKDOWN (IMT)",
+}
 
 # --- Helpers --------------------------------------------------------
+import re
+import requests
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+
 def _build_wo_title(category: str, subcategory: str, comment: str) -> str:
     """'Category - Subcategory - Comment' capped at 80 chars with ellipsis."""
     parts = [p for p in [category, subcategory or "", comment or ""] if p]
@@ -1990,22 +2009,24 @@ def _build_wo_title(category: str, subcategory: str, comment: str) -> str:
 def _resolve_trade_for_user(user, event) -> str:
     """
     Choose Trade code:
-      1) Based on the logged-in user's maintenance group(s)
+      1) Based on the logged-in user's maintenance_* group(s) (direct trade mapping)
       2) Else infer from event.labour_types
       3) Else default to MI
     """
-    # 1) by user groups
     user_groups = set(user.groups.values_list("name", flat=True))
-    for role in TRADE_PRIORITY:
-        grp_name = ROLE_TO_GROUP.get(role)  # ROLE_TO_GROUP exists elsewhere in your file
-        if grp_name and grp_name in user_groups:
-            return TRADE_BY_ROLE.get(role, "MI")
 
-    # 2) by event.labour_types (e.g., ["PLCTECH","ELECTRICIAN"])
+    # 1) direct group → trade, in priority order
+    for trade in TRADE_PRIORITY_TRADES:
+        grp = GROUP_BY_TRADE.get(trade)
+        if grp and grp in user_groups:
+            return trade
+
+    # 2) infer from event.labour_types (e.g., ["PLCTECH","ELECTRICIAN"])
     if isinstance(event.labour_types, list):
-        for code in event.labour_types:
-            trade = TRADE_BY_EVENT_CODE.get(str(code).upper())
-            if trade:
+        for trade in TRADE_PRIORITY_TRADES:
+            # check if any code on the event maps to this trade
+            want_codes = [k for k, v in TRADE_BY_EVENT_CODE.items() if v == trade]
+            if any(str(code).upper() in want_codes for code in event.labour_types):
                 return trade
 
     # 3) fallback
@@ -2018,7 +2039,7 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
     calling the Litmus API. Saves event.work_order_id on success.
     Returns a dict with ok/message/work_order_id/status_code.
     """
-    # idempotent: if already created, don't call the API again
+    # idempotent
     if event.work_order_id:
         return {
             "ok": True,
@@ -2027,23 +2048,24 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
             "status_code": 200,
         }
 
-    wo_title = _build_wo_title(event.category, event.subcategory, event.comment)
+    wo_title   = _build_wo_title(event.category, event.subcategory, event.comment)
     trade_code = _resolve_trade_for_user(user, event)
+    standard_wo = STANDARD_WO_BY_TRADE.get(trade_code, f"PMS BREAKDOWN ({trade_code})")
 
     payload = {
-        "WO":            wo_title,
-        "Org":           "PMDS",
-        "Equipment":     str(event.machine),   # equip from the machine field
-        "Type":          "BRKD",
-        "Priority":      "2",
-        "Dept":          "MAINT",
-        "WOStatus":      "R",
-        "EstTradeDT":    1,
-        "Trade":         trade_code,           # ← dynamic trade
-        "EstTradeHours": 1,
-        "PeopleRequired":1,
-        "RespDept":      "MT",
-        "StandardWO":    "PMS BREAKDOWN",
+        "WO":             wo_title,
+        "Org":            "PMDS",
+        "Equipment":      str(event.machine),
+        "Type":           "BRKD",
+        "Priority":       "2",
+        "Dept":           "MAINT",
+        "WOStatus":       "R",
+        "EstTradeDT":     1,
+        "Trade":          trade_code,   # ELA / EMTR / MI / IMT
+        "EstTradeHours":  1,
+        "PeopleRequired": 1,
+        "RespDept":       "MT",
+        "StandardWO":     standard_wo,  # dynamic template
     }
 
     headers = {
@@ -2054,19 +2076,14 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
     try:
         resp = requests.post(LITMUS_API_URL, json=payload, headers=headers, timeout=timeout)
     except Exception as e:
-        return {
-            "ok": False,
-            "message": f"Request exception: {e}",
-            "status_code": 0,
-        }
+        return {"ok": False, "message": f"Request exception: {e}", "status_code": 0}
 
-    # Parse response JSON (or fall back to text)
     try:
         body = resp.json()
     except ValueError:
         body = {"raw": resp.text}
 
-    # Extract "Message" regardless of wrapper shape
+    # Extract "WO # 975463" from message
     message_field = None
     if isinstance(body, dict):
         if "Message" in body:
@@ -2074,7 +2091,6 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
         elif "result" in body and isinstance(body["result"], dict):
             message_field = body["result"].get("Message")
 
-    # Look for "WO # 975463" in the Message
     wo_id = None
     if isinstance(message_field, str):
         m = re.search(r"WO\s*#\s*(\d+)", message_field)
@@ -2086,12 +2102,11 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
         event.save(update_fields=["work_order_id", "updated_at_UTC"])
         return {
             "ok": True,
-            "message": f"Work order #{wo_id} created (Trade {trade_code}).",
+            "message": f"Work order #{wo_id} created (Trade {trade_code}, StandardWO '{standard_wo}').",
             "work_order_id": wo_id,
             "status_code": resp.status_code,
         }
 
-    # Failure path
     fallback_msg = (message_field or str(body)[:200]) if body else resp.text[:200]
     return {
         "ok": False,
