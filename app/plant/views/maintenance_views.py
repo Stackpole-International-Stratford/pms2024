@@ -1850,31 +1850,42 @@ def create_workorder(request):
     print("Raw incoming data:", data)
 
     # extract or default
-    equip    = data.get("equip",    "1806")
-    reason   = data.get("reason",   "Heat")
-    standard = data.get("standard", "572 DUST CONTAINER")  # pick a real code from your UI
-    priority = data.get("priority", "2")
-    status   = data.get("status",   "R")
+    equip       = data.get("equip",       "1806")
+    category    = data.get("category",    "Temperature")
+    subcategory = data.get("subcategory", "Heat Break")
+    comment     = data.get("comment",     "Heat is too much. Operators were sent on break humidex > 43")
+    standard    = data.get("standard",    "PMS BREAKDOWN")
+    priority    = data.get("priority",    "2")
+    status      = data.get("status",      "R")
 
-    print(f"Parsed params → equip={equip}, reason={reason}, "
-          f"standard={standard}, priority={priority}, status={status}")
+    # build the full WO string
+    wo_full = f"{category} - {subcategory} - {comment}"
 
-    # build payload with the corrected Org and STDWOCODE field
+    # enforce max‐80 rule with ellipsis
+    if len(wo_full) > 80:
+        wo = wo_full[:77] + "..."
+        print(f"WO too long ({len(wo_full)} chars); truncating to 80 with ellipsis")
+    else:
+        wo = wo_full
+
+    print(f"Using WO: '{wo}' ({len(wo)} chars)")
+
     payload = {
-        "WO":             f"{equip} Tyler Test {reason}",
-        "Org":            "PMDS",          # corrected org code
-        "Equipment":      equip,
-        "Type":           "BRKD",
-        "Priority":       priority,
-        "Dept":           "MAINT",
-        "WOStatus":       status,
-        "EstTradeDT":     1,
-        "Trade":          "MI",
-        "EstTradeHours":  1,
-        "PeopleRequired": 1,
-        "RespDept":       "MT",
-        "StandardWO":      standard,        # corrected JSON key + real standard-WO code
+        "WO":            wo,
+        "Org":           "PMDS",
+        "Equipment":     equip,
+        "Type":          "BRKD",
+        "Priority":      priority,
+        "Dept":          "MAINT",
+        "WOStatus":      status,
+        "EstTradeDT":    1,
+        "Trade":         "MI",
+        "EstTradeHours": 1,
+        "PeopleRequired":1,
+        "RespDept":      "MT",
+        "StandardWO":    standard,
     }
+
 
     payload_json = json.dumps(payload)
     print("Constructed JSON payload:", payload_json)
