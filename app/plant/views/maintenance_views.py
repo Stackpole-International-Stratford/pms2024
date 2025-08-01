@@ -1935,3 +1935,12 @@ def create_workorder(request):
         {"status_code": resp.status_code, "result": result},
         status=resp.status_code
     )
+
+
+
+@login_required
+def generate_workorder(request, entry_id):
+    # just log to the server console:
+    print(f"Generate WO for downtime event {entry_id}")
+    # you can return anything; for now we’ll just redirect back
+    return HttpResponse(f"Requested WO for event {entry_id}")

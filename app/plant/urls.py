@@ -113,4 +113,5 @@ urlpatterns = [
 
     path("api/create-workorder/", create_workorder, name="create_workorder"),
 
+    path('downtime/<int:entry_id>/generate-wo/', generate_workorder, name='generate_workorder'),
 ]
