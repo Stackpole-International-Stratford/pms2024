@@ -115,8 +115,6 @@ urlpatterns = [
 
     path('downtime/<int:entry_id>/generate-wo/', generate_workorder, name='generate_workorder'),
 
-    path("maintenance/audit-missing-equipment/", audit_missing_equipment, name="audit_missing_equipment"),
-
 
 
 
