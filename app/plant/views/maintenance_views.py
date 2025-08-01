@@ -1951,7 +1951,6 @@ def create_workorder(request):
 
 
 
-
 # --- Inline config (can be moved to settings later) -----------------
 LITMUS_API_URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
 LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
@@ -1972,7 +1971,7 @@ TRADE_BY_EVENT_CODE = {
     # "IMT":       "IMT",
 }
 
-# Trade → Django group name (direct mapping you asked for)
+# Trade → Django group name (direct mapping)
 GROUP_BY_TRADE = {
     "ELA":  "maintenance_electrician",
     "MI":   "maintenance_millwright",
@@ -1994,6 +1993,7 @@ STANDARD_WO_BY_TRADE = {
 # --- Helpers --------------------------------------------------------
 import re
 import requests
+from requests.exceptions import Timeout, RequestException
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -2009,7 +2009,7 @@ def _build_wo_title(category: str, subcategory: str, comment: str) -> str:
 def _resolve_trade_for_user(user, event) -> str:
     """
     Choose Trade code:
-      1) Based on the logged-in user's maintenance_* group(s) (direct trade mapping)
+      1) Based on the logged-in user's maintenance_* group(s)
       2) Else infer from event.labour_types
       3) Else default to MI
     """
@@ -2024,13 +2024,88 @@ def _resolve_trade_for_user(user, event) -> str:
     # 2) infer from event.labour_types (e.g., ["PLCTECH","ELECTRICIAN"])
     if isinstance(event.labour_types, list):
         for trade in TRADE_PRIORITY_TRADES:
-            # check if any code on the event maps to this trade
             want_codes = [k for k, v in TRADE_BY_EVENT_CODE.items() if v == trade]
             if any(str(code).upper() in want_codes for code in event.labour_types):
                 return trade
 
     # 3) fallback
     return "MI"
+
+
+def _extract_message_from_body(body):
+    if isinstance(body, dict):
+        if "Message" in body:
+            return body.get("Message")
+        if "result" in body and isinstance(body["result"], dict):
+            return body["result"].get("Message")
+    return None
+
+
+def _extract_wo_id_from_text(text: str):
+    m = re.search(r"WO\s*#\s*(\d+)", text or "", flags=re.I)
+    return int(m.group(1)) if m else None
+
+
+def _is_equipment_not_found(msg: str, status_code: int) -> bool:
+    """Heuristic: detect when EAM rejected the Equipment number."""
+    if status_code in (400, 404):
+        return True
+    if not msg:
+        return False
+    # common phrasings we might see
+    needles = ["equipment", "asset", "machine"]
+    return (
+        any(n in msg.lower() for n in needles) and
+        any(w in msg.lower() for w in ["not found", "invalid", "doesn't exist", "does not exist", "unknown"])
+    )
+
+
+def _candidate_alt_equipment(equipment: str):
+    """
+    If equipment ends with a single letter (e.g., '1806L' or '1806R'),
+    return the numeric part as a fallback candidate. Otherwise None.
+    """
+    if not equipment:
+        return None
+    m = re.fullmatch(r"\s*(\d+)[A-Za-z]\s*", str(equipment))
+    return m.group(1) if m else None
+
+
+def _post_to_litmus(equipment: str, payload_base: dict, headers: dict, *, timeout: int):
+    """POST once and parse the response into a small normalized dict."""
+    payload = {**payload_base, "Equipment": str(equipment)}
+    try:
+        resp = requests.post(LITMUS_API_URL, json=payload, headers=headers, timeout=timeout)
+    except Timeout:
+        return {"ok": False, "status_code": 0, "message": "Timed out contacting EAM. Please try again."}
+    except RequestException as e:
+        return {"ok": False, "status_code": 0, "message": f"Network error contacting EAM: {e}"}
+
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {"raw": resp.text}
+
+    msg = _extract_message_from_body(body) or (resp.text if isinstance(body, dict) and "raw" in body else str(body))
+    wo_id = _extract_wo_id_from_text(msg)
+
+    if resp.ok and wo_id:
+        return {"ok": True, "status_code": resp.status_code, "message": msg, "wo_id": wo_id}
+
+    # Friendly HTTP hints
+    if resp.status_code in (401, 403):
+        hint = "Authorization error from EAM (check API key or permissions)."
+    elif resp.status_code >= 500:
+        hint = "EAM is having an issue (server error). Please try again shortly."
+    else:
+        hint = None
+
+    return {
+        "ok": False,
+        "status_code": resp.status_code,
+        "message": f"{msg}" + (f"  {hint}" if hint else ""),
+        "wo_id": None,
+    }
 
 
 def _create_workorder_for_event(event, user, *, timeout: int = 30):
@@ -2052,67 +2127,75 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
     trade_code = _resolve_trade_for_user(user, event)
     standard_wo = STANDARD_WO_BY_TRADE.get(trade_code, f"PMS BREAKDOWN ({trade_code})")
 
-    payload = {
+    headers = {
+        "X-Api-Key":    LITMUS_API_KEY,
+        "Content-Type": "application/json",
+    }
+    payload_base = {
         "WO":             wo_title,
         "Org":            "PMDS",
-        "Equipment":      str(event.machine),
         "Type":           "BRKD",
         "Priority":       "2",
         "Dept":           "MAINT",
         "WOStatus":       "R",
         "EstTradeDT":     1,
-        "Trade":          trade_code,   # ELA / EMTR / MI / IMT
+        "Trade":          trade_code,
         "EstTradeHours":  1,
         "PeopleRequired": 1,
         "RespDept":       "MT",
-        "StandardWO":     standard_wo,  # dynamic template
+        "StandardWO":     standard_wo,
     }
 
-    headers = {
-        "X-Api-Key":    LITMUS_API_KEY,
-        "Content-Type": "application/json",
-    }
+    original_equipment = str(event.machine).strip()
 
-    try:
-        resp = requests.post(LITMUS_API_URL, json=payload, headers=headers, timeout=timeout)
-    except Exception as e:
-        return {"ok": False, "message": f"Request exception: {e}", "status_code": 0}
-
-    try:
-        body = resp.json()
-    except ValueError:
-        body = {"raw": resp.text}
-
-    # Extract "WO # 975463" from message
-    message_field = None
-    if isinstance(body, dict):
-        if "Message" in body:
-            message_field = body.get("Message")
-        elif "result" in body and isinstance(body["result"], dict):
-            message_field = body["result"].get("Message")
-
-    wo_id = None
-    if isinstance(message_field, str):
-        m = re.search(r"WO\s*#\s*(\d+)", message_field)
-        if m:
-            wo_id = int(m.group(1))
-
-    if resp.ok and wo_id is not None:
-        event.work_order_id = wo_id
+    # 1) Try with the machine as-is
+    first = _post_to_litmus(original_equipment, payload_base, headers, timeout=timeout)
+    if first["ok"]:
+        event.work_order_id = first["wo_id"]
         event.save(update_fields=["work_order_id", "updated_at_UTC"])
         return {
             "ok": True,
-            "message": f"Work order #{wo_id} created (Trade {trade_code}, StandardWO '{standard_wo}').",
-            "work_order_id": wo_id,
-            "status_code": resp.status_code,
+            "message": f"Work order #{first['wo_id']} created (Trade {trade_code}, StandardWO '{standard_wo}').",
+            "work_order_id": first["wo_id"],
+            "status_code": first["status_code"],
         }
 
-    fallback_msg = (message_field or str(body)[:200]) if body else resp.text[:200]
+    # 2) If equipment looks like 1806L/1806R/etc and error suggests "not found", try stripping suffix letter
+    alt_equipment = _candidate_alt_equipment(original_equipment)
+    if alt_equipment and _is_equipment_not_found(first.get("message"), first.get("status_code", 0)):
+        second = _post_to_litmus(alt_equipment, payload_base, headers, timeout=timeout)
+        if second["ok"]:
+            event.work_order_id = second["wo_id"]
+            event.save(update_fields=["work_order_id", "updated_at_UTC"])
+            return {
+                "ok": True,
+                "message": (
+                    f"Work order #{second['wo_id']} created (Trade {trade_code}, StandardWO '{standard_wo}'). "
+                    f"Note: '{original_equipment}' not found in EAM; succeeded using '{alt_equipment}'."
+                ),
+                "work_order_id": second["wo_id"],
+                "status_code": second["status_code"],
+            }
+        # Both attempts failed – tailor message for equipment not found
+        if _is_equipment_not_found(second.get("message"), second.get("status_code", 0)):
+            return {
+                "ok": False,
+                "message": (
+                    f"EAM could not find equipment '{original_equipment}' "
+                    f"(also tried '{alt_equipment}'). Please verify the machine number in EAM "
+                    f"or remove the trailing letter if not used there."
+                ),
+                "status_code": second["status_code"] or first["status_code"] or 400,
+            }
+
+    # 3) General failure fallback with a helpful message
     return {
         "ok": False,
-        "message": f"Work order creation failed (HTTP {resp.status_code}). {fallback_msg}",
-        "status_code": resp.status_code,
-        "raw": body,
+        "message": (
+            first["message"] or
+            "Could not create the work order. Please try again, and if the problem persists contact maintenance."
+        ),
+        "status_code": first.get("status_code", 400),
     }
 
 
