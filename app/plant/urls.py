@@ -111,8 +111,6 @@ urlpatterns = [
 
     path('quick-add/', quick_add, name='quick_add'),
 
-    path("api/create-workorder/", create_workorder, name="create_workorder"),
-
     path('downtime/<int:entry_id>/generate-wo/', generate_workorder, name='generate_workorder'),
 
 

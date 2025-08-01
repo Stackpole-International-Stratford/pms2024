@@ -428,3 +428,7 @@ JAZZMIN_SETTINGS = {
     "login_logo": None,
     "login_logo_dark": None,
 }
+
+
+LITMUS_API_URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
+LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"

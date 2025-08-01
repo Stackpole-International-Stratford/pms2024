@@ -16,8 +16,10 @@ from django.db.models import OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
 import time
 from django.contrib import messages
+from requests.exceptions import Timeout, RequestException
 from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
+from django.conf import settings
 from django.http        import HttpResponseForbidden
 import math
 from django.utils.timezone import is_naive, make_aware, get_default_timezone, utc, localtime
@@ -1857,104 +1859,17 @@ def quick_add(request):
 
 
 
-import json
-import requests
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-
-@require_http_methods(["GET", "POST"])
-def create_workorder(request):
-    LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
-    URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
-
-    print("=== create_workorder triggered ===")
-    print("Request method:", request.method)
-
-    # pull from GET or POST data
-    data = request.GET if request.method == "GET" else request.POST
-    print("Raw incoming data:", data)
-
-    # extract or default
-    equip       = data.get("equip",       "1806")
-    category    = data.get("category",    "Temperature")
-    subcategory = data.get("subcategory", "Heat Break")
-    comment     = data.get("comment",     "Heat is too much. Operators were sent on break humidex > 43")
-    standard    = data.get("standard",    "PMS BREAKDOWN")
-    priority    = data.get("priority",    "2")
-    status      = data.get("status",      "R")
-
-    # build the full WO string
-    wo_full = f"{category} - {subcategory} - {comment}"
-
-    # enforce max‐80 rule with ellipsis
-    if len(wo_full) > 80:
-        wo = wo_full[:77] + "..."
-        print(f"WO too long ({len(wo_full)} chars); truncating to 80 with ellipsis")
-    else:
-        wo = wo_full
-
-    print(f"Using WO: '{wo}' ({len(wo)} chars)")
-
-    payload = {
-        "WO":            wo,
-        "Org":           "PMDS",
-        "Equipment":     equip,
-        "Type":          "BRKD",
-        "Priority":      priority,
-        "Dept":          "MAINT",
-        "WOStatus":      status,
-        "EstTradeDT":    1,
-        "Trade":         "MI",
-        "EstTradeHours": 1,
-        "PeopleRequired":1,
-        "RespDept":      "MT",
-        "StandardWO":    standard,
-    }
 
 
-    payload_json = json.dumps(payload)
-    print("Constructed JSON payload:", payload_json)
-
-    headers = {
-        "X-Api-Key":    LITMUS_API_KEY,
-        "Content-Type": "application/json",
-    }
-    print("Target URL:", URL)
-    print("Request headers:", headers)
-
-    try:
-        # you can also use json=payload instead of data=payload_json
-        resp = requests.post(URL, data=payload_json, headers=headers, timeout=30)
-    except Exception as e:
-        print(">>> Exception during requests.post:", str(e))
-        return JsonResponse(
-            {"error": "Request exception", "details": str(e)},
-            status=500
-        )
-
-    print("HTTP response status code:", resp.status_code)
-    print("HTTP response headers:", dict(resp.headers))
-
-    try:
-        result = resp.json()
-        print("Response JSON body:", json.dumps(result))
-    except ValueError:
-        raw = resp.text
-        print("Response body is not JSON, raw text:", raw)
-        result = {"raw": raw}
-
-    print("=== create_workorder complete ===")
-    return JsonResponse(
-        {"status_code": resp.status_code, "result": result},
-        status=resp.status_code
-    )
+# ====================================================================================
+# ====================================================================================
+# ======================== Phase 4 Generating Work Orders ============================
+# ====================================================================================
+# ====================================================================================
 
 
-
-
-# --- Inline config (can be moved to settings later) -----------------
-LITMUS_API_URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
-LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
+LITMUS_API_URL = settings.LITMUS_API_URL
+LITMUS_API_KEY = settings.LITMUS_API_KEY
 
 # Role → Trade
 TRADE_BY_ROLE = {
@@ -1992,13 +1907,7 @@ STANDARD_WO_BY_TRADE = {
 }
 
 # --- Helpers --------------------------------------------------------
-import re
-import requests
-from requests.exceptions import Timeout, RequestException
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
+
 
 def _build_wo_title(category: str, subcategory: str, comment: str) -> str:
     """'Category - Subcategory - Comment' capped at 80 chars with ellipsis."""
