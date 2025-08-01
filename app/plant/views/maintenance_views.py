@@ -1875,7 +1875,7 @@ def create_workorder(request):
         "RespDept":       "MT",
         "StandardWO":      standard,        # corrected JSON key + real standard-WO code
     }
-
+.
     payload_json = json.dumps(payload)
     print("Constructed JSON payload:", payload_json)
 
