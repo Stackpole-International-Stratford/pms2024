@@ -129,13 +129,22 @@ class MachineDowntimeEventTEST(models.Model):
     created_at_UTC     = models.DateTimeField(auto_now_add=True)
     updated_at_UTC     = models.DateTimeField(auto_now=True)
 
+    # new: store the generated work-order ID from the API
+    work_order_id      = models.IntegerField(
+        "Work Order #",
+        null=True,
+        blank=True,
+        default=None,
+        help_text="ID returned by the work-order API"
+    )
+
     # new:
     LABOUR_CHOICES = [
         ('ELECTRICIAN', 'Need Electrician'),
         ('TECH',        'Need Tech'),
         ('MILLWRIGHT',  'Need Millwright'),
-        ('PLCTECH',    'Need PLC Technician'),
-        ('IMT',        'Need IMT'),
+        ('PLCTECH',     'Need PLC Technician'),
+        ('IMT',         'Need IMT'),
         ('NA',          'N/A'),
     ]
     labour_types = models.JSONField(
@@ -178,11 +187,12 @@ class MachineDowntimeEventTEST(models.Model):
         else None.
         """
         if self.closeout_epoch:
-            return datetime.fromtimestamp(self.closeout_epoch)
+            return _datetime.fromtimestamp(self.closeout_epoch)
         return None
 
     def __str__(self):
         return f"{self.code} @ {self.start_epoch} on {self.line}/{self.machine}"
+    
 
 
 class LinePriority(models.Model):
