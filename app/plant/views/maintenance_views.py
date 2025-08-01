@@ -34,7 +34,8 @@ from django.utils.encoding import smart_str
 from collections import OrderedDict
 from django.contrib.auth.decorators import user_passes_test
 from django.utils.dateparse import parse_datetime
-
+import re
+import requests
 
 
 # ============================================================================
@@ -1938,20 +1939,170 @@ def create_workorder(request):
 
 
 
+
+
+
+
+
+# --- Inline config (can be moved to settings later) -----------------
+LITMUS_API_URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
+LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
+
+# Map our roles to Litmus Trade codes
+TRADE_BY_ROLE = {
+    "electrician": "ELA",
+    "millwright":  "MI",
+    "plctech":     "EMTR",
+    # add more if needed, e.g. "imt": "IMT"
+}
+
+# For inferring from event.labour_types (MODEL uses uppercase labels)
+TRADE_BY_EVENT_CODE = {
+    "ELECTRICIAN": "ELA",
+    "MILLWRIGHT":  "MI",
+    "PLCTECH":     "EMTR",
+    # "IMT": "IMT",
+}
+
+# Preferred order if user has multiple groups (tweak as you like)
+TRADE_PRIORITY = ["electrician", "plctech", "millwright"]
+
+
+# --- Helpers --------------------------------------------------------
+def _build_wo_title(category: str, subcategory: str, comment: str) -> str:
+    """'Category - Subcategory - Comment' capped at 80 chars with ellipsis."""
+    parts = [p for p in [category, subcategory or "", comment or ""] if p]
+    full = " - ".join(parts)
+    return (full[:77] + "...") if len(full) > 80 else full
+
+
+def _resolve_trade_for_user(user, event) -> str:
+    """
+    Choose Trade code:
+      1) Based on the logged-in user's maintenance group(s)
+      2) Else infer from event.labour_types
+      3) Else default to MI
+    """
+    # 1) by user groups
+    user_groups = set(user.groups.values_list("name", flat=True))
+    for role in TRADE_PRIORITY:
+        grp_name = ROLE_TO_GROUP.get(role)  # ROLE_TO_GROUP exists elsewhere in your file
+        if grp_name and grp_name in user_groups:
+            return TRADE_BY_ROLE.get(role, "MI")
+
+    # 2) by event.labour_types (e.g., ["PLCTECH","ELECTRICIAN"])
+    if isinstance(event.labour_types, list):
+        for code in event.labour_types:
+            trade = TRADE_BY_EVENT_CODE.get(str(code).upper())
+            if trade:
+                return trade
+
+    # 3) fallback
+    return "MI"
+
+
+def _create_workorder_for_event(event, user, *, timeout: int = 30):
+    """
+    Create a work order for the given MachineDowntimeEventTEST instance by
+    calling the Litmus API. Saves event.work_order_id on success.
+    Returns a dict with ok/message/work_order_id/status_code.
+    """
+    # idempotent: if already created, don't call the API again
+    if event.work_order_id:
+        return {
+            "ok": True,
+            "message": f"Work order already exists: #{event.work_order_id}.",
+            "work_order_id": event.work_order_id,
+            "status_code": 200,
+        }
+
+    wo_title = _build_wo_title(event.category, event.subcategory, event.comment)
+    trade_code = _resolve_trade_for_user(user, event)
+
+    payload = {
+        "WO":            wo_title,
+        "Org":           "PMDS",
+        "Equipment":     str(event.machine),   # equip from the machine field
+        "Type":          "BRKD",
+        "Priority":      "2",
+        "Dept":          "MAINT",
+        "WOStatus":      "R",
+        "EstTradeDT":    1,
+        "Trade":         trade_code,           # ← dynamic trade
+        "EstTradeHours": 1,
+        "PeopleRequired":1,
+        "RespDept":      "MT",
+        "StandardWO":    "PMS BREAKDOWN",
+    }
+
+    headers = {
+        "X-Api-Key":    LITMUS_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    try:
+        resp = requests.post(LITMUS_API_URL, json=payload, headers=headers, timeout=timeout)
+    except Exception as e:
+        return {
+            "ok": False,
+            "message": f"Request exception: {e}",
+            "status_code": 0,
+        }
+
+    # Parse response JSON (or fall back to text)
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {"raw": resp.text}
+
+    # Extract "Message" regardless of wrapper shape
+    message_field = None
+    if isinstance(body, dict):
+        if "Message" in body:
+            message_field = body.get("Message")
+        elif "result" in body and isinstance(body["result"], dict):
+            message_field = body["result"].get("Message")
+
+    # Look for "WO # 975463" in the Message
+    wo_id = None
+    if isinstance(message_field, str):
+        m = re.search(r"WO\s*#\s*(\d+)", message_field)
+        if m:
+            wo_id = int(m.group(1))
+
+    if resp.ok and wo_id is not None:
+        event.work_order_id = wo_id
+        event.save(update_fields=["work_order_id", "updated_at_UTC"])
+        return {
+            "ok": True,
+            "message": f"Work order #{wo_id} created (Trade {trade_code}).",
+            "work_order_id": wo_id,
+            "status_code": resp.status_code,
+        }
+
+    # Failure path
+    fallback_msg = (message_field or str(body)[:200]) if body else resp.text[:200]
+    return {
+        "ok": False,
+        "message": f"Work order creation failed (HTTP {resp.status_code}). {fallback_msg}",
+        "status_code": resp.status_code,
+        "raw": body,
+    }
+
+
+# --- View -----------------------------------------------------------
 @login_required
 @require_POST
 def generate_workorder(request, entry_id):
-    try:
-        # Do your actual WO creation here...
-        print(f"Generate WO for downtime event {entry_id}")
+    event = get_object_or_404(MachineDowntimeEventTEST, pk=entry_id, is_deleted=False)
+    result = _create_workorder_for_event(event, request.user)
 
-        return JsonResponse({
-            "ok": True,
-            "message": f"Work order created for event {entry_id}."
-        })
-    except Exception as e:
-        return JsonResponse({
-            "ok": False,
-            "message": f"Failed to create work order: {e}"
-        }, status=400)
-
+    status = 200 if result.get("ok") else 400
+    return JsonResponse(
+        {
+            "ok": result.get("ok", False),
+            "message": result.get("message", "Unknown result."),
+            "work_order_id": result.get("work_order_id"),
+        },
+        status=status
+    )

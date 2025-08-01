@@ -368,29 +368,23 @@ Add New or Update Employee
     const modalEl = document.getElementById('generateWorkOrderModal');
     const getModal = () => bootstrap.Modal.getOrCreateInstance(modalEl);
 
-    // When the lightning "Generate WO" button is clicked, prep the modal
     document.querySelectorAll('.generate-wo-btn').forEach(link => {
       link.addEventListener('click', (e) => {
-        e.preventDefault();    // don't follow the <a> href
-        e.stopPropagation();   // don't trigger row click
-
-        // Point the form at the specific event URL rendered in the link
+        e.preventDefault();
+        e.stopPropagation();
         form.action = link.href;
 
-        // Fill in the machine number in the modal
         const row = link.closest('tr.editable-row');
         const text = row?.querySelector('td')?.textContent || '';
         const machine = (text.split('–')[1] || '').trim();
         document.getElementById('wo-machine-num').textContent = machine;
 
-        // Ensure the modal opens (data-bs-* may handle this already)
         getModal().show();
       });
     });
 
-    // Submit the modal form via AJAX and show an alert with the result
     form.addEventListener('submit', async (e) => {
-      e.preventDefault(); // stay on the same page
+      e.preventDefault();
 
       const submitBtn = form.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
@@ -403,11 +397,11 @@ Add New or Update Employee
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
           },
-          body: new FormData(form) // includes csrf token field
+          body: new FormData(form)
         });
 
         let data = null;
-        try { data = await res.json(); } catch { /* non-JSON fallback */ }
+        try { data = await res.json(); } catch {}
 
         if (!res.ok || (data && data.ok === false)) {
           const msg = (data && data.message) ? data.message : `Failed to generate work order (HTTP ${res.status}).`;
@@ -415,11 +409,11 @@ Add New or Update Employee
           return;
         }
 
-        // Success
+        // Success: close modal, alert, then refresh the page/table
         getModal()?.hide();
-        alert((data && data.message) ? data.message : 'Work order generated.');
-        // If you want to reflect changes immediately, uncomment:
-        // location.reload();
+        const msg = (data && data.message) ? data.message : 'Work order generated.';
+        alert(msg);
+        location.reload(); // <-- refresh to remove the lightning icon, show WO #
       } catch (err) {
         alert(`Could not generate work order: ${err?.message || err}`);
       } finally {
@@ -428,6 +422,7 @@ Add New or Update Employee
     });
   })();
   </script>
+
 
 
 
