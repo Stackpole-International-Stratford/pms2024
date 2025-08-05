@@ -6505,30 +6505,24 @@ def fetch_prdowntime1_entries_with_id(assetnum: str,
     Returns a list of 5-tuples:
       (id, comment, category, start_at: datetime, closeout_at: datetime or None)
     matching any MachineDowntimeEvent overlapping the given window.
-    """
-    # 1) normalize the machine identifier
-    assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
 
-    # 2) parse the ISO-8601 window into epochs
+    Changes:
+      - Exact L/R match first; fallback to base numeric only if exact returns no rows.
+      - Correct overlap condition: start <= window_end AND (end >= window_start or end is NULL).
+    """
+    # --- parse the ISO-8601 window into epochs (naive -> epoch) ---
     start_dt = datetime.fromisoformat(called4helptime)
     end_dt   = datetime.fromisoformat(completedtime)
     start_ts = int(start_dt.timestamp())
     end_ts   = int(end_dt.timestamp())
 
-    # 3) rebuild your “overlap” Q exactly as before
+    # --- build the overlap predicate ---
     overlap = (
-        (Q(start_epoch__lt=start_ts) &
-         (Q(closeout_epoch__gte=start_ts) | Q(closeout_epoch__isnull=True)))
-        |
-        Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)
-        |
-        (Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts) &
-         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
-        |
-        (Q(start_epoch__lt=start_ts) &
-         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+        Q(start_epoch__lte=end_ts) &
+        (Q(closeout_epoch__isnull=True) | Q(closeout_epoch__gte=start_ts))
     )
 
+    # --- exact machine first ---
     qs = (
         MachineDowntimeEvent.objects
         .filter(machine=assetnum, is_deleted=False)
@@ -6536,16 +6530,29 @@ def fetch_prdowntime1_entries_with_id(assetnum: str,
         .order_by('start_epoch')
     )
 
+    # --- fallback to base numeric (strip a single trailing L/R) if needed ---
+    if not qs.exists() and re.fullmatch(r"\d+[LR]", assetnum):
+        base = assetnum[:-1]
+        qs = (
+            MachineDowntimeEvent.objects
+            .filter(machine=base, is_deleted=False)
+            .filter(overlap)
+            .order_by('start_epoch')
+        )
+
     rows = []
     for ev in qs:
         rows.append((
-            ev.id,              # idnumber
-            ev.comment,         # problem/comment
-            ev.category,        # new Scheduled vs. Unplanned flag
-            ev.start_at,        # datetime.fromtimestamp(ev.start_epoch)
-            ev.closeout_at      # datetime or None
+            ev.id,          # idnumber
+            ev.comment,     # problem/comment
+            ev.category,    # e.g., "Scheduled Down"
+            ev.start_at,    # datetime accessor on your model (kept as-is)
+            ev.closeout_at  # datetime or None (kept as-is)
         ))
     return rows
+
+
+
 
 def get_parts_for_machine(lines, line_name, machine_id):
     """
@@ -6996,46 +7003,50 @@ def get_pr_downtime_entries(machine_number: str,
 
     return pr_downtime_entries
 
-def calculate_planned_downtime(downtime_events, pr_downtime_entries, block_end):
+def calculate_planned_downtime(pr_downtime_entries, block_start, block_end,
+                               cap_to_window=True, cap_to_downtime_minutes=None):
     """
-    Sum only the overlap (in minutes) between your production-gap events
-    (downtime_events) and any PR entries whose category == "Scheduled Down".
-    If a PR entry has no end_time, it’s assumed to run until block_end.
-    
-    :param downtime_events: list of dicts with "start" and "end" (either datetime or "%Y-%m-%d %H:%M" strings)
-    :param pr_downtime_entries: list of dicts with "category", "start_time" (datetime), and optional "end_time" (datetime or None)
-    :param block_end: datetime marking the end of your GFX window
-    :returns: total planned downtime in minutes (int)
+    Sum the union (merged overlap) of all Scheduled-Down PR entries within [block_start, block_end].
+    - cap_to_window: if True, cap planned minutes to the window length.
+    - cap_to_downtime_minutes: if given, also cap to actual downtime minutes for the window.
     """
-    planned = 0
-
+    # 1) Collect clamped intervals for Scheduled Down
+    intervals = []
     for pr in pr_downtime_entries:
-        # only consider scheduled-down entries
         if pr.get("category") != "Scheduled Down":
             continue
-
-        pr_start = pr.get("start_time")
-        if not pr_start:
-            # no valid start → skip
+        s = pr.get("start_time")
+        if not s:
             continue
+        e = pr.get("end_time") or block_end
 
-        # if still open, treat as running until block_end
-        pr_end = pr.get("end_time") or block_end
+        # clamp to the window
+        s = max(s, block_start)
+        e = min(e, block_end)
+        if e > s:
+            intervals.append((s, e))
 
-        for ev in downtime_events:
-            # normalize event start/end to datetime
-            ev_start = ev["start"] if isinstance(ev["start"], datetime) \
-                       else datetime.strptime(ev["start"], "%Y-%m-%d %H:%M")
-            ev_end   = ev["end"]   if isinstance(ev["end"], datetime) \
-                       else datetime.strptime(ev["end"],   "%Y-%m-%d %H:%M")
+    if not intervals:
+        return 0
 
-            # compute overlap window
-            overlap_start = max(pr_start, ev_start)
-            overlap_end   = min(pr_end,   ev_end)
+    # 2) Merge overlapping intervals
+    intervals.sort(key=lambda x: x[0])
+    merged = [list(intervals[0])]
+    for s, e in intervals[1:]:
+        if s <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], e)
+        else:
+            merged.append([s, e])
 
-            if overlap_end > overlap_start:
-                mins = int((overlap_end - overlap_start).total_seconds() // 60)
-                planned += mins
+    # 3) Sum merged durations
+    planned = sum(int((e - s).total_seconds() // 60) for s, e in merged)
+
+    # 4) Caps
+    if cap_to_window:
+        window_len = int((block_end - block_start).total_seconds() // 60)
+        planned = min(planned, window_len)
+    if cap_to_downtime_minutes is not None:
+        planned = min(planned, int(cap_to_downtime_minutes))
 
     return planned
 
@@ -7540,7 +7551,14 @@ def fetch_combined_oee_production_data(request):
                     # print(f"[DEBUG] ---- Machine {machine_number}: Added {len(downtime_events)} downtime events")
 
                     # Calculate planned downtime.
-                    planned = calculate_planned_downtime(downtime_events, pr_entries, block_end)
+                    planned = calculate_planned_downtime(
+                        pr_entries,
+                        block_start, block_end,
+                        cap_to_window=True,
+                        # Optional: also cap to actual GFx downtime for that window
+                        cap_to_downtime_minutes=downtime_minutes
+                    )
+
                     machine_data["planned_downtime_minutes"] += planned
                     op_total_planned_downtime += planned
                     line_total_planned_downtime += planned
