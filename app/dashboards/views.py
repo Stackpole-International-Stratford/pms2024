@@ -1907,6 +1907,68 @@ PAGES = {
             },
         ],
     },
+        "ZF": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+            "program": "ZF",
+            "lines": [
+                {
+                    "line": "ZF",
+                    "scrap_line": "ZF",
+                    "operations": [
+                        {
+                            "op": "OP10",
+                            "machines": [
+                                {"number": "1504"},
+                                {"number": "1506"},
+                                {"number": "1519"},
+                                {"number": "1520"},
+                                {"number": "1518"},
+                                {"number": "1521"},
+                                {"number": "1522"},
+                                {"number": "1523"},
+                            ],
+                        },
+                        
+                    ],
+                }
+            ],
+        },
+        ],
+    },
+     "GFX": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+            "program": "GFX",
+            "lines": [
+                {
+                    "line": "GFX",
+                    "scrap_line": "GFX",
+                    "operations": [
+                        {
+                            "op": "OP10",
+                            "machines": [
+                                {"number": "1504"},
+                                {"number": "1506"},
+                                {"number": "1519"},
+                                {"number": "1520"},
+                                {"number": "1518"},
+                                {"number": "1521"},
+                                {"number": "1522"},
+                                {"number": "1523"},
+                            ],
+                        },
+                        
+                    ],
+                }
+            ],
+        },
+        ],
+    },
+
+
     "trilobe": {
         "dayshift_start": "07:00",
         "programs": [
