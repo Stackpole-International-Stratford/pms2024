@@ -1918,16 +1918,15 @@ PAGES = {
                     "scrap_line": "ZF",
                     "operations": [
                         {
-                            "op": "OP10",
+                            "op": "OP60",
                             "machines": [
-                                {"number": "1504"},
-                                {"number": "1506"},
-                                {"number": "1519"},
-                                {"number": "1520"},
-                                {"number": "1518"},
-                                {"number": "1521"},
-                                {"number": "1522"},
-                                {"number": "1523"},
+                                {"number": "775"},
+                            ],
+                        },
+                        {
+                            "op": "autoguage",
+                            "machines": [
+                                {"number": "797"},
                             ],
                         },
                         
@@ -1948,16 +1947,18 @@ PAGES = {
                     "scrap_line": "GFX",
                     "operations": [
                         {
-                            "op": "OP10",
+                            "op": "OP30",
                             "machines": [
-                                {"number": "1504"},
-                                {"number": "1506"},
-                                {"number": "1519"},
-                                {"number": "1520"},
-                                {"number": "1518"},
-                                {"number": "1521"},
-                                {"number": "1522"},
-                                {"number": "1523"},
+                                {"number": "1605"},
+                                {"number": "1606"},
+                                {"number": "1607"},
+                                {"number": "1608"},
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1617"},
                             ],
                         },
                         
