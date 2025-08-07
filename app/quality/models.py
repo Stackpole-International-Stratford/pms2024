@@ -260,3 +260,52 @@ class ScrapSubmission(models.Model):
             f"{self.operation_name}/{self.category_name} "
             f"(qty {self.quantity})"
         )
+    
+
+
+
+
+
+# ==========================================================================
+# ==========================================================================
+# ======================= TPC Requests =====================================
+# ==========================================================================
+# ==========================================================================
+
+# tpc/models.py
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+
+
+class TPCRequest(models.Model):
+    date_requested   = models.DateField(default=timezone.now)
+    issuer_name      = models.CharField(max_length=120)
+    reason           = models.CharField(max_length=200)
+    process          = models.CharField(max_length=120)
+    supplier_issue   = models.BooleanField(default=False)
+    machine_number   = models.CharField(max_length=50, blank=True)
+    reason_note      = models.TextField(blank=True)
+    feature          = models.CharField(max_length=120, blank=True)
+    current_process  = models.TextField(blank=True)
+    changed_to       = models.TextField(blank=True)
+    expiration_date  = models.DateField()
+    expiration_notes = models.TextField(blank=True)
+
+    # approval info
+    approved         = models.BooleanField(default=False)
+    approved_by      = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_tpc'
+    )
+    approved_at      = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-date_requested"]
+
+    def __str__(self):
+        return f"TPC #{self.pk} – {self.issuer_name} on {self.date_requested}"
+
+
