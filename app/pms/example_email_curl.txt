@@ -1,0 +1,19 @@
+curl -w "\nTotal time: %{time_total}s\n" \
+  -X POST http://localhost:5005/send-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "html": "<h1>Test Email</h1><p>If you see this, it works!</p>",
+    "recipients": [
+      "tyler.careless@johnsonelectric.com",
+      "user1@mailinator.com",
+      "user2@mailinator.com",
+      "user3@mailinator.com",
+      "user4@mailinator.com",
+      "user5@mailinator.com",
+      "user6@mailinator.com",
+      "user7@mailinator.com",
+      "user8@mailinator.com",
+      "user9@mailinator.com",
+      "user10@mailinator.com"
+    ]
+  }'
