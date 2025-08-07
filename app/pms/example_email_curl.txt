@@ -1,5 +1,5 @@
 curl -w "\nTotal time: %{time_total}s\n" \
-  -X POST http://localhost:5005/send-email \
+  -X POST http://10.4.1.234:5005/send-email \
   -H "Content-Type: application/json" \
   -d '{
     "html": "<h1>Test Email</h1><p>If you see this, it works!</p>",
