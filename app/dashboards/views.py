@@ -2944,7 +2944,7 @@ def dashboard_current_shift(request, pages: str):
 
     # ── Helper for deciding base hour per program ───────────────────────────
     def get_base_hour_for(program: str) -> int:
-        return 7 if program in ("8670", "plant3", "trilobe", "Area2") else 6
+        return 7 if program in ("8670", "plant3", "trilobe", "Area2", "ZF", "GFX") else 6
 
     # ── Compute “now” once, in EST ───────────────────────────────────────────
     tz_est  = pytz.timezone("America/New_York")
