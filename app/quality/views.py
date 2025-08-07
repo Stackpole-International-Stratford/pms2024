@@ -1557,3 +1557,9 @@ def send_tpc_email(request):
         "sent_to": recipients,
         "mailer_response": resp.json() if resp.headers.get('Content-Type','').startswith('application/json') else resp.text
     })
+
+
+
+def tpc_request(request):
+    # simply render the tpc_requests.html template
+    return render(request, 'quality/tpc_requests.html')

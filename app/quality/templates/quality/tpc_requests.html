@@ -1,0 +1,13 @@
+{# templates/tpc_requests.html #}
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <a
+    href="{% url 'admin:quality_tpcrequest_add' %}?_changelist_filters=q%3Dman"
+    class="btn btn-primary"
+  >
+    Hello World
+  </a>
+</div>
+{% endblock %}
