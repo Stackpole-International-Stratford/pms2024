@@ -1536,11 +1536,8 @@ def send_tpc_email(request):
     }
 
     # 4) POST to Flask mailer
-    flask_url = getattr(
-        settings, 
-        'FLASK_EMAILER_URL', 
-        'http://10.4.1.232:5005/send-email'
-    )
+    flask_url = settings.FLASK_EMAILER_URL  # now loaded directly from settings
+    
     try:
         resp = requests.post(
             flask_url,

@@ -428,3 +428,6 @@ JAZZMIN_SETTINGS = {
     "login_logo": None,
     "login_logo_dark": None,
 }
+
+
+FLASK_EMAILER_URL = 'http://10.4.1.232:5005/send-email'
