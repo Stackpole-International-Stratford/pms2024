@@ -3,6 +3,8 @@ from plant.models.setupfor_models import Part  # Importing the Part model
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from plant.models.setupfor_models import Asset
+from django.conf import settings
+from django.utils import timezone
 
 class SupervisorAuthorization(models.Model):
     supervisor_id = models.CharField(max_length=256)
@@ -272,10 +274,7 @@ class ScrapSubmission(models.Model):
 # ==========================================================================
 # ==========================================================================
 
-# tpc/models.py
-from django.conf import settings
-from django.db import models
-from django.utils import timezone
+
 
 
 class TPCRequest(models.Model):
