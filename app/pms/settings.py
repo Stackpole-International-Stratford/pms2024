@@ -430,4 +430,4 @@ JAZZMIN_SETTINGS = {
 }
 
 
-FLASK_EMAILER_URL = 'http://10.4.1.232:5005/send-email'
+FLASK_EMAILER_URL = 'http://10.4.1.234:5005/send-email'
