@@ -23,6 +23,10 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_http_methods
+import requests
+from django.conf import settings
+from django.views.decorators.http import require_GET
+from plant.models.email_models import EmailCampaign
 
 
 def index(request):
@@ -1480,3 +1484,79 @@ def get_categories(request):
         return JsonResponse({'results': list(cats)})
     except ScrapSystemOperation.DoesNotExist:
         return JsonResponse({'results': []})
+    
+
+
+
+
+
+
+
+
+
+
+
+# =====================================================================
+# =====================================================================
+# ========================= TPC Email Test ============================
+# =====================================================================
+# =====================================================================
+
+
+
+
+
+@require_GET
+def send_tpc_email(request):
+    """
+    Fetches the 'TPC Email' campaign, builds a Hello World HTML payload,
+    and POSTs it to the Flask emailer.
+    """
+    # 1) Look up the campaign
+    try:
+        campaign = EmailCampaign.objects.get(name="TPC Email")
+    except EmailCampaign.DoesNotExist:
+        return JsonResponse(
+            {"error": "TPC Email campaign not found."}, 
+            status=404
+        )
+
+    # 2) Collect recipient emails
+    recipients = list(campaign.recipients.values_list('email', flat=True))
+    if not recipients:
+        return JsonResponse(
+            {"error": "No recipients configured for TPC Email."}, 
+            status=400
+        )
+
+    # 3) Build the payload
+    payload = {
+        "html": "<h1>Hello World</h1><p>This is a test.</p>",
+        "recipients": recipients,
+    }
+
+    # 4) POST to Flask mailer
+    flask_url = getattr(
+        settings, 
+        'FLASK_EMAILER_URL', 
+        'http://10.4.1.232:5005/send-email'
+    )
+    try:
+        resp = requests.post(
+            flask_url,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=10,
+        )
+        resp.raise_for_status()
+    except requests.RequestException as exc:
+        return JsonResponse(
+            {"error": "Failed to hand off to Flask emailer.", "details": str(exc)},
+            status=502
+        )
+
+    return JsonResponse({
+        "status": "success", 
+        "sent_to": recipients,
+        "mailer_response": resp.json() if resp.headers.get('Content-Type','').startswith('application/json') else resp.text
+    })

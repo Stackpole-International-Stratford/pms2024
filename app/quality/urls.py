@@ -62,6 +62,6 @@ urlpatterns = [
     path('scrap-entry/get-operations/', get_operations, name='get_operations'),
     path('scrap-entry/get-categories/', get_categories, name='get_categories'),
 
-
+    path('send-tpc-email/', send_tpc_email, name='send_tpc_email'),
 
 ]

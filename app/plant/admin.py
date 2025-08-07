@@ -64,7 +64,6 @@ class EmailCampaignAdmin(admin.ModelAdmin):
             return False
         if request.user.is_superuser:
             return True
-        # allow listing, but only detail if they’re an editor
         if obj is None:
             return True
         return request.user in obj.editors.all()
@@ -74,14 +73,12 @@ class EmailCampaignAdmin(admin.ModelAdmin):
             return False
         if request.user.is_superuser:
             return True
-        # allow listing, but only change if they’re an editor
         if obj is None:
             return True
         return request.user in obj.editors.all()
 
     def get_readonly_fields(self, request, obj=None):
         ro = list(super().get_readonly_fields(request, obj))
-        # once created, non-superusers may not touch name/description/editors
         if obj is not None and not request.user.is_superuser:
             ro += ['name', 'description', 'editors']
         return ro
