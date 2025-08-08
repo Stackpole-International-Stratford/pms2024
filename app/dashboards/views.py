@@ -1907,6 +1907,63 @@ PAGES = {
             },
         ],
     },
+        "ZF": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+            "program": "ZF",
+            "lines": [
+                {
+                    "line": "ZF",
+                    "scrap_line": "ZF",
+                    "operations": [
+                        {
+                            "op": "autoguage",
+                            "machines": [
+                                {"number": "797"},
+                            ],
+                        },
+                        
+                    ],
+                }
+            ],
+        },
+        ],
+    },
+     "GFX": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+            "program": "GFX",
+            "lines": [
+                {
+                    "line": "GFX",
+                    "scrap_line": "GFX",
+                    "operations": [
+                        {
+                            "op": "OP30",
+                            "machines": [
+                                {"number": "1605"},
+                                {"number": "1606"},
+                                {"number": "1607"},
+                                {"number": "1608"},
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1617"},
+                            ],
+                        },
+                        
+                    ],
+                }
+            ],
+        },
+        ],
+    },
+
+
     "trilobe": {
         "dayshift_start": "07:00",
         "programs": [
@@ -2882,7 +2939,7 @@ def dashboard_current_shift(request, pages: str):
 
     # ── Helper for deciding base hour per program ───────────────────────────
     def get_base_hour_for(program: str) -> int:
-        return 7 if program in ("8670", "plant3", "trilobe", "Area2") else 6
+        return 7 if program in ("8670", "plant3", "trilobe", "Area2", "ZF", "GFX") else 6
 
     # ── Compute “now” once, in EST ───────────────────────────────────────────
     tz_est  = pytz.timezone("America/New_York")
@@ -3837,7 +3894,7 @@ def send_all_dashboards(request, pwd):
         """
 
     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
-    programs = ["8670", "Area1&Area2", "trilobe", "9341"]
+    programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
     rf = RequestFactory()
     fragments = []
     for pages in programs:
