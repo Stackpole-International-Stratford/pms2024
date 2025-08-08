@@ -1,11 +1,10 @@
-{# templates/quality/tpc_requests.html #}
 {% extends "parent.html" %}
 {% load static %}
 
 {% block content %}
 <style>
-  #tpc-table { width:100%; }                    /* keeps columns inside the page */
-  #tpc-table thead tr:first-child th { cursor:pointer; }  /* shows it’s sortable */
+  #tpc-table { width:100%; }                       /* keep columns inside page */
+  #tpc-table thead tr:first-child th { cursor:pointer; }
 </style>
 
 <div class="container mt-5">
@@ -17,6 +16,7 @@
         <th>ID</th>
         <th>Date requested</th>
         <th>Issuer</th>
+        <th>Part</th>
         <th>Reason</th>
         <th>Process</th>
         <th>Supplier Issue</th>
@@ -25,7 +25,8 @@
         <th>Approved?</th>
       </tr>
       <tr>
-        {% for _ in "012345678" %}
+        {# one search box per column #}
+        {% for _ in "0123456789" %}
           <th><input type="text" class="form-control form-control-sm" placeholder="Search…"></th>
         {% endfor %}
       </tr>
@@ -37,13 +38,9 @@
           <td>{{ t.pk }}</td>
           <td>{{ t.date_requested }}</td>
 
-          {#  20-char cap for “Issuer”  #}
           <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:20 }}</td>
-
-          {#  40-char cap for “Reason”  #}
+          <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:20 }}</td>
           <td title="{{ t.reason }}">{{ t.reason|truncatechars:25 }}</td>
-
-          {#  40-char cap for “Process” #}
           <td title="{{ t.process }}">{{ t.process|truncatechars:25 }}</td>
 
           <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
@@ -69,7 +66,7 @@
 </div>
 
 <script>
-/* ---------- Vanilla-JS live search & click-to-sort ---------- */
+/* ---------- Vanilla-JS live search + click-to-sort ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   const table  = document.getElementById('tpc-table');
   const inputs = table.querySelectorAll('thead tr:nth-child(2) input');
