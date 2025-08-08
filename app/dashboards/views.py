@@ -3894,7 +3894,7 @@ def send_all_dashboards(request, pwd):
         """
 
     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
-    programs = ["8670", "Area1&Area2", "trilobe", "9341"]
+    programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
     rf = RequestFactory()
     fragments = []
     for pages in programs:
