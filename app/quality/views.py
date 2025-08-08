@@ -27,7 +27,7 @@ import requests
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from plant.models.email_models import EmailCampaign
-
+from .models import TPCRequest
 
 def index(request):
     is_quality_manager = False
@@ -1560,6 +1560,7 @@ def send_tpc_email(request):
 
 
 
-def tpc_request(request):
-    # simply render the tpc_requests.html template
-    return render(request, 'quality/tpc_requests.html')
+
+def tpc_request(request):          #  <-- give the view a clearer name
+    tpcs = TPCRequest.objects.all()     #  already ordered by Meta.ordering
+    return render(request, "quality/tpc_requests.html", {"tpcs": tpcs})
