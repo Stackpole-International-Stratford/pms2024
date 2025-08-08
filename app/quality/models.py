@@ -306,5 +306,12 @@ class TPCRequest(models.Model):
 
     def __str__(self):
         return f"TPC #{self.pk} – {self.issuer_name} on {self.date_requested}"
+    
+    def approve(self, user):
+        """Mark this TPC as approved by *user* right now."""
+        self.approved      = True
+        self.approved_by   = user
+        self.approved_at   = timezone.now()
+        self.save(update_fields=["approved", "approved_by", "approved_at"])
 
 

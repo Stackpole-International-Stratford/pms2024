@@ -3,15 +3,21 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet"
-      href="https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.min.css">
+<style>
+  /* keep the Bootstrap-like stripes and add basic UX touches */
+  #tpc-table                 { width: 100%; }
+  #tpc-table thead th        { white-space: nowrap; }
+  #tpc-table thead tr:first-child th { cursor: pointer; }   /* click-to-sort hint */
+  #tpc-table thead tr:nth-child(2) input { width: 100%; }
+  #tpc-table tbody tr:nth-child(even)   { background: #f9f9f9; }
+</style>
 
 <div class="container mt-5">
   <h2>TPC Requests</h2>
 
-  <table id="tpc-table" class="table table-striped table-bordered" style="width:100%">
+  <table id="tpc-table" class="table table-bordered">
     <thead>
-      <!-- 1st row: headings -->
+      <!-- row 0 – headings (clickable for sort) -->
       <tr>
         <th>ID</th>
         <th>Date requested</th>
@@ -23,11 +29,11 @@
         <th>Expiration</th>
         <th>Approved?</th>
       </tr>
-      <!-- 2nd row: small inputs used by DataTables for live-search -->
+
+      <!-- row 1 – per-column live-filter inputs -->
       <tr>
         {% for _ in "012345678" %}
-          <th><input type="text" class="form-control form-control-sm"
-                     placeholder="Search…" /></th>
+          <th><input type="text" class="form-control form-control-sm" placeholder="Search…"></th>
         {% endfor %}
       </tr>
     </thead>
@@ -43,33 +49,63 @@
           <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
           <td>{{ t.machine_number }}</td>
           <td>{{ t.expiration_date }}</td>
-          <td>{{ t.approved|yesno:"Yes,No" }}</td>
+
+          <!-- approval cell -->
+          <td>
+            {% if t.approved %}
+              ✔️
+            {% elif is_quality_manager %}
+              <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+              </form>
+            {% else %}
+              —
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-<!-- JS dependencies -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.datatables.net/2.0.0/js/dataTables.min.js"></script>
-
 <script>
-  $(function () {
-    // initialise
-    const table = new DataTable('#tpc-table', {
-      orderCellsTop: true,     // make sure sort works with the search row on top
-      fixedHeader: true        // nice UX when scrolling
-    });
+/* ---------- Vanilla-JS live search & click-to-sort ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const table  = document.getElementById('tpc-table');
+  const inputs = table.querySelectorAll('thead tr:nth-child(2) input');
+  const rows   = Array.from(table.tBodies[0].rows);
 
-    // hook up each header input to its column search
-    $('#tpc-table thead tr:eq(1) th').each(function (i) {
-      $('input', this).on('keyup change clear', function () {
-        if (table.column(i).search() !== this.value) {
-          table.column(i).search(this.value).draw();
-        }
+  /* per-column filter */
+  function filter() {
+    rows.forEach(row => {
+      const visible = Array.from(inputs).every((inp, idx) => {
+        const term = inp.value.trim().toLowerCase();
+        return !term || row.cells[idx].textContent.toLowerCase().includes(term);
       });
+      row.style.display = visible ? '' : 'none';
+    });
+  }
+  inputs.forEach(inp => inp.addEventListener('input', filter));
+
+  /* simple click-to-sort */
+  table.querySelectorAll('thead tr:first-child th').forEach((th, idx) => {
+    let asc = true;
+    th.addEventListener('click', () => {
+      rows.sort((a, b) => {
+        const A = a.cells[idx].textContent.trim();
+        const B = b.cells[idx].textContent.trim();
+        const numA = parseFloat(A.replace(/[^0-9.\-]/g, ''));
+        const numB = parseFloat(B.replace(/[^0-9.\-]/g, ''));
+        const diff = (!isNaN(numA) && !isNaN(numB))
+                     ? numA - numB
+                     : A.localeCompare(B, undefined, {numeric:true, sensitivity:'base'});
+        return asc ? diff : -diff;
+      });
+      asc = !asc;               // toggle next time
+      rows.forEach(r => table.tBodies[0].appendChild(r));
     });
   });
+});
 </script>
 {% endblock %}

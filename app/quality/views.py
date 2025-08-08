@@ -1561,6 +1561,30 @@ def send_tpc_email(request):
 
 
 
-def tpc_request(request):          #  <-- give the view a clearer name
-    tpcs = TPCRequest.objects.all()     #  already ordered by Meta.ordering
-    return render(request, "quality/tpc_requests.html", {"tpcs": tpcs})
+# views.py
+@login_required
+def tpc_request(request):
+    tpcs = TPCRequest.objects.all()
+    is_quality_manager = request.user.groups.filter(name="quality_manager").exists()
+    return render(
+        request,
+        "quality/tpc_requests.html",
+        {"tpcs": tpcs, "is_quality_manager": is_quality_manager},
+    )
+
+
+
+@login_required
+def tpc_request_approve(request, pk):
+    """POST-only endpoint to approve a single TPC."""
+    if request.method != "POST":
+        return redirect("tpc_request_list")                 # no GET approvals 😇
+
+    if not request.user.groups.filter(name="quality_manager").exists():
+        messages.error(request, "You do not have permission to approve TPCs.")
+        return redirect("tpc_request_list")
+
+    tpc = get_object_or_404(TPCRequest, pk=pk, approved=False)
+    tpc.approve(request.user)
+    messages.success(request, f"TPC #{tpc.pk} approved!")
+    return redirect("tpc_request_list")

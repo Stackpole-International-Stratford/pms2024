@@ -65,6 +65,9 @@ urlpatterns = [
     path('send-tpc-email/', send_tpc_email, name='send_tpc_email'),
 
 
-    path('tpc-request/', tpc_request, name='tpc_request'),
+    path("tpc-requests/", tpc_request, name="tpc_request_list"),
+
+    # approve action
+    path("tpc-requests/<int:pk>/approve/", tpc_request_approve, name="tpc_approve",),
 
 ]

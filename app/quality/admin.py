@@ -67,7 +67,6 @@ class AssetAdmin(admin.ModelAdmin):
 # ────────────────────────────────────
 QM_GROUP = "quality_manager"          # name of your Quality-Manager group
 
-
 @admin.register(TPCRequest)
 class TPCRequestAdmin(admin.ModelAdmin):
     # ─────────────── list view ───────────────
@@ -105,10 +104,8 @@ class TPCRequestAdmin(admin.ModelAdmin):
     def _is_qm(self, request):
         return request.user.groups.filter(name=QM_GROUP).exists()
 
-    # show only *un-expired* rows in the changelist
-    def get_queryset(self, request):
-        today = timezone.now().date()
-        return super().get_queryset(request).filter(expiration_date__gte=today)
+    # ❶  NO queryset filtering → show *all* TPCs
+    # (delete the old get_queryset override completely)
 
     # tailor add/change forms
     def get_fields(self, request, obj=None):
@@ -116,7 +113,7 @@ class TPCRequestAdmin(admin.ModelAdmin):
             return self.base_fields
         if self._is_qm(request):              # QM editing
             return self.base_fields + self.approval_fields
-        return self.base_fields + self.approval_fields if obj.approved else self.base_fields
+        return self.base_fields + (self.approval_fields if obj.approved else ())
 
     def get_readonly_fields(self, request, obj=None):
         ro = list(self.readonly_fields)
