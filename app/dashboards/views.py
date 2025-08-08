@@ -1918,12 +1918,6 @@ PAGES = {
                     "scrap_line": "ZF",
                     "operations": [
                         {
-                            "op": "OP60",
-                            "machines": [
-                                {"number": "775"},
-                            ],
-                        },
-                        {
                             "op": "autoguage",
                             "machines": [
                                 {"number": "797"},
