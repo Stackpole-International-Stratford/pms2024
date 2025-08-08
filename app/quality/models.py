@@ -280,6 +280,7 @@ class ScrapSubmission(models.Model):
 class TPCRequest(models.Model):
     date_requested   = models.DateField(default=timezone.now)
     issuer_name      = models.CharField(max_length=120)
+    part             = models.CharField(max_length=120)
     reason           = models.CharField(max_length=200)
     process          = models.CharField(max_length=120)
     supplier_issue   = models.BooleanField(default=False)
