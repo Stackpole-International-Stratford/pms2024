@@ -64,10 +64,6 @@
             <div class="form-text m-0">Expiration</div>
             <div id="m-expiration-date" class="fw-semibold"></div>
           </div>
-          <div class="col-12">
-            <div class="form-text m-0">Expiration Notes</div>
-            <pre id="m-expiration-notes" class="border rounded p-2 bg-body-secondary mb-0"></pre>
-          </div>
 
           <div class="col-md-6">
             <div class="form-text m-0">Issuer</div>
@@ -167,7 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('m-pk',               row.dataset.pk);
     setText('m-date-requested',   row.dataset.dateRequested);
     setText('m-expiration-date',  row.dataset.expirationDate);
-    setText('m-expiration-notes', row.dataset.expirationNotes);
     setText('m-issuer-name',      row.dataset.issuerName);
     setText('m-part',             row.dataset.part);
     setText('m-reason',           row.dataset.reason);

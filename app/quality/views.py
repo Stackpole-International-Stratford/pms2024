@@ -1685,7 +1685,6 @@ def tpc_request_create(request):
             expiration_date=expiration_dt,
             current_process=current_process,
             changed_to=changed_to,
-            expiration_notes=expiration_notes,
         )
 
         messages.success(request, f"TPC #{tpc.pk} created successfully.")
