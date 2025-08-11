@@ -1567,11 +1567,15 @@ def send_tpc_email(request):
 
 
 
-
 @login_required(login_url='/login/')
 def tpc_request(request):
     page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+
+    # DEBUG PRINTS
+    print("DEBUG: Logged in user:", request.user.username)
+    print("DEBUG: Groups for user:", list(request.user.groups.values_list("name", flat=True)))
+    print("DEBUG: Is TPC Approver?", is_tpc_approver)
 
     tpcs = (
         TPCRequest.objects
@@ -1593,6 +1597,7 @@ def tpc_request(request):
             "tpc_page_size": settings.TPC_PAGE_SIZE
         },
     )
+
 
 
 @login_required(login_url='/login/')
