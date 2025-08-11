@@ -1949,3 +1949,23 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
             print(f"[SUCCESS] Broadcast email for TPC #{tpc.pk} sent to {len(recips_emails)} recipients.")
     except Exception as e:
         print(f"[ERROR] Exception while sending broadcast email: {e}")
+
+
+
+# quality/views.py
+@login_required(login_url='/login/')
+def tpc_request_detail(request, pk):
+    tpc = (
+        TPCRequest.objects
+        .select_related("approved_by")
+        .prefetch_related("approvals__user")
+        .get(pk=pk)
+    )
+    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+    user_has_approved = tpc.has_user_approved(request.user)
+
+    return render(request, "quality/tpc_request_detail.html", {
+        "tpc": tpc,
+        "is_tpc_approver": is_tpc_approver,
+        "user_has_approved": user_has_approved,
+    })

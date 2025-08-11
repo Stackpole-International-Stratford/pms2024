@@ -1,0 +1,76 @@
+{# templates/quality/tpc_request_detail.html #}
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">TPC #{{ tpc.pk }}</h2>
+    <div class="d-flex gap-2">
+      <a href="{% url 'tpc_request_list' %}" class="btn btn-outline-secondary">Back</a>
+
+      {% if is_tpc_approver and not tpc.approved and not user_has_approved %}
+      <form action="{% url 'tpc_approve' tpc.pk %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-dark">Approve</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-dark text-white">Summary</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4"><div class="form-text m-0">Date requested</div><div class="fw-semibold">{{ tpc.date_requested }}</div></div>
+        <div class="col-md-4"><div class="form-text m-0">Expiration</div><div class="fw-semibold">{{ tpc.expiration_date }}</div></div>
+        <div class="col-md-4"><div class="form-text m-0">Approved?</div>
+          <div class="fw-semibold">
+            {% if tpc.approved %}✅ Fully approved{% else %}
+              {{ tpc.approvals.count }}/{{ tpc.required_approvals_count }}
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="col-md-6"><div class="form-text m-0">Issuer</div><div class="fw-semibold">{{ tpc.issuer_name|default:"—" }}</div></div>
+        <div class="col-md-6"><div class="form-text m-0">Parts</div>
+          <div class="fw-semibold">
+            {% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}
+          </div>
+        </div>
+
+        <div class="col-12"><div class="form-text m-0">Reason</div><pre class="border rounded p-2 bg-body-secondary mb-0">{{ tpc.reason|default:"—" }}</pre></div>
+        <div class="col-12"><div class="form-text m-0">Process</div><pre class="border rounded p-2 bg-body-secondary mb-0">{{ tpc.process|default:"—" }}</pre></div>
+
+        <div class="col-md-4"><div class="form-text m-0">Supplier Issue</div><div class="fw-semibold">{{ tpc.supplier_issue|yesno:"Yes,No" }}</div></div>
+        <div class="col-md-8"><div class="form-text m-0">Machines</div>
+          <div class="fw-semibold">
+            {% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}
+          </div>
+        </div>
+
+        <div class="col-12"><div class="form-text m-0">Feature</div><div class="fw-semibold">{{ tpc.feature|default:"—" }}</div></div>
+        <div class="col-12"><div class="form-text m-0">Current Process</div><pre class="border rounded p-2 bg-body-secondary mb-0">{{ tpc.current_process|default:"—" }}</pre></div>
+        <div class="col-12"><div class="form-text m-0">Changed To</div><pre class="border rounded p-2 bg-body-secondary mb-0">{{ tpc.changed_to|default:"—" }}</pre></div>
+
+        <div class="col-12">
+          <div class="form-text m-0">Approvals</div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge text-bg-secondary">{{ tpc.approvals.count }}/{{ tpc.required_approvals_count }}</span>
+            <span class="text-muted">
+              {% for a in tpc.approvals.all %}
+                {{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}
+              {% empty %}—{% endfor %}
+            </span>
+          </div>
+          {% if tpc.approved_by %}
+            <div class="small mt-2 text-muted">
+              Last approved by {{ tpc.approved_by.get_full_name|default:tpc.approved_by.username }}
+              on {{ tpc.approved_at }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
