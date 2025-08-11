@@ -32,8 +32,8 @@ from django.db.models import Exists, OuterRef
 from django.core import serializers
 from django.template.loader import render_to_string
 from django.utils import timezone
-
-
+from django.utils.html import strip_tags
+from django.db import transaction
 
 def index(request):
     is_quality_manager = False
@@ -1753,16 +1753,156 @@ def tpc_request_approve(request, pk):
 
     try:
         tpc.approve(request.user)
+        tpc.refresh_from_db()
     except PermissionError:
         messages.error(request, "You do not have permission to approve TPCs.")
         return redirect("tpc_request_list")
 
+    # inside tpc_request_approve, where you already have:
     if tpc.approved:
         messages.success(request, f"All approvers have approved. TPC #{tpc.pk} is now fully approved!")
+        # fire the email AFTER the DB commit
+        send_tpc_broadcast_email(tpc.pk)
     else:
-        # Show progress like "2/5 approvals recorded"
+        # existing partial-approval message...
         messages.success(
             request,
             f"Your approval has been recorded ({tpc.approvals_count()}/{tpc.required_approvals_count()})."
         )
     return redirect("tpc_request_list")
+
+
+
+
+def _render_tpc_html(tpc) -> str:
+    """
+    Produce a clean, un-truncated HTML email with ALL TPC fields.
+    If you prefer a template, swap this out for render_to_string('quality/email_tpc_fully_approved.html', {...}).
+    """
+    # helpers for nice presentation
+    def join_list(val):
+        if not val:
+            return "—"
+        return ", ".join(val)
+
+    local_exp = timezone.localtime(tpc.expiration_date) if timezone.is_aware(tpc.expiration_date) else tpc.expiration_date
+    approved_at_local = timezone.localtime(tpc.approved_at) if tpc.approved_at else None
+
+    approver_names = [a.user.get_full_name() or a.user.username for a in tpc.approvals.all()]
+    approvals_block = ", ".join(approver_names) if approver_names else "—"
+
+    supplier_issue = "Yes" if tpc.supplier_issue else "No"
+
+    # inline minimal styles for readability in most clients
+    return f"""
+    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; color:#111;">
+      <h2 style="margin:0 0 12px;">TPC #{tpc.pk} is fully approved</h2>
+      <p style="margin:0 0 16px;">The TPC below reached full approval and is now official.</p>
+
+      <table style="width:100%; border-collapse:collapse;">
+        <tbody>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;width:220px;"><strong>ID</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.pk}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Date requested</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.date_requested}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Issuer</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.issuer_name or '—'}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Parts</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{join_list(tpc.parts)}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Reason</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.reason or '—'}</pre></td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Process</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.process or '—'}</pre></td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Supplier Issue</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{supplier_issue}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Machines</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{join_list(tpc.machines)}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Feature</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.feature or '—'}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Current process</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.current_process or '—'}</pre></td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Changed to</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.changed_to or '—'}</pre></td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Expiration</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{local_exp:%Y-%m-%d %H:%M %Z}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Approvals</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Approved by (last)</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td></tr>
+          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Approved at</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:20px;color:#555;">This message was sent automatically after all required approvers confirmed.</p>
+    </div>
+    """
+
+
+def send_tpc_broadcast_email(tpc_pk: int) -> None:
+    """
+    Fetch recipients from the 'TPC Email' campaign and send the email via Flask.
+    Prints detailed debug info at every step.
+    """
+    from .models import TPCRequest  # avoid circular import
+    print(f"[DEBUG] Preparing broadcast email for TPC #{tpc_pk}")
+
+    try:
+        tpc = (
+            TPCRequest.objects
+            .select_related("approved_by")
+            .prefetch_related("approvals__user")
+            .get(pk=tpc_pk)
+        )
+    except TPCRequest.DoesNotExist:
+        print(f"[ERROR] TPC #{tpc_pk} does not exist.")
+        return
+
+    # 1) Load campaign + recipients
+    try:
+        campaign = (
+            EmailCampaign.objects
+            .filter(name="TPC Email")
+            .prefetch_related("recipients")
+            .first()
+        )
+    except Exception as e:
+        print(f"[ERROR] Could not fetch EmailCampaign: {e}")
+        return
+
+    if not campaign:
+        print("[ERROR] Campaign 'TPC Email' not found.")
+        return
+
+    # Flask expects a list of strings for 'recipients'
+    recips_emails = [r.email for r in campaign.recipients.all()]
+    if not recips_emails:
+        print("[ERROR] No recipients in 'TPC Email' campaign.")
+        return
+
+    print(f"[DEBUG] Found {len(recips_emails)} recipient emails: {recips_emails}")
+
+    # 2) Build content
+    subject = f"TPC #{tpc.pk} fully approved – {tpc.issuer_name} – {tpc.date_requested:%Y-%m-%d}"
+    html_body = _render_tpc_html(tpc)
+    # text is optional for your Flask service; keep it if it accepts, otherwise drop it.
+    text_body = strip_tags(html_body)
+
+    print(f"[DEBUG] Email subject: {subject}")
+    print(f"[DEBUG] HTML body length: {len(html_body)} chars")
+    print(f"[DEBUG] Text body length: {len(text_body)} chars")
+
+    # 3) Payload per Flask error: needs 'html' and 'recipients'
+    payload = {
+        "subject": subject,
+        "html": html_body,
+        "recipients": recips_emails,   # <-- key change from 'to' -> 'recipients'
+        "text": text_body,             # keep if your service allows; harmless if ignored
+    }
+
+    print("[DEBUG] Payload JSON to be sent:")
+    print(payload)
+
+    # 4) Send
+    url = getattr(settings, "FLASK_EMAILER_URL", None)
+    if not url:
+        print("[ERROR] FLASK_EMAILER_URL not configured in settings.")
+        return
+
+    print(f"[DEBUG] Sending POST to {url}")
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"[DEBUG] HTTP status: {resp.status_code}")
+        print(f"[DEBUG] Response body: {resp.text}")
+
+        if resp.status_code >= 400:
+            print(f"[ERROR] Flask emailer returned error: {resp.status_code} {resp.text}")
+        else:
+            print(f"[SUCCESS] Broadcast email for TPC #{tpc.pk} sent to {len(recips_emails)} recipients.")
+    except Exception as e:
+        print(f"[ERROR] Exception while sending broadcast email: {e}")
