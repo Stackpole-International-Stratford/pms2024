@@ -1,72 +1,119 @@
-{# templates/quality/tpc_request_form.html #}
 {% extends "parent.html" %}
 
 {% block content %}
 <div class="container mt-5">
-  <h2 class="mb-3">New TPC Request</h2>
+  <h2 class="mb-4">New TPC Request</h2>
 
   <form method="post" novalidate>
     {% csrf_token %}
 
     <div class="row g-3">
+      <!-- Issuer -->
       <div class="col-md-6">
-        <label class="form-label">Issuer name</label>
-        {{ form.issuer_name }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Part</label>
-        {{ form.part }}
+        <label class="form-label fw-bold">Issuer Name</label>
+        <input type="text" name="issuer_name" value="{{ issuer_default }}" class="form-control" required>
       </div>
 
+      <!-- Parts dropdown checklist -->
       <div class="col-md-6">
-        <label class="form-label">Reason</label>
-        {{ form.reason }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Process</label>
-        {{ form.process }}
-      </div>
-
-      <div class="col-md-6">
-        <div class="form-check mt-4">
-          {{ form.supplier_issue }} <label class="form-check-label">Supplier issue?</label>
+        <label class="form-label fw-bold">Parts</label>
+        <div class="dropdown w-100">
+          <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Select Parts
+          </button>
+          <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; width: 100%;">
+            {% for p in parts_qs %}
+              <li>
+                <label class="dropdown-item form-check">
+                  <input type="checkbox" name="parts" value="{{ p.part_number }}" class="form-check-input me-2">
+                  {{ p.part_number }} – {{ p.part_name }}
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
+
+      <!-- Reason -->
       <div class="col-md-6">
-        <label class="form-label">Machine #</label>
-        {{ form.machine_number }}
+        <label class="form-label fw-bold">Reason</label>
+        <input type="text" name="reason" class="form-control">
       </div>
 
+      <!-- Process -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Process</label>
+        <input type="text" name="process" class="form-control">
+      </div>
+
+      <!-- Supplier issue -->
+      <div class="col-md-6">
+        <div class="form-check mt-4">
+          <input type="checkbox" name="supplier_issue" class="form-check-input">
+          <label class="form-check-label fw-bold">Supplier Issue?</label>
+        </div>
+      </div>
+
+      <!-- Machines dropdown checklist -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Machines</label>
+        <div class="dropdown w-100">
+          <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Select Machines
+          </button>
+          <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; width: 100%;">
+            {% for m in machines_qs %}
+              <li>
+                <label class="dropdown-item form-check">
+                  <input type="checkbox" name="machines" value="{{ m.asset_number }}" class="form-check-input me-2">
+                  {{ m.asset_number }} – {{ m.asset_name }}
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Reason note -->
       <div class="col-12">
-        <label class="form-label">Reason note</label>
-        {{ form.reason_note }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Feature</label>
-        {{ form.feature }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Expiration date</label>
-        {{ form.expiration_date }}
+        <label class="form-label fw-bold">Reason Note</label>
+        <textarea name="reason_note" class="form-control" rows="3"></textarea>
       </div>
 
+      <!-- Feature -->
       <div class="col-md-6">
-        <label class="form-label">Current process</label>
-        {{ form.current_process }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Changed to</label>
-        {{ form.changed_to }}
+        <label class="form-label fw-bold">Feature</label>
+        <input type="text" name="feature" class="form-control">
       </div>
 
+      <!-- Expiration date -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Expiration Date</label>
+        <input type="datetime-local" name="expiration_date" class="form-control">
+      </div>
+
+      <!-- Current process -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Current Process</label>
+        <textarea name="current_process" class="form-control" rows="3"></textarea>
+      </div>
+
+      <!-- Changed to -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Changed To</label>
+        <textarea name="changed_to" class="form-control" rows="3"></textarea>
+      </div>
+
+      <!-- Expiration notes -->
       <div class="col-12">
-        <label class="form-label">Expiration notes</label>
-        {{ form.expiration_notes }}
+        <label class="form-label fw-bold">Expiration Notes</label>
+        <textarea name="expiration_notes" class="form-control" rows="3"></textarea>
       </div>
     </div>
 
+    <!-- Actions -->
     <div class="mt-4 d-flex gap-2">
-      <button class="btn btn-warning" type="submit">Create TPC</button>
+      <button class="btn btn-warning px-4" type="submit">Create TPC</button>
       <a href="{% url 'tpc_request_list' %}" class="btn btn-outline-dark">Cancel</a>
     </div>
   </form>

@@ -6,6 +6,8 @@ from plant.models.setupfor_models import Asset
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.db.models import JSONField
+
 
 class SupervisorAuthorization(models.Model):
     supervisor_id = models.CharField(max_length=256)
@@ -278,11 +280,11 @@ class ScrapSubmission(models.Model):
 class TPCRequest(models.Model):
     date_requested   = models.DateField(default=timezone.now)
     issuer_name      = models.CharField(max_length=120)
-    part             = models.CharField(max_length=120)
+    parts = models.JSONField(default=list)  # store list of part_numbers
     reason           = models.CharField(max_length=200)
     process          = models.CharField(max_length=120)
     supplier_issue   = models.BooleanField(default=False)
-    machine_number   = models.CharField(max_length=50, blank=True)
+    machines = models.JSONField(default=list)  # store list of asset_numbers
     reason_note      = models.TextField(blank=True)
     feature          = models.CharField(max_length=120, blank=True)
     current_process  = models.TextField(blank=True)

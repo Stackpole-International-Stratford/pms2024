@@ -28,7 +28,6 @@ from django.conf import settings
 from django.views.decorators.http import require_GET
 from plant.models.email_models import EmailCampaign
 from .models import TPCRequest, TPCApproval 
-from .forms import TPCRequestForm
 from django.db.models import Exists, OuterRef
 from django.core import serializers
 from django.template.loader import render_to_string
@@ -1623,19 +1622,80 @@ def tpc_request_load_more(request):
     return JsonResponse({"html": html, "has_more": tpcs.count() == page_size})
 
 
+
 @login_required(login_url='/login/')
 def tpc_request_create(request):
     if request.method == "POST":
-        form = TPCRequestForm(request.POST)
-        if form.is_valid():
-            tpc = form.save()
-            messages.success(request, f"TPC #{tpc.pk} created.")
-            return redirect("tpc_request_list")
-    else:
-        # Pre-fill issuer_name from the logged-in user if you like:
-        form = TPCRequestForm(initial={"issuer_name": request.user.get_full_name() or request.user.username})
-    return render(request, "quality/tpc_request_form.html", {"form": form})
+        issuer_name = request.POST.get("issuer_name", "").strip()
+        parts = request.POST.getlist("parts")
+        reason = request.POST.get("reason", "").strip()
+        process = request.POST.get("process", "").strip()
+        supplier_issue = bool(request.POST.get("supplier_issue"))
+        machines = request.POST.getlist("machines")
+        reason_note = request.POST.get("reason_note", "").strip()
+        feature = request.POST.get("feature", "").strip()
+        expiration_date_str = request.POST.get("expiration_date", "").strip()
+        current_process = request.POST.get("current_process", "").strip()
+        changed_to = request.POST.get("changed_to", "").strip()
+        expiration_notes = request.POST.get("expiration_notes", "").strip()
 
+        # --- Validation ---
+        missing = []
+        if not issuer_name: missing.append("Issuer name")
+        if not parts: missing.append("At least one part")
+        if not reason: missing.append("Reason")
+        if not process: missing.append("Process")
+        if not machines: missing.append("At least one machine")
+        if not expiration_date_str: missing.append("Expiration date")
+        if not current_process: missing.append("Current process")
+        if not changed_to: missing.append("Changed to")
+
+        if missing:
+            messages.error(request, f"Please fill out all required fields: {', '.join(missing)}")
+            return render(request, "quality/tpc_request_form.html", {
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+            })
+
+        # Parse datetime-local input (YYYY-MM-DDTHH:MM)
+        expiration_dt = None
+        try:
+            expiration_dt = timezone.make_aware(
+                timezone.datetime.fromisoformat(expiration_date_str)
+            )
+        except Exception:
+            messages.error(request, "Invalid expiration date format. Please select a valid date and time.")
+            return render(request, "quality/tpc_request_form.html", {
+                "issuer_default": issuer_name,
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+            })
+
+        # Create TPC
+        tpc = TPCRequest.objects.create(
+            issuer_name=issuer_name,
+            part=",".join(parts),  # store as comma-separated string
+            reason=reason,
+            process=process,
+            supplier_issue=supplier_issue,
+            machine_number=",".join(machines),
+            reason_note=reason_note,
+            feature=feature,
+            expiration_date=expiration_dt,
+            current_process=current_process,
+            changed_to=changed_to,
+            expiration_notes=expiration_notes,
+        )
+
+        messages.success(request, f"TPC #{tpc.pk} created successfully.")
+        return redirect("tpc_request_list")
+
+    return render(request, "quality/tpc_request_form.html", {
+        "issuer_default": request.user.get_full_name() or request.user.username,
+        "parts_qs": Part.objects.all().order_by("part_number"),
+        "machines_qs": Asset.objects.all().order_by("asset_number"),
+    })
 
 
 

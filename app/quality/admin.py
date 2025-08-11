@@ -71,56 +71,69 @@ QM_GROUP = "quality_manager"          # Django Group that may approve TPCs
 @admin.register(TPCRequest)
 class TPCRequestAdmin(admin.ModelAdmin):
 
-    # ───── list view ─────
+    # ── list view ──
     list_display = (
-        "id", "date_requested", "issuer_name", "part",
+        "id", "date_requested", "issuer_name", "parts_display",
         "reason_short", "process", "supplier_issue",
-        "machine_number", "approved", "approved_by", "approved_at",
+        "machines_display", "approved", "approved_by", "approved_at",
     )
     list_filter = (
         "supplier_issue", "approved", "process",
-        "issuer_name", "part", "feature",
+        "issuer_name",  # removed: 'part' (not a field anymore)
+        # keep 'feature' if it exists as a CharField; otherwise remove
+        "feature",
     )
     search_fields = (
-        "issuer_name", "part", "reason", "process",
-        "machine_number", "feature", "reason_note",
+        "issuer_name", "reason", "process",
+        "feature", "reason_note",
+        # allow text search inside JSON lists
+        "parts__icontains", "machines__icontains",
     )
     date_hierarchy = "date_requested"
     list_per_page = 50
     readonly_fields = ("approved_by", "approved_at")
 
-    # ───── edit view layout ─────
+    # ── edit view layout ──
     base_fields = (
-        "date_requested", "issuer_name", "part", "reason",
-        "process", "supplier_issue", "machine_number", "reason_note",
-        "feature", "current_process", "changed_to",
+        "date_requested", "issuer_name",
+        # use the new field names here
+        "parts", "reason", "process", "supplier_issue",
+        "machines", "reason_note", "feature", "current_process", "changed_to",
         "expiration_date", "expiration_notes",
     )
     approval_fields = ("approved", "approved_by", "approved_at")
 
     @admin.display(description="Reason")
     def reason_short(self, obj):
-        """40-char preview for the list view."""
         return (obj.reason[:40] + " …") if len(obj.reason) > 40 else obj.reason
 
-    # ───── helpers ─────
+    @admin.display(description="Parts")
+    def parts_display(self, obj):
+        try:
+            return ", ".join(obj.parts) if obj.parts else "—"
+        except Exception:
+            return str(obj.parts) if obj.parts else "—"
+
+    @admin.display(description="Machines")
+    def machines_display(self, obj):
+        try:
+            return ", ".join(obj.machines) if obj.machines else "—"
+        except Exception:
+            return str(obj.machines) if obj.machines else "—"
+
+    # ── permissions ──
     def _is_qm(self, request):
         return request.user.groups.filter(name=QM_GROUP).exists()
 
-    # Only QMs may edit existing records
     def has_change_permission(self, request, obj=None):
         if obj is None:
             return super().has_change_permission(request, obj)
         return self._is_qm(request)
 
-    # Dynamic field/readonly selection
     def get_fields(self, request, obj=None):
-        if obj is None:                      # add form
+        if obj is None:
             return self.base_fields
-        return (
-            self.base_fields +
-            (self.approval_fields if self._is_qm(request) or obj.approved else ())
-        )
+        return self.base_fields + (self.approval_fields if self._is_qm(request) or obj.approved else ())
 
     def get_readonly_fields(self, request, obj=None):
         ro = list(self.readonly_fields)
@@ -128,7 +141,7 @@ class TPCRequestAdmin(admin.ModelAdmin):
             ro.append("approved")
         return ro
 
-    # ───── bulk actions ─────
+    # ── bulk actions ──
     actions = ["approve_selected", "unapprove_selected"]
 
     def get_actions(self, request):
@@ -147,11 +160,7 @@ class TPCRequestAdmin(admin.ModelAdmin):
     def approve_selected(self, request, queryset):
         if not self._ensure_manager(request):
             return
-        count = queryset.update(
-            approved=True,
-            approved_by=request.user,
-            approved_at=timezone.now(),
-        )
+        count = queryset.update(approved=True, approved_by=request.user, approved_at=timezone.now())
         self.message_user(request, f"{count} TPC(s) approved.")
     approve_selected.short_description = "Approve selected TPCs"
 
@@ -162,13 +171,12 @@ class TPCRequestAdmin(admin.ModelAdmin):
         self.message_user(request, f"{count} TPC(s) un-approved.")
     unapprove_selected.short_description = "Un-approve selected TPCs"
 
-    # ───── save hook ─────
     def save_model(self, request, obj, form, change):
-        if not change:                              # new record
+        if not change:
             obj.approved = False
             obj.approved_by = None
             obj.approved_at = None
-        elif "approved" in form.changed_data:       # QM toggled checkbox
+        elif "approved" in form.changed_data:
             if obj.approved:
                 obj.approved_by = request.user
                 obj.approved_at = timezone.now()
