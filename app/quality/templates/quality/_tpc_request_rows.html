@@ -18,10 +18,10 @@
 >
   <td>{{ t.pk }}</td>
   <td>{{ t.date_requested }}</td>
-  <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:20 }}</td>
-  <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:20 }}</td>
-  <td title="{{ t.reason }}">{{ t.reason|truncatechars:25 }}</td>
-  <td title="{{ t.process }}">{{ t.process|truncatechars:25 }}</td>
+  <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:10 }}</td>
+  <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:10 }}</td>
+  <td title="{{ t.reason }}">{{ t.reason|truncatechars:10 }}</td>
+  <td title="{{ t.process }}">{{ t.process|truncatechars:10 }}</td>
   <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
   <td>{{ t.machine_number }}</td>
   <td>{{ t.expiration_date }}</td>
