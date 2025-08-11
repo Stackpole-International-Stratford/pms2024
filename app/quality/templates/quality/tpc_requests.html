@@ -3,7 +3,6 @@
 {% load static %}
 
 {% block content %}
-
 <div class="container mt-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">TPC Requests</h2>
@@ -16,16 +15,16 @@
     <table id="tpc-table" class="table table-bordered table-striped table-hover align-middle">
       <thead class="align-middle">
         <tr class="text-nowrap">
-          <th title="Click to sort">ID</th>
-          <th title="Click to sort">Date requested</th>
-          <th title="Click to sort">Issuer</th>
-          <th title="Click to sort">Part</th>
-          <th title="Click to sort">Reason</th>
-          <th title="Click to sort">Process</th>
-          <th title="Click to sort">Supplier Issue</th>
-          <th title="Click to sort">Machine #</th>
-          <th title="Click to sort">Expiration</th>
-          <th title="Click to sort">Approved?</th>
+          <th>ID</th>
+          <th>Date requested</th>
+          <th>Issuer</th>
+          <th>Part</th>
+          <th>Reason</th>
+          <th>Process</th>
+          <th>Supplier Issue</th>
+          <th>Machine #</th>
+          <th>Expiration</th>
+          <th>Approved?</th>
         </tr>
         <tr>
           {% for _ in "0123456789" %}
@@ -36,7 +35,6 @@
 
       <tbody>
         {% for t in tpcs %}
-          {# Full values in data-* so the modal can show untruncated content #}
           <tr
             title="Click to view details"
             data-pk="{{ t.pk }}"
@@ -48,6 +46,7 @@
             data-supplier-issue="{{ t.supplier_issue|yesno:'Yes,No' }}"
             data-machine-number="{{ t.machine_number }}"
             data-expiration-date="{{ t.expiration_date }}"
+            data-expiration-notes="{{ t.expiration_notes|default:'—' }}"
             data-approved="{{ t.approved|yesno:'Yes,No' }}"
             data-approvals-got="{{ t.approvals.count }}"
             data-approvals-req="{{ t.required_approvals_count }}"
@@ -55,10 +54,10 @@
           >
             <td>{{ t.pk }}</td>
             <td>{{ t.date_requested }}</td>
-            <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:20 }}</td>
-            <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:20 }}</td>
-            <td title="{{ t.reason }}">{{ t.reason|truncatechars:25 }}</td>
-            <td title="{{ t.process }}">{{ t.process|truncatechars:25 }}</td>
+            <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:10 }}</td>
+            <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:10 }}</td>
+            <td title="{{ t.reason }}">{{ t.reason|truncatechars:10 }}</td>
+            <td title="{{ t.process }}">{{ t.process|truncatechars:10 }}</td>
             <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
             <td>{{ t.machine_number }}</td>
             <td>{{ t.expiration_date }}</td>
@@ -108,6 +107,10 @@
           <div class="col-md-6">
             <div class="form-text m-0">Expiration</div>
             <div id="m-expiration-date" class="fw-semibold"></div>
+          </div>
+          <div class="col-12">
+            <div class="form-text m-0">Expiration Notes</div>
+            <pre id="m-expiration-notes" class="border rounded p-2 bg-body-secondary mb-0"></pre>
           </div>
 
           <div class="col-md-6">
@@ -160,7 +163,6 @@
 </div>
 
 <script>
-/* ---------- Vanilla-JS live search + click-to-sort ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   const table  = document.getElementById('tpc-table');
   const inputs = table.querySelectorAll('thead tr:nth-child(2) input');
@@ -196,7 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* ---------- Row click -> open modal (Bootstrap only) ---------- */
   const modalEl = document.getElementById('tpcModal');
   const bsModal = typeof bootstrap !== 'undefined' ? new bootstrap.Modal(modalEl) : null;
 
@@ -210,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('m-pk',               row.dataset.pk);
     setText('m-date-requested',   row.dataset.dateRequested);
     setText('m-expiration-date',  row.dataset.expirationDate);
+    setText('m-expiration-notes', row.dataset.expirationNotes);
     setText('m-issuer-name',      row.dataset.issuerName);
     setText('m-part',             row.dataset.part);
     setText('m-reason',           row.dataset.reason);
