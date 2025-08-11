@@ -1,0 +1,74 @@
+{# templates/quality/tpc_request_form.html #}
+{% extends "parent.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-3">New TPC Request</h2>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Issuer name</label>
+        {{ form.issuer_name }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Part</label>
+        {{ form.part }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Reason</label>
+        {{ form.reason }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Process</label>
+        {{ form.process }}
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-check mt-4">
+          {{ form.supplier_issue }} <label class="form-check-label">Supplier issue?</label>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Machine #</label>
+        {{ form.machine_number }}
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Reason note</label>
+        {{ form.reason_note }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Feature</label>
+        {{ form.feature }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Expiration date</label>
+        {{ form.expiration_date }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Current process</label>
+        {{ form.current_process }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Changed to</label>
+        {{ form.changed_to }}
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Expiration notes</label>
+        {{ form.expiration_notes }}
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Create TPC</button>
+      <a href="{% url 'tpc_request_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

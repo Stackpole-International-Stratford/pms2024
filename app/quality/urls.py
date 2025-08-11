@@ -67,7 +67,7 @@ urlpatterns = [
 
     path("tpc-requests/", tpc_request, name="tpc_request_list"),
 
-    # approve action
-    path("tpc-requests/<int:pk>/approve/", tpc_request_approve, name="tpc_approve",),
+    path("tpc-requests/new/", tpc_request_create, name="tpc_request_new"),
+    path("tpc-requests/<int:pk>/approve/", tpc_request_approve, name="tpc_approve"),
 
 ]

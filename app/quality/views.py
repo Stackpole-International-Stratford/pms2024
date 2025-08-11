@@ -27,7 +27,10 @@ import requests
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from plant.models.email_models import EmailCampaign
-from .models import TPCRequest
+from .models import TPCRequest, TPCApproval 
+from .forms import TPCRequestForm
+from django.db.models import Exists, OuterRef
+
 
 def index(request):
     is_quality_manager = False
@@ -1561,30 +1564,73 @@ def send_tpc_email(request):
 
 
 
-# views.py
+
 @login_required
 def tpc_request(request):
-    tpcs = TPCRequest.objects.all()
-    is_quality_manager = request.user.groups.filter(name="quality_manager").exists()
+    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+
+    tpcs = (
+        TPCRequest.objects
+        .all()
+        .annotate(
+            user_has_approved=Exists(
+                TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
+            )
+        )
+        .prefetch_related("approvals")  # keeps approvals.count fast
+    )
+
     return render(
         request,
         "quality/tpc_requests.html",
-        {"tpcs": tpcs, "is_quality_manager": is_quality_manager},
+        {"tpcs": tpcs, "is_tpc_approver": is_tpc_approver},
     )
 
-
+@login_required
+def tpc_request_create(request):
+    if request.method == "POST":
+        form = TPCRequestForm(request.POST)
+        if form.is_valid():
+            tpc = form.save()
+            messages.success(request, f"TPC #{tpc.pk} created.")
+            return redirect("tpc_request_list")
+    else:
+        # Pre-fill issuer_name from the logged-in user if you like:
+        form = TPCRequestForm(initial={"issuer_name": request.user.get_full_name() or request.user.username})
+    return render(request, "quality/tpc_request_form.html", {"form": form})
 
 @login_required
 def tpc_request_approve(request, pk):
-    """POST-only endpoint to approve a single TPC."""
+    """POST-only endpoint to record *this user's* approval toward the group consensus."""
     if request.method != "POST":
-        return redirect("tpc_request_list")                 # no GET approvals 😇
+        return redirect("tpc_request_list")
 
-    if not request.user.groups.filter(name="quality_manager").exists():
+    if not request.user.groups.filter(name="tpc_approvers").exists():
         messages.error(request, "You do not have permission to approve TPCs.")
         return redirect("tpc_request_list")
 
-    tpc = get_object_or_404(TPCRequest, pk=pk, approved=False)
-    tpc.approve(request.user)
-    messages.success(request, f"TPC #{tpc.pk} approved!")
+    tpc = get_object_or_404(TPCRequest, pk=pk)
+
+    if tpc.approved:
+        messages.info(request, f"TPC #{tpc.pk} is already fully approved.")
+        return redirect("tpc_request_list")
+
+    if tpc.has_user_approved(request.user):
+        messages.info(request, "You have already approved this TPC.")
+        return redirect("tpc_request_list")
+
+    try:
+        tpc.approve(request.user)
+    except PermissionError:
+        messages.error(request, "You do not have permission to approve TPCs.")
+        return redirect("tpc_request_list")
+
+    if tpc.approved:
+        messages.success(request, f"All approvers have approved. TPC #{tpc.pk} is now fully approved!")
+    else:
+        # Show progress like "2/5 approvals recorded"
+        messages.success(
+            request,
+            f"Your approval has been recorded ({tpc.approvals_count()}/{tpc.required_approvals_count()})."
+        )
     return redirect("tpc_request_list")

@@ -1,14 +1,20 @@
+{# templates/quality/tpc_requests.html #}
 {% extends "parent.html" %}
 {% load static %}
 
 {% block content %}
 <style>
-  #tpc-table { width:100%; }                       /* keep columns inside page */
+  #tpc-table { width:100%; }
   #tpc-table thead tr:first-child th { cursor:pointer; }
 </style>
 
 <div class="container mt-5">
-  <h2>TPC Requests</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">TPC Requests</h2>
+    <a href="{% url 'tpc_request_new' %}" class="btn btn-primary">
+      + Add new TPC request
+    </a>
+  </div>
 
   <table id="tpc-table" class="table table-bordered table-striped">
     <thead>
@@ -25,7 +31,6 @@
         <th>Approved?</th>
       </tr>
       <tr>
-        {# one search box per column #}
         {% for _ in "0123456789" %}
           <th><input type="text" class="form-control form-control-sm" placeholder="Search…"></th>
         {% endfor %}
@@ -37,26 +42,33 @@
         <tr>
           <td>{{ t.pk }}</td>
           <td>{{ t.date_requested }}</td>
-
           <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:20 }}</td>
           <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:20 }}</td>
           <td title="{{ t.reason }}">{{ t.reason|truncatechars:25 }}</td>
           <td title="{{ t.process }}">{{ t.process|truncatechars:25 }}</td>
-
           <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
           <td>{{ t.machine_number }}</td>
           <td>{{ t.expiration_date }}</td>
 
           <td>
             {% if t.approved %}
-              ✔️
-            {% elif is_quality_manager %}
-              <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success">Approve</button>
-              </form>
+              ✅ Fully approved
             {% else %}
-              —
+              {# show progress like "2/5" #}
+              {% with got=t.approvals.count req=t.required_approvals_count %}
+                <span class="badge bg-secondary">{{ got }}/{{ req }}</span>
+              {% endwith %}
+
+              {% if is_tpc_approver %}
+                {% if not t.user_has_approved %}
+                  <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                  </form>
+                {% else %}
+                  <span class="text-muted ms-2">You’ve approved</span>
+                {% endif %}
+              {% endif %}
             {% endif %}
           </td>
         </tr>
@@ -72,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputs = table.querySelectorAll('thead tr:nth-child(2) input');
   const rows   = Array.from(table.tBodies[0].rows);
 
-  /* per-column filtering */
   function filter() {
     rows.forEach(row => {
       const ok = Array.from(inputs).every((inp, idx) => {
@@ -84,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   inputs.forEach(inp => inp.addEventListener('input', filter));
 
-  /* simple click-to-sort */
   table.querySelectorAll('thead tr:first-child th').forEach((th, idx) => {
     let asc = true;
     th.addEventListener('click', () => {

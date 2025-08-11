@@ -277,6 +277,12 @@ class ScrapSubmission(models.Model):
 
 
 
+# models.py
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+
 class TPCRequest(models.Model):
     date_requested   = models.DateField(default=timezone.now)
     issuer_name      = models.CharField(max_length=120)
@@ -292,7 +298,7 @@ class TPCRequest(models.Model):
     expiration_date  = models.DateField()
     expiration_notes = models.TextField(blank=True)
 
-    # approval info
+    # legacy fields kept working (final approver + timestamp when fully approved)
     approved         = models.BooleanField(default=False)
     approved_by      = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -307,12 +313,48 @@ class TPCRequest(models.Model):
 
     def __str__(self):
         return f"TPC #{self.pk} – {self.issuer_name} on {self.date_requested}"
-    
+
+    def approver_queryset(self):
+        """All active users who must approve (members of 'tpc_approvers')."""
+        return User.objects.filter(is_active=True, groups__name="tpc_approvers").distinct()
+
+    def approvals_count(self):
+        return self.approvals.count()
+
+    def required_approvals_count(self):
+        return self.approver_queryset().count()
+
+    def has_user_approved(self, user):
+        return self.approvals.filter(user=user).exists()
+
     def approve(self, user):
-        """Mark this TPC as approved by *user* right now."""
-        self.approved      = True
-        self.approved_by   = user
-        self.approved_at   = timezone.now()
-        self.save(update_fields=["approved", "approved_by", "approved_at"])
+        """
+        Record user's approval. When everyone in 'tpc_approvers' has approved,
+        mark the TPC as fully approved.
+        """
+        if not user.groups.filter(name="tpc_approvers").exists():
+            raise PermissionError("User is not allowed to approve TPCs.")
+
+        # create per-user approval if not already present
+        TPCApproval.objects.get_or_create(tpc=self, user=user)
+
+        # if everyone required has approved, flip the final flags
+        if self.approvals_count() >= self.required_approvals_count() and self.required_approvals_count() > 0:
+            self.approved = True
+            self.approved_by = user       # last approver
+            self.approved_at = timezone.now()
+            self.save(update_fields=["approved", "approved_by", "approved_at"])
+
+
+class TPCApproval(models.Model):
+    tpc = models.ForeignKey(TPCRequest, related_name="approvals", on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    approved_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ("tpc", "user")  # one approval per user per TPC
+
+    def __str__(self):
+        return f"Approval: TPC #{self.tpc_id} by {self.user}"
 
 
