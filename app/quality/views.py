@@ -1673,10 +1673,6 @@ def tpc_request_create(request):
 
         if missing:
             print("Missing fields:", missing)
-            messages.error(
-                request,
-                f"Please fill out all required fields: {', '.join(missing)}"
-            )
             return render(request, "quality/tpc_request_form.html", {
                 "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
                 "parts_qs": Part.objects.all().order_by("part_number"),
@@ -1691,7 +1687,6 @@ def tpc_request_create(request):
             print("Parsed expiration_dt:", expiration_dt)
         except Exception as e:
             print("Expiration date parse error:", e)
-            messages.error(request, "Invalid expiration date format. Please select a valid date and time.")
             return render(request, "quality/tpc_request_form.html", {
                 "issuer_default": issuer_name,
                 "parts_qs": Part.objects.all().order_by("part_number"),
@@ -1718,7 +1713,6 @@ def tpc_request_create(request):
             print("Error creating TPCRequest:", e)
             raise
 
-        messages.success(request, f"TPC #{tpc.pk} created successfully.")
         return redirect("tpc_request_list")
 
     # GET: render form
@@ -1738,37 +1732,27 @@ def tpc_request_approve(request, pk):
         return redirect("tpc_request_list")
 
     if not request.user.groups.filter(name="tpc_approvers").exists():
-        messages.error(request, "You do not have permission to approve TPCs.")
         return redirect("tpc_request_list")
 
     tpc = get_object_or_404(TPCRequest, pk=pk)
 
     if tpc.approved:
-        messages.info(request, f"TPC #{tpc.pk} is already fully approved.")
         return redirect("tpc_request_list")
 
     if tpc.has_user_approved(request.user):
-        messages.info(request, "You have already approved this TPC.")
         return redirect("tpc_request_list")
 
     try:
         tpc.approve(request.user)
         tpc.refresh_from_db()
     except PermissionError:
-        messages.error(request, "You do not have permission to approve TPCs.")
         return redirect("tpc_request_list")
 
     # inside tpc_request_approve, where you already have:
     if tpc.approved:
-        messages.success(request, f"All approvers have approved. TPC #{tpc.pk} is now fully approved!")
         # fire the email AFTER the DB commit
         send_tpc_broadcast_email(tpc.pk)
-    else:
-        # existing partial-approval message...
-        messages.success(
-            request,
-            f"Your approval has been recorded ({tpc.approvals_count()}/{tpc.required_approvals_count()})."
-        )
+
     return redirect("tpc_request_list")
 
 
