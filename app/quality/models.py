@@ -295,7 +295,7 @@ class TPCRequest(models.Model):
     feature          = models.CharField(max_length=120, blank=True)
     current_process  = models.TextField(blank=True)
     changed_to       = models.TextField(blank=True)
-    expiration_date  = models.DateField()
+    expiration_date  = models.DateTimeField()
     expiration_notes = models.TextField(blank=True)
 
     # legacy fields kept working (final approver + timestamp when fully approved)
