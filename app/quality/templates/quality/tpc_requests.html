@@ -32,17 +32,17 @@
       </thead>
 
       <tbody id="tpc-tbody">
-        {% for t in tpcs %}
+          {% for t in tpcs %}
           <tr
             data-pk="{{ t.pk }}"
             data-date-requested="{{ t.date_requested }}"
             data-expiration-date="{{ t.expiration_date }}"
             data-issuer-name="{{ t.issuer_name }}"
-            data-part="{{ t.part|default:'—' }}"
+            data-part="{% if t.parts %}{{ t.parts|join:', ' }}{% else %}—{% endif %}"
             data-reason="{{ t.reason }}"
             data-process="{{ t.process }}"
             data-supplier-issue="{{ t.supplier_issue|yesno:'Yes,No' }}"
-            data-machine-number="{{ t.machine_number }}"
+            data-machine-number="{% if t.machines %}{{ t.machines|join:', ' }}{% else %}—{% endif %}"
             data-approved="{{ t.approved|yesno:'Yes,No' }}"
             data-approvals-got="{{ t.approvals.count }}"
             data-approvals-req="{{ t.required_approvals_count }}"
@@ -51,11 +51,15 @@
             <td>{{ t.pk }}</td>
             <td>{{ t.date_requested }}</td>
             <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:10 }}</td>
-            <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:10 }}</td>
+            <td title="{% if t.parts %}{{ t.parts|join:', ' }}{% else %}—{% endif %}">
+              {% if t.parts %}{{ t.parts|join:", "|truncatechars:20 }}{% else %}—{% endif %}
+            </td>
             <td title="{{ t.reason }}">{{ t.reason|truncatechars:10 }}</td>
             <td title="{{ t.process }}">{{ t.process|truncatechars:10 }}</td>
             <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
-            <td>{{ t.machine_number }}</td>
+            <td title="{% if t.machines %}{{ t.machines|join:', ' }}{% else %}—{% endif %}">
+              {% if t.machines %}{{ t.machines|join:", "|truncatechars:20 }}{% else %}—{% endif %}
+            </td>
             <td>{{ t.expiration_date }}</td>
             <td>
               {% if t.approved %}
@@ -64,7 +68,6 @@
                 {% with got=t.approvals.count req=t.required_approvals_count %}
                   <span class="badge text-bg-secondary">{{ got }}/{{ req }}</span>
                 {% endwith %}
-
                 {% if is_tpc_approver %}
                   {% if not t.user_has_approved %}
                     <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
@@ -78,7 +81,8 @@
               {% endif %}
             </td>
           </tr>
-        {% endfor %}
+          {% endfor %}
+
       </tbody>
     </table>
 
