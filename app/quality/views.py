@@ -1565,7 +1565,7 @@ def send_tpc_email(request):
 
 
 
-@login_required
+@login_required(login_url='/login/')
 def tpc_request(request):
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
@@ -1586,7 +1586,8 @@ def tpc_request(request):
         {"tpcs": tpcs, "is_tpc_approver": is_tpc_approver},
     )
 
-@login_required
+
+@login_required(login_url='/login/')
 def tpc_request_create(request):
     if request.method == "POST":
         form = TPCRequestForm(request.POST)
@@ -1599,7 +1600,7 @@ def tpc_request_create(request):
         form = TPCRequestForm(initial={"issuer_name": request.user.get_full_name() or request.user.username})
     return render(request, "quality/tpc_request_form.html", {"form": form})
 
-@login_required
+@login_required(login_url='/login/')
 def tpc_request_approve(request, pk):
     """POST-only endpoint to record *this user's* approval toward the group consensus."""
     if request.method != "POST":
