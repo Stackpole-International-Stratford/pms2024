@@ -4,7 +4,7 @@
 <div class="container mt-5">
   <h2 class="mb-4">New TPC Request</h2>
 
-  <form method="post" novalidate>
+  <form id="tpcForm" method="post" novalidate>
     {% csrf_token %}
 
     <div class="row g-3">
@@ -14,36 +14,36 @@
         <input type="text" name="issuer_name" value="{{ issuer_default }}" class="form-control" required>
       </div>
 
-      <!-- Parts dropdown checklist -->
-      <div class="col-md-6">
-        <label class="form-label fw-bold">Parts</label>
-        <div class="dropdown w-100">
-          <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Select Parts
-          </button>
-          <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; width: 100%;">
-            {% for p in parts_qs %}
-              <li>
-                <label class="dropdown-item form-check">
-                  <input type="checkbox" name="parts" value="{{ p.part_number }}" class="form-check-input me-2">
-                  {{ p.part_number }} – {{ p.part_name }}
-                </label>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-
       <!-- Reason -->
       <div class="col-md-6">
         <label class="form-label fw-bold">Reason</label>
-        <input type="text" name="reason" class="form-control">
+        <input type="text" name="reason" class="form-control" required>
       </div>
 
-      <!-- Process -->
+      <!-- Parts -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Process</label>
-        <input type="text" name="process" class="form-control">
+        <label class="form-label fw-bold">Parts</label>
+        <div class="border p-2" style="height: 200px; overflow-y: auto;">
+          {% for p in parts_qs %}
+            <div class="form-check">
+              <input type="checkbox" name="parts" value="{{ p.part_number }}" class="form-check-input">
+              <label class="form-check-label">{{ p.part_number }} – {{ p.part_name }}</label>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Machines -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Machines</label>
+        <div class="border p-2" style="height: 200px; overflow-y: auto;">
+          {% for m in machines_qs %}
+            <div class="form-check">
+              <input type="checkbox" name="machines" value="{{ m.asset_number }}" class="form-check-input">
+              <label class="form-check-label">{{ m.asset_number }} – {{ m.asset_name }}</label>
+            </div>
+          {% endfor %}
+        </div>
       </div>
 
       <!-- Supplier issue -->
@@ -54,60 +54,40 @@
         </div>
       </div>
 
-      <!-- Machines dropdown checklist -->
-      <div class="col-md-6">
-        <label class="form-label fw-bold">Machines</label>
-        <div class="dropdown w-100">
-          <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Select Machines
-          </button>
-          <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto; width: 100%;">
-            {% for m in machines_qs %}
-              <li>
-                <label class="dropdown-item form-check">
-                  <input type="checkbox" name="machines" value="{{ m.asset_number }}" class="form-check-input me-2">
-                  {{ m.asset_number }} – {{ m.asset_name }}
-                </label>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-
       <!-- Reason note -->
-      <div class="col-12">
+      <div class="col-md-6">
         <label class="form-label fw-bold">Reason Note</label>
-        <textarea name="reason_note" class="form-control" rows="3"></textarea>
+        <textarea name="reason_note" class="form-control" rows="3" required></textarea>
       </div>
 
       <!-- Feature -->
       <div class="col-md-6">
         <label class="form-label fw-bold">Feature</label>
-        <input type="text" name="feature" class="form-control">
+        <input type="text" name="feature" class="form-control" required>
       </div>
 
       <!-- Expiration date -->
       <div class="col-md-6">
         <label class="form-label fw-bold">Expiration Date</label>
-        <input type="datetime-local" name="expiration_date" class="form-control">
+        <input type="datetime-local" name="expiration_date" class="form-control" required>
       </div>
 
       <!-- Current process -->
       <div class="col-md-6">
         <label class="form-label fw-bold">Current Process</label>
-        <textarea name="current_process" class="form-control" rows="3"></textarea>
+        <textarea name="current_process" class="form-control" rows="3" required></textarea>
       </div>
 
       <!-- Changed to -->
       <div class="col-md-6">
         <label class="form-label fw-bold">Changed To</label>
-        <textarea name="changed_to" class="form-control" rows="3"></textarea>
+        <textarea name="changed_to" class="form-control" rows="3" required></textarea>
       </div>
 
       <!-- Expiration notes -->
       <div class="col-12">
         <label class="form-label fw-bold">Expiration Notes</label>
-        <textarea name="expiration_notes" class="form-control" rows="3"></textarea>
+        <textarea name="expiration_notes" class="form-control" rows="3" required></textarea>
       </div>
     </div>
 
@@ -118,4 +98,36 @@
     </div>
   </form>
 </div>
+
+<script>
+document.getElementById('tpcForm').addEventListener('submit', function(e) {
+  const requiredFields = this.querySelectorAll('[required]');
+  for (let field of requiredFields) {
+    if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) {
+      if (field.name === 'supplier_issue') {
+        alert('Please check Supplier Issue.');
+        e.preventDefault();
+        return;
+      }
+    } else if (field.value.trim() === '') {
+      alert('Please fill all fields.');
+      e.preventDefault();
+      return;
+    }
+  }
+
+  // Check at least one part selected
+  if (!this.querySelectorAll('input[name="parts"]:checked').length) {
+    alert('Please select at least one Part.');
+    e.preventDefault();
+    return;
+  }
+  // Check at least one machine selected
+  if (!this.querySelectorAll('input[name="machines"]:checked').length) {
+    alert('Please select at least one Machine.');
+    e.preventDefault();
+    return;
+  }
+});
+</script>
 {% endblock %}
