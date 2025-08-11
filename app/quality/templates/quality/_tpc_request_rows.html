@@ -1,6 +1,6 @@
 {% for t in tpcs %}
 <tr
-  title="Click to view details"
+  title="Click to approve"
   data-pk="{{ t.pk }}"
   data-date-requested="{{ t.date_requested }}"
   data-issuer-name="{{ t.issuer_name }}"
@@ -37,7 +37,7 @@
         {% if not t.user_has_approved %}
           <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
             {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-success">Approve</button>
+            <button type="submit" class="btn btn-sm btn-dark">Approve</button>
           </form>
         {% else %}
           <span class="text-muted ms-2">You’ve approved</span>

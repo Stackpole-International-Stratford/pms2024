@@ -49,6 +49,14 @@ class RedRabbitTypeForm(forms.ModelForm):
 
 
 class TPCRequestForm(forms.ModelForm):
+    part = forms.ModelChoiceField(
+        queryset=Part.objects.all().order_by('part_number'),
+        widget=forms.Select(attrs={"class": "form-control"}),
+        to_field_name="part_number",  # This makes it store the part_number instead of the ID
+        empty_label="Select a part number",
+        label="Part Number"
+    )
+
     class Meta:
         model = TPCRequest
         fields = [
@@ -60,7 +68,6 @@ class TPCRequestForm(forms.ModelForm):
         widgets = {
             "expiration_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
             "issuer_name":     forms.TextInput(attrs={"class": "form-control"}),
-            "part":            forms.TextInput(attrs={"class": "form-control"}),
             "reason":          forms.TextInput(attrs={"class": "form-control"}),
             "process":         forms.TextInput(attrs={"class": "form-control"}),
             "supplier_issue":  forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -71,6 +78,16 @@ class TPCRequestForm(forms.ModelForm):
             "changed_to":      forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "expiration_notes":forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Make sure the CharField stores just the part_number string
+        if isinstance(self.cleaned_data["part"], Part):
+            instance.part = self.cleaned_data["part"].part_number
+        if commit:
+            instance.save()
+        return instance
+
 
 
 
