@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from plant.models.setupfor_models import Asset
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 class SupervisorAuthorization(models.Model):
     supervisor_id = models.CharField(max_length=256)
@@ -273,15 +274,6 @@ class ScrapSubmission(models.Model):
 # ======================= TPC Requests =====================================
 # ==========================================================================
 # ==========================================================================
-
-
-
-
-# models.py
-from django.conf import settings
-from django.db import models
-from django.utils import timezone
-from django.contrib.auth.models import User
 
 class TPCRequest(models.Model):
     date_requested   = models.DateField(default=timezone.now)

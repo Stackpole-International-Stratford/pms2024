@@ -66,7 +66,10 @@ class TPCRequestForm(forms.ModelForm):
             "expiration_date", "expiration_notes",
         ]
         widgets = {
-            "expiration_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "expiration_date": forms.DateTimeInput(attrs={
+                "type": "datetime-local",
+                "class": "form-control"
+            }),
             "issuer_name":     forms.TextInput(attrs={"class": "form-control"}),
             "reason":          forms.TextInput(attrs={"class": "form-control"}),
             "process":         forms.TextInput(attrs={"class": "form-control"}),
