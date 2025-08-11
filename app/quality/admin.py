@@ -99,7 +99,7 @@ class TPCRequestAdmin(admin.ModelAdmin):
         # use the new field names here
         "parts", "reason", "process", "supplier_issue",
         "machines", "reason_note", "feature", "current_process", "changed_to",
-        "expiration_date", "expiration_notes",
+        "expiration_date",
     )
     approval_fields = ("approved", "approved_by", "approved_at")
 

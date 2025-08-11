@@ -18,11 +18,11 @@
           <th>ID</th>
           <th>Date requested</th>
           <th>Issuer</th>
-          <th>Part</th>
+          <th>Parts</th>
           <th>Reason</th>
           <th>Process</th>
           <th>Supplier Issue</th>
-          <th>Machine #</th>
+          <th>Machines</th>
           <th>Expiration</th>
           <th>Approved?</th>
         </tr>
@@ -34,14 +34,47 @@
       </thead>
 
       <tbody id="tpc-tbody">
-        {% include "quality/_tpc_request_rows.html" %}
+        {% for tpc in tpcs %}
+          <tr
+            data-pk="{{ tpc.pk }}"
+            data-date-requested="{{ tpc.date_requested }}"
+            data-expiration-date="{{ tpc.expiration_date }}"
+            data-issuer-name="{{ tpc.issuer_name }}"
+            data-part="{{ tpc.parts|join:', ' }}"
+            data-reason="{{ tpc.reason }}"
+            data-process="{{ tpc.process }}"
+            data-supplier-issue="{% if tpc.supplier_issue %}Yes{% else %}No{% endif %}"
+            data-machine-number="{{ tpc.machines|join:', ' }}"
+            data-approved="{% if tpc.approved %}Yes{% else %}No{% endif %}"
+            data-approvals-got="{{ tpc.approvals_count }}"
+            data-approvals-req="{{ tpc.required_approvals_count }}"
+            data-approvers="{% for a in tpc.approvals.all %}{{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+          >
+          <td>{{ tpc.pk }}</td>
+          <td>{{ tpc.date_requested }}</td>
+          <td>{{ tpc.issuer_name }}</td>
+          <td>
+            {% if tpc.parts %}
+              {{ tpc.parts|join:", " }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ tpc.reason }}</td>
+          <td>{{ tpc.process }}</td>
+          <td>{% if tpc.supplier_issue %}Yes{% else %}No{% endif %}</td>
+          <td>
+            {% if tpc.machines %}
+              {{ tpc.machines|join:", " }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ tpc.expiration_date }}</td>
+          <td>{% if tpc.approved %}Yes{% else %}No{% endif %}</td>
+        </tr>
+        {% endfor %}
       </tbody>
-
     </table>
     <div class="text-center mt-3">
       <button id="load-more" class="btn btn-outline-dark">Load more</button>
     </div>
-
   </div>
 </div>
 
@@ -70,7 +103,7 @@
             <div id="m-issuer-name" class="fw-semibold"></div>
           </div>
           <div class="col-md-6">
-            <div class="form-text m-0">Part</div>
+            <div class="form-text m-0">Parts</div>
             <div id="m-part" class="fw-semibold"></div>
           </div>
 
@@ -89,7 +122,7 @@
             <div id="m-supplier-issue" class="fw-semibold"></div>
           </div>
           <div class="col-md-4">
-            <div class="form-text m-0">Machine #</div>
+            <div class="form-text m-0">Machines</div>
             <div id="m-machine-number" class="fw-semibold"></div>
           </div>
           <div class="col-md-4">
@@ -184,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  let offset = {{ tpcs|length }}; // how many we initially loaded
+  let offset = {{ tpcs|length }};
   const pageSize = {{ tpc_page_size }};
   const loadBtn = document.getElementById('load-more');
   const tbody = document.getElementById('tpc-tbody');
@@ -212,8 +245,5 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   });
 });
-
-
-
 </script>
 {% endblock %}

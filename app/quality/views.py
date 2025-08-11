@@ -31,6 +31,8 @@ from .models import TPCRequest, TPCApproval
 from django.db.models import Exists, OuterRef
 from django.core import serializers
 from django.template.loader import render_to_string
+from django.utils import timezone
+
 
 
 def index(request):
@@ -1622,10 +1624,12 @@ def tpc_request_load_more(request):
     return JsonResponse({"html": html, "has_more": tpcs.count() == page_size})
 
 
-
 @login_required(login_url='/login/')
 def tpc_request_create(request):
     if request.method == "POST":
+        print("---- TPC Request Create POST ----")
+        print("POST data:", request.POST)
+
         issuer_name = request.POST.get("issuer_name", "").strip()
         parts = request.POST.getlist("parts")
         reason = request.POST.get("reason", "").strip()
@@ -1637,7 +1641,19 @@ def tpc_request_create(request):
         expiration_date_str = request.POST.get("expiration_date", "").strip()
         current_process = request.POST.get("current_process", "").strip()
         changed_to = request.POST.get("changed_to", "").strip()
-        expiration_notes = request.POST.get("expiration_notes", "").strip()
+
+        print("Parsed values:")
+        print("  issuer_name:", issuer_name)
+        print("  parts:", parts)
+        print("  reason:", reason)
+        print("  process:", process)
+        print("  supplier_issue:", supplier_issue)
+        print("  machines:", machines)
+        print("  reason_note:", reason_note)
+        print("  feature:", feature)
+        print("  expiration_date_str:", expiration_date_str)
+        print("  current_process:", current_process)
+        print("  changed_to:", changed_to)
 
         # --- Validation ---
         missing = []
@@ -1651,7 +1667,11 @@ def tpc_request_create(request):
         if not changed_to: missing.append("Changed to")
 
         if missing:
-            messages.error(request, f"Please fill out all required fields: {', '.join(missing)}")
+            print("Missing fields:", missing)
+            messages.error(
+                request,
+                f"Please fill out all required fields: {', '.join(missing)}"
+            )
             return render(request, "quality/tpc_request_form.html", {
                 "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
                 "parts_qs": Part.objects.all().order_by("part_number"),
@@ -1659,12 +1679,13 @@ def tpc_request_create(request):
             })
 
         # Parse datetime-local input (YYYY-MM-DDTHH:MM)
-        expiration_dt = None
         try:
             expiration_dt = timezone.make_aware(
                 timezone.datetime.fromisoformat(expiration_date_str)
             )
-        except Exception:
+            print("Parsed expiration_dt:", expiration_dt)
+        except Exception as e:
+            print("Expiration date parse error:", e)
             messages.error(request, "Invalid expiration date format. Please select a valid date and time.")
             return render(request, "quality/tpc_request_form.html", {
                 "issuer_default": issuer_name,
@@ -1672,24 +1693,31 @@ def tpc_request_create(request):
                 "machines_qs": Asset.objects.all().order_by("asset_number"),
             })
 
-        # Create TPC
-        tpc = TPCRequest.objects.create(
-            issuer_name=issuer_name,
-            part=",".join(parts),  # store as comma-separated string
-            reason=reason,
-            process=process,
-            supplier_issue=supplier_issue,
-            machine_number=",".join(machines),
-            reason_note=reason_note,
-            feature=feature,
-            expiration_date=expiration_dt,
-            current_process=current_process,
-            changed_to=changed_to,
-        )
+        # Create TPCRequest with JSON fields
+        try:
+            tpc = TPCRequest.objects.create(
+                issuer_name=issuer_name,
+                parts=parts,                # stored as JSON list
+                reason=reason,
+                process=process,
+                supplier_issue=supplier_issue,
+                machines=machines,          # stored as JSON list
+                reason_note=reason_note,
+                feature=feature,
+                expiration_date=expiration_dt,
+                current_process=current_process,
+                changed_to=changed_to,
+            )
+            print("Created TPC with PK:", tpc.pk)
+        except Exception as e:
+            print("Error creating TPCRequest:", e)
+            raise
 
         messages.success(request, f"TPC #{tpc.pk} created successfully.")
         return redirect("tpc_request_list")
 
+    # GET: render form
+    print("---- TPC Request Create GET ----")
     return render(request, "quality/tpc_request_form.html", {
         "issuer_default": request.user.get_full_name() or request.user.username,
         "parts_qs": Part.objects.all().order_by("part_number"),
