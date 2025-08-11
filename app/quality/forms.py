@@ -1,7 +1,7 @@
 # quality/forms.py
 from django import forms
 from .models import Feat, QualityPDFDocument, RedRabbitType
-from plant.models.setupfor_models import Part
+from plant.models.setupfor_models import Part, Asset
 from .models import TPCRequest
 from .models import RedRabbitType
 from .models import QualityPDFDocument
@@ -51,10 +51,18 @@ class RedRabbitTypeForm(forms.ModelForm):
 class TPCRequestForm(forms.ModelForm):
     part = forms.ModelChoiceField(
         queryset=Part.objects.all().order_by('part_number'),
-        widget=forms.Select(attrs={"class": "form-control"}),
-        to_field_name="part_number",  # This makes it store the part_number instead of the ID
+        widget=forms.Select(attrs={"class": "form-control select2"}),
+        to_field_name="part_number",
         empty_label="Select a part number",
         label="Part Number"
+    )
+
+    machine_number = forms.ModelChoiceField(
+        queryset=Asset.objects.all().order_by('asset_number'),
+        widget=forms.Select(attrs={"class": "form-control select2"}),
+        to_field_name="asset_number",   # store asset_number string, not PK
+        empty_label="Select a machine",
+        label="Machine"
     )
 
     class Meta:
@@ -74,7 +82,6 @@ class TPCRequestForm(forms.ModelForm):
             "reason":          forms.TextInput(attrs={"class": "form-control"}),
             "process":         forms.TextInput(attrs={"class": "form-control"}),
             "supplier_issue":  forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "machine_number":  forms.TextInput(attrs={"class": "form-control"}),
             "reason_note":     forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "feature":         forms.TextInput(attrs={"class": "form-control"}),
             "current_process": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
@@ -84,13 +91,15 @@ class TPCRequestForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # Make sure the CharField stores just the part_number string
+
+        # Store part_number string
         if isinstance(self.cleaned_data["part"], Part):
             instance.part = self.cleaned_data["part"].part_number
+
+        # Store asset_number string
+        if isinstance(self.cleaned_data["machine_number"], Asset):
+            instance.machine_number = self.cleaned_data["machine_number"].asset_number
+
         if commit:
             instance.save()
         return instance
-
-
-
-
