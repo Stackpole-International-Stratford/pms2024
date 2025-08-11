@@ -30,6 +30,8 @@ from plant.models.email_models import EmailCampaign
 from .models import TPCRequest, TPCApproval 
 from .forms import TPCRequestForm
 from django.db.models import Exists, OuterRef
+from django.core import serializers
+from django.template.loader import render_to_string
 
 
 def index(request):
@@ -1567,24 +1569,58 @@ def send_tpc_email(request):
 
 @login_required(login_url='/login/')
 def tpc_request(request):
+    page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
     tpcs = (
         TPCRequest.objects
-        .all()
+        .order_by('-date_requested')
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
             )
         )
-        .prefetch_related("approvals")  # keeps approvals.count fast
+        .prefetch_related("approvals")[:page_size]
     )
 
     return render(
         request,
         "quality/tpc_requests.html",
-        {"tpcs": tpcs, "is_tpc_approver": is_tpc_approver},
+        {
+            "tpcs": tpcs,
+            "is_tpc_approver": is_tpc_approver,
+            "tpc_page_size": settings.TPC_PAGE_SIZE
+        },
     )
+
+
+@login_required(login_url='/login/')
+def tpc_request_load_more(request):
+    try:
+        offset = int(request.GET.get("offset", 0))
+    except ValueError:
+        offset = 0
+
+    page_size = settings.TPC_PAGE_SIZE
+    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+
+    tpcs = (
+        TPCRequest.objects
+        .order_by('-date_requested')
+        .annotate(
+            user_has_approved=Exists(
+                TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
+            )
+        )
+        .prefetch_related("approvals")[offset:offset+page_size]
+    )
+
+    html = render_to_string("quality/_tpc_request_rows.html", {
+        "tpcs": tpcs,
+        "is_tpc_approver": is_tpc_approver,
+    }, request=request)
+
+    return JsonResponse({"html": html, "has_more": tpcs.count() == page_size})
 
 
 @login_required(login_url='/login/')
@@ -1599,6 +1635,9 @@ def tpc_request_create(request):
         # Pre-fill issuer_name from the logged-in user if you like:
         form = TPCRequestForm(initial={"issuer_name": request.user.get_full_name() or request.user.username})
     return render(request, "quality/tpc_request_form.html", {"form": form})
+
+
+
 
 @login_required(login_url='/login/')
 def tpc_request_approve(request, pk):

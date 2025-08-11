@@ -69,5 +69,6 @@ urlpatterns = [
 
     path("tpc-requests/new/", tpc_request_create, name="tpc_request_new"),
     path("tpc-requests/<int:pk>/approve/", tpc_request_approve, name="tpc_approve"),
+    path('tpc-requests/load-more/', tpc_request_load_more, name='tpc_request_load_more'),
 
 ]

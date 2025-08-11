@@ -33,59 +33,15 @@
         </tr>
       </thead>
 
-      <tbody>
-        {% for t in tpcs %}
-          <tr
-            title="Click to approve"
-            data-pk="{{ t.pk }}"
-            data-date-requested="{{ t.date_requested }}"
-            data-issuer-name="{{ t.issuer_name }}"
-            data-part="{{ t.part|default:'—' }}"
-            data-reason="{{ t.reason }}"
-            data-process="{{ t.process }}"
-            data-supplier-issue="{{ t.supplier_issue|yesno:'Yes,No' }}"
-            data-machine-number="{{ t.machine_number }}"
-            data-expiration-date="{{ t.expiration_date }}"
-            data-expiration-notes="{{ t.expiration_notes|default:'—' }}"
-            data-approved="{{ t.approved|yesno:'Yes,No' }}"
-            data-approvals-got="{{ t.approvals.count }}"
-            data-approvals-req="{{ t.required_approvals_count }}"
-            data-approvers="{% for a in t.approvals.all %}{{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}"
-          >
-            <td>{{ t.pk }}</td>
-            <td>{{ t.date_requested }}</td>
-            <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:10 }}</td>
-            <td title="{{ t.part }}">{{ t.part|default:"—"|truncatechars:10 }}</td>
-            <td title="{{ t.reason }}">{{ t.reason|truncatechars:10 }}</td>
-            <td title="{{ t.process }}">{{ t.process|truncatechars:10 }}</td>
-            <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
-            <td>{{ t.machine_number }}</td>
-            <td>{{ t.expiration_date }}</td>
-
-            <td>
-              {% if t.approved %}
-                <span class="text-success">✅ Fully approved</span>
-              {% else %}
-                {% with got=t.approvals.count req=t.required_approvals_count %}
-                  <span class="badge text-bg-secondary">{{ got }}/{{ req }}</span>
-                {% endwith %}
-
-                {% if is_tpc_approver %}
-                  {% if not t.user_has_approved %}
-                    <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-dark">Approve</button>
-                    </form>
-                  {% else %}
-                    <span class="text-muted ms-2">You’ve approved</span>
-                  {% endif %}
-                {% endif %}
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
+      <tbody id="tpc-tbody">
+        {% include "quality/_tpc_request_rows.html" %}
       </tbody>
+
     </table>
+    <div class="text-center mt-3">
+      <button id="load-more" class="btn btn-outline-primary">Load more</button>
+    </div>
+
   </div>
 </div>
 
@@ -231,5 +187,38 @@ document.addEventListener('DOMContentLoaded', () => {
     el.textContent = value || '—';
   }
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  let offset = {{ tpcs|length }}; // how many we initially loaded
+  const pageSize = {{ tpc_page_size }};
+  const loadBtn = document.getElementById('load-more');
+  const tbody = document.getElementById('tpc-tbody');
+
+  loadBtn.addEventListener('click', () => {
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading...';
+
+    fetch(`{% url 'tpc_request_load_more' %}?offset=${offset}`)
+      .then(resp => resp.json())
+      .then(data => {
+        tbody.insertAdjacentHTML('beforeend', data.html);
+        offset += pageSize;
+        if (data.has_more) {
+          loadBtn.disabled = false;
+          loadBtn.textContent = 'Load more';
+        } else {
+          loadBtn.remove();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Load more';
+      });
+  });
+});
+
+
+
 </script>
 {% endblock %}
