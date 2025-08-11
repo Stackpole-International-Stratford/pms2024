@@ -1795,33 +1795,92 @@ def _render_tpc_html(tpc) -> str:
 
     # inline minimal styles for readability in most clients
     return f"""
-    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; color:#111;">
-      <h2 style="margin:0 0 12px;">TPC #{tpc.pk} is fully approved</h2>
-      <p style="margin:0 0 16px;">The TPC below reached full approval and is now official.</p>
+        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
+        <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+            
+            <!-- Header -->
+            <div style="background-color:#004085; color:#fff; padding:16px 20px;">
+            <h2 style="margin:0; font-size:20px;">TPC #{tpc.pk} Fully Approved</h2>
+            <p style="margin:4px 0 0; font-size:14px; opacity:0.85;">
+                Issued by {tpc.issuer_name or '—'} &middot; {tpc.date_requested}
+            </p>
+            </div>
+            
+            <!-- Body -->
+            <div style="padding:20px;">
+            <p style="margin-top:0; font-size:15px;">
+                The following Temporary Process Change request has received all required approvals and is now official.
+            </p>
 
-      <table style="width:100%; border-collapse:collapse;">
-        <tbody>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;width:220px;"><strong>ID</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.pk}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Date requested</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.date_requested}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Issuer</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.issuer_name or '—'}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Parts</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{join_list(tpc.parts)}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Reason</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.reason or '—'}</pre></td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Process</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.process or '—'}</pre></td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Supplier Issue</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{supplier_issue}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Machines</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{join_list(tpc.machines)}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Feature</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.feature or '—'}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Current process</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.current_process or '—'}</pre></td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Changed to</strong></td><td style="padding:8px;border-top:1px solid #ddd;"><pre style="white-space:pre-wrap;margin:0;">{tpc.changed_to or '—'}</pre></td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Expiration</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{local_exp:%Y-%m-%d %H:%M %Z}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Approvals</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Approved by (last)</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td></tr>
-          <tr><td style="padding:8px;border-top:1px solid #ddd;"><strong>Approved at</strong></td><td style="padding:8px;border-top:1px solid #ddd;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td></tr>
-        </tbody>
-      </table>
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <tbody>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
+                    <td style="padding:8px;">{tpc.pk}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Date Requested</td>
+                    <td style="padding:8px;">{tpc.date_requested}</td>
+                </tr>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Parts</td>
+                    <td style="padding:8px;">{join_list(tpc.parts)}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Reason</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
+                </tr>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Process</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
+                    <td style="padding:8px;">{supplier_issue}</td>
+                </tr>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Machines</td>
+                    <td style="padding:8px;">{join_list(tpc.machines)}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Feature</td>
+                    <td style="padding:8px;">{tpc.feature or '—'}</td>
+                </tr>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Current Process</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Changed To</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
+                </tr>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Expiration</td>
+                    <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Approvals</td>
+                    <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
+                </tr>
+                <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Approved By (Last)</td>
+                    <td style="padding:8px;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; font-weight:bold;">Approved At</td>
+                    <td style="padding:8px;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td>
+                </tr>
+                </tbody>
+            </table>
 
-      <p style="margin-top:20px;color:#555;">This message was sent automatically after all required approvers confirmed.</p>
-    </div>
-    """
+            <p style="margin-top:20px; font-size:13px; color:#666;">
+                This message was sent automatically after all required approvers confirmed the TPC.
+            </p>
+            </div>
+        </div>
+        </div>
+        """
+
 
 
 def send_tpc_broadcast_email(tpc_pk: int) -> None:
