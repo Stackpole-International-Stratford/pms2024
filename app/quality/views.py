@@ -1526,7 +1526,7 @@ def tpc_request(request):
 
     tpcs = (
         TPCRequest.objects
-        .order_by('-date_requested')
+        .order_by('-id')
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
@@ -1857,7 +1857,7 @@ def _render_tpc_html(tpc) -> str:
             </div>
 
             <!-- Header -->
-            <div style="background-color:#004085; color:#fff; padding:16px 20px; text-align:center;">
+            <div style="background-color:#000000; color:#fff; padding:16px 20px; text-align:center;">
                 <h2 style="margin:0; font-size:22px;">Temporary Process Change</h2>
                 <div style="font-size:26px; font-weight:700; margin-top:5px;">TPC #{tpc.pk}</div>
                 <p style="margin:6px 0 0; font-size:14px; opacity:0.85;">

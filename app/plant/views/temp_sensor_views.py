@@ -226,7 +226,7 @@ def temp_display(request):
     minutes_left = int((expiry_timestamp - now).total_seconds() // 60)
 
     # ---- refresh session for specific users ----
-    if request.user.is_authenticated and request.user.username in {"tcareless", "tyler.careless", 'itsignage'}:
+    if request.user.is_authenticated and request.user.username in {"tcareless", 'itsignage'}:
         # reset expiry to full SESSION_COOKIE_AGE (seconds)
         request.session.set_expiry(getattr(settings, "SESSION_COOKIE_AGE", 1209600))
         # mark modified so Django actually writes the session even if nothing else changed
