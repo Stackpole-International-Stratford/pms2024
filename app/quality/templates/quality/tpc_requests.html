@@ -1,4 +1,3 @@
-{# templates/quality/tpc_requests.html #}
 {% extends "parent.html" %}
 {% load static %}
 
@@ -23,7 +22,7 @@
           <th>Machines</th>
           <th>Expiration</th>
           <th>Approved?</th>
-          <th>PDF</th> <!-- NEW -->
+          <th>PDF</th>
         </tr>
         <tr>
           {% for _ in "0123456789" %}
@@ -31,136 +30,91 @@
           {% endfor %}
         </tr>
       </thead>
-
       <tbody id="tpc-tbody">
-          {% for t in tpcs %}
-          <tr
-            data-pk="{{ t.pk }}"
-            data-date-requested="{{ t.date_requested }}"
-            data-expiration-date="{{ t.expiration_date }}"
-            data-issuer-name="{{ t.issuer_name }}"
-            data-part="{% if t.parts %}{{ t.parts|join:', ' }}{% else %}—{% endif %}"
-            data-reason="{{ t.reason }}"
-            data-process="{{ t.process }}"
-            data-supplier-issue="{{ t.supplier_issue|yesno:'Yes,No' }}"
-            data-machine-number="{% if t.machines %}{{ t.machines|join:', ' }}{% else %}—{% endif %}"
-            data-approved="{{ t.approved|yesno:'Yes,No' }}"
-            data-approvals-got="{{ t.approvals.count }}"
-            data-approvals-req="{{ t.required_approvals_count }}"
-            data-approvers="{% for a in t.approvals.all %}{{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}"
-          >
-            <td>{{ t.pk }}</td>
-            <td>{{ t.date_requested }}</td>
-            <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:10 }}</td>
-            <td title="{% if t.parts %}{{ t.parts|join:', ' }}{% else %}—{% endif %}">
-              {% if t.parts %}{{ t.parts|join:", "|truncatechars:20 }}{% else %}—{% endif %}
-            </td>
-            <td title="{{ t.reason }}">{{ t.reason|truncatechars:10 }}</td>
-            <td title="{{ t.process }}">{{ t.process|truncatechars:10 }}</td>
-            <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
-            <td title="{% if t.machines %}{{ t.machines|join:', ' }}{% else %}—{% endif %}">
-              {% if t.machines %}{{ t.machines|join:", "|truncatechars:20 }}{% else %}—{% endif %}
-            </td>
-            <td>{{ t.expiration_date }}</td>
-            <td>
-              {% if t.approved %}
-                <span class="text-success">✅ Fully approved</span>
-              {% else %}
-                {% with got=t.approvals.count req=t.required_approvals_count %}
-                  <span class="badge text-bg-secondary">{{ got }}/{{ req }}</span>
-                {% endwith %}
-                {% if is_tpc_approver %}
-                  {% if not t.user_has_approved %}
-                    <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                    </form>
-                  {% else %}
-                    <span class="text-muted ms-2">You’ve approved</span>
-                  {% endif %}
+        {% for t in tpcs %}
+        <tr
+          data-pk="{{ t.pk }}"
+          data-date-requested="{{ t.date_requested }}"
+          data-expiration-date="{{ t.expiration_date }}"
+          data-issuer-name="{{ t.issuer_name }}"
+          data-part="{% if t.parts %}{{ t.parts|join:', ' }}{% else %}—{% endif %}"
+          data-reason="{{ t.reason }}"
+          data-process="{{ t.process }}"
+          data-supplier-issue="{{ t.supplier_issue|yesno:'Yes,No' }}"
+          data-machine-number="{% if t.machines %}{{ t.machines|join:', ' }}{% else %}—{% endif %}"
+          data-approved="{{ t.approved|yesno:'Yes,No' }}"
+          data-approvals-got="{{ t.approvals.count }}"
+          data-approvals-req="{{ t.required_approvals_count }}"
+          data-approvers="{% for a in t.approvals.all %}{{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}"
+        >
+          <td>{{ t.pk }}</td>
+          <td>{{ t.date_requested }}</td>
+          <td title="{{ t.issuer_name }}">{{ t.issuer_name|truncatechars:10 }}</td>
+          <td title="{% if t.parts %}{{ t.parts|join:', ' }}{% else %}—{% endif %}">
+            {% if t.parts %}{{ t.parts|join:", "|truncatechars:20 }}{% else %}—{% endif %}
+          </td>
+          <td title="{{ t.reason }}">{{ t.reason|truncatechars:10 }}</td>
+          <td title="{{ t.process }}">{{ t.process|truncatechars:10 }}</td>
+          <td>{{ t.supplier_issue|yesno:"Yes,No" }}</td>
+          <td title="{% if t.machines %}{{ t.machines|join:', ' }}{% else %}—{% endif %}">
+            {% if t.machines %}{{ t.machines|join:", "|truncatechars:20 }}{% else %}—{% endif %}
+          </td>
+          <td>{{ t.expiration_date }}</td>
+          <td>
+            {% if t.approved %}
+              <span class="text-success">✅ Fully approved</span>
+            {% else %}
+              {% with got=t.approvals.count req=t.required_approvals_count %}
+                <span class="badge text-bg-secondary">{{ got }}/{{ req }}</span>
+              {% endwith %}
+              {% if is_tpc_approver %}
+                {% if not t.user_has_approved %}
+                  <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                  </form>
+                {% else %}
+                  <span class="text-muted ms-2">You’ve approved</span>
                 {% endif %}
               {% endif %}
-            </td>
-            <td>
-              {% if t.approved %}
-              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" rel="noopener noreferrer" title="View PDF" style="text-decoration: none; color: inherit;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-filetype-pdf" viewBox="0 0 16 16">
-                  <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v3.999h.791v-1.342h.803q.43 0 .732-.173.305-.175.463-.474a1.4 1.4 0 0 0 .161-.677q0-.375-.158-.677a1.2 1.2 0 0 0-.46-.477q-.3-.18-.732-.179m.545 1.333a.8.8 0 0 1-.085.38.57.57 0 0 1-.238.241.8.8 0 0 1-.375.082H.788V12.48h.66q.327 0 .512.181.185.183.185.522m1.217-1.333v3.999h1.46q.602 0 .998-.237a1.45 1.45 0 0 0 .595-.689q.196-.45.196-1.084 0-.63-.196-1.075a1.43 1.43 0 0 0-.589-.68q-.396-.234-1.005-.234zm.791.645h.563q.371 0 .609.152a.9.9 0 0 1 .354.454q.118.302.118.753a2.3 2.3 0 0 1-.068.592 1.1 1.1 0 0 1-.196.422.8.8 0 0 1-.334.252 1.3 1.3 0 0 1-.483.082h-.563zm3.743 1.763v1.591h-.79V11.85h2.548v.653H7.896v1.117h1.606v.638z"/>
-                </svg>
-              </a>
-              {% endif %}
+            {% endif %}
           </td>
-          </tr>
-          {% endfor %}
-
+          <td>
+            {% if t.approved %}
+              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" rel="noopener noreferrer" title="View PDF">📄</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
-
-    <div class="text-center mt-3">
+    <div class="text-center mt-3" id="load-more-container">
       <button id="load-more" class="btn btn-outline-dark">Load more</button>
     </div>
   </div>
 </div>
 
-{# ---------- Bootstrap Modal ---------- #}
+{# ---------- Modal ---------- #}
 <div class="modal fade" id="tpcModal" tabindex="-1" aria-labelledby="tpcModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="tpcModalLabel">TPC Request <span id="m-pk" class="fw-semibold"></span></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-
       <div class="modal-body">
         <div class="row g-3">
-          <div class="col-md-6">
-            <div class="form-text m-0">Date requested</div>
-            <div id="m-date-requested" class="fw-semibold"></div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-text m-0">Expiration</div>
-            <div id="m-expiration-date" class="fw-semibold"></div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-text m-0">Issuer</div>
-            <div id="m-issuer-name" class="fw-semibold"></div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-text m-0">Parts</div>
-            <div id="m-part" class="fw-semibold"></div>
-          </div>
-          <div class="col-12">
-            <div class="form-text m-0">Reason</div>
-            <pre id="m-reason" class="border rounded p-2 bg-body-secondary mb-0"></pre>
-          </div>
-          <div class="col-12">
-            <div class="form-text m-0">Process</div>
-            <pre id="m-process" class="border rounded p-2 bg-body-secondary mb-0"></pre>
-          </div>
-          <div class="col-md-4">
-            <div class="form-text m-0">Supplier Issue</div>
-            <div id="m-supplier-issue" class="fw-semibold"></div>
-          </div>
-          <div class="col-md-4">
-            <div class="form-text m-0">Machines</div>
-            <div id="m-machine-number" class="fw-semibold"></div>
-          </div>
-          <div class="col-md-4">
-            <div class="form-text m-0">Approved?</div>
-            <div id="m-approved" class="fw-semibold"></div>
-          </div>
-          <div class="col-12">
-            <div class="form-text m-0">Approvals</div>
-            <div class="d-flex align-items-center gap-2">
-              <span id="m-approvals-pill" class="badge text-bg-secondary"></span>
-              <span id="m-approvers" class="text-muted"></span>
-            </div>
-          </div>
+          <div class="col-md-6"><div class="form-text">Date requested</div><div id="m-date-requested" class="fw-semibold"></div></div>
+          <div class="col-md-6"><div class="form-text">Expiration</div><div id="m-expiration-date" class="fw-semibold"></div></div>
+          <div class="col-md-6"><div class="form-text">Issuer</div><div id="m-issuer-name" class="fw-semibold"></div></div>
+          <div class="col-md-6"><div class="form-text">Parts</div><div id="m-part" class="fw-semibold"></div></div>
+          <div class="col-12"><div class="form-text">Reason</div><pre id="m-reason" class="border rounded p-2 bg-body-secondary"></pre></div>
+          <div class="col-12"><div class="form-text">Process</div><pre id="m-process" class="border rounded p-2 bg-body-secondary"></pre></div>
+          <div class="col-md-4"><div class="form-text">Supplier Issue</div><div id="m-supplier-issue" class="fw-semibold"></div></div>
+          <div class="col-md-4"><div class="form-text">Machines</div><div id="m-machine-number" class="fw-semibold"></div></div>
+          <div class="col-md-4"><div class="form-text">Approved?</div><div id="m-approved" class="fw-semibold"></div></div>
+          <div class="col-12"><div class="form-text">Approvals</div><span id="m-approvals-pill" class="badge text-bg-secondary"></span> <span id="m-approvers" class="text-muted"></span></div>
         </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -168,86 +122,103 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const table  = document.getElementById('tpc-table');
-  const inputs = table.querySelectorAll('thead tr:nth-child(2) input');
-  const tbody  = table.tBodies[0];
-  const rows   = Array.from(tbody.rows);
-
-  function filter() {
-    rows.forEach(row => {
-      const ok = Array.from(inputs).every((inp, idx) => {
-        const term = inp.value.trim().toLowerCase();
-        return !term || row.cells[idx].textContent.toLowerCase().includes(term);
-      });
-      row.classList.toggle('d-none', !ok);
-    });
-  }
-  inputs.forEach(inp => inp.addEventListener('input', filter));
-
-  table.querySelectorAll('thead tr:first-child th').forEach((th, idx) => {
-    let asc = true;
-    th.addEventListener('click', () => {
-      rows.sort((a, b) => {
-        const A = a.cells[idx].textContent.trim();
-        const B = b.cells[idx].textContent.trim();
-        const numA = parseFloat(A.replace(/[^0-9.\-]/g, ''));
-        const numB = parseFloat(B.replace(/[^0-9.\-]/g, ''));
-        const diff = (!isNaN(numA) && !isNaN(numB))
-          ? numA - numB
-          : A.localeCompare(B, undefined, {numeric:true, sensitivity:'base'});
-        return asc ? diff : -diff;
-      });
-      asc = !asc;
-      rows.forEach(r => tbody.appendChild(r));
-    });
-  });
-
-  const modalEl = document.getElementById('tpcModal');
-  const bsModal = typeof bootstrap !== 'undefined' ? new bootstrap.Modal(modalEl) : null;
-
-  tbody.addEventListener('click', (ev) => {
-    const target = ev.target;
-    if (target.closest('a, button, [data-row-safe-click], form')) return;
-    const row = target.closest('tr');
-    if (!row) return;
-    setText('m-pk', row.dataset.pk);
-    setText('m-date-requested', row.dataset.dateRequested);
-    setText('m-expiration-date', row.dataset.expirationDate);
-    setText('m-issuer-name', row.dataset.issuerName);
-    setText('m-part', row.dataset.part);
-    setText('m-reason', row.dataset.reason);
-    setText('m-process', row.dataset.process);
-    setText('m-supplier-issue', row.dataset.supplierIssue);
-    setText('m-machine-number', row.dataset.machineNumber);
-    setText('m-approved', row.dataset.approved);
-    setText('m-approvals-pill', `${row.dataset.approvalsGot}/${row.dataset.approvalsReq}`);
-    setText('m-approvers', row.dataset.approvers);
-    if (bsModal) bsModal.show();
-  });
-
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = value || '—';
-  }
-
+  const tbody = document.getElementById('tpc-tbody');
+  const loadBtn = document.getElementById('load-more');
   let offset = {{ tpcs|length }};
   const pageSize = {{ tpc_page_size }};
-  const loadBtn = document.getElementById('load-more');
+  const isTpcApprover = {{ is_tpc_approver|yesno:"true,false" }};
 
+  // Filtering
+  const inputs = document.querySelectorAll('thead tr:nth-child(2) input');
+  function filterRows() {
+    tbody.querySelectorAll('tr').forEach(row => {
+      const visible = Array.from(inputs).every((inp, i) =>
+        !inp.value || row.cells[i].textContent.toLowerCase().includes(inp.value.toLowerCase())
+      );
+      row.classList.toggle('d-none', !visible);
+    });
+  }
+  inputs.forEach(inp => inp.addEventListener('input', filterRows));
+
+  // Modal
+  const modal = new bootstrap.Modal(document.getElementById('tpcModal'));
+  tbody.addEventListener('click', e => {
+    if (e.target.closest('a, button, form')) return;
+    const row = e.target.closest('tr');
+    if (!row) return;
+    const set = (id, val) => document.getElementById(id).textContent = val || '—';
+    set('m-pk', row.dataset.pk);
+    set('m-date-requested', row.dataset.dateRequested);
+    set('m-expiration-date', row.dataset.expirationDate);
+    set('m-issuer-name', row.dataset.issuerName);
+    set('m-part', row.dataset.part);
+    set('m-reason', row.dataset.reason);
+    set('m-process', row.dataset.process);
+    set('m-supplier-issue', row.dataset.supplierIssue);
+    set('m-machine-number', row.dataset.machineNumber);
+    set('m-approved', row.dataset.approved);
+    set('m-approvals-pill', `${row.dataset.approvalsGot}/${row.dataset.approvalsReq}`);
+    set('m-approvers', row.dataset.approvers);
+    modal.show();
+  });
+
+  // Load more via JSON
   loadBtn.addEventListener('click', () => {
     loadBtn.disabled = true;
     loadBtn.textContent = 'Loading...';
     fetch(`{% url 'tpc_request_load_more' %}?offset=${offset}`)
-      .then(resp => resp.json())
+      .then(res => res.json())
       .then(data => {
-        tbody.insertAdjacentHTML('beforeend', data.html);
+        data.rows.forEach(t => {
+          const tr = document.createElement('tr');
+          tr.dataset.pk = t.pk;
+          tr.dataset.dateRequested = t.date_requested;
+          tr.dataset.expirationDate = t.expiration_date;
+          tr.dataset.issuerName = t.issuer_name;
+          tr.dataset.part = t.parts;
+          tr.dataset.reason = t.reason;
+          tr.dataset.process = t.process;
+          tr.dataset.supplierIssue = t.supplier_issue;
+          tr.dataset.machineNumber = t.machines;
+          tr.dataset.approved = t.approved ? 'Yes' : 'No';
+          tr.dataset.approvalsGot = t.approvals_got;
+          tr.dataset.approvalsReq = t.approvals_req;
+          tr.dataset.approvers = t.approvers;
+
+          tr.innerHTML = `
+            <td>${t.pk}</td>
+            <td>${t.date_requested}</td>
+            <td title="${t.issuer_name}">${t.issuer_name}</td>
+            <td title="${t.parts}">${t.parts}</td>
+            <td title="${t.reason}">${t.reason}</td>
+            <td title="${t.process}">${t.process}</td>
+            <td>${t.supplier_issue}</td>
+            <td title="${t.machines}">${t.machines}</td>
+            <td>${t.expiration_date}</td>
+            <td>
+              ${t.approved
+                ? '<span class="text-success">✅ Fully approved</span>'
+                : `<span class="badge text-bg-secondary">${t.approvals_got}/${t.approvals_req}</span>` +
+                  (isTpcApprover
+                    ? (!t.user_has_approved
+                      ? `<form action="/quality/tpc-requests/${t.pk}/approve/" method="post" class="d-inline ms-2" data-row-safe-click>
+                           {% csrf_token %}
+                           <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                         </form>`
+                      : `<span class="text-muted ms-2">You’ve approved</span>`)
+                    : '')
+              }
+            </td>
+            <td>${t.pdf_url ? `<a href="${t.pdf_url}" target="_blank" title="View PDF">📄</a>` : ''}</td>
+          `;
+          tbody.appendChild(tr);
+        });
         offset += pageSize;
         if (data.has_more) {
           loadBtn.disabled = false;
           loadBtn.textContent = 'Load more';
         } else {
-          loadBtn.remove();
+          document.getElementById('load-more-container').remove();
         }
       })
       .catch(err => {

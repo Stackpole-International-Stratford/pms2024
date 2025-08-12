@@ -1557,7 +1557,7 @@ def tpc_request_load_more(request):
     page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
-    tpcs = (
+    tpc_qs = (
         TPCRequest.objects
         .order_by('-date_requested')
         .annotate(
@@ -1565,15 +1565,39 @@ def tpc_request_load_more(request):
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
             )
         )
-        .prefetch_related("approvals")[offset:offset+page_size]
+        .prefetch_related("approvals")[offset:offset + page_size + 1]
     )
 
-    html = render_to_string("quality/_tpc_request_rows.html", {
-        "tpcs": tpcs,
-        "is_tpc_approver": is_tpc_approver,
-    }, request=request)
+    tpcs = list(tpc_qs[:page_size])
+    has_more = len(tpc_qs) > page_size
 
-    return JsonResponse({"html": html, "has_more": tpcs.count() == page_size})
+    data = []
+    for t in tpcs:
+        data.append({
+            "pk": t.pk,
+            "date_requested": t.date_requested.strftime("%Y-%m-%d %H:%M"),
+            "issuer_name": t.issuer_name,
+            "parts": ", ".join(t.parts) if t.parts else "—",
+            "reason": t.reason,
+            "process": t.process,
+            "supplier_issue": "Yes" if t.supplier_issue else "No",
+            "machines": ", ".join(t.machines) if t.machines else "—",
+            "expiration_date": t.expiration_date.strftime("%Y-%m-%d %H:%M"),
+            "approved": t.approved,
+            "approvals_got": t.approvals.count(),
+            "approvals_req": t.required_approvals_count(),
+            "approvers": ", ".join(
+                a.user.get_full_name() or a.user.username
+                for a in t.approvals.all()
+            ) or "—",
+            "user_has_approved": t.user_has_approved,
+            "pdf_url": tpc_request_pdf and request.build_absolute_uri(
+                f"/quality/tpc/{t.pk}/pdf/"
+            ) if t.approved else None
+        })
+
+    return JsonResponse({"rows": data, "has_more": has_more, "is_tpc_approver": is_tpc_approver})
+
 
 
 @login_required(login_url='/login/')
