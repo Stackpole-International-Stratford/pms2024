@@ -37,7 +37,7 @@ from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseForbidden, Http404
 from django.shortcuts import redirect, render
-
+from .models import TPCRequest
 
 def index(request):
     is_quality_manager = False
@@ -1508,66 +1508,9 @@ def get_categories(request):
 
 # =====================================================================
 # =====================================================================
-# ========================= TPC Email Test ============================
+# ============================ TPCs  ==================================
 # =====================================================================
 # =====================================================================
-
-
-
-
-
-@require_GET
-def send_tpc_email(request):
-    """
-    Fetches the 'TPC Email' campaign, builds a Hello World HTML payload,
-    and POSTs it to the Flask emailer.
-    """
-    # 1) Look up the campaign
-    try:
-        campaign = EmailCampaign.objects.get(name="TPC Email")
-    except EmailCampaign.DoesNotExist:
-        return JsonResponse(
-            {"error": "TPC Email campaign not found."}, 
-            status=404
-        )
-
-    # 2) Collect recipient emails
-    recipients = list(campaign.recipients.values_list('email', flat=True))
-    if not recipients:
-        return JsonResponse(
-            {"error": "No recipients configured for TPC Email."}, 
-            status=400
-        )
-
-    # 3) Build the payload
-    payload = {
-        "html": "<h1>Hello World</h1><p>This is a test.</p>",
-        "recipients": recipients,
-    }
-
-    # 4) POST to Flask mailer
-    flask_url = settings.FLASK_EMAILER_URL  # now loaded directly from settings
-    
-    try:
-        resp = requests.post(
-            flask_url,
-            json=payload,
-            headers={'Content-Type': 'application/json'},
-            timeout=10,
-        )
-        resp.raise_for_status()
-    except requests.RequestException as exc:
-        return JsonResponse(
-            {"error": "Failed to hand off to Flask emailer.", "details": str(exc)},
-            status=502
-        )
-
-    return JsonResponse({
-        "status": "success", 
-        "sent_to": recipients,
-        "mailer_response": resp.json() if resp.headers.get('Content-Type','').startswith('application/json') else resp.text
-    })
-
 
 
 
@@ -1963,7 +1906,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 # (optional) remove the top-level import to keep it lazy:
 # from weasyprint import HTML
 
-from .models import TPCRequest
+
 
 
 @login_required(login_url='/login/')
