@@ -33,6 +33,8 @@
       <tbody id="tpc-tbody">
         {% for t in tpcs %}
         <tr
+          class="tpc-row"
+          style="cursor:pointer"
           data-pk="{{ t.pk }}"
           data-date-requested="{{ t.date_requested }}"
           data-expiration-date="{{ t.expiration_date }}"
@@ -47,6 +49,7 @@
           data-approvals-req="{{ t.required_approvals_count }}"
           data-approvers="{% for a in t.approvals.all %}{{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}"
           data-user-has-approved="{{ t.user_has_approved|yesno:'true,false' }}"
+          data-href="/quality/tpc-requests/{{ t.pk }}/edit/"
         >
           <td>{{ t.pk }}</td>
           <td title="{{ t.date_requested }}">{{ t.date_requested|truncatechars:15 }}</td>
@@ -80,7 +83,7 @@
           </td>
           <td>
             {% if t.approved %}
-              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" title="View PDF">📄</a>
+              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" title="View PDF" data-row-safe-click>📄</a>
             {% endif %}
           </td>
         </tr>
@@ -93,72 +96,6 @@
   </div>
 </div>
 
-{# ---------- Edit Modal ---------- #}
-<div class="modal fade" id="tpcModal" tabindex="-1" aria-labelledby="tpcModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <form id="tpc-edit-form">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title">Edit TPC Request <span id="m-pk" class="fw-semibold"></span></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Date Requested</label>
-              <input type="text" class="form-control" id="m-date-requested" name="date_requested">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Expiration</label>
-              <input type="text" class="form-control" id="m-expiration-date" name="expiration_date">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Issuer</label>
-              <input type="text" class="form-control" id="m-issuer-name" name="issuer_name">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Parts</label>
-              <input type="text" class="form-control" id="m-part" name="parts">
-            </div>
-            <div class="col-12">
-              <label class="form-label">Reason</label>
-              <textarea class="form-control" id="m-reason" name="reason"></textarea>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Process</label>
-              <textarea class="form-control" id="m-process" name="process"></textarea>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Supplier Issue</label>
-              <select class="form-select" id="m-supplier-issue" name="supplier_issue">
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Machines</label>
-              <input type="text" class="form-control" id="m-machine-number" name="machines">
-            </div>
-            <div class="col-md-4">
-              <div id="m-approved" class="form-control-plaintext fw-semibold"></div>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Approvals</label>
-              <span id="m-approvals-pill" class="badge text-bg-secondary"></span>
-              <span id="m-approvers" class="text-muted"></span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Save</button>
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const tbody = document.getElementById('tpc-tbody');
@@ -166,72 +103,39 @@ document.addEventListener('DOMContentLoaded', () => {
   let offset = {{ tpcs|length }};
   const pageSize = {{ tpc_page_size }};
   const isTpcApprover = {{ is_tpc_approver|yesno:"true,false" }};
-  const modal = new bootstrap.Modal(document.getElementById('tpcModal'));
-  const form = document.getElementById('tpc-edit-form');
 
   // Filtering
-  document.querySelectorAll('thead tr:nth-child(2) input').forEach((inp, i) => {
+  document.querySelectorAll('thead tr:nth-child(2) input').forEach((inp) => {
     inp.addEventListener('input', () => {
+      const filters = Array.from(document.querySelectorAll('thead tr:nth-child(2) input'));
       tbody.querySelectorAll('tr').forEach(row => {
-        const visible = Array.from(document.querySelectorAll('thead tr:nth-child(2) input'))
-          .every((input, idx) => !input.value || row.cells[idx].textContent.toLowerCase().includes(input.value.toLowerCase()));
+        const visible = filters.every((input, idx) => !input.value || row.cells[idx].textContent.toLowerCase().includes(input.value.toLowerCase()));
         row.classList.toggle('d-none', !visible);
       });
     });
   });
 
-  // Row click => open modal
+  // Row click => navigate to detail page
   tbody.addEventListener('click', e => {
-    if (e.target.closest('a, button, form')) return;
+    // Let links/buttons/forms work normally without navigating the row
+    if (e.target.closest('a, button, form, [data-row-safe-click]')) return;
     const row = e.target.closest('tr');
     if (!row) return;
-    form.dataset.pk = row.dataset.pk;
-    document.getElementById('m-pk').textContent = row.dataset.pk;
-    document.getElementById('m-date-requested').value = row.dataset.dateRequested;
-    document.getElementById('m-expiration-date').value = row.dataset.expirationDate;
-    document.getElementById('m-issuer-name').value = row.dataset.issuerName;
-    document.getElementById('m-part').value = row.dataset.part;
-    document.getElementById('m-reason').value = row.dataset.reason;
-    document.getElementById('m-process').value = row.dataset.process;
-    document.getElementById('m-supplier-issue').value = row.dataset.supplierIssue;
-    document.getElementById('m-machine-number').value = row.dataset.machineNumber;
-    document.getElementById('m-approved').value = row.dataset.approved;
-    document.getElementById('m-approvals-pill').textContent = `${row.dataset.approvalsGot}/${row.dataset.approvalsReq}`;
-    document.getElementById('m-approvers').textContent = row.dataset.approvers;
-    modal.show();
-  });
-
-  // Save changes
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    const pk = form.dataset.pk;
-    fetch(`/quality/tpc-requests/${pk}/edit/`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value},
-      body: new FormData(form)
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        location.reload();
-      } else {
-        alert('Save failed');
-      }
-    })
-    .catch(err => console.error(err));
+    const href = row.dataset.href || `/quality/tpc-requests/${row.dataset.pk}/edit/`;
+    window.location.href = href;
   });
 
   // Load more
   loadBtn.addEventListener('click', () => {
-    console.log(`Loading more from offset ${offset}`);
     loadBtn.disabled = true;
     loadBtn.textContent = 'Loading...';
     fetch(`{% url 'tpc_request_load_more' %}?offset=${offset}`)
       .then(res => res.json())
       .then(data => {
-        console.log('Load more response:', data);
         data.rows.forEach(t => {
           const tr = document.createElement('tr');
+          tr.className = 'tpc-row';
+          tr.style.cursor = 'pointer';
           tr.dataset.pk = t.pk;
           tr.dataset.dateRequested = t.date_requested;
           tr.dataset.expirationDate = t.expiration_date;
@@ -246,16 +150,17 @@ document.addEventListener('DOMContentLoaded', () => {
           tr.dataset.approvalsReq = t.approvals_req;
           tr.dataset.approvers = t.approvers;
           tr.dataset.userHasApproved = t.user_has_approved;
+          tr.dataset.href = `/quality/tpc-requests/${t.pk}/edit/`;
 
           tr.innerHTML = `
             <td>${t.pk}</td>
             <td title="${t.date_requested}">${t.date_requested.substring(0,15)}</td>
             <td title="${t.issuer_name}">${t.issuer_name.substring(0,15)}</td>
-            <td title="${t.parts}">${t.parts.substring(0,15)}</td>
+            <td title="${t.parts}">${t.parts ? t.parts.substring(0,15) : '—'}</td>
             <td title="${t.reason}">${t.reason.substring(0,15)}</td>
             <td title="${t.process}">${t.process.substring(0,15)}</td>
             <td>${t.supplier_issue}</td>
-            <td title="${t.machines}">${t.machines.substring(0,15)}</td>
+            <td title="${t.machines}">${t.machines ? t.machines.substring(0,15) : '—'}</td>
             <td title="${t.expiration_date}">${t.expiration_date.substring(0,15)}</td>
             <td>
               ${t.approved
@@ -271,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     : '')
               }
             </td>
-            <td>${t.pdf_url ? `<a href="${t.pdf_url}" target="_blank" title="View PDF">📄</a>` : ''}</td>
+            <td>${t.pdf_url ? `<a href="${t.pdf_url}" target="_blank" title="View PDF" data-row-safe-click>📄</a>` : ''}</td>
           `;
           tbody.appendChild(tr);
         });
