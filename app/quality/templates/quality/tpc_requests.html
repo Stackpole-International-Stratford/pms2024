@@ -82,9 +82,11 @@
               {% endif %}
             </td>
             <td>
-            <a href="{% url 'tpc_request_detail' t.pk %}" class="btn btn-sm btn-primary">
-              View
-            </a>
+              {% if t.approved %}
+                <a href="{% url 'tpc_request_detail' t.pk %}" class="btn btn-sm btn-primary">
+                  View
+                </a>
+              {% endif %}
           </td>
           </tr>
           {% endfor %}

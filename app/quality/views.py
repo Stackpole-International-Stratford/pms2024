@@ -1959,8 +1959,14 @@ def tpc_request_detail(request, pk):
         TPCRequest.objects
         .select_related("approved_by")
         .prefetch_related("approvals__user")
-        .get(pk=pk)
+        .filter(pk=pk)
+        .first()
     )
+
+    if not tpc or not tpc.approved:
+        # Redirect back if possible, otherwise to the list view
+        return redirect(request.META.get("HTTP_REFERER", "tpc_request_list"))
+
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
     user_has_approved = tpc.has_user_approved(request.user)
 
