@@ -34,6 +34,10 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden, Http404
+from django.shortcuts import redirect, render
+
 
 def index(request):
     is_quality_manager = False
@@ -1953,10 +1957,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
 
 # quality/views.py
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseForbidden, Http404
-from django.shortcuts import redirect, render
-from django.template.loader import render_to_string
+
 # (optional) remove the top-level import to keep it lazy:
 # from weasyprint import HTML
 
