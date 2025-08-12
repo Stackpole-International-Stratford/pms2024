@@ -34,6 +34,10 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden, Http404
+from django.shortcuts import redirect, render
+
 
 def index(request):
     is_quality_manager = False
@@ -1756,14 +1760,7 @@ def tpc_request_approve(request, pk):
     return redirect("tpc_request_list")
 
 
-
-
 def _render_tpc_html(tpc) -> str:
-    """
-    Produce a clean, un-truncated HTML email with ALL TPC fields.
-    If you prefer a template, swap this out for render_to_string('quality/email_tpc_fully_approved.html', {...}).
-    """
-    # helpers for nice presentation
     def join_list(val):
         if not val:
             return "—"
@@ -1777,93 +1774,103 @@ def _render_tpc_html(tpc) -> str:
 
     supplier_issue = "Yes" if tpc.supplier_issue else "No"
 
-    # inline minimal styles for readability in most clients
+    pdf_url = f"http://10.4.1.234/quality/tpc/{tpc.pk}/pdf/"
+
     return f"""
-        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
-        <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-            
-            <!-- Header -->
-            <div style="background-color:#004085; color:#fff; padding:16px 20px;">
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
+      <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <div style="background-color:#004085; color:#fff; padding:16px 20px;">
             <h2 style="margin:0; font-size:20px;">TPC #{tpc.pk} Fully Approved</h2>
             <p style="margin:4px 0 0; font-size:14px; opacity:0.85;">
                 Issued by {tpc.issuer_name or '—'} &middot; {tpc.date_requested}
             </p>
-            </div>
-            
-            <!-- Body -->
-            <div style="padding:20px;">
+          </div>
+          
+          <!-- Body -->
+          <div style="padding:20px;">
             <p style="margin-top:0; font-size:15px;">
                 The following Temporary Process Change request has received all required approvals and is now official.
             </p>
 
             <table style="width:100%; border-collapse:collapse; font-size:14px;">
-                <tbody>
+              <tbody>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
-                    <td style="padding:8px;">{tpc.pk}</td>
+                  <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
+                  <td style="padding:8px;">{tpc.pk}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Date Requested</td>
-                    <td style="padding:8px;">{tpc.date_requested}</td>
+                  <td style="padding:8px; font-weight:bold;">Date Requested</td>
+                  <td style="padding:8px;">{tpc.date_requested}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; font-weight:bold;">Parts</td>
-                    <td style="padding:8px;">{join_list(tpc.parts)}</td>
+                  <td style="padding:8px; font-weight:bold;">Parts</td>
+                  <td style="padding:8px;">{join_list(tpc.parts)}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Reason</td>
-                    <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
+                  <td style="padding:8px; font-weight:bold;">Reason</td>
+                  <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; font-weight:bold;">Process</td>
-                    <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
+                  <td style="padding:8px; font-weight:bold;">Process</td>
+                  <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
-                    <td style="padding:8px;">{supplier_issue}</td>
+                  <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
+                  <td style="padding:8px;">{supplier_issue}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; font-weight:bold;">Machines</td>
-                    <td style="padding:8px;">{join_list(tpc.machines)}</td>
+                  <td style="padding:8px; font-weight:bold;">Machines</td>
+                  <td style="padding:8px;">{join_list(tpc.machines)}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Feature</td>
-                    <td style="padding:8px;">{tpc.feature or '—'}</td>
+                  <td style="padding:8px; font-weight:bold;">Feature</td>
+                  <td style="padding:8px;">{tpc.feature or '—'}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; font-weight:bold;">Current Process</td>
-                    <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
+                  <td style="padding:8px; font-weight:bold;">Current Process</td>
+                  <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Changed To</td>
-                    <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
+                  <td style="padding:8px; font-weight:bold;">Changed To</td>
+                  <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; font-weight:bold;">Expiration</td>
-                    <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
+                  <td style="padding:8px; font-weight:bold;">Expiration</td>
+                  <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Approvals</td>
-                    <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
+                  <td style="padding:8px; font-weight:bold;">Approvals</td>
+                  <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                    <td style="padding:8px; font-weight:bold;">Approved By (Last)</td>
-                    <td style="padding:8px;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td>
+                  <td style="padding:8px; font-weight:bold;">Approved By (Last)</td>
+                  <td style="padding:8px;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; font-weight:bold;">Approved At</td>
-                    <td style="padding:8px;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td>
+                  <td style="padding:8px; font-weight:bold;">Approved At</td>
+                  <td style="padding:8px;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td>
                 </tr>
-                </tbody>
+                <tr style="background-color:#f0f4f8;">
+                  <td style="padding:8px; font-weight:bold;">PDF Link</td>
+                  <td style="padding:8px;">
+                    <a href="{pdf_url}" target="_blank" style="color:#004085; text-decoration:none;">
+                      View PDF
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
             </table>
 
             <p style="margin-top:20px; font-size:13px; color:#666;">
                 This message was sent automatically after all required approvers confirmed the TPC.
             </p>
-            </div>
-        </div>
-        </div>
-        """
+          </div>
+      </div>
+    </div>
+    """
+
 
 
 
@@ -1953,35 +1960,11 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
 
 # quality/views.py
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseForbidden, Http404
-from django.shortcuts import redirect, render
-from django.template.loader import render_to_string
+
 # (optional) remove the top-level import to keep it lazy:
 # from weasyprint import HTML
 
 from .models import TPCRequest
-
-@login_required(login_url='/login/')
-def tpc_request_detail(request, pk):
-    tpc = (
-        TPCRequest.objects
-        .select_related("approved_by")
-        .prefetch_related("approvals__user")
-        .filter(pk=pk)
-        .first()
-    )
-    if not tpc or not tpc.approved:
-        return redirect(request.META.get("HTTP_REFERER", "tpc_request_list"))
-
-    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
-    user_has_approved = tpc.has_user_approved(request.user)
-
-    return render(request, "quality/tpc_request_detail.html", {
-        "tpc": tpc,
-        "is_tpc_approver": is_tpc_approver,
-        "user_has_approved": user_has_approved,
-    })
 
 
 @login_required(login_url='/login/')
