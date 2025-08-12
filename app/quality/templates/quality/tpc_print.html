@@ -15,14 +15,13 @@
   }
 
   /* Page layout */
-  .page { height: 297mm; display: flex; flex-direction: column; }
+  .page { height: 297mm; display: flex; }
   .copy {
-    height: 148.5mm;       /* EXACT half page */
     box-sizing: border-box;
     border: 1px solid #000;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    width: 100%;
   }
 
   /* Header */
@@ -43,14 +42,13 @@
   .g4 col:nth-child(2) { width: 32%; }
   .g4 col:nth-child(3) { width: 18%; }
   .g4 col:nth-child(4) { width: 32%; }
-
   .g2 col { width: 50%; }
 
   /* Row height control */
   .h-sm td  { height: 12mm; }
-  .h-md td  { height: 24mm; }
-  .h-lg td  { height: 50mm; }
-  .h-md2 td { height: 28mm; }
+  .h-md td  { height: 30mm; }
+  .h-lg td  { height: 70mm; }
+  .h-md2 td { height: 34mm; }
   .h-note td{ height: 14mm; }
 
   /* Banners */
@@ -58,11 +56,13 @@
   .notice { background:#ffd84d; text-align:center; font-weight:800; padding:3pt 0; border-top:1px solid #000; letter-spacing:.02em; }
 
   .muted { font-size:9pt; color:#555; margin-top:2pt; }
+
+  /* Force one page per TPC */
+  .copy { page-break-after: always; }
 </style>
 </head>
 <body>
   <div class="page">
-    {% for _ in "12" %}
     <section class="copy">
       <div class="hdr">
         <div class="hdr-ttl">Temporary Process Change</div>
@@ -95,7 +95,7 @@
       <table class="g2 h-md">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Reason Note</div><div class="val">{{ tpc.reason|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Reason Note</div><div class="val">{{ tpc.reason_note|default:"—" }}</div></div></td>
           <td><div class="cell"><div class="lbl">Feature</div><div class="val">{{ tpc.feature|default:"—" }}</div></div></td>
         </tr>
       </table>
@@ -127,10 +127,7 @@
         </tr>
       </table>
 
-      <div class="banner">Ensure the TPC # is recorded on the Process Sheet</div>
-      <div class="notice">PRINT ON ORANGE PAPER</div>
-
-      <!-- Approvals -->
+      <!-- Approvals now moved here -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
@@ -152,8 +149,10 @@
           </td>
         </tr>
       </table>
+
+      <div class="banner">Ensure the TPC # is recorded on the Process Sheet</div>
+      <div class="notice">PRINT ON ORANGE PAPER</div>
     </section>
-    {% endfor %}
   </div>
 </body>
 </html>
