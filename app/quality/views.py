@@ -1598,48 +1598,6 @@ def tpc_request_load_more(request):
 
     return JsonResponse({"rows": data, "has_more": has_more, "is_tpc_approver": is_tpc_approver})
 
-@login_required(login_url='/login/')
-def tpc_request_edit(request, pk):
-    tpc = get_object_or_404(TPCRequest, pk=pk)
-
-    if request.method == "POST":
-        # Update fields from POST data
-        tpc.issuer_name = request.POST.get("issuer_name", "").strip()
-        tpc.parts = request.POST.get("parts", "").split(",") if request.POST.get("parts") else []
-        tpc.reason = request.POST.get("reason", "").strip()
-        tpc.process = request.POST.get("process", "").strip()
-        tpc.supplier_issue = request.POST.get("supplier_issue") == "true"
-        tpc.machines = request.POST.get("machines", "").split(",") if request.POST.get("machines") else []
-        tpc.feature = request.POST.get("feature", "").strip()
-        tpc.current_process = request.POST.get("current_process", "").strip()
-        tpc.changed_to = request.POST.get("changed_to", "").strip()
-
-        exp_date = request.POST.get("expiration_date")
-        if exp_date:
-            try:
-                tpc.expiration_date = timezone.make_aware(
-                    timezone.datetime.fromisoformat(exp_date)
-                )
-            except Exception:
-                pass
-
-        tpc.save()
-        return JsonResponse({"success": True})
-
-    # GET: return JSON for modal population
-    return JsonResponse({
-        "pk": tpc.pk,
-        "issuer_name": tpc.issuer_name,
-        "parts": ", ".join(tpc.parts or []),
-        "reason": tpc.reason,
-        "process": tpc.process,
-        "supplier_issue": tpc.supplier_issue,
-        "machines": ", ".join(tpc.machines or []),
-        "feature": tpc.feature,
-        "current_process": tpc.current_process,
-        "changed_to": tpc.changed_to,
-        "expiration_date": tpc.expiration_date.strftime("%Y-%m-%dT%H:%M") if tpc.expiration_date else "",
-    })
 
 
 @login_required(login_url='/login/')
@@ -1736,6 +1694,108 @@ def tpc_request_create(request):
         "machines_qs": Asset.objects.all().order_by("asset_number"),
     })
 
+
+@login_required(login_url='/login/')
+def tpc_request_edit(request, pk):
+    tpc = get_object_or_404(
+        TPCRequest.objects.select_related("approved_by").prefetch_related("approvals__user"),
+        pk=pk
+    )
+
+    if request.method == "POST":
+        print("---- TPC Request Edit POST ----")
+        print("POST data:", request.POST)
+
+        issuer_name = request.POST.get("issuer_name", "").strip()
+        parts = request.POST.getlist("parts")
+        reason = request.POST.get("reason", "").strip()
+        process = request.POST.get("process", "").strip()
+        supplier_issue = bool(request.POST.get("supplier_issue"))
+        machines = request.POST.getlist("machines")
+        reason_note = request.POST.get("reason_note", "").strip()
+        feature = request.POST.get("feature", "").strip()
+        expiration_date_str = request.POST.get("expiration_date", "").strip()
+        current_process = request.POST.get("current_process", "").strip()
+        changed_to = request.POST.get("changed_to", "").strip()
+
+        print("Parsed values:")
+        print("  issuer_name:", issuer_name)
+        print("  parts:", parts)
+        print("  reason:", reason)
+        print("  process:", process)
+        print("  supplier_issue:", supplier_issue)
+        print("  machines:", machines)
+        print("  reason_note:", reason_note)
+        print("  feature:", feature)
+        print("  expiration_date_str:", expiration_date_str)
+        print("  current_process:", current_process)
+        print("  changed_to:", changed_to)
+
+        # --- Validation (same rules as create) ---
+        missing = []
+        if not issuer_name: missing.append("Issuer name")
+        if not parts: missing.append("At least one part")
+        if not reason: missing.append("Reason")
+        if not process: missing.append("Process")
+        if not machines: missing.append("At least one machine")
+        if not expiration_date_str: missing.append("Expiration date")
+        if not current_process: missing.append("Current process")
+        if not changed_to: missing.append("Changed to")
+
+        if missing:
+            print("Missing fields:", missing)
+            return render(request, "quality/tpc_edit.html", {
+                "tpc": tpc,  # re-show existing DB values below if parsing fails
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+                "form_error": "Please fill all required fields."
+            })
+
+        # Parse datetime-local input (YYYY-MM-DDTHH:MM)
+        try:
+            expiration_dt = timezone.make_aware(
+                timezone.datetime.fromisoformat(expiration_date_str)
+            )
+        except Exception as e:
+            print("Expiration date parse error:", e)
+            return render(request, "quality/tpc_edit.html", {
+                "tpc": tpc,
+                "issuer_default": issuer_name,
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+                "form_error": "Invalid expiration date."
+            })
+
+        # Update fields
+        try:
+            tpc.issuer_name = issuer_name
+            tpc.parts = parts
+            tpc.reason = reason
+            tpc.process = process
+            tpc.supplier_issue = supplier_issue
+            tpc.machines = machines
+            tpc.reason_note = reason_note
+            tpc.feature = feature
+            tpc.expiration_date = expiration_dt
+            tpc.current_process = current_process
+            tpc.changed_to = changed_to
+            tpc.save()
+            print("Updated TPC with PK:", tpc.pk)
+        except Exception as e:
+            print("Error updating TPCRequest:", e)
+            raise
+
+        return redirect("tpc_request_list")
+
+    # GET: render edit form prepopulated
+    print("---- TPC Request Edit GET ----")
+    return render(request, "quality/tpc_edit.html", {
+        "tpc": tpc,
+        "issuer_default": tpc.issuer_name or (request.user.get_full_name() or request.user.username),
+        "parts_qs": Part.objects.all().order_by("part_number"),
+        "machines_qs": Asset.objects.all().order_by("asset_number"),
+    })
 
 
 @login_required(login_url='/login/')
