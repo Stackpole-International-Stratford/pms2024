@@ -1986,7 +1986,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
     print(f"[DEBUG] Found {len(recips_emails)} recipient emails: {recips_emails}")
 
     # 2) Build content
-    subject = f"TPC #{tpc.pk} fully approved – {tpc.issuer_name} – {tpc.date_requested:%Y-%m-%d}"
+    subject = f"TPC #{tpc.pk} has been fully approved – {tpc.date_requested:%Y-%m-%d}"
     html_body = _render_tpc_html(tpc)
     # text is optional for your Flask service; keep it if it accepts, otherwise drop it.
     text_body = strip_tags(html_body)
