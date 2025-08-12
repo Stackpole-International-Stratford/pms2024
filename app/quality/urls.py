@@ -72,6 +72,7 @@ urlpatterns = [
     path('tpc-requests/load-more/', tpc_request_load_more, name='tpc_request_load_more'),
 
     path("tpc/<int:pk>/pdf/", tpc_request_pdf, name="tpc_request_pdf"),
+    path("tpc-requests/<int:pk>/edit/", tpc_request_edit, name="tpc_request_edit"),
 
 
 ]

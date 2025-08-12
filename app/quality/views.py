@@ -1598,6 +1598,48 @@ def tpc_request_load_more(request):
 
     return JsonResponse({"rows": data, "has_more": has_more, "is_tpc_approver": is_tpc_approver})
 
+@login_required(login_url='/login/')
+def tpc_request_edit(request, pk):
+    tpc = get_object_or_404(TPCRequest, pk=pk)
+
+    if request.method == "POST":
+        # Update fields from POST data
+        tpc.issuer_name = request.POST.get("issuer_name", "").strip()
+        tpc.parts = request.POST.get("parts", "").split(",") if request.POST.get("parts") else []
+        tpc.reason = request.POST.get("reason", "").strip()
+        tpc.process = request.POST.get("process", "").strip()
+        tpc.supplier_issue = request.POST.get("supplier_issue") == "true"
+        tpc.machines = request.POST.get("machines", "").split(",") if request.POST.get("machines") else []
+        tpc.feature = request.POST.get("feature", "").strip()
+        tpc.current_process = request.POST.get("current_process", "").strip()
+        tpc.changed_to = request.POST.get("changed_to", "").strip()
+
+        exp_date = request.POST.get("expiration_date")
+        if exp_date:
+            try:
+                tpc.expiration_date = timezone.make_aware(
+                    timezone.datetime.fromisoformat(exp_date)
+                )
+            except Exception:
+                pass
+
+        tpc.save()
+        return JsonResponse({"success": True})
+
+    # GET: return JSON for modal population
+    return JsonResponse({
+        "pk": tpc.pk,
+        "issuer_name": tpc.issuer_name,
+        "parts": ", ".join(tpc.parts or []),
+        "reason": tpc.reason,
+        "process": tpc.process,
+        "supplier_issue": tpc.supplier_issue,
+        "machines": ", ".join(tpc.machines or []),
+        "feature": tpc.feature,
+        "current_process": tpc.current_process,
+        "changed_to": tpc.changed_to,
+        "expiration_date": tpc.expiration_date.strftime("%Y-%m-%dT%H:%M") if tpc.expiration_date else "",
+    })
 
 
 @login_required(login_url='/login/')
