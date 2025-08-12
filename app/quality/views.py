@@ -1953,6 +1953,15 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
 
 # quality/views.py
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden, Http404
+from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
+# (optional) remove the top-level import to keep it lazy:
+# from weasyprint import HTML
+
+from .models import TPCRequest
+
 @login_required(login_url='/login/')
 def tpc_request_detail(request, pk):
     tpc = (
@@ -1962,9 +1971,7 @@ def tpc_request_detail(request, pk):
         .filter(pk=pk)
         .first()
     )
-
     if not tpc or not tpc.approved:
-        # Redirect back if possible, otherwise to the list view
         return redirect(request.META.get("HTTP_REFERER", "tpc_request_list"))
 
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
@@ -1975,3 +1982,28 @@ def tpc_request_detail(request, pk):
         "is_tpc_approver": is_tpc_approver,
         "user_has_approved": user_has_approved,
     })
+
+
+@login_required(login_url='/login/')
+def tpc_request_pdf(request, pk):
+    # Lazy import so the whole site doesn't crash if libs are missing
+    from weasyprint import HTML
+
+    tpc = (
+        TPCRequest.objects
+        .select_related("approved_by")
+        .prefetch_related("approvals__user")
+        .filter(pk=pk)
+        .first()
+    )
+    if not tpc:
+        raise Http404("TPC not found")
+    if not tpc.approved:
+        return HttpResponseForbidden("This TPC is not fully approved yet.")
+
+    html = render_to_string("quality/tpc_print.html", {"tpc": tpc}, request=request)
+    pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
+
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="tpc-{tpc.pk}.pdf"'
+    return resp
