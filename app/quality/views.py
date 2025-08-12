@@ -1962,27 +1962,6 @@ from django.template.loader import render_to_string
 
 from .models import TPCRequest
 
-@login_required(login_url='/login/')
-def tpc_request_detail(request, pk):
-    tpc = (
-        TPCRequest.objects
-        .select_related("approved_by")
-        .prefetch_related("approvals__user")
-        .filter(pk=pk)
-        .first()
-    )
-    if not tpc or not tpc.approved:
-        return redirect(request.META.get("HTTP_REFERER", "tpc_request_list"))
-
-    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
-    user_has_approved = tpc.has_user_approved(request.user)
-
-    return render(request, "quality/tpc_request_detail.html", {
-        "tpc": tpc,
-        "is_tpc_approver": is_tpc_approver,
-        "user_has_approved": user_has_approved,
-    })
-
 
 @login_required(login_url='/login/')
 def tpc_request_pdf(request, pk):
