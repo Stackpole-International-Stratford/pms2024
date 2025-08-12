@@ -34,12 +34,6 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import strip_tags
 from django.db import transaction
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseForbidden, Http404
-from django.shortcuts import redirect, render
-from django.utils.html import strip_tags
-import base64
-
 
 def index(request):
     is_quality_manager = False
@@ -1762,7 +1756,14 @@ def tpc_request_approve(request, pk):
     return redirect("tpc_request_list")
 
 
+
+
 def _render_tpc_html(tpc) -> str:
+    """
+    Produce a clean, un-truncated HTML email with ALL TPC fields.
+    If you prefer a template, swap this out for render_to_string('quality/email_tpc_fully_approved.html', {...}).
+    """
+    # helpers for nice presentation
     def join_list(val):
         if not val:
             return "—"
@@ -1776,110 +1777,102 @@ def _render_tpc_html(tpc) -> str:
 
     supplier_issue = "Yes" if tpc.supplier_issue else "No"
 
-    pdf_url = f"http://10.4.1.232:8082/quality/tpc/{tpc.pk}/pdf/"
-
+    # inline minimal styles for readability in most clients
     return f"""
-    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
-      <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-          
-          <!-- Header -->
-          <div style="background-color:#004085; color:#fff; padding:16px 20px;">
+        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
+        <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+            
+            <!-- Header -->
+            <div style="background-color:#004085; color:#fff; padding:16px 20px;">
             <h2 style="margin:0; font-size:20px;">TPC #{tpc.pk} Fully Approved</h2>
             <p style="margin:4px 0 0; font-size:14px; opacity:0.85;">
                 Issued by {tpc.issuer_name or '—'} &middot; {tpc.date_requested}
             </p>
-          </div>
-          
-          <!-- Body -->
-          <div style="padding:20px;">
+            </div>
+            
+            <!-- Body -->
+            <div style="padding:20px;">
             <p style="margin-top:0; font-size:15px;">
                 The following Temporary Process Change request has received all required approvals and is now official.
             </p>
 
             <table style="width:100%; border-collapse:collapse; font-size:14px;">
-              <tbody>
+                <tbody>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
-                  <td style="padding:8px;">{tpc.pk}</td>
+                    <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
+                    <td style="padding:8px;">{tpc.pk}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Date Requested</td>
-                  <td style="padding:8px;">{tpc.date_requested}</td>
+                    <td style="padding:8px; font-weight:bold;">Date Requested</td>
+                    <td style="padding:8px;">{tpc.date_requested}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">Parts</td>
-                  <td style="padding:8px;">{join_list(tpc.parts)}</td>
+                    <td style="padding:8px; font-weight:bold;">Parts</td>
+                    <td style="padding:8px;">{join_list(tpc.parts)}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Reason</td>
-                  <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
+                    <td style="padding:8px; font-weight:bold;">Reason</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">Process</td>
-                  <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
+                    <td style="padding:8px; font-weight:bold;">Process</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
-                  <td style="padding:8px;">{supplier_issue}</td>
+                    <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
+                    <td style="padding:8px;">{supplier_issue}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">Machines</td>
-                  <td style="padding:8px;">{join_list(tpc.machines)}</td>
+                    <td style="padding:8px; font-weight:bold;">Machines</td>
+                    <td style="padding:8px;">{join_list(tpc.machines)}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Feature</td>
-                  <td style="padding:8px;">{tpc.feature or '—'}</td>
+                    <td style="padding:8px; font-weight:bold;">Feature</td>
+                    <td style="padding:8px;">{tpc.feature or '—'}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">Current Process</td>
-                  <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
+                    <td style="padding:8px; font-weight:bold;">Current Process</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Changed To</td>
-                  <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
+                    <td style="padding:8px; font-weight:bold;">Changed To</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">Expiration</td>
-                  <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
+                    <td style="padding:8px; font-weight:bold;">Expiration</td>
+                    <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Approvals</td>
-                  <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
+                    <td style="padding:8px; font-weight:bold;">Approvals</td>
+                    <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
                 </tr>
                 <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">Approved By (Last)</td>
-                  <td style="padding:8px;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td>
+                    <td style="padding:8px; font-weight:bold;">Approved By (Last)</td>
+                    <td style="padding:8px;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; font-weight:bold;">Approved At</td>
-                  <td style="padding:8px;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td>
+                    <td style="padding:8px; font-weight:bold;">Approved At</td>
+                    <td style="padding:8px;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td>
                 </tr>
-                <tr style="background-color:#f0f4f8;">
-                  <td style="padding:8px; font-weight:bold;">PDF Link</td>
-                  <td style="padding:8px;">
-                    <a href="{pdf_url}" target="_blank" style="color:#004085; text-decoration:none;">
-                      View PDF
-                    </a>
-                  </td>
-                </tr>
-              </tbody>
+                </tbody>
             </table>
 
             <p style="margin-top:20px; font-size:13px; color:#666;">
                 This message was sent automatically after all required approvers confirmed the TPC.
             </p>
-          </div>
-      </div>
-    </div>
-    """
+            </div>
+        </div>
+        </div>
+        """
+
 
 
 def send_tpc_broadcast_email(tpc_pk: int) -> None:
     """
     Fetch recipients from the 'TPC Email' campaign and send the email via Flask.
-    Optionally attaches the generated TPC PDF from the dev endpoint.
+    Prints detailed debug info at every step.
     """
-    from .models import TPCRequest
+    from .models import TPCRequest  # avoid circular import
     print(f"[DEBUG] Preparing broadcast email for TPC #{tpc_pk}")
 
     try:
@@ -1893,7 +1886,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
         print(f"[ERROR] TPC #{tpc_pk} does not exist.")
         return
 
-    # Load campaign + recipients
+    # 1) Load campaign + recipients
     try:
         campaign = (
             EmailCampaign.objects
@@ -1909,6 +1902,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
         print("[ERROR] Campaign 'TPC Email' not found.")
         return
 
+    # Flask expects a list of strings for 'recipients'
     recips_emails = [r.email for r in campaign.recipients.all()]
     if not recips_emails:
         print("[ERROR] No recipients in 'TPC Email' campaign.")
@@ -1916,42 +1910,28 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
     print(f"[DEBUG] Found {len(recips_emails)} recipient emails: {recips_emails}")
 
-    # Email content
+    # 2) Build content
     subject = f"TPC #{tpc.pk} fully approved – {tpc.issuer_name} – {tpc.date_requested:%Y-%m-%d}"
     html_body = _render_tpc_html(tpc)
+    # text is optional for your Flask service; keep it if it accepts, otherwise drop it.
     text_body = strip_tags(html_body)
 
-    # Try to fetch PDF
-    pdf_url = f"http://10.4.1.232:8082/quality/tpc/{tpc.pk}/pdf/"
-    attachments = None
-    try:
-        print(f"[DEBUG] Fetching PDF from {pdf_url}")
-        pdf_resp = requests.get(pdf_url, timeout=10)
-        if pdf_resp.status_code == 200 and pdf_resp.content:
-            attachments = [(f"TPC-{tpc.pk}.pdf", pdf_resp.content)]
-            print(f"[DEBUG] PDF fetched successfully ({len(pdf_resp.content)} bytes)")
-        else:
-            print(f"[WARN] Failed to fetch PDF: HTTP {pdf_resp.status_code}")
-    except Exception as e:
-        print(f"[ERROR] Exception fetching PDF: {e}")
+    print(f"[DEBUG] Email subject: {subject}")
+    print(f"[DEBUG] HTML body length: {len(html_body)} chars")
+    print(f"[DEBUG] Text body length: {len(text_body)} chars")
 
-    # Build payload for Flask
+    # 3) Payload per Flask error: needs 'html' and 'recipients'
     payload = {
         "subject": subject,
         "html": html_body,
-        "recipients": recips_emails,
-        "text": text_body,
+        "recipients": recips_emails,   # <-- key change from 'to' -> 'recipients'
+        "text": text_body,             # keep if your service allows; harmless if ignored
     }
-    if attachments:
-        payload["attachments"] = [
-            {"filename": name, "content_base64": base64.b64encode(content).decode("utf-8")}
-            for name, content in attachments
-        ]
 
     print("[DEBUG] Payload JSON to be sent:")
-    print(payload.keys())
+    print(payload)
 
-    # Send to Flask
+    # 4) Send
     url = getattr(settings, "FLASK_EMAILER_URL", None)
     if not url:
         print("[ERROR] FLASK_EMAILER_URL not configured in settings.")
@@ -1959,7 +1939,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
     print(f"[DEBUG] Sending POST to {url}")
     try:
-        resp = requests.post(url, json=payload, timeout=15)
+        resp = requests.post(url, json=payload, timeout=10)
         print(f"[DEBUG] HTTP status: {resp.status_code}")
         print(f"[DEBUG] Response body: {resp.text}")
 
@@ -1972,13 +1952,36 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
 
 
-
 # quality/views.py
-
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden, Http404
+from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 # (optional) remove the top-level import to keep it lazy:
 # from weasyprint import HTML
 
 from .models import TPCRequest
+
+@login_required(login_url='/login/')
+def tpc_request_detail(request, pk):
+    tpc = (
+        TPCRequest.objects
+        .select_related("approved_by")
+        .prefetch_related("approvals__user")
+        .filter(pk=pk)
+        .first()
+    )
+    if not tpc or not tpc.approved:
+        return redirect(request.META.get("HTTP_REFERER", "tpc_request_list"))
+
+    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+    user_has_approved = tpc.has_user_approved(request.user)
+
+    return render(request, "quality/tpc_request_detail.html", {
+        "tpc": tpc,
+        "is_tpc_approver": is_tpc_approver,
+        "user_has_approved": user_has_approved,
+    })
 
 
 @login_required(login_url='/login/')
