@@ -827,6 +827,11 @@ def prod_query(request):
 
             machines = form.cleaned_data.get('machines')
 
+
+            shift_start, shift_end = shift_start_end_from_form_times(inquiry_date, times)
+
+            shift_start_ts = datetime.timestamp(shift_start)
+
             machine_list = []
             for machine in machines:
                 machine = machine.strip()
@@ -842,9 +847,8 @@ def prod_query(request):
                 part_list += f'"{part.strip()}", '
             part_list = part_list[:-2]
 
-            shift_start, shift_end = shift_start_end_from_form_times(inquiry_date, times)
 
-            shift_start_ts = datetime.timestamp(shift_start)
+
             
             # Initialize 'sql' to none before building it
             sql = None
