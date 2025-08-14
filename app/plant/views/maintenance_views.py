@@ -392,6 +392,12 @@ def maintenance_form(request):
         })['subcategories'].append({'code': c.code, 'name': c.subcategory})
     downtime_codes_list = list(structured.values())
 
+    # default date/time for form (America/Toronto)
+    _now_local   = timezone.localtime()
+    _default_date = _now_local.date().isoformat()
+    _default_time = _now_local.strftime("%H:%M")
+
+
     return render(request, 'plant/maintenance_form.html', {
         'entries':             entries,
         'offset':              offset,
@@ -399,6 +405,8 @@ def maintenance_form(request):
         'has_more':            has_more,
         'downtime_codes_json': json.dumps(downtime_codes_list),
         'lines_json':          json.dumps(prod_lines),
+        'default_date':        _default_date,
+        'default_time':        _default_time,
     })
 
 
@@ -1735,9 +1743,16 @@ def maintenance_bulk_form(request):
         })['subcategories'].append({'code': c.code, 'name': c.subcategory})
     downtime_codes_list = list(structured.values())
 
+    # default date/time for form (America/Toronto)
+    _now_local   = timezone.localtime()
+    _default_date = _now_local.date().isoformat()
+    _default_time = _now_local.strftime("%H:%M")
+
     return render(request, 'plant/maintenance_bulk_form.html', {
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
+        'default_date':         _default_date,
+        'default_time':         _default_time,
     })
 
 
@@ -1833,8 +1848,16 @@ def quick_add(request):
         })['subcategories'].append({'code': c.code, 'name': c.subcategory})
     downtime_codes_list = list(structured.values())
 
+
+    # default date/time for form (America/Toronto)
+    _now_local   = timezone.localtime()
+    _default_date = _now_local.date().isoformat()
+    _default_time = _now_local.strftime("%H:%M")
+
     return render(request, 'plant/quick_add.html', {
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
         'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
+        'default_date':         _default_date,
+        'default_time':         _default_time,
     })
