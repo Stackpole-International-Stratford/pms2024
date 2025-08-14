@@ -807,6 +807,140 @@ def fetch_chart_data(machine, start, end, interval=5, group_by_shift=False):
         return labels, counts
 
 
+
+def get_reject_totals_for_machine(machine, start_timestamp, times, part_list_str):
+    """
+    Returns rows shaped like your GFxPRoduction result:
+      [ f"{machine}REJ", Part, bucket1, bucket2, ..., bucketN ]
+
+    Buckets align with your 'times' codes:
+      - times <= 6: 8 hourly buckets
+      - times <= 8: 3 shifts (24h)
+      - times in [9,10]: 7 days
+      - times in [11,12]: 21 buckets (3 shifts × 7 days)
+
+    Uses MySQLdb and the same DAVE_* creds pattern as get_reject_data.
+    Aggregates across ALL reject reasons.
+    """
+    times = int(times)
+    start_ts = int(start_timestamp)
+
+    # Build bucket expressions
+    buckets_sql = []
+    where_window_end = None
+
+    if times <= 6:
+        # 8 x 1-hour buckets in an 8-hour window
+        edges = [0, 3600, 7200, 10800, 14400, 18000, 21600, 25200, 28800]
+        for i in range(8):
+            lo = start_ts + edges[i]
+            hi = start_ts + edges[i + 1]
+            if i == 0:
+                buckets_sql.append(
+                    f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp <= {hi} THEN 1 ELSE 0 END) AS hour{i+1}"
+                )
+            else:
+                buckets_sql.append(
+                    f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS hour{i+1}"
+                )
+        where_window_end = start_ts + 28800
+
+    elif times <= 8:
+        # 3 shifts (24h)
+        s1_lo, s1_hi = start_ts, start_ts + 28800
+        s2_lo, s2_hi = start_ts + 28800, start_ts + 57600
+        s3_lo = start_ts + 57600
+        buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {s1_lo} AND TimeStamp <= {s1_hi} THEN 1 ELSE 0 END) AS shift1")
+        buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {s2_lo} AND TimeStamp < {s2_hi} THEN 1 ELSE 0 END) AS shift2")
+        buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {s3_lo} THEN 1 ELSE 0 END) AS shift3")
+        where_window_end = start_ts + 86400
+
+    elif times in (9, 10):
+        # 7 days
+        day = 86400
+        labels = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
+        for d, label in enumerate(labels):
+            lo = start_ts + d * day
+            hi = start_ts + (d + 1) * day
+            if d == 0:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp <= {hi} THEN 1 ELSE 0 END) AS {label}")
+            elif d < 6:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS {label}")
+            else:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} THEN 1 ELSE 0 END) AS {label}")
+        where_window_end = start_ts + 7 * day
+
+    elif times in (11, 12):
+        # 21 buckets: 3 shifts × 7 days (each shift = 8h)
+        shift = 28800
+        total_shifts = 21
+        for i in range(total_shifts):
+            lo = start_ts + i * shift
+            hi = start_ts + (i + 1) * shift
+            buckets_sql.append(
+                f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS shift{i+1}"
+            )
+        where_window_end = start_ts + total_shifts * shift
+
+    else:
+        # fallback → 7 days
+        day = 86400
+        labels = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
+        for d, label in enumerate(labels):
+            lo = start_ts + d * day
+            hi = start_ts + (d + 1) * day
+            if d == 0:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp <= {hi} THEN 1 ELSE 0 END) AS {label}")
+            elif d < 6:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS {label}")
+            else:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} THEN 1 ELSE 0 END) AS {label}")
+        where_window_end = start_ts + 7 * day
+
+    select_buckets = ", ".join(buckets_sql)
+
+    # Build SQL (aggregate across ALL reject reasons)
+    sql = [
+        "SELECT Part,",
+        select_buckets,
+        "FROM `prodmon_prodction_rejects`",
+        f"WHERE TimeStamp >= {start_ts} AND TimeStamp < {where_window_end}",
+        "AND Machine = %s",
+    ]
+    if part_list_str:
+        sql.append(f"AND Part IN ({part_list_str})")
+    sql.append("GROUP BY Part")
+    sql.append("ORDER BY Part ASC;")
+    sql = " ".join(sql)
+
+    rows_out = []
+    conn = MySQLdb.connect(
+        host=DAVE_HOST,
+        user=DAVE_USER,
+        passwd=DAVE_PASSWORD,
+        db=DAVE_DB
+    )
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(sql, (machine,))
+        for row in cursor.fetchall():
+            # row: (Part, bucket1, ..., bucketN)
+            part = row[0]
+            buckets = list(row[1:])
+            shaped = [f"{machine}REJ", part] + buckets
+            rows_out.append(shaped)
+    except Exception as e:
+        print("Oops!", e, "occurred while running SQL (rejects).")
+        logger.exception("get_reject_totals_for_machine failed. SQL: %s", sql)
+    finally:
+        cursor.close()
+        conn.close()
+
+    return rows_out
+
+
+
 def prod_query(request):
     context = {}
     if request.method == 'GET':
@@ -832,13 +966,6 @@ def prod_query(request):
 
             shift_start_ts = datetime.timestamp(shift_start)
 
-            machine_list = []
-            for machine in machines:
-                machine = machine.strip()
-                machine_list.append(machine)
-                machine_list.append(f'{machine}REJ')
-                machine_list.append(f'{machine}AS')
-
             # build list of parts with quotes and commas for sql IN clause
             parts = form.cleaned_data.get('parts')
 
@@ -846,6 +973,25 @@ def prod_query(request):
             for part in parts:
                 part_list += f'"{part.strip()}", '
             part_list = part_list[:-2]
+
+
+
+            machine_list = []
+            for machine in machines:
+                machine = machine.strip()
+                # keep the normal/base machine in the main query
+                machine_list.append(machine)
+
+                # add “reject rows” by querying the new table,
+                # shaped exactly like rows from the main query
+                rej_rows = get_reject_totals_for_machine(
+                    machine=machine,
+                    start_timestamp=shift_start_ts,
+                    times=int(times),
+                    part_list_str=part_list  # this is your already-quoted IN-list string (e.g. '"A","B"')
+                )
+                # append them into results so the rest of your pipeline (totals, template, etc.) stays the same
+                results.extend(rej_rows)
 
 
 
