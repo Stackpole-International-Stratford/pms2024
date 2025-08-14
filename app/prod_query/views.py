@@ -929,6 +929,7 @@ def get_reject_totals_for_machine(machine, start_timestamp, times, part_list_str
             part = row[0]
             buckets = list(row[1:])
             shaped = [f"{machine}REJ", part] + buckets
+            shaped.append(sum(shaped[2:]))   # <<< add the Total here
             rows_out.append(shaped)
     except Exception as e:
         print("Oops!", e, "occurred while running SQL (rejects).")
