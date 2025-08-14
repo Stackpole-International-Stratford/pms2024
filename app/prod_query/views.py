@@ -1472,7 +1472,8 @@ def reject_query(request):
 
 
 def machine_detail(request, machine, start_timestamp, times):
-
+    if machine.endswith("REJ"):
+        machine = machine[:-3]
     tic = time.time()
     part_list = request.GET.get('parts')
     context = {}
