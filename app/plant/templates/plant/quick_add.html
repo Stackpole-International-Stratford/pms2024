@@ -28,12 +28,14 @@
         <div class="col-md-3">
           <label for="start-date" class="form-label">Date</label>
           <input type="date" id="start-date" name="start_date"
-                 class="form-control" required>
+                 class="form-control" required
+                 value="{{ default_date }}">
         </div>
         <div class="col-md-3">
           <label for="start-time" class="form-label">Time</label>
           <input type="time" id="start-time" name="start_time"
-                 class="form-control" required>
+                 class="form-control" required
+                 value="{{ default_time }}">
         </div>
         <div class="col-md-3">
           <label for="line-select" class="form-label">Line</label>
@@ -209,9 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Default date & time
-  const now = new Date();
-  startDate.value = now.toISOString().slice(0, 10);
-  startTime.value = now.toTimeString().slice(0, 5);
+  // Use server-local values to avoid UTC rollover
+  startDate.value = "{{ default_date|escapejs }}";
+  startTime.value = "{{ default_time|escapejs }}";
 
   // Quick-machine change: blank guard and multi-line
   machineInput.addEventListener('change', () => {
