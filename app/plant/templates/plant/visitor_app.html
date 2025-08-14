@@ -1,9 +1,214 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Visitor App</title>
+  <meta charset="utf-8">
+  <title>Visitor App</title>
+
+  <!-- Bootstrap (from your static) -->
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    .camera-area video, .camera-area canvas, .photo-preview img {
+      width: 100%; max-width: 520px; border-radius: .5rem;
+    }
+    .form-help { font-size: .9rem; color: #6c757d; }
+  </style>
 </head>
-<body>
-    <h1>Hello World</h1>
+<body class="bg-light">
+  <div class="container py-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h1 class="h4 mb-0">Visitor Check-In</h1>
+          </div>
+          <div class="card-body">
+
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} mb-3">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
+                  {{ form.first_name }}
+                  {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
+                  {{ form.last_name }}
+                  {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors }}</div>{% endif %}
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+                  {{ form.email }}
+                  {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label d-block">Are you a…</label>
+                  {{ form.visitor_type }}
+                  {% if form.visitor_type.errors %}<div class="text-danger small">{{ form.visitor_type.errors }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.hosts.id_for_label }}">Choose host(s)</label>
+                  {{ form.hosts }}
+                  <div class="form-help">Hold Ctrl/Cmd to select multiple (or tap multiple on mobile).</div>
+                  {% if form.hosts.errors %}<div class="text-danger small">{{ form.hosts.errors }}</div>{% endif %}
+                </div>
+
+                <!-- Photo section -->
+                {{ form.photo_data }} <!-- hidden field for captured image data -->
+
+                <div class="col-12">
+                  <h2 class="h5">Add your photo (required)</h2>
+                  <p class="form-help mb-2">Either take a photo using your camera or upload an image file.</p>
+
+                  <div class="mb-3">
+                    <button type="button" class="btn btn-outline-primary" id="startCameraBtn">Use Camera</button>
+                    <button type="button" class="btn btn-outline-secondary d-none" id="retakeBtn">Retake</button>
+                  </div>
+
+                  <div class="camera-area d-none mb-3" id="cameraArea">
+                    <video id="video" autoplay playsinline class="bg-dark"></video>
+                    <div class="mt-2">
+                      <button type="button" class="btn btn-primary" id="captureBtn">Capture</button>
+                      <span class="form-help ms-2">Preview appears below after capture.</span>
+                    </div>
+                  </div>
+
+                  <div class="photo-preview mb-3 d-none" id="photoPreview">
+                    <img id="previewImg" alt="Photo preview">
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="id_photo" class="form-label">Or upload a file</label>
+                    <input type="file" name="photo" accept="image/*" capture="environment" id="id_photo" class="form-control">
+                    {% if form.photo.errors %}<div class="text-danger small">{{ form.photo.errors }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <button class="btn btn-success" type="submit">Submit</button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const startBtn = document.getElementById('startCameraBtn');
+      const retakeBtn = document.getElementById('retakeBtn');
+      const cameraArea = document.getElementById('cameraArea');
+      const video = document.getElementById('video');
+      const captureBtn = document.getElementById('captureBtn');
+      const previewWrap = document.getElementById('photoPreview');
+      const previewImg = document.getElementById('previewImg');
+      const hiddenData = document.getElementById('id_photo_data');
+      const fileInput = document.getElementById('id_photo');
+
+      let stream = null;
+
+      function stopStream() {
+        if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+          stream = null;
+        }
+      }
+
+      async function startCamera() {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+          });
+          video.srcObject = stream;
+          cameraArea.classList.remove('d-none');
+          retakeBtn.classList.add('d-none');
+          previewWrap.classList.add('d-none');
+          hiddenData.value = '';
+          // Clear file input if using camera
+          fileInput.value = '';
+        } catch (e) {
+          alert("Couldn't access the camera. You can still upload a photo file.");
+        }
+      }
+
+      startBtn.addEventListener('click', startCamera);
+
+      captureBtn.addEventListener('click', () => {
+        if (!video.videoWidth) return;
+
+        // Create a canvas on the fly to capture the frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        // Convert to JPEG data URL (kept client-side until submit)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        hiddenData.value = dataUrl;
+
+        // Show preview and stop camera stream
+        previewImg.src = dataUrl;
+        previewWrap.classList.remove('d-none');
+        retakeBtn.classList.remove('d-none');
+        stopStream();
+        cameraArea.classList.add('d-none');
+      });
+
+      retakeBtn.addEventListener('click', () => {
+        hiddenData.value = '';
+        previewWrap.classList.add('d-none');
+        retakeBtn.classList.add('d-none');
+        startCamera();
+      });
+
+      // If user picks a file, clear captured data
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files.length > 0) {
+          hiddenData.value = '';
+          previewWrap.classList.add('d-none');
+          retakeBtn.classList.add('d-none');
+          stopStream();
+          cameraArea.classList.add('d-none');
+        }
+      });
+
+      // Optional client-side guard: require either file or captured data
+      document.querySelector('form').addEventListener('submit', (e) => {
+        const hasFile = fileInput.files && fileInput.files.length > 0;
+        const hasData = hiddenData.value && hiddenData.value.startsWith('data:image');
+        if (!hasFile && !hasData) {
+          e.preventDefault();
+          alert('Please add a photo (use the camera or upload a file).');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
