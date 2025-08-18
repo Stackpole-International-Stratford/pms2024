@@ -36,6 +36,9 @@
             </div>
           {% endfor %}
         </div>
+        <div class="mt-2">
+          <a href="{% url 'display_parts' %}">(manage <u>parts</u>)</a>
+        </div>
       </div>
 
       <!-- Machines -->
@@ -49,8 +52,10 @@
             </div>
           {% endfor %}
         </div>
+        <div class="mt-2">
+          <a href="{% url 'display_assets' %}">(manage <u>machines</u>)</a>
+        </div>
       </div>
-
       <!-- Supplier issue -->
       <div class="col-md-6">
         <div class="form-check mt-4">
