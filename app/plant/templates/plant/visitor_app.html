@@ -96,16 +96,28 @@
                     <img id="previewImg" alt="Photo preview">
                   </div>
 
-                  <div class="mb-3">
-                    <label for="id_photo" class="form-label">Take photo</label>
-                    <input type="file" name="photo" accept="image/*" capture="environment" id="id_photo" class="form-control">
-                    {% if form.photo.errors %}<div class="text-danger small">{{ form.photo.errors }}</div>{% endif %}
-                  </div>
+                <div class="mb-3">
+                  <label for="id_photo" class="form-label d-block">Take photo</label>
+
+                  <!-- Hidden actual input -->
+                  <input type="file" name="photo" accept="image/*" capture="environment"
+                        id="id_photo" class="d-none">
+
+                  <!-- Styled trigger (Bootstrap button with icon) -->
+                  <label for="id_photo" class="btn btn-outline-dark">
+                    <i class="bi bi-camera"></i> Open Camera
+                  </label>
+
+                  {% if form.photo.errors %}
+                    <div class="text-danger small">{{ form.photo.errors }}</div>
+                  {% endif %}
+                </div>
+
                 </div>
               </div>
 
               <div class="mt-3">
-                <button class="btn btn-success" type="submit">Submit</button>
+                <button class="btn btn-warning" type="submit">Submit</button>
               </div>
             </form>
 
