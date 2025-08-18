@@ -9,11 +9,17 @@
   <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
   <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 
+  <!-- Bootstrap Icons (make sure this path exists in your static; otherwise use a CDN) -->
+  <link href="{% static 'bootstrap-icons/font/bootstrap-icons.css' %}" rel="stylesheet">
+
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
-    .camera-area video, .camera-area canvas, .photo-preview img {
+    .camera-area video, .camera-area canvas {
       width: 100%; max-width: 520px; border-radius: .5rem;
+    }
+    .photo-preview img {
+      width: 140px; height: 140px; object-fit: cover; border-radius: .5rem; border: 1px solid #dee2e6;
     }
     .form-help { font-size: .9rem; color: #6c757d; }
   </style>
@@ -74,16 +80,20 @@
                   {% if form.hosts.errors %}<div class="text-danger small">{{ form.hosts.errors }}</div>{% endif %}
                 </div>
 
-                <!-- Photo section -->
-                {{ form.photo_data }} <!-- hidden field for captured image data -->
+                <!-- Hidden field for captured image data URL -->
+                {{ form.photo_data }}
 
+                <!-- Photo section -->
                 <div class="col-12">
                   <h2 class="h5">Add your photo (required)</h2>
+                  <p class="form-help mb-2">Capture from your camera or choose a photo. A thumbnail will appear below.</p>
 
+                  <!-- Retake only applies to live camera capture -->
                   <div class="mb-3">
                     <button type="button" class="btn btn-outline-secondary d-none" id="retakeBtn">Retake</button>
                   </div>
 
+                  <!-- Live camera area (only used if you start it programmatically) -->
                   <div class="camera-area d-none mb-3" id="cameraArea">
                     <video id="video" autoplay playsinline class="bg-dark"></video>
                     <div class="mt-2">
@@ -92,27 +102,33 @@
                     </div>
                   </div>
 
+                  <!-- Thumbnail preview (for either capture or upload) -->
                   <div class="photo-preview mb-3 d-none" id="photoPreview">
                     <img id="previewImg" alt="Photo preview">
                   </div>
 
-                <div class="mb-3">
-                  <label for="id_photo" class="form-label d-block">Take photo</label>
+                  <!-- Styled file input trigger -->
+                  <div class="mb-3">
+                    <label for="id_photo" class="form-label d-block">Take photo</label>
 
-                  <!-- Hidden actual input -->
-                  <input type="file" name="photo" accept="image/*" capture="environment"
-                        id="id_photo" class="d-none">
+                    <!-- Hidden actual input -->
+                    <input
+                      type="file"
+                      name="photo"
+                      accept="image/*"
+                      capture="environment"
+                      id="id_photo"
+                      class="d-none">
 
-                  <!-- Styled trigger (Bootstrap button with icon) -->
-                  <label for="id_photo" class="btn btn-outline-dark">
-                    <i class="bi bi-camera"></i> Open Camera
-                  </label>
+                    <!-- Pretty button that triggers the hidden input -->
+                    <label for="id_photo" class="btn btn-outline-dark">
+                      <i class="bi bi-camera"></i> Open Camera
+                    </label>
 
-                  {% if form.photo.errors %}
-                    <div class="text-danger small">{{ form.photo.errors }}</div>
-                  {% endif %}
-                </div>
-
+                    {% if form.photo.errors %}
+                      <div class="text-danger small">{{ form.photo.errors }}</div>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
 
@@ -130,17 +146,17 @@
 
   <script>
     (function () {
-      const startBtn = document.getElementById('startCameraBtn');
-      const retakeBtn = document.getElementById('retakeBtn');
-      const cameraArea = document.getElementById('cameraArea');
-      const video = document.getElementById('video');
-      const captureBtn = document.getElementById('captureBtn');
+      const retakeBtn   = document.getElementById('retakeBtn');
+      const cameraArea  = document.getElementById('cameraArea');
+      const video       = document.getElementById('video');
+      const captureBtn  = document.getElementById('captureBtn');
       const previewWrap = document.getElementById('photoPreview');
-      const previewImg = document.getElementById('previewImg');
-      const hiddenData = document.getElementById('id_photo_data');
-      const fileInput = document.getElementById('id_photo');
+      const previewImg  = document.getElementById('previewImg');
+      const hiddenData  = document.getElementById('id_photo_data'); // from {{ form.photo_data }}
+      const fileInput   = document.getElementById('id_photo');
 
       let stream = null;
+      let objectUrl = null; // to clean up uploaded file previews
 
       function stopStream() {
         if (stream) {
@@ -149,8 +165,10 @@
         }
       }
 
+      // OPTIONAL: If you want to open a live camera stream somewhere else, call this.
       async function startCamera() {
         try {
+          video.setAttribute('playsinline', '');
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: 'environment' } },
             audio: false
@@ -160,37 +178,49 @@
           retakeBtn.classList.add('d-none');
           previewWrap.classList.add('d-none');
           hiddenData.value = '';
-          // Clear file input if using camera
-          fileInput.value = '';
+          if (fileInput) fileInput.value = '';
+          revokeObjectUrl();
         } catch (e) {
-          alert("Couldn't access the camera. You can still upload a photo file.");
+          // Silent: on many devices, users will use the file picker (which can open camera)
+          console.warn("Couldn't access the camera.", e);
         }
       }
 
-      startBtn.addEventListener('click', startCamera);
+      function revokeObjectUrl() {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+      }
 
+      // --- Capture from live video to thumbnail + hidden data URL
       captureBtn.addEventListener('click', () => {
         if (!video.videoWidth) return;
 
-        // Create a canvas on the fly to capture the frame
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0);
 
-        // Convert to JPEG data URL (kept client-side until submit)
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         hiddenData.value = dataUrl;
 
-        // Show preview and stop camera stream
+        // Show thumbnail
         previewImg.src = dataUrl;
         previewWrap.classList.remove('d-none');
+
+        // Reset file input path & object URL preview
+        if (fileInput) fileInput.value = '';
+        revokeObjectUrl();
+
+        // UI tweaks
         retakeBtn.classList.remove('d-none');
         stopStream();
         cameraArea.classList.add('d-none');
       });
 
+      // Retake (for live camera flow)
       retakeBtn.addEventListener('click', () => {
         hiddenData.value = '';
         previewWrap.classList.add('d-none');
@@ -198,26 +228,46 @@
         startCamera();
       });
 
-      // If user picks a file, clear captured data
+      // --- Show thumbnail when user UPLOADS a photo (or uses mobile camera via file input)
       fileInput.addEventListener('change', () => {
         if (fileInput.files && fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+
+          // Clear any camera-captured data URL
           hiddenData.value = '';
-          previewWrap.classList.add('d-none');
-          retakeBtn.classList.add('d-none');
+
+          // Stop live stream if running
           stopStream();
           cameraArea.classList.add('d-none');
+
+          // Create an object URL for thumbnail
+          revokeObjectUrl();
+          objectUrl = URL.createObjectURL(file);
+          previewImg.src = objectUrl;
+          previewWrap.classList.remove('d-none');
+
+          // Retake button doesn’t apply to uploads; keep it hidden
+          retakeBtn.classList.add('d-none');
+        } else {
+          // If user cleared the file picker
+          revokeObjectUrl();
+          previewWrap.classList.add('d-none');
         }
       });
 
-      // Optional client-side guard: require either file or captured data
+      // Client-side guard: require either file or captured data
       document.querySelector('form').addEventListener('submit', (e) => {
         const hasFile = fileInput.files && fileInput.files.length > 0;
         const hasData = hiddenData.value && hiddenData.value.startsWith('data:image');
         if (!hasFile && !hasData) {
           e.preventDefault();
-          alert('Please add a photo (use the camera or upload a file).');
+          alert('Please add a photo (capture or upload).');
         }
       });
+
+      // If you want the live camera to be available, you can call startCamera() somewhere,
+      // e.g., on page load or via a dedicated “Use Live Camera” button.
+      // startCamera();
     })();
   </script>
 </body>
