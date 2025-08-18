@@ -79,10 +79,8 @@
 
                 <div class="col-12">
                   <h2 class="h5">Add your photo (required)</h2>
-                  <p class="form-help mb-2">Either take a photo using your camera or upload an image file.</p>
 
                   <div class="mb-3">
-                    <button type="button" class="btn btn-outline-primary" id="startCameraBtn">Use Camera</button>
                     <button type="button" class="btn btn-outline-secondary d-none" id="retakeBtn">Retake</button>
                   </div>
 
@@ -99,7 +97,7 @@
                   </div>
 
                   <div class="mb-3">
-                    <label for="id_photo" class="form-label">Or upload a file</label>
+                    <label for="id_photo" class="form-label">Take photo</label>
                     <input type="file" name="photo" accept="image/*" capture="environment" id="id_photo" class="form-control">
                     {% if form.photo.errors %}<div class="text-danger small">{{ form.photo.errors }}</div>{% endif %}
                   </div>
