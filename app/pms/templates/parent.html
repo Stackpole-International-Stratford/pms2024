@@ -312,6 +312,89 @@
 </style>
 
 
+<style>
+/* === Professional Kinetic Presence === */
+
+/* Global: smooth feel */
+* {
+  transition: color 0.2s ease, background 0.25s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+/* --- Buttons: precision press + confidence hover --- */
+.btn {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+.btn:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.btn:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* --- Navbar: subtle underline reveal --- */
+.navbar-nav .nav-link {
+  position: relative;
+  font-weight: 500;
+}
+.navbar-nav .nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: all 0.3s ease;
+  opacity: 0.7;
+}
+.navbar-nav .nav-link:hover::after {
+  left: 0;
+  width: 100%;
+}
+
+/* --- Dropdowns: crisp active feedback --- */
+.dropdown-menu .dropdown-item {
+  transition: background 0.2s ease, padding-left 0.25s ease;
+}
+.dropdown-menu .dropdown-item:hover {
+  background: #f5f7f9;
+  padding-left: 1.25rem;
+  font-weight: 500;
+}
+
+/* --- Accordion: purposeful expansion --- */
+.accordion-button {
+  transition: background 0.3s ease, font-weight 0.2s ease;
+}
+.accordion-button:not(.collapsed) {
+  background: #f8f9fa;
+  font-weight: 600;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* --- Cards / panels: hover = focus --- */
+.card, .accordion, .dropdown-menu {
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.card:hover, .accordion:hover, .dropdown-menu:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+/* --- Logo: dignity, not motion --- */
+.navbar-logo img {
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+  transition: filter 0.4s ease;
+}
+.navbar-logo img:hover {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+}
+
+</style>
+
 
       
       
