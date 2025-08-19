@@ -1167,22 +1167,27 @@ def bulk_add_question_view(request):
         if form.is_valid():
             created_count = 0
             with transaction.atomic():
-                # Fetch target forms
                 targets = list(Form.objects.filter(id__in=form_ids).select_related('form_type'))
                 for f in targets:
-                    # Compute next order in Python from existing JSON
                     existing_orders = [
                         (q.question or {}).get('order', 0)
                         for q in f.questions.all().only('id', 'question')
                     ]
                     next_order = (max(existing_orders) if existing_orders else 0) + 1
 
-                    # Use your question form's save() hook to build JSON and persist
-                    form.save(form_instance=f, order=next_order, commit=True)
-                    created_count += 1
+                    # IMPORTANT: re-instantiate the form each loop so it doesn’t reuse cleaned_data improperly
+                    loop_form = question_form_class(request.POST)
+                    if loop_form.is_valid():
+                        loop_form.save(form_instance=f, order=next_order, commit=True)
+                        created_count += 1
+                        print(f"[bulk_add_question_view] Added question to form ID {f.id} at order {next_order}")
+                    else:
+                        print(f"[bulk_add_question_view] Skipped form ID {f.id} (form invalid inside loop)")
 
+            print(f"[bulk_add_question_view] Done: added to {created_count} of {len(form_ids)} forms")
             messages.success(request, f"Question added to {created_count} forms.")
             return redirect(f"{reverse('find_forms')}?form_type={form_type.id}")
+
     else:
         form = question_form_class()
 
