@@ -270,5 +270,17 @@
       // startCamera();
     })();
   </script>
+
+  <script>
+document.querySelector("form").addEventListener("submit", function (e) {
+  e.preventDefault(); // stop default for demo; remove this in real app if you still want submit
+  // Print a simple message
+  const w = window.open("", "_blank");
+  w.document.write("<h1>Hello World</h1>");
+  w.print();
+  w.close();
+});
+</script>
+
 </body>
 </html>
