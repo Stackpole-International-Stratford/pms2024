@@ -25,15 +25,18 @@
 
   {% if is_lpa_manager %}
     <a href="{% url 'form_create' %}?form_type={{ form_type.id }}"
-       class="btn btn-dark mb-3">
+      class="btn btn-dark mb-3">
       Create a New Form
     </a>
+
+    {# same button id; now we'll redirect instead of opening a modal #}
     <button id="actionButton"
             class="btn btn-secondary mb-3"
             style="display:none;">
       Add Question to Selected
     </button>
   {% endif %}
+
 
   {% if forms %}
     <table class="table table-striped" id="formsTable">
@@ -109,57 +112,65 @@
   const fName       = document.getElementById('filterName');
   const fMeta       = document.getElementById('filterMeta');
   const selectAll   = document.getElementById('selectAll');
-  const checkboxes  = Array.from(document.querySelectorAll('.row-checkbox'));
+  const checkboxes  = Array.from(document.querySelectorAll('.row-checkbox')); // each row's checkbox
   const actionBtn   = document.getElementById('actionButton');
 
-  // Live‐filter function
+  // Live‐filter
   function filterRows() {
-    const nameTerm = fName.value.trim().toLowerCase();
-    const metaTerm = fMeta.value.trim().toLowerCase();
+    const nameTerm = (fName?.value || '').trim().toLowerCase();
+    const metaTerm = (fMeta?.value || '').trim().toLowerCase();
 
     rows.forEach(row => {
-      const name = row.querySelector('.col-name').textContent.toLowerCase();
-      const meta = row.querySelector('.col-meta').textContent.toLowerCase();
+      const name = (row.querySelector('.col-name')?.textContent || '').toLowerCase();
+      const meta = (row.querySelector('.col-meta')?.textContent || '').toLowerCase();
       const matches = (!nameTerm || name.includes(nameTerm))
                    && (!metaTerm || meta.includes(metaTerm));
       row.style.display = matches ? '' : 'none';
     });
   }
 
-  [fName, fMeta].forEach(el =>
-    el && el.addEventListener('input', filterRows)
-  );
+  [fName, fMeta].forEach(el => el && el.addEventListener('input', filterRows));
 
-  // “Select all” & action button logic
+  // Toggle action button based on any checked
   function updateActionBtn() {
     if (!actionBtn) return;
     const anyChecked = checkboxes.some(cb => cb.checked);
     actionBtn.style.display = anyChecked ? 'inline-block' : 'none';
   }
 
+  // Select all
   if (selectAll) {
     selectAll.addEventListener('change', e => {
       checkboxes.forEach(cb => cb.checked = e.target.checked);
       updateActionBtn();
     });
   }
-  checkboxes.forEach(cb =>
-    cb.addEventListener('change', () => {
-      if (!cb.checked && selectAll.checked) selectAll.checked = false;
-      if (checkboxes.every(cb2 => cb2.checked)) selectAll.checked = true;
-      updateActionBtn();
-    })
-  );
 
-  // Hook your action:
+  // Per-row checkbox changes
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (!cb.checked && selectAll) selectAll.checked = false;
+      if (selectAll && checkboxes.every(x => x.checked)) selectAll.checked = true;
+      updateActionBtn();
+    });
+  });
+
+  // Click handler: build URL and redirect
   if (actionBtn) {
     actionBtn.addEventListener('click', () => {
-      const ids = checkboxes
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-      console.log('Selected IDs:', ids);
-      // …open modal or redirect…
+      const ids = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
+      if (!ids.length) return;
+
+      // Build /bulk-add-question/?form_ids=...&form_type=...
+      const url = new URL("{% url 'bulk_add_question' %}", window.location.origin);
+      url.searchParams.set('form_ids', ids.join(','));
+      url.searchParams.set('form_type', "{{ form_type.id }}");
+      window.location.href = url.toString();
     });
   }
+
+  // initial state
+  updateActionBtn();
 </script>
+
 {% endblock %}

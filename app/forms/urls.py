@@ -41,4 +41,10 @@ urlpatterns = [
     path('process-selected-forms/', process_selected_forms, name='process_selected_forms'),
     path('process-form-deletion/', process_form_deletion, name='process_form_deletion'),
 
+
+
+
+    #Bulk add question fix for Arun
+    path('bulk-add-question/', bulk_add_question_view, name='bulk_add_question'),
+
 ]

@@ -7,7 +7,11 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-
+from django.contrib import messages
+from django.db.models import Max
+from django.urls import reverse
+from django.db import transaction
+from .forms import QUESTION_FORM_CLASSES
 
 
 
@@ -1112,3 +1116,80 @@ def na_dealt_answers_view(request):
     return render(request, 'forms/na_dealt_answers_list.html', {'na_dealt_answers': na_dealt_answers})
 
 
+
+
+
+
+
+# ===========================================================================
+# ===========================================================================
+# Bulk add question fix
+# ===========================================================================
+# ===========================================================================
+
+
+
+
+def bulk_add_question_view(request):
+    """
+    Render a page with a question form; when submitted, add that question
+    to all selected forms (appending to the end based on JSON 'order').
+    """
+    # Get ids from GET (first render) or POST (submit)
+    raw_ids = request.GET.get('form_ids') if request.method == 'GET' else request.POST.get('form_ids')
+    if not raw_ids:
+        messages.error(request, "No forms selected.")
+        return redirect('find_forms')
+
+    try:
+        form_ids = [int(fid) for fid in raw_ids.split(',') if fid.strip()]
+    except ValueError:
+        messages.error(request, "Invalid form ids.")
+        return redirect('find_forms')
+
+    # Determine form_type (from query or inferred from first form)
+    form_type_id = request.GET.get('form_type') if request.method == 'GET' else request.POST.get('form_type')
+    if form_type_id:
+        form_type = get_object_or_404(FormType, id=form_type_id)
+    else:
+        first_form = get_object_or_404(Form, id=form_ids[0])
+        form_type = first_form.form_type
+
+    # Pick the right Question form class
+    question_form_class = QUESTION_FORM_CLASSES.get(form_type.name)
+    if not question_form_class:
+        return render(request, 'forms/error.html', {
+            'message': f'Form type "{form_type.name}" not supported for bulk add.'
+        })
+
+    if request.method == 'POST':
+        form = question_form_class(request.POST)
+        if form.is_valid():
+            created_count = 0
+            with transaction.atomic():
+                # Fetch target forms
+                targets = list(Form.objects.filter(id__in=form_ids).select_related('form_type'))
+                for f in targets:
+                    # Compute next order in Python from existing JSON
+                    existing_orders = [
+                        (q.question or {}).get('order', 0)
+                        for q in f.questions.all().only('id', 'question')
+                    ]
+                    next_order = (max(existing_orders) if existing_orders else 0) + 1
+
+                    # Use your question form's save() hook to build JSON and persist
+                    form.save(form_instance=f, order=next_order, commit=True)
+                    created_count += 1
+
+            messages.success(request, f"Question added to {created_count} forms.")
+            return redirect(f"{reverse('find_forms')}?form_type={form_type.id}")
+    else:
+        form = question_form_class()
+
+    target_forms = Form.objects.filter(id__in=form_ids).select_related('form_type').order_by('-created_at')
+    return render(request, 'forms/bulk_add_question.html', {
+        'form': form,
+        'target_forms': target_forms,
+        'form_ids_csv': ",".join(str(x) for x in form_ids),
+        'form_type': form_type,
+    })
