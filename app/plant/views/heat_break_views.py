@@ -142,6 +142,15 @@ def turn_off_heat(request, heatbreak_id):
     hb.save()
     print("✅ Updated HeatBreak:", hb.id, "end_time_epoch:", hb.end_time_epoch)
 
+    # 🔗 call hook after save
+    hook_to_downtime_app(
+        machine_id=hb.machine.id,
+        start_epoch=hb.start_time_epoch,
+        end_epoch=hb.end_time_epoch,
+        turned_on_username=hb.turned_on_by_username,
+        turned_off_username=hb.turned_off_by_username,
+    )
+
     return JsonResponse({
         "status": "ok",
         "end_time_epoch": hb.end_time_epoch,
@@ -164,3 +173,14 @@ def turn_off_heat(request, heatbreak_id):
 # ======================================================================
 
 
+def hook_to_downtime_app(machine_id, start_epoch, end_epoch, turned_on_username, turned_off_username):
+    """
+    Placeholder hook to send data to downtime app.
+    For now, just print out the details.
+    """
+    print("📡 hook_to_downtime_app called:")
+    print("   machine_id        :", machine_id)
+    print("   start_time_epoch  :", start_epoch)
+    print("   end_time_epoch    :", end_epoch)
+    print("   turned_on_username:", turned_on_username)
+    print("   turned_off_username:", turned_off_username)
