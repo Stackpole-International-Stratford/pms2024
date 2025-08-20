@@ -208,7 +208,8 @@ def gfx_run(host, user, password, db_name,
             machine_id, start_epoch, end_epoch,
             turned_on_username, turned_off_username):
     """
-    Connects to MySQL and prints the most recent row from GFX_Production.
+    Connects to MySQL and prints the most recent row from GFX_Production,
+    then also prints the latest MachineDowntimeEvent from Django ORM.
     """
     print("🧪 gfx_run: attempting MySQL connection...")
 
@@ -223,8 +224,8 @@ def gfx_run(host, user, password, db_name,
         cursor = conn.cursor()
         print("✅ gfx_run: connected")
 
-        # Try to fetch last row ordered by id (adjust column name if needed)
-        cursor.execute("SELECT * FROM GFxPRoduction ORDER BY id DESC LIMIT 1;")
+        # Try to fetch last row ordered by id (adjust if needed)
+        cursor.execute("SELECT * FROM GFX_Production ORDER BY id DESC LIMIT 1;")
         row = cursor.fetchone()
 
         if row:
@@ -248,3 +249,39 @@ def gfx_run(host, user, password, db_name,
     print("   end_time_epoch    :", end_epoch)
     print("   turned_on_username:", turned_on_username)
     print("   turned_off_username:", turned_off_username)
+
+    # ---------- NEW: also dump latest MachineDowntimeEvent ----------
+    try:
+        mde = (MachineDowntimeEvent.objects
+               .filter(is_deleted=False)
+               .order_by('-created_at_UTC')
+               .first())
+
+        if not mde:
+            mde = (MachineDowntimeEvent.objects
+                   .filter(is_deleted=False)
+                   .order_by('-start_epoch')
+                   .first())
+
+        if mde:
+            print("🧾 Latest MachineDowntimeEvent:")
+            print(f"   id                : {mde.id}")
+            print(f"   line              : {mde.line}")
+            print(f"   machine           : {mde.machine}")
+            print(f"   category          : {mde.category}")
+            print(f"   subcategory       : {mde.subcategory}")
+            print(f"   code              : {mde.code}")
+            print(f"   start_epoch       : {mde.start_epoch}")
+            print(f"   closeout_epoch    : {mde.closeout_epoch}")
+            print(f"   comment           : {mde.comment}")
+            print(f"   labour_types      : {mde.labour_types}")
+            print(f"   employee_id       : {mde.employee_id}")
+            print(f"   closeout_comment  : {mde.closeout_comment}")
+            print(f"   is_deleted        : {mde.is_deleted}")
+            print(f"   created_at_UTC    : {mde.created_at_UTC}")
+            print(f"   updated_at_UTC    : {mde.updated_at_UTC}")
+        else:
+            print("⚠️ No MachineDowntimeEvent rows found.")
+
+    except Exception as e:
+        print("❌ gfx_run: ORM error ->", repr(e))
