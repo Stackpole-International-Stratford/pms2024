@@ -108,13 +108,16 @@
           <div class="mb-3">
             <label class="form-label">End Time</label>
             <input type="datetime-local" class="form-control" name="end_time" id="offEnd">
-          </div>
+            <div id="offEndFeedback" class="invalid-feedback">
+                End time cannot be before the start time.
+            </div>
+            </div>
           <input type="hidden" name="heatbreak_id" id="heatbreakId">
           <input type="hidden" id="offMachineId">
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Confirm</button>
+          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-warning">Confirm</button>
         </div>
       </div>
     </form>
@@ -123,111 +126,187 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const ACTIVE = new Map(); // machineId -> {hbId, startIso, duration}
+    // ---------- helpers ----------
+    const ACTIVE = new Map(); // machineId -> { hbId, startIso, duration }
 
-    // Initialize radios to reflect server state
+    function pad2(n) { return String(n).padStart(2, "0"); }
+
+    // Format a Date into YYYY-MM-DDTHH:MM for <input type="datetime-local">
+    function formatForDatetimeLocal(d) {
+        return [
+            d.getFullYear(), "-", pad2(d.getMonth() + 1), "-", pad2(d.getDate()),
+            "T", pad2(d.getHours()), ":", pad2(d.getMinutes())
+        ].join("");
+    }
+
+    // Convert an ISO string (which may include timezone) into local datetime-local string
+    function isoToLocalInput(iso) {
+        try {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return "";
+            return formatForDatetimeLocal(d);
+        } catch {
+            return "";
+        }
+    }
+
+    // Parse a datetime-local string as LOCAL time safely (no timezone)
+    function parseLocalInput(str) {
+        // Expect "YYYY-MM-DDTHH:MM"
+        if (!str || !str.includes("T")) return null;
+        const [datePart, timePart] = str.split("T");
+        const [y, m, d] = datePart.split("-").map(Number);
+        const [hh, mm] = timePart.split(":").map(Number);
+        // Month is 0-based in Date()
+        const dt = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    function selectRadio(machineId, value) {
+        const target = document.getElementById(`toggle-${machineId}-${value}`);
+        if (target) target.checked = true;
+    }
+
+    function selectNone(machineId) {
+        selectRadio(machineId, "none");
+    }
+
+    function setEndInvalid(isInvalid) {
+        const endInput = document.getElementById("offEnd");
+        if (!endInput) return;
+        if (isInvalid) {
+            endInput.classList.add("is-invalid");
+        } else {
+            endInput.classList.remove("is-invalid");
+        }
+    }
+
+    // ---------- initialize UI from server-emitted data-* ----------
     document.querySelectorAll("tr[id^='row-']").forEach(function (row) {
         const machineId = row.dataset.machine;
-        const hbId = row.dataset.activeHbId || null;
-        const duration = row.dataset.activeDuration || null;
-        const startIso = row.dataset.startTimeIso || null;
+        const hbId      = row.dataset.activeHbId || null;
+        const duration  = row.dataset.activeDuration || null;
+        const startIso  = row.dataset.startTimeIso || null;
 
         if (hbId && duration) {
             ACTIVE.set(machineId, { hbId: hbId, startIso: startIso, duration: duration });
-            const radio = document.getElementById(`toggle-${machineId}-${duration}`);
-            if (radio) radio.checked = true;
+            selectRadio(machineId, duration);
         } else {
-            const radioNone = document.getElementById(`toggle-${machineId}-none`);
-            if (radioNone) radioNone.checked = true;
+            selectNone(machineId);
         }
     });
 
-    // One handler for all radios
+    // ---------- radio change handling (No heat break + durations) ----------
     document.querySelectorAll(".toggle-radio").forEach(function (radio) {
         radio.addEventListener("change", function () {
             const machineId = this.dataset.machine;
             const val = this.value;
 
             if (val === "none") {
-                // Turning OFF if an active HB exists
+                // User wants to turn OFF (end) an active heat break
                 const active = ACTIVE.get(machineId);
                 if (!active) {
-                    // Nothing to turn off; just ensure "No heat break" stays selected
+                    // No active HB; nothing to end
                     return;
                 }
 
-                // Prefill modal
+                // Prefill modal values
+                const offStart = document.getElementById("offStart");
+                const offEnd   = document.getElementById("offEnd");
                 document.getElementById("heatbreakId").value = active.hbId;
                 document.getElementById("offMachineId").value = machineId;
 
-                // Start time: use the known start if available; fall back empty
-                if (active.startIso) {
-                    // match <input type="datetime-local"> format (YYYY-MM-DDTHH:MM)
-                    document.getElementById("offStart").value = active.startIso.slice(0,16);
-                } else {
-                    document.getElementById("offStart").value = "";
-                }
-                // End time defaults to "now"
-                document.getElementById("offEnd").value = new Date().toISOString().slice(0,16);
+                // Start time displayed in LOCAL time (read-only)
+                const startLocalStr = active.startIso ? isoToLocalInput(active.startIso) : "";
+                offStart.value = startLocalStr;
 
-                const modal = new bootstrap.Modal(document.getElementById("offModal"));
-                modal.show();
-            } else {
-                // Turning ON with a specific duration
-                fetch(`/plant/heat/${machineId}/on/`, {
-                    method: "POST",
-                    headers: {"X-CSRFToken": "{{ csrf_token }}"},
-                    body: new URLSearchParams({duration: val})
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === "ok") {
-                        ACTIVE.set(machineId, {
-                            hbId: String(data.heatbreak_id),
-                            startIso: data.start_time_iso,
-                            duration: String(val)
-                        });
-                        // Ensure the chosen radio stays selected (idempotent)
-                        const radio = document.getElementById(`toggle-${machineId}-${val}`);
-                        if (radio) radio.checked = true;
-                    } else {
-                        // revert to "No heat break" on error
-                        const radioNone = document.getElementById(`toggle-${machineId}-none`);
-                        if (radioNone) radioNone.checked = true;
-                    }
-                })
-                .catch(() => {
-                    const radioNone = document.getElementById(`toggle-${machineId}-none`);
-                    if (radioNone) radioNone.checked = true;
-                });
+                // End time defaults to "now" in LOCAL time
+                const nowLocalStr = formatForDatetimeLocal(new Date());
+                offEnd.value = nowLocalStr;
+
+                // Validation setup: enforce min = startLocalStr
+                offEnd.min = startLocalStr || "";
+
+                // Clear invalid state on open
+                setEndInvalid(false);
+
+                // Attach live validation
+                offEnd.oninput = function () {
+                    const start = parseLocalInput(offStart.value);
+                    const end   = parseLocalInput(offEnd.value);
+                    const invalid = !!(start && end && end < start);
+                    setEndInvalid(invalid);
+                };
+                offEnd.dispatchEvent(new Event("input"));
+
+                new bootstrap.Modal(document.getElementById("offModal")).show();
+                return;
             }
+
+            // Turning ON with a chosen duration
+            fetch(`/plant/heat/${machineId}/on/`, {
+                method: "POST",
+                headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                body: new URLSearchParams({ duration: val })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "ok") {
+                    ACTIVE.set(machineId, {
+                        hbId: String(data.heatbreak_id),
+                        startIso: data.start_time_iso, // keep ISO (UTC offset aware)
+                        duration: String(val)
+                    });
+                    selectRadio(machineId, val);
+                } else {
+                    selectNone(machineId);
+                }
+            })
+            .catch(() => {
+                selectNone(machineId);
+            });
         });
     });
 
-    // Submit OFF modal -> call /off/, then clear local state and flip radio to None
+    // ---------- modal submit -> validate, call /off/, clear state, set "No heat break" ----------
     document.getElementById("offForm").addEventListener("submit", function (e) {
         e.preventDefault();
+
         const hbId = document.getElementById("heatbreakId").value;
         const machineId = document.getElementById("offMachineId").value;
-        const endTime = document.getElementById("offEnd").value;
+        const startTimeStr = document.getElementById("offStart").value; // local
+        const endTimeStr   = document.getElementById("offEnd").value;   // local
+
+        const start = parseLocalInput(startTimeStr);
+        const end   = parseLocalInput(endTimeStr);
+
+        // Block submit if end < start
+        if (start && end && end < start) {
+            setEndInvalid(true);
+            document.getElementById("offEnd").focus();
+            return; // do not POST
+        }
+        setEndInvalid(false);
 
         fetch(`/plant/heat/${hbId}/off/`, {
             method: "POST",
             headers: {"X-CSRFToken": "{{ csrf_token }}"},
-            body: new URLSearchParams({end_time: endTime})
+            body: new URLSearchParams({ end_time: endTimeStr })
         })
         .then(r => r.json())
         .then(data => {
             if (data.status === "ok") {
-                // Close modal
-                bootstrap.Modal.getInstance(document.getElementById("offModal")).hide();
-                // Clear active state and select "No heat break"
+                const modalEl = document.getElementById("offModal");
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+
                 ACTIVE.delete(machineId);
-                const radioNone = document.getElementById(`toggle-${machineId}-none`);
-                if (radioNone) radioNone.checked = true;
+                selectNone(machineId);
             }
         });
     });
 });
 </script>
+
+
 {% endblock %}
