@@ -148,7 +148,8 @@ def turn_off_heat(request, heatbreak_id):
     hb.save()
     print("✅ Updated HeatBreak:", hb.id, "end_time_epoch:", hb.end_time_epoch)
 
-
+    # 👇 Call custom logging function
+    log_heatbreak_info(hb.id)
 
     return JsonResponse({
         "status": "ok",
@@ -170,3 +171,21 @@ def turn_off_heat(request, heatbreak_id):
 # ==================== Hook now into downtime app ======================
 # ======================================================================
 # ======================================================================
+
+
+def log_heatbreak_info(heatbreak_id):
+    try:
+        hb = HeatBreak.objects.get(pk=heatbreak_id)
+
+        print("📋 HeatBreak info lookup:")
+        print("   ID:", hb.id)
+        print("   Machine number:", hb.machine_number)   # ✅ use denormalized field
+        print("   Started:", epoch_to_iso(hb.start_time_epoch))
+        print("   Ended:", epoch_to_iso(hb.end_time_epoch) if hb.end_time_epoch else "Still active")
+        print("   Turned on by:", hb.turned_on_by_username)
+        print("   Turned off by:", hb.turned_off_by_username)
+
+    except HeatBreak.DoesNotExist:
+        print("❌ HeatBreak not found for id:", heatbreak_id)
+
+
