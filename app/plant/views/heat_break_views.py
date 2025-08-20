@@ -225,7 +225,7 @@ def gfx_run(host, user, password, db_name,
         print("✅ gfx_run: connected")
 
         # Try to fetch last row ordered by id (adjust if needed)
-        cursor.execute("SELECT * FROM GFX_Production ORDER BY id DESC LIMIT 1;")
+        cursor.execute("SELECT * FROM GFxPRoduction ORDER BY id DESC LIMIT 1;")
         row = cursor.fetchone()
 
         if row:
