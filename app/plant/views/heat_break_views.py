@@ -186,8 +186,8 @@ def log_heatbreak_info(heatbreak_id):
         print("📋 HeatBreak info lookup:")
         print("   ID:", hb.id)
         print("   Machine number:", hb.machine_number)
-        print("   Started:", epoch_to_iso(start_epoch_for_display))
-        print("   Ended:", epoch_to_iso(hb.end_time_epoch) if hb.end_time_epoch else "Still active")
+        print("   Started:", start_epoch_for_display)
+        print("   Ended:", hb.end_time_epoch if hb.end_time_epoch else "Still active")
         print("   Duration:", f"{hb.duration_minutes} mins")   # ✅ directly from the table
         print("   Turned on by:", hb.turned_on_by_username)
         print("   Turned off by:", hb.turned_off_by_username)
