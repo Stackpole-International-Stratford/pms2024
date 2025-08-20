@@ -9,6 +9,7 @@ from .views.maintenance_views import *
 from .views.cycle_crud_views import *
 from .views.temp_sensor_views import *
 from .views.hr_views import *
+from .views.heat_break_views import *
 
 urlpatterns = [
     path('', index, name='index'),  # New index page URL
@@ -110,5 +111,8 @@ urlpatterns = [
     path('maintenance/bulk_add/', maintenance_bulk_form, name='maintenance_bulk_form'),
 
     path('quick-add/', quick_add, name='quick_add'),
+
+    
+    path('heat-toggle/', heat_toggle_view, name='heat_toggle_view'),
 
 ]
