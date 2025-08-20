@@ -3,10 +3,16 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-
+from django.conf import settings
+import MySQLdb
 from plant.models.maintenance_models import *
 from plant.models.heat_break_models import *
 
+
+DAVE_HOST = settings.NEW_HOST
+DAVE_USER = settings.DAVE_USER
+DAVE_PASSWORD = settings.DAVE_PASSWORD
+DAVE_DB = settings.DAVE_DB
 # ---------- helpers ----------
 
 def now_epoch() -> int:
@@ -175,10 +181,68 @@ def turn_off_heat(request, heatbreak_id):
 
 def hook_to_downtime_app(machine_id, start_epoch, end_epoch, turned_on_username, turned_off_username):
     """
-    Placeholder hook to send data to downtime app.
-    For now, just print out the details.
+    Placeholder integration. For now, just print.
     """
     print("📡 hook_to_downtime_app called:")
+    print("   machine_id        :", machine_id)
+    print("   start_time_epoch  :", start_epoch)
+    print("   end_time_epoch    :", end_epoch)
+    print("   turned_on_username:", turned_on_username)
+    print("   turned_off_username:", turned_off_username)
+
+    # also call gfx_run
+    gfx_run(
+        host=DAVE_HOST,
+        user=DAVE_USER,
+        password=DAVE_PASSWORD,
+        db_name=DAVE_DB,
+        machine_id=machine_id,
+        start_epoch=start_epoch,
+        end_epoch=end_epoch,
+        turned_on_username=turned_on_username,
+        turned_off_username=turned_off_username,
+    )
+
+
+def gfx_run(host, user, password, db_name,
+            machine_id, start_epoch, end_epoch,
+            turned_on_username, turned_off_username):
+    """
+    Connects to MySQL and prints the most recent row from GFX_Production.
+    """
+    print("🧪 gfx_run: attempting MySQL connection...")
+
+    try:
+        conn = MySQLdb.connect(
+            host=host,
+            user=user,
+            passwd=password,
+            db=db_name,
+            charset="utf8mb4"
+        )
+        cursor = conn.cursor()
+        print("✅ gfx_run: connected")
+
+        # Try to fetch last row ordered by id (adjust column name if needed)
+        cursor.execute("SELECT * FROM GFxPRoduction ORDER BY id DESC LIMIT 1;")
+        row = cursor.fetchone()
+
+        if row:
+            cols = [desc[0] for desc in cursor.description]
+            print("🧾 gfx_run: last row in GFX_Production:")
+            for col, val in zip(cols, row):
+                print(f"   {col}: {val}")
+        else:
+            print("⚠️ gfx_run: no rows in GFX_Production")
+
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print("❌ gfx_run: DB error ->", repr(e))
+
+    # Log the context we were passed
+    print("🧷 gfx_run context:")
     print("   machine_id        :", machine_id)
     print("   start_time_epoch  :", start_epoch)
     print("   end_time_epoch    :", end_epoch)
