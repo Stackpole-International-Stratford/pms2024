@@ -114,5 +114,7 @@ urlpatterns = [
 
     
     path('heat-toggle/', heat_toggle_view, name='heat_toggle_view'),
+    path('heat/<int:machine_id>/on/', turn_on_heat, name='turn_on_heat'),
+    path('heat/<int:heatbreak_id>/off/', turn_off_heat, name='turn_off_heat'),
 
 ]

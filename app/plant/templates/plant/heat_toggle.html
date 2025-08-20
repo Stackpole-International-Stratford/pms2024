@@ -7,18 +7,18 @@
         {% for line, machines in grouped_data.items %}
             <div class="accordion-item">
                 <h2 class="accordion-header" id="heading-{{ forloop.counter }}">
-                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" 
-                            type="button" 
-                            data-bs-toggle="collapse" 
-                            data-bs-target="#collapse-{{ forloop.counter }}" 
-                            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#collapse-{{ forloop.counter }}"
+                            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
                             aria-controls="collapse-{{ forloop.counter }}">
                         {{ line }}
                     </button>
                 </h2>
-                <div id="collapse-{{ forloop.counter }}" 
-                     class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
-                     aria-labelledby="heading-{{ forloop.counter }}" 
+                <div id="collapse-{{ forloop.counter }}"
+                     class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                     aria-labelledby="heading-{{ forloop.counter }}"
                      data-bs-parent="#linesAccordion">
                     <div class="accordion-body">
                         <div class="table-responsive">
@@ -27,6 +27,8 @@
                                     <tr>
                                         <th>Operation</th>
                                         <th>Machine #</th>
+                                        <th>Duration</th>
+                                        <th>On/Off</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -34,6 +36,31 @@
                                         <tr>
                                             <td>{{ machine.operation }}</td>
                                             <td>{{ machine.machine_number }}</td>
+                                            <td>
+                                                {% for mins in durations %}
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input toggle-radio"
+                                                               type="radio"
+                                                               name="toggle-{{ machine.id }}"
+                                                               id="toggle-{{ machine.id }}-{{ mins }}"
+                                                               value="{{ mins }}"
+                                                               data-machine="{{ machine.id }}">
+                                                        <label class="form-check-label"
+                                                               for="toggle-{{ machine.id }}-{{ mins }}">{{ mins }} min</label>
+                                                    </div>
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input heat-switch"
+                                                           type="checkbox"
+                                                           id="switch-{{ machine.id }}"
+                                                           data-machine="{{ machine.id }}"
+                                                           disabled>
+                                                    <label class="form-check-label"
+                                                           for="switch-{{ machine.id }}">Off/On</label>
+                                                </div>
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -47,4 +74,95 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="offModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="offForm" method="post">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Heat Break End</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>The heat break was between:</p>
+          <div class="mb-3">
+            <label class="form-label">Start Time</label>
+            <input type="datetime-local" class="form-control" name="start_time" id="offStart" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">End Time</label>
+            <input type="datetime-local" class="form-control" name="end_time" id="offEnd">
+          </div>
+          <input type="hidden" name="heatbreak_id" id="heatbreakId">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Enable switch when a duration radio is selected
+    document.querySelectorAll(".toggle-radio").forEach(function (radio) {
+        radio.addEventListener("change", function () {
+            let machineId = this.dataset.machine;
+            let switchElem = document.getElementById("switch-" + machineId);
+            switchElem.removeAttribute("disabled");
+
+            // Create heat break record via AJAX
+            fetch(`/heat/${machineId}/on/`, {
+                method: "POST",
+                headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                body: new URLSearchParams({duration: this.value})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "ok") {
+                    switchElem.dataset.heatbreakId = data.heatbreak_id;
+                    document.getElementById("offStart").value = data.start_time.slice(0,16);
+                }
+            });
+        });
+    });
+
+    // Handle turning OFF (show modal)
+    document.querySelectorAll(".heat-switch").forEach(function (sw) {
+        sw.addEventListener("change", function () {
+            if (!this.checked) {
+                let hbId = this.dataset.heatbreakId;
+                document.getElementById("heatbreakId").value = hbId;
+                document.getElementById("offEnd").value = new Date().toISOString().slice(0,16);
+
+                let modal = new bootstrap.Modal(document.getElementById("offModal"));
+                modal.show();
+            }
+        });
+    });
+
+    // Submit modal form
+    document.getElementById("offForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        let hbId = document.getElementById("heatbreakId").value;
+        let endTime = document.getElementById("offEnd").value;
+
+        fetch(`/heat/${hbId}/off/`, {
+            method: "POST",
+            headers: {"X-CSRFToken": "{{ csrf_token }}"},
+            body: new URLSearchParams({end_time: endTime})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "ok") {
+                bootstrap.Modal.getInstance(document.getElementById("offModal")).hide();
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
