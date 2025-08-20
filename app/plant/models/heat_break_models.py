@@ -1,13 +1,19 @@
 # models.py
 from django.db import models
-from django.conf import settings  # for linking to Django's User model
+from django.conf import settings
 from django.utils import timezone
+
+def unix_now() -> int:
+    # timezone-aware, migration-serializable callable
+    return int(timezone.now().timestamp())
 
 class HeatBreak(models.Model):
     machine = models.ForeignKey("DowntimeMachine", on_delete=models.CASCADE, related_name="heat_breaks")
     duration_minutes = models.PositiveIntegerField()  # 15, 30, 45
-    start_time = models.DateTimeField(default=timezone.now)
-    end_time = models.DateTimeField(null=True, blank=True)
+
+    # epoch fields
+    start_time_epoch = models.BigIntegerField(default=unix_now)
+    end_time_epoch = models.BigIntegerField(null=True, blank=True)
 
     turned_on_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -24,11 +30,16 @@ class HeatBreak(models.Model):
         blank=True,
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at_epoch = models.BigIntegerField(default=unix_now, editable=False)
+    updated_at_epoch = models.BigIntegerField(default=unix_now, editable=False)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at_epoch"]
+
+    def save(self, *args, **kwargs):
+        self.updated_at_epoch = unix_now()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.machine} Heat Break ({self.start_time} - {self.end_time or 'Active'})"
+        end_display = self.end_time_epoch if self.end_time_epoch is not None else "Active"
+        return f"{self.machine} Heat Break ({self.start_time_epoch} - {end_display})"

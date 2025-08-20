@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", function () {
             switchElem.removeAttribute("disabled");
 
             // Create heat break record via AJAX
-            fetch(`/heat/${machineId}/on/`, {
+            fetch(`/plant/heat/${machineId}/on/`, {
                 method: "POST",
                 headers: {"X-CSRFToken": "{{ csrf_token }}"},
                 body: new URLSearchParams({duration: this.value})
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let hbId = document.getElementById("heatbreakId").value;
         let endTime = document.getElementById("offEnd").value;
 
-        fetch(`/heat/${hbId}/off/`, {
+        fetch(`/plant/heat/${hbId}/off/`, {
             method: "POST",
             headers: {"X-CSRFToken": "{{ csrf_token }}"},
             body: new URLSearchParams({end_time: endTime})
