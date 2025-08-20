@@ -9,6 +9,9 @@ def unix_now() -> int:
 
 class HeatBreak(models.Model):
     machine = models.ForeignKey("DowntimeMachine", on_delete=models.CASCADE, related_name="heat_breaks")
+
+    # 🔽 denormalized snapshot of the machine number at the time of the event
+    machine_number = models.CharField(max_length=50, db_index=True, null=True, blank=True)
     duration_minutes = models.PositiveIntegerField()
 
     start_time_epoch = models.BigIntegerField(default=unix_now)

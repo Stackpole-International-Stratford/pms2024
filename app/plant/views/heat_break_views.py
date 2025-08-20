@@ -93,9 +93,10 @@ def turn_on_heat(request, machine_id):
     start_epoch = now_epoch()
     hb = HeatBreak.objects.create(
         machine=machine,
+        machine_number=machine.machine_number,           # ✅ snapshot the machine number
         duration_minutes=duration,
         start_time_epoch=start_epoch,
-        turned_on_by=request.user,
+        turned_on_by_username=request.user.get_username(),  # ✅ username, not FK
     )
     print("✅ Created HeatBreak:", hb.id, "at epoch", hb.start_time_epoch)
 
@@ -115,7 +116,6 @@ def turn_off_heat(request, heatbreak_id):
         print("❌ turn_off_heat invalid request method:", request.method)
         return JsonResponse({"status": "error", "msg": "Invalid request"}, status=400)
 
-    # Only active heatbreaks (no end_time yet)
     hb = get_object_or_404(HeatBreak, pk=heatbreak_id, end_time_epoch__isnull=True)
     print("✅ Found active HeatBreak:", hb.id, "machine:", hb.machine)
 
@@ -124,7 +124,8 @@ def turn_off_heat(request, heatbreak_id):
 
     end_epoch = parse_to_epoch(end_time_raw)
     hb.end_time_epoch = end_epoch
-    hb.turned_off_by = request.user
+    hb.turned_off_by_username = request.user.get_username()  # ✅ username
+    hb.updated_at_epoch = now_epoch()                        # ✅ keep updated_at in sync (unless model auto-updates)
     hb.save()
     print("✅ Updated HeatBreak:", hb.id, "end_time_epoch:", hb.end_time_epoch)
 
@@ -133,3 +134,4 @@ def turn_off_heat(request, heatbreak_id):
         "end_time_epoch": hb.end_time_epoch,
         "end_time_iso": epoch_to_iso(hb.end_time_epoch),
     })
+
