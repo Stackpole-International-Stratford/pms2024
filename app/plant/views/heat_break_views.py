@@ -51,14 +51,27 @@ def parse_to_epoch(value: str | None) -> int:
 def heat_toggle_view(request):
     print("➡️ heat_toggle_view called by:", request.user)
 
-    machines = DowntimeMachine.objects.filter(is_tracked=True).order_by("line", "operation", "machine_number")
+    machines = DowntimeMachine.objects.filter(is_tracked=True)\
+        .order_by("line", "operation", "machine_number")
     print(f"Found {machines.count()} tracked machines")
 
+    # Map active heatbreaks by machine_id
+    active_qs = HeatBreak.objects.filter(machine__in=machines, end_time_epoch__isnull=True)
+    active_by_machine = {
+        hb.machine_id: {
+            "id": hb.id,
+            "duration": hb.duration_minutes,
+            "start_time_iso": epoch_to_iso(hb.start_time_epoch),
+        }
+        for hb in active_qs
+    }
+
+    # Group machines by line and attach active hb metadata to each machine
     grouped_data = {}
-    for machine in machines:
-        if machine.line not in grouped_data:
-            grouped_data[machine.line] = []
-        grouped_data[machine.line].append(machine)
+    for m in machines:
+        # attach for easy access in template
+        m.active_hb = active_by_machine.get(m.id)  # either dict or None
+        grouped_data.setdefault(m.line, []).append(m)
 
     for line, mlist in grouped_data.items():
         print(f"Line {line}: {len(mlist)} machines")

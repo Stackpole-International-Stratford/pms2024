@@ -1,3 +1,4 @@
+{# templates/plant/heat_toggle.html #}
 {% extends "parent.html" %}
 {% block content %}
 <div class="container mt-4">
@@ -27,38 +28,51 @@
                                     <tr>
                                         <th>Operation</th>
                                         <th>Machine #</th>
-                                        <th>Duration</th>
-                                        <th>On/Off</th>
+                                        <th>Heat Break</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for machine in machines %}
-                                        <tr>
+                                        {# Carry the active state as data attributes on the row #}
+                                        <tr
+                                            id="row-{{ machine.id }}"
+                                            data-machine="{{ machine.id }}"
+                                            {% if machine.active_hb %}
+                                                data-active-hb-id="{{ machine.active_hb.id }}"
+                                                data-active-duration="{{ machine.active_hb.duration }}"
+                                                data-start-time-iso="{{ machine.active_hb.start_time_iso }}"
+                                            {% endif %}
+                                            >
+
                                             <td>{{ machine.operation }}</td>
                                             <td>{{ machine.machine_number }}</td>
                                             <td>
-                                                {% for mins in durations %}
+                                                <div class="d-flex flex-wrap align-items-center gap-3">
+                                                    {# "No heat break" default radio #}
                                                     <div class="form-check form-check-inline">
                                                         <input class="form-check-input toggle-radio"
                                                                type="radio"
                                                                name="toggle-{{ machine.id }}"
-                                                               id="toggle-{{ machine.id }}-{{ mins }}"
-                                                               value="{{ mins }}"
+                                                               id="toggle-{{ machine.id }}-none"
+                                                               value="none"
                                                                data-machine="{{ machine.id }}">
                                                         <label class="form-check-label"
-                                                               for="toggle-{{ machine.id }}-{{ mins }}">{{ mins }} min</label>
+                                                               for="toggle-{{ machine.id }}-none">No heat break</label>
                                                     </div>
-                                                {% endfor %}
-                                            </td>
-                                            <td>
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input heat-switch"
-                                                           type="checkbox"
-                                                           id="switch-{{ machine.id }}"
-                                                           data-machine="{{ machine.id }}"
-                                                           disabled>
-                                                    <label class="form-check-label"
-                                                           for="switch-{{ machine.id }}">Off/On</label>
+
+                                                    {# Existing duration radios #}
+                                                    {% for mins in durations %}
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input toggle-radio"
+                                                                   type="radio"
+                                                                   name="toggle-{{ machine.id }}"
+                                                                   id="toggle-{{ machine.id }}-{{ mins }}"
+                                                                   value="{{ mins }}"
+                                                                   data-machine="{{ machine.id }}">
+                                                            <label class="form-check-label"
+                                                                   for="toggle-{{ machine.id }}-{{ mins }}">{{ mins }} min</label>
+                                                        </div>
+                                                    {% endfor %}
                                                 </div>
                                             </td>
                                         </tr>
@@ -96,6 +110,7 @@
             <input type="datetime-local" class="form-control" name="end_time" id="offEnd">
           </div>
           <input type="hidden" name="heatbreak_id" id="heatbreakId">
+          <input type="hidden" id="offMachineId">
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -108,48 +123,93 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Enable switch when a duration radio is selected
-    document.querySelectorAll(".toggle-radio").forEach(function (radio) {
-        radio.addEventListener("change", function () {
-            let machineId = this.dataset.machine;
-            let switchElem = document.getElementById("switch-" + machineId);
-            switchElem.removeAttribute("disabled");
+    const ACTIVE = new Map(); // machineId -> {hbId, startIso, duration}
 
-            // Create heat break record via AJAX
-            fetch(`/plant/heat/${machineId}/on/`, {
-                method: "POST",
-                headers: {"X-CSRFToken": "{{ csrf_token }}"},
-                body: new URLSearchParams({duration: this.value})
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === "ok") {
-                    switchElem.dataset.heatbreakId = data.heatbreak_id;
-                    document.getElementById("offStart").value = data.start_time.slice(0,16);
-                }
-            });
-        });
+    // Initialize radios to reflect server state
+    document.querySelectorAll("tr[id^='row-']").forEach(function (row) {
+        const machineId = row.dataset.machine;
+        const hbId = row.dataset.activeHbId || null;
+        const duration = row.dataset.activeDuration || null;
+        const startIso = row.dataset.startTimeIso || null;
+
+        if (hbId && duration) {
+            ACTIVE.set(machineId, { hbId: hbId, startIso: startIso, duration: duration });
+            const radio = document.getElementById(`toggle-${machineId}-${duration}`);
+            if (radio) radio.checked = true;
+        } else {
+            const radioNone = document.getElementById(`toggle-${machineId}-none`);
+            if (radioNone) radioNone.checked = true;
+        }
     });
 
-    // Handle turning OFF (show modal)
-    document.querySelectorAll(".heat-switch").forEach(function (sw) {
-        sw.addEventListener("change", function () {
-            if (!this.checked) {
-                let hbId = this.dataset.heatbreakId;
-                document.getElementById("heatbreakId").value = hbId;
+    // One handler for all radios
+    document.querySelectorAll(".toggle-radio").forEach(function (radio) {
+        radio.addEventListener("change", function () {
+            const machineId = this.dataset.machine;
+            const val = this.value;
+
+            if (val === "none") {
+                // Turning OFF if an active HB exists
+                const active = ACTIVE.get(machineId);
+                if (!active) {
+                    // Nothing to turn off; just ensure "No heat break" stays selected
+                    return;
+                }
+
+                // Prefill modal
+                document.getElementById("heatbreakId").value = active.hbId;
+                document.getElementById("offMachineId").value = machineId;
+
+                // Start time: use the known start if available; fall back empty
+                if (active.startIso) {
+                    // match <input type="datetime-local"> format (YYYY-MM-DDTHH:MM)
+                    document.getElementById("offStart").value = active.startIso.slice(0,16);
+                } else {
+                    document.getElementById("offStart").value = "";
+                }
+                // End time defaults to "now"
                 document.getElementById("offEnd").value = new Date().toISOString().slice(0,16);
 
-                let modal = new bootstrap.Modal(document.getElementById("offModal"));
+                const modal = new bootstrap.Modal(document.getElementById("offModal"));
                 modal.show();
+            } else {
+                // Turning ON with a specific duration
+                fetch(`/plant/heat/${machineId}/on/`, {
+                    method: "POST",
+                    headers: {"X-CSRFToken": "{{ csrf_token }}"},
+                    body: new URLSearchParams({duration: val})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === "ok") {
+                        ACTIVE.set(machineId, {
+                            hbId: String(data.heatbreak_id),
+                            startIso: data.start_time_iso,
+                            duration: String(val)
+                        });
+                        // Ensure the chosen radio stays selected (idempotent)
+                        const radio = document.getElementById(`toggle-${machineId}-${val}`);
+                        if (radio) radio.checked = true;
+                    } else {
+                        // revert to "No heat break" on error
+                        const radioNone = document.getElementById(`toggle-${machineId}-none`);
+                        if (radioNone) radioNone.checked = true;
+                    }
+                })
+                .catch(() => {
+                    const radioNone = document.getElementById(`toggle-${machineId}-none`);
+                    if (radioNone) radioNone.checked = true;
+                });
             }
         });
     });
 
-    // Submit modal form
+    // Submit OFF modal -> call /off/, then clear local state and flip radio to None
     document.getElementById("offForm").addEventListener("submit", function (e) {
         e.preventDefault();
-        let hbId = document.getElementById("heatbreakId").value;
-        let endTime = document.getElementById("offEnd").value;
+        const hbId = document.getElementById("heatbreakId").value;
+        const machineId = document.getElementById("offMachineId").value;
+        const endTime = document.getElementById("offEnd").value;
 
         fetch(`/plant/heat/${hbId}/off/`, {
             method: "POST",
@@ -159,7 +219,12 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(r => r.json())
         .then(data => {
             if (data.status === "ok") {
+                // Close modal
                 bootstrap.Modal.getInstance(document.getElementById("offModal")).hide();
+                // Clear active state and select "No heat break"
+                ACTIVE.delete(machineId);
+                const radioNone = document.getElementById(`toggle-${machineId}-none`);
+                if (radioNone) radioNone.checked = true;
             }
         });
     });
