@@ -7,6 +7,7 @@ from django.conf import settings
 import MySQLdb
 from plant.models.maintenance_models import *
 from plant.models.heat_break_models import *
+import datetime
 
 
 DAVE_HOST = settings.NEW_HOST
@@ -177,15 +178,20 @@ def log_heatbreak_info(heatbreak_id):
     try:
         hb = HeatBreak.objects.get(pk=heatbreak_id)
 
+        # ⏰ normalize start time to the top of the hour (for display only)
+        dt = datetime.datetime.fromtimestamp(hb.start_time_epoch, tz=datetime.timezone.utc)
+        dt_start_of_hour = dt.replace(minute=0, second=0, microsecond=0)
+        start_epoch_for_display = int(dt_start_of_hour.timestamp())
+
         print("📋 HeatBreak info lookup:")
         print("   ID:", hb.id)
-        print("   Machine number:", hb.machine_number)   # ✅ use denormalized field
-        print("   Started:", epoch_to_iso(hb.start_time_epoch))
+        print("   Machine number:", hb.machine_number)
+        print("   Started:", epoch_to_iso(start_epoch_for_display))
         print("   Ended:", epoch_to_iso(hb.end_time_epoch) if hb.end_time_epoch else "Still active")
+        print("   Duration:", f"{hb.duration_minutes} mins")   # ✅ directly from the table
         print("   Turned on by:", hb.turned_on_by_username)
         print("   Turned off by:", hb.turned_off_by_username)
 
     except HeatBreak.DoesNotExist:
         print("❌ HeatBreak not found for id:", heatbreak_id)
-
 
