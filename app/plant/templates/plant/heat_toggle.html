@@ -3,6 +3,12 @@
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">Heat Breaks Toggle</h1>
+        
+    <!-- Back to app button -->
+    <a href="{% url 'maintenance_all' %}" class="btn btn-warning mb-3">
+      ← Back to app
+    </a>
+
     <p>Toggling heat breaks on and off will automatically generate entries in the downtime app</p>
 
     <div class="accordion" id="linesAccordion">
