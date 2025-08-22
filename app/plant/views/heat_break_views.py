@@ -40,13 +40,13 @@ def hour_range(start_floor_epoch: int, end_epoch: int):
 def now_epoch() -> int:
     return int(timezone.now().timestamp())
 
-def epoch_to_iso(epoch: int | None) -> str | None:
+def epoch_to_iso(epoch):
     if epoch is None:
         return None
     # Render in the current Django timezone
     return timezone.datetime.fromtimestamp(epoch, tz=timezone.get_current_timezone()).isoformat()
 
-def parse_to_epoch(value: str | None) -> int:
+def parse_to_epoch(value):
     """
     Accepts either:
       - epoch (e.g. '1724162400' or '1724162400.123')
