@@ -10,9 +10,18 @@
   <form method="post">
     {% csrf_token %}
     <div class="mb-3">
-      <label class="form-label">Approver Name (who you called)</label>
-      <input type="text" name="approver_name" class="form-control" required>
-    </div>
+        <label class="form-label" for="id_approver_name">Approver Name (who you called)</label>
+        <input type="text" id="id_approver_name" name="approver_name" class="form-control" required>
+
+        <!-- Reference list (non-clickable) -->
+        <div class="mt-2 small text-muted">
+            <div>One of...</div>
+            <div><strong>First try Barb Zaba (Quality Manager)</strong> 647-968-5702</div>
+            <div><strong>Secondly try, Pawel Mlynarski (Engineering Manager)</strong> 519-755-7285</div>
+            <div><strong>Finally try, Dave Milne (Production Manager)</strong> 226-921-5208</div>
+        </div>
+        </div>
+
     <div class="mb-3">
       <label class="form-label">Phone Number (who you called)</label>
       <input type="text" name="approver_phone" class="form-control" required>
