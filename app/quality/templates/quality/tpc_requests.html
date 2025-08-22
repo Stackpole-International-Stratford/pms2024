@@ -74,6 +74,7 @@
 
               <span class="badge text-bg-secondary">{{ t.approvals.count }}/{{ t.required_approvals_count }}</span>
 
+              {# Approver-only official approve button #}
               {% if is_tpc_approver %}
                 {% if not t.user_has_approved %}
                   <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
@@ -85,8 +86,8 @@
                 {% endif %}
               {% endif %}
 
-              {# Show Verbal approval button only if there are no verbals yet #}
-              {% if not t.verbal_approvals.count %}
+              {# Verbal approval button only for non-approvers, and only if no verbals exist yet #}
+              {% if not is_tpc_approver and not t.verbal_approvals.count %}
                 <a href="{% url 'tpc_verbal' t.pk %}"
                   class="btn btn-outline-warning btn-sm py-0 px-1 lh-1"
                   data-row-safe-click>
@@ -95,7 +96,6 @@
               {% endif %}
             {% endif %}
           </td>
-
         <td>
           {% if t.approved %}
             <a href="{% url 'tpc_request_pdf' t.pk %}"
