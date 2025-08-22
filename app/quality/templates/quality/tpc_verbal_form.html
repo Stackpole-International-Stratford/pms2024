@@ -1,0 +1,35 @@
+{% extends "parent.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Verbal Approval for TPC #{{ tpc.pk }}</h3>
+
+  {% if form_error %}
+  <div class="alert alert-danger">{{ form_error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Approver Name (who you called)</label>
+      <input type="text" name="approver_name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Phone Number</label>
+      <input type="text" name="approver_phone" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Response / Conditions</label>
+      <textarea name="approver_response" rows="3" class="form-control" required></textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Approved?</label>
+      <select name="approved" class="form-select" required>
+        <option value="">Select...</option>
+        <option value="true">Yes</option>
+        <option value="">No</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Verbal Approval</button>
+  </form>
+</div>
+{% endblock %}

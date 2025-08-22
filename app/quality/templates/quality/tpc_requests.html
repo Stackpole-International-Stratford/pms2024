@@ -64,11 +64,17 @@
             {% if t.machines %}{{ t.machines|join:", "|truncatechars:15 }}{% else %}—{% endif %}
           </td>
           <td title="{{ t.expiration_date }}">{{ t.expiration_date|truncatechars:15 }}</td>
+
           <td>
             {% if t.approved %}
               <span class="text-success">✅ Fully approved</span>
             {% else %}
+              {% if t.verbal_approvals.count %}
+                <span class="text-warning me-2">⚠️ Verbal approval</span>
+              {% endif %}
+
               <span class="badge text-bg-secondary">{{ t.approvals.count }}/{{ t.required_approvals_count }}</span>
+
               {% if is_tpc_approver %}
                 {% if not t.user_has_approved %}
                   <form action="{% url 'tpc_approve' t.pk %}" method="post" class="d-inline ms-2" data-row-safe-click>
@@ -79,11 +85,20 @@
                   <span class="text-muted ms-2">You’ve approved</span>
                 {% endif %}
               {% endif %}
+
+              <a href="{% url 'tpc_verbal' t.pk %}"
+                class="btn btn-sm btn-outline-warning ms-2"
+                data-row-safe-click>
+                Verbal approval
+              </a>
             {% endif %}
           </td>
+
           <td>
             {% if t.approved %}
-              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" title="View PDF" data-row-safe-click>📄</a>
+              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" title="View official PDF" data-row-safe-click>📄</a>
+            {% elif t.verbal_approvals.count %}
+              <a href="{% url 'tpc_request_pdf' t.pk %}" target="_blank" title="View verbal approval PDF" data-row-safe-click>📄 (verbal)</a>
             {% endif %}
           </td>
         </tr>

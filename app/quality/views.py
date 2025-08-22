@@ -27,7 +27,7 @@ import requests
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from plant.models.email_models import EmailCampaign
-from .models import TPCRequest, TPCApproval 
+from .models import *
 from django.db.models import Exists, OuterRef
 from django.core import serializers
 from django.template.loader import render_to_string
@@ -2034,27 +2034,75 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
 
 
 
-
 @login_required(login_url='/login/')
 def tpc_request_pdf(request, pk):
+    """
+    Generate a PDF for a TPC.
+    - If fully approved (official), render the official PDF.
+    - Else, if at least one verbal approval exists, render the verbal PDF.
+    - Else, forbid access.
+    """
     # Lazy import so the whole site doesn't crash if libs are missing
     from weasyprint import HTML
 
     tpc = (
         TPCRequest.objects
         .select_related("approved_by")
-        .prefetch_related("approvals__user")
+        .prefetch_related("approvals__user", "verbal_approvals")
         .filter(pk=pk)
         .first()
     )
     if not tpc:
         raise Http404("TPC not found")
-    if not tpc.approved:
-        return HttpResponseForbidden("This TPC is not fully approved yet.")
 
-    html = render_to_string("quality/tpc_print.html", {"tpc": tpc}, request=request)
+    # Official PDF
+    if tpc.approved:
+        html = render_to_string("quality/tpc_print.html", {"tpc": tpc}, request=request)
+        filename = f"tpc-{tpc.pk}.pdf"
+
+    else:
+        # Verbal PDF fallback (if any verbal approval exists)
+        verbal = tpc.verbal_approvals.order_by("-created_at").first()
+        if not verbal:
+            return HttpResponseForbidden("This TPC is not approved yet.")
+        html = render_to_string(
+            "quality/tpc_print_verbal.html",
+            {"tpc": tpc, "verbal": verbal},
+            request=request
+        )
+        filename = f"tpc-{tpc.pk}-verbal.pdf"
+
     pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
-
     resp = HttpResponse(pdf, content_type="application/pdf")
-    resp["Content-Disposition"] = f'inline; filename="tpc-{tpc.pk}.pdf"'
+    resp["Content-Disposition"] = f'inline; filename="{filename}"'
     return resp
+
+
+@login_required(login_url='/login/')
+def tpc_request_verbal(request, pk):
+    tpc = get_object_or_404(TPCRequest, pk=pk)
+
+    if request.method == "POST":
+        approver_name = request.POST.get("approver_name", "").strip()
+        approver_phone = request.POST.get("approver_phone", "").strip()
+        approver_response = request.POST.get("approver_response", "").strip()
+        approved = bool(request.POST.get("approved"))
+
+        if not approver_name or not approver_phone or not approver_response:
+            return render(request, "quality/tpc_verbal_form.html", {
+                "tpc": tpc,
+                "form_error": "All fields are required."
+            })
+
+        VerbalApproval.objects.create(
+            tpc=tpc,
+            issuer=request.user,
+            approver_name=approver_name,
+            approver_phone=approver_phone,
+            approver_response=approver_response,
+            approved=approved,
+        )
+
+        return redirect("tpc_request_list")
+
+    return render(request, "quality/tpc_verbal_form.html", {"tpc": tpc})

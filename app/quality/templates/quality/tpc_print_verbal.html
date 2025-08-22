@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TPC #{{ tpc.pk }} – Verbal Approval Print</title>
+<style>
+  /* A4 portrait, zero margins */
+  @page { size: A4; margin: 0; }
+  html, body { height: 100%; margin: 0; padding: 0; }
+  body {
+    background: #fff;
+    font: 12pt system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page layout */
+  .page { height: 297mm; display: flex; }
+  .copy {
+    box-sizing: border-box;
+    border: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    page-break-after: always;
+  }
+
+  /* Header */
+  .hdr { background:#000; color:#fff; padding: 6pt 8pt; }
+  .hdr-ttl { font-weight: 800; font-size: 18pt; text-align:center; line-height: 1.1; }
+  .hdr-num { font-weight: 900; font-size: 22pt; text-align:center; margin-top: 2pt; }
+
+  /* Verbal banner */
+  .verbal-banner {
+    background:#ffd84d;
+    color:#000;
+    text-align:center;
+    font-weight:900;
+    letter-spacing:.02em;
+    padding: 6pt 8pt;
+    border-bottom: 1px solid #000;
+  }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  td { border: 1px solid #000; vertical-align: top; padding: 0; word-wrap: break-word; overflow-wrap: break-word; }
+
+  .cell { padding: 3pt 5pt; }
+  .lbl { color:#b00; font-weight:700; font-size:9pt; margin-bottom: 2pt; }
+  .val { word-break: break-word; white-space: pre-wrap; }
+
+  /* Col widths */
+  .g4 col:nth-child(1) { width: 18%; }
+  .g4 col:nth-child(2) { width: 32%; }
+  .g4 col:nth-child(3) { width: 18%; }
+  .g4 col:nth-child(4) { width: 32%; }
+  .g2 col { width: 50%; }
+
+  /* Row height control */
+  .h-sm td  { height: 12mm; }
+  .h-md td  { height: 30mm; }
+  .h-lg td  { height: 70mm; }
+  .h-md2 td { height: 34mm; }
+  .h-note td{ height: 14mm; }
+
+  /* Banners */
+  .banner { background:#ffd84d; text-align:center; font-weight:700; padding:3pt 0; border-top:1px solid #000; }
+  .notice { background:#ffd84d; text-align:center; font-weight:800; padding:3pt 0; border-top:1px solid #000; letter-spacing:.02em; }
+
+  .muted { font-size:9pt; color:#555; margin-top:2pt; }
+</style>
+</head>
+<body>
+
+  <!-- ===== Copy 1 ===== -->
+  <div class="page">
+    <section class="copy">
+
+      <div class="verbal-banner">
+        VERBAL APPROVAL (TEMPORARY) — Pending formal TPC approver sign-off
+      </div>
+
+      <div class="hdr">
+        <div class="hdr-ttl">Temporary Process Change</div>
+        <div class="hdr-num">TPC #{{ tpc.pk }}</div>
+      </div>
+
+      <!-- Row 1: Date / Issuer / Reason / Expiration -->
+      <table class="g4 h-sm">
+        <colgroup><col><col><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Date</div><div class="val">{{ tpc.date_requested }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Issuer</div><div class="val">{{ tpc.issuer_name|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Reason</div><div class="val">{{ tpc.reason|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Expiration</div><div class="val">{{ tpc.expiration_date|default:"—" }}</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 2: Process / Supplier Issue / Parts / Machines -->
+      <table class="g4 h-sm">
+        <colgroup><col><col><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Process</div><div class="val">{{ tpc.process|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Supplier Issue</div><div class="val">{{ tpc.supplier_issue|yesno:"Yes,No" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Parts</div><div class="val">{% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}</div></div></td>
+          <td><div class="cell"><div class="lbl">Machines</div><div class="val">{% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 3: Reason Note / Feature -->
+      <table class="g2 h-md">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Reason Note</div><div class="val">{{ tpc.reason_note|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Feature</div><div class="val">{{ tpc.feature|default:"—" }}</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 4: Current Process / blank -->
+      <table class="g2 h-lg">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Current Process</div><div class="val">{{ tpc.current_process|default:"—" }}</div></div></td>
+          <td><div class="cell"></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 5: Changed To / blank -->
+      <table class="g2 h-md2">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Changed To</div><div class="val">{{ tpc.changed_to|default:"—" }}</div></div></td>
+          <td><div class="cell"></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 6: Length of Change / Expired notice -->
+      <table class="g2 h-note">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Length of Change</div><div class="val">{{ tpc.expiration_date|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">If Expired Notify Supervisor – Do Not Remove</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Verbal Approval block -->
+      <table class="g2 h-sm">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td colspan="2">
+            <div class="cell">
+              <div class="lbl">Verbal Approval</div>
+              <div class="val">
+                VERBALLY APPROVED BY {{ verbal.approver_name|default:"—" }}
+                AT {{ verbal.created_at|default:"—" }}
+                <br>Phone: {{ verbal.approver_phone|default:"—" }}
+                <br>Response / Conditions: {{ verbal.approver_response|default:"—" }}
+                <br>Status: {% if verbal.approved %}Approved{% else %}Not Approved{% endif %}
+                <div class="muted">This is a temporary authorization pending formal approval by the TPC approver group.</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="banner">Ensure the TPC # is recorded on the Process Sheet</div>
+      <div class="notice">PRINT ON ORANGE PAPER</div>
+    </section>
+  </div>
+
+  <!-- ===== Copy 2 (duplicate) ===== -->
+  <div class="page">
+    <section class="copy">
+
+      <div class="verbal-banner">
+        VERBAL APPROVAL (TEMPORARY) — Pending formal TPC approver sign-off
+      </div>
+
+      <div class="hdr">
+        <div class="hdr-ttl">Temporary Process Change</div>
+        <div class="hdr-num">TPC #{{ tpc.pk }}</div>
+      </div>
+
+      <!-- Row 1: Date / Issuer / Reason / Expiration -->
+      <table class="g4 h-sm">
+        <colgroup><col><col><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Date</div><div class="val">{{ tpc.date_requested }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Issuer</div><div class="val">{{ tpc.issuer_name|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Reason</div><div class="val">{{ tpc.reason|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Expiration</div><div class="val">{{ tpc.expiration_date|default:"—" }}</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 2: Process / Supplier Issue / Parts / Machines -->
+      <table class="g4 h-sm">
+        <colgroup><col><col><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Process</div><div class="val">{{ tpc.process|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Supplier Issue</div><div class="val">{{ tpc.supplier_issue|yesno:"Yes,No" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Parts</div><div class="val">{% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}</div></div></td>
+          <td><div class="cell"><div class="lbl">Machines</div><div class="val">{% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 3: Reason Note / Feature -->
+      <table class="g2 h-md">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Reason Note</div><div class="val">{{ tpc.reason_note|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Feature</div><div class="val">{{ tpc.feature|default:"—" }}</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 4: Current Process / blank -->
+      <table class="g2 h-lg">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Current Process</div><div class="val">{{ tpc.current_process|default:"—" }}</div></div></td>
+          <td><div class="cell"></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 5: Changed To / blank -->
+      <table class="g2 h-md2">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Changed To</div><div class="val">{{ tpc.changed_to|default:"—" }}</div></div></td>
+          <td><div class="cell"></div></td>
+        </tr>
+      </table>
+
+      <!-- Row 6: Length of Change / Expired notice -->
+      <table class="g2 h-note">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td><div class="cell"><div class="lbl">Length of Change</div><div class="val">{{ tpc.expiration_date|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">If Expired Notify Supervisor – Do Not Remove</div></div></td>
+        </tr>
+      </table>
+
+      <!-- Verbal Approval block -->
+      <table class="g2 h-sm">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td colspan="2">
+            <div class="cell">
+              <div class="lbl">Verbal Approval</div>
+              <div class="val">
+                VERBALLY APPROVED BY {{ verbal.approver_name|default:"—" }}
+                AT {{ verbal.created_at|default:"—" }}
+                <br>Phone: {{ verbal.approver_phone|default:"—" }}
+                <br>Response / Conditions: {{ verbal.approver_response|default:"—" }}
+                <br>Status: {% if verbal.approved %}Approved{% else %}Not Approved{% endif %}
+                <div class="muted">This is a temporary authorization pending formal approval by the TPC approver group.</div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="banner">Ensure the TPC # is recorded on the Process Sheet</div>
+      <div class="notice">PRINT ON ORANGE PAPER</div>
+    </section>
+  </div>
+
+</body>
+</html>

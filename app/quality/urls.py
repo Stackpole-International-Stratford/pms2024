@@ -77,5 +77,6 @@ urlpatterns = [
 
     path("tpc-requests/<int:pk>/edit/", tpc_request_edit, name="tpc_request_edit"),
 
+    path("tpc-requests/<int:pk>/verbal/", tpc_request_verbal, name="tpc_verbal"),
 
 ]
