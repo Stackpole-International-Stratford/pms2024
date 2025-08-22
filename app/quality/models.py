@@ -280,18 +280,18 @@ class ScrapSubmission(models.Model):
 class TPCRequest(models.Model):
     date_requested   = models.DateField(default=timezone.now)
     issuer_name      = models.CharField(max_length=120)
-    parts = models.JSONField(default=list)  # store list of part_numbers
+    parts            = models.JSONField(default=list)
     reason           = models.CharField(max_length=200)
     process          = models.CharField(max_length=120)
     supplier_issue   = models.BooleanField(default=False)
-    machines = models.JSONField(default=list)  # store list of asset_numbers
+    machines         = models.JSONField(default=list)
     reason_note      = models.TextField(blank=True)
     feature          = models.CharField(max_length=120, blank=True)
     current_process  = models.TextField(blank=True)
     changed_to       = models.TextField(blank=True)
     expiration_date  = models.DateTimeField()
 
-    # legacy fields kept working (final approver + timestamp when fully approved)
+    # approvals
     approved         = models.BooleanField(default=False)
     approved_by      = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -301,6 +301,9 @@ class TPCRequest(models.Model):
     )
     approved_at      = models.DateTimeField(null=True, blank=True)
 
+    # NEW: soft-delete flag
+    rejected         = models.BooleanField(default=False, db_index=True)
+
     class Meta:
         ordering = ["-date_requested"]
 
@@ -308,7 +311,6 @@ class TPCRequest(models.Model):
         return f"TPC #{self.pk} – {self.issuer_name} on {self.date_requested}"
 
     def approver_queryset(self):
-        """All active users who must approve (members of 'tpc_approvers')."""
         return User.objects.filter(is_active=True, groups__name="tpc_approvers").distinct()
 
     def approvals_count(self):
@@ -321,23 +323,18 @@ class TPCRequest(models.Model):
         return self.approvals.filter(user=user).exists()
 
     def approve(self, user):
-        """
-        Record user's approval. When everyone in 'tpc_approvers' has approved,
-        mark the TPC as fully approved.
-        """
+        if self.rejected:
+            raise PermissionError("This TPC has been rejected and cannot be approved.")
         if not user.groups.filter(name="tpc_approvers").exists():
             raise PermissionError("User is not allowed to approve TPCs.")
 
-        # create per-user approval if not already present
         TPCApproval.objects.get_or_create(tpc=self, user=user)
 
-        # if everyone required has approved, flip the final flags
         if self.approvals_count() >= self.required_approvals_count() and self.required_approvals_count() > 0:
             self.approved = True
-            self.approved_by = user       # last approver
+            self.approved_by = user
             self.approved_at = timezone.now()
             self.save(update_fields=["approved", "approved_by", "approved_at"])
-
 
 class TPCApproval(models.Model):
     tpc = models.ForeignKey(TPCRequest, related_name="approvals", on_delete=models.CASCADE)

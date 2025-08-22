@@ -79,4 +79,7 @@ urlpatterns = [
 
     path("tpc-requests/<int:pk>/verbal/", tpc_request_verbal, name="tpc_verbal"),
 
+    path("tpc-requests/<int:pk>/reject/", tpc_request_reject, name="tpc_reject"),
+
+
 ]

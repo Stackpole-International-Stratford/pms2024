@@ -1512,38 +1512,28 @@ def get_categories(request):
 # =====================================================================
 # =====================================================================
 
-
-
 @login_required(login_url='/login/')
 def tpc_request(request):
     page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
-    # DEBUG PRINTS
-    print("DEBUG: Logged in user:", request.user.username)
-    print("DEBUG: Groups for user:", list(request.user.groups.values_list("name", flat=True)))
-    print("DEBUG: Is TPC Approver?", is_tpc_approver)
-
     tpcs = (
         TPCRequest.objects
+        .filter(rejected=False)                      # hide soft-rejected
         .order_by('-id')
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
             )
         )
-        .prefetch_related("approvals")[:page_size]
+        .prefetch_related("approvals", "verbal_approvals")[:page_size]
     )
 
-    return render(
-        request,
-        "quality/tpc_requests.html",
-        {
-            "tpcs": tpcs,
-            "is_tpc_approver": is_tpc_approver,
-            "tpc_page_size": settings.TPC_PAGE_SIZE
-        },
-    )
+    return render(request, "quality/tpc_requests.html", {
+        "tpcs": tpcs,
+        "is_tpc_approver": is_tpc_approver,         # approvers can also reject
+        "tpc_page_size": settings.TPC_PAGE_SIZE,
+    })
 
 
 
@@ -1559,21 +1549,26 @@ def tpc_request_load_more(request):
 
     tpc_qs = (
         TPCRequest.objects
+        .filter(rejected=False)
         .order_by('-date_requested')
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
             )
         )
-        .prefetch_related("approvals")[offset:offset + page_size + 1]
+        .prefetch_related("approvals", "verbal_approvals")[offset:offset + page_size + 1]
     )
 
     tpcs = list(tpc_qs[:page_size])
     has_more = len(tpc_qs) > page_size
 
-    data = []
+    build_abs = request.build_absolute_uri
+    rows = []
     for t in tpcs:
-        data.append({
+        has_verbal = t.verbal_approvals.all().exists()
+        pdf_url = build_abs(f"/quality/tpc/{t.pk}/pdf/") if (t.approved or has_verbal) else None
+
+        rows.append({
             "pk": t.pk,
             "date_requested": t.date_requested.strftime("%Y-%m-%d %H:%M"),
             "issuer_name": t.issuer_name,
@@ -1584,19 +1579,20 @@ def tpc_request_load_more(request):
             "machines": ", ".join(t.machines) if t.machines else "—",
             "expiration_date": t.expiration_date.strftime("%Y-%m-%d %H:%M"),
             "approved": t.approved,
+            "has_verbal": has_verbal,
             "approvals_got": t.approvals.count(),
             "approvals_req": t.required_approvals_count(),
-            "approvers": ", ".join(
-                a.user.get_full_name() or a.user.username
-                for a in t.approvals.all()
-            ) or "—",
+            "approvers": ", ".join(a.user.get_full_name() or a.user.username for a in t.approvals.all()) or "—",
             "user_has_approved": t.user_has_approved,
-            "pdf_url": tpc_request_pdf and request.build_absolute_uri(
-                f"/quality/tpc/{t.pk}/pdf/"
-            ) if t.approved else None
+            "pdf_url": pdf_url,
         })
 
-    return JsonResponse({"rows": data, "has_more": has_more, "is_tpc_approver": is_tpc_approver})
+    return JsonResponse({
+        "rows": rows,
+        "has_more": has_more,
+        "is_tpc_approver": is_tpc_approver,   # frontend uses this for approve+reject visibility
+    })
+
 
 
 
@@ -2107,3 +2103,30 @@ def tpc_request_verbal(request, pk):
         return redirect("tpc_request_list")
 
     return render(request, "quality/tpc_verbal_form.html", {"tpc": tpc})
+
+
+
+
+@login_required(login_url='/login/')
+def tpc_request_reject(request, pk):
+    """
+    Soft-reject a TPC: mark rejected=True.
+    Only members of 'tpc_approvers'. Not allowed once approved.
+    """
+    if request.method != "POST":
+        return redirect("tpc_request_list")
+
+    if not request.user.groups.filter(name="tpc_approvers").exists():
+        return HttpResponseForbidden("You do not have permission to reject TPCs.")
+
+    tpc = get_object_or_404(TPCRequest, pk=pk, rejected=False)
+
+    if tpc.approved:
+        # Optional: message framework if you use it
+        return redirect("tpc_request_list")
+
+    tpc.rejected = True
+    tpc.save(update_fields=["rejected"])
+    return redirect("tpc_request_list")
+
+
