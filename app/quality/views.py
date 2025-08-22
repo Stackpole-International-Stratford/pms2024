@@ -2097,6 +2097,7 @@ def tpc_request_verbal(request, pk):
         VerbalApproval.objects.create(
             tpc=tpc,
             issuer=request.user,
+            issuer_username=request.user.get_username(),  # NEW
             approver_name=approver_name,
             approver_phone=approver_phone,
             approver_response=approver_response,

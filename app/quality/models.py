@@ -351,14 +351,18 @@ class TPCApproval(models.Model):
         return f"Approval: TPC #{self.tpc_id} by {self.user}"
 
 
+# models.py
 class VerbalApproval(models.Model):
     tpc = models.ForeignKey(TPCRequest, related_name="verbal_approvals", on_delete=models.CASCADE)
     issuer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  # who logged it
-    approver_name = models.CharField(max_length=200)  # name they phoned
+    issuer_username = models.CharField(max_length=150, db_index=True)  # NEW: denormalized username
+
+    approver_name = models.CharField(max_length=200)
     approver_phone = models.CharField(max_length=50)
-    approver_response = models.TextField()  # what the approver said, conditions etc.
+    approver_response = models.TextField()
     approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"VerbalApproval for TPC #{self.tpc_id} by {self.approver_name}"
+
