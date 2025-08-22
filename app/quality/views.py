@@ -1679,6 +1679,13 @@ def tpc_request_create(request):
         except Exception as e:
             print("Error creating TPCRequest:", e)
             raise
+        else:
+            # Send the “TPC Request Initiated” broadcast after commit (safe if not in an atomic block too)
+            try:
+                transaction.on_commit(lambda: send_tpc_initiated_email(tpc.pk))
+            except Exception as e:
+                # Never break the user flow if email fails
+                print(f"[ERROR] Could not queue 'TPC Request Initiated' email: {e}")
 
         return redirect("tpc_request_list")
 
@@ -1825,6 +1832,189 @@ def tpc_request_approve(request, pk):
     return redirect("tpc_request_list")
 
 
+
+def _render_tpc_initiated_html(tpc) -> str:
+    def join_list(val):
+        return ", ".join(val) if val else "—"
+
+    local_exp = timezone.localtime(tpc.expiration_date) if timezone.is_aware(tpc.expiration_date) else tpc.expiration_date
+    approver_names = [a.user.get_full_name() or a.user.username for a in tpc.approvals.all()]
+    approvals_block = ", ".join(approver_names) if approver_names else "—"
+    supplier_issue = "Yes" if tpc.supplier_issue else "No"
+
+    # App links (adjust base to your env or pull from settings)
+    open_url = f"http://10.4.1.234/quality/tpc-requests/{tpc.pk}/edit/"
+
+    return f"""
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
+      <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+
+        <!-- Banner -->
+        <div style="background-color:#ffd84d; text-align:center; padding:10px;">
+          <a href="{open_url}" target="_blank" style="font-weight:bold; color:#004085; text-decoration:none; font-size:15px;">
+            🔔 TPC #{tpc.pk} created — approval required (Open in app)
+          </a>
+        </div>
+
+        <!-- Header -->
+        <div style="background-color:#000; color:#fff; padding:16px 20px; text-align:center;">
+          <h2 style="margin:0; font-size:22px;">Temporary Process Change</h2>
+          <div style="font-size:26px; font-weight:700; margin-top:5px;">TPC #{tpc.pk}</div>
+          <p style="margin:6px 0 0; font-size:14px; opacity:0.85;">
+            Issued by {tpc.issuer_name or '—'} &middot; {tpc.date_requested}
+          </p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:20px;">
+          <p style="margin-top:0; font-size:15px;">
+            A new Temporary Process Change request has been initiated and now requires approval from the TPC approvers group.
+          </p>
+
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <tbody>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
+                <td style="padding:8px;">{tpc.pk}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Date Requested</td>
+                <td style="padding:8px;">{tpc.date_requested}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Parts</td>
+                <td style="padding:8px;">{join_list(tpc.parts)}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Reason</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Process</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
+                <td style="padding:8px;">{supplier_issue}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Machines</td>
+                <td style="padding:8px;">{join_list(tpc.machines)}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Feature</td>
+                <td style="padding:8px;">{tpc.feature or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Current Process</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Changed To</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Expiration</td>
+                <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Approvals (so far)</td>
+                <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Status</td>
+                <td style="padding:8px;">Pending approvals</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p style="margin-top:20px; font-size:13px; color:#666;">
+            This message was sent automatically when the TPC was created. Approvers can open the TPC in the app to review and approve.
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+
+
+def send_tpc_initiated_email(tpc_pk: int) -> None:
+    """
+    Broadcast “TPC Request Initiated” when a TPC is created.
+    Uses EmailCampaign named exactly 'TPC Request Initiated'.
+    """
+    from .models import TPCRequest  # keep imports local
+
+    print(f"[DEBUG] Preparing INITIATED broadcast email for TPC #{tpc_pk}")
+
+    try:
+        tpc = (
+            TPCRequest.objects
+            .select_related("approved_by")
+            .prefetch_related("approvals__user")
+            .get(pk=tpc_pk)
+        )
+    except TPCRequest.DoesNotExist:
+        print(f"[ERROR] TPC #{tpc_pk} does not exist.")
+        return
+
+    # Load campaign + recipients
+    try:
+        campaign = (
+            EmailCampaign.objects
+            .filter(name="TPC Request Initiated")
+            .prefetch_related("recipients")
+            .first()
+        )
+    except Exception as e:
+        print(f"[ERROR] Could not fetch EmailCampaign: {e}")
+        return
+
+    if not campaign:
+        print("[ERROR] Campaign 'TPC Request Initiated' not found.")
+        return
+
+    recips_emails = [r.email for r in campaign.recipients.all()]
+    if not recips_emails:
+        print("[ERROR] No recipients in 'TPC Request Initiated' campaign.")
+        return
+
+    print(f"[DEBUG] Found {len(recips_emails)} recipient emails for INITIATED: {recips_emails}")
+
+    subject = f"TPC #{tpc.pk} initiated – {tpc.issuer_name} – {tpc.date_requested:%Y-%m-%d} (approval required)"
+    html_body = _render_tpc_initiated_html(tpc)
+    text_body = strip_tags(html_body)
+
+    print(f"[DEBUG] INITIATED subject: {subject}")
+    print(f"[DEBUG] INITIATED HTML length: {len(html_body)}")
+    print(f"[DEBUG] INITIATED Text length: {len(text_body)}")
+
+    payload = {
+        "subject": subject,
+        "html": html_body,
+        "recipients": recips_emails,  # matches your Flask emailer contract
+        "text": text_body,
+    }
+
+    url = getattr(settings, "FLASK_EMAILER_URL", None)
+    if not url:
+        print("[ERROR] FLASK_EMAILER_URL not configured in settings.")
+        return
+
+    print(f"[DEBUG] Sending INITIATED POST to {url}")
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"[DEBUG] INITIATED HTTP status: {resp.status_code}")
+        print(f"[DEBUG] INITIATED response: {resp.text}")
+        if resp.status_code >= 400:
+            print(f"[ERROR] INITIATED emailer returned error: {resp.status_code} {resp.text}")
+        else:
+            print(f"[SUCCESS] INITIATED email for TPC #{tpc.pk} sent to {len(recips_emails)} recipients.")
+    except Exception as e:
+        print(f"[ERROR] Exception sending INITIATED email: {e}")
+
+
+
+
 def _render_tpc_html(tpc) -> str:
     def join_list(val):
         if not val:
@@ -1940,7 +2130,7 @@ def _render_tpc_html(tpc) -> str:
 
 def send_tpc_broadcast_email(tpc_pk: int) -> None:
     """
-    Fetch recipients from the 'TPC Email' campaign and send the email via Flask.
+    Fetch recipients from the 'TPC Approved Email' campaign and send the email via Flask.
     Prints detailed debug info at every step.
     """
     from .models import TPCRequest  # avoid circular import
@@ -1961,7 +2151,7 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
     try:
         campaign = (
             EmailCampaign.objects
-            .filter(name="TPC Email")
+            .filter(name="TPC Approved Email")
             .prefetch_related("recipients")
             .first()
         )
@@ -1970,13 +2160,13 @@ def send_tpc_broadcast_email(tpc_pk: int) -> None:
         return
 
     if not campaign:
-        print("[ERROR] Campaign 'TPC Email' not found.")
+        print("[ERROR] Campaign 'TPC Approved Email' not found.")
         return
 
     # Flask expects a list of strings for 'recipients'
     recips_emails = [r.email for r in campaign.recipients.all()]
     if not recips_emails:
-        print("[ERROR] No recipients in 'TPC Email' campaign.")
+        print("[ERROR] No recipients in 'TPC Approved Email' campaign.")
         return
 
     print(f"[DEBUG] Found {len(recips_emails)} recipient emails: {recips_emails}")
