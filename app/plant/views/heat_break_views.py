@@ -108,7 +108,6 @@ def heat_toggle_view(request):
         "grouped_data": grouped_data,
         "durations": [15, 30, 45],
     }
-    print("✅ Context prepared for template")
     return render(request, "plant/heat_toggle.html", context)
 
 
@@ -259,7 +258,6 @@ def create_heatbreak_downtime_rows(heatbreak_id: int):
     )
 
     to_create = []
-    print("🧮 Building downtime rows…")
     for row_start, row_end in candidate_pairs:
         # per spec: always hour_start + duration
         # skip if an identical row already exists (idempotency)
@@ -290,7 +288,6 @@ def create_heatbreak_downtime_rows(heatbreak_id: int):
     with transaction.atomic():
         MachineDowntimeEvent.objects.bulk_create(to_create, ignore_conflicts=False)
 
-    print(f"✅ Inserted {len(to_create)} MachineDowntimeEvent row(s):")
     for evt in to_create:
         s = timezone.datetime.fromtimestamp(evt.start_epoch, tz=tz).isoformat()
         e = timezone.datetime.fromtimestamp(evt.closeout_epoch, tz=tz).isoformat()

@@ -216,7 +216,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ACTIVE.set(machineId, { hbId, startIso, duration });
       PREV_CHECKED.set(machineId, true);
       if (cb) cb.checked = true;
-      // ensure status text shows the duration
       setStatusBadge(machineId, true, duration);
     } else {
       PREV_CHECKED.set(machineId, false);
@@ -268,31 +267,51 @@ document.addEventListener("DOMContentLoaded", () => {
         const offEnd = document.getElementById("offEnd");
         const offPayloadJson = document.getElementById("offPayloadJson");
 
-        // prepare modal defaults
         offCount.textContent = String(toTurnOff.length);
+
         const now = new Date();
         const nowLocalStr = formatForDatetimeLocal(now);
         offEnd.value = nowLocalStr;
         offEnd.max = nowLocalStr; // prevent future end times
+
+        // >>> NEW: compute the latest (max) start among selected OFF machines and enforce as min <<<
+        const startDates = toTurnOff
+          .map(id => ACTIVE.get(id)?.startIso)
+          .filter(Boolean)
+          .map(iso => new Date(iso));
+        let latestStart = null;
+        if (startDates.length > 0) {
+          latestStart = new Date(Math.max(...startDates.map(d => d.getTime())));
+          offEnd.min = formatForDatetimeLocal(latestStart);
+        } else {
+          // Fallback: no known starts (shouldn't happen). Don't allow past.
+          offEnd.min = ""; // no min restriction beyond future cap
+        }
+
         setEndInvalid(false, "");
 
         offEnd.oninput = function () {
           const end = new Date(offEnd.value);
           const nowDt = new Date();
+
           if (end > nowDt) {
             setEndInvalid(true, "End time cannot be in the future.");
+          } else if (latestStart && end < latestStart) {
+            const msg = `End time cannot be before the start time (${formatForDatetimeLocal(latestStart)}).`;
+            setEndInvalid(true, msg);
           } else {
             setEndInvalid(false, "");
           }
         };
 
-        // stash payload
+        // stash payload, including the min allowed start for server-side safety if needed later
         offPayloadJson.value = JSON.stringify({
           lineIndex,
           lineName,
           toTurnOn,
           toTurnOff,
-          duration: chosenDuration
+          duration: chosenDuration,
+          minAllowedStartIso: latestStart ? latestStart.toISOString() : null
         });
 
         new bootstrap.Modal(modalEl).show();
@@ -313,10 +332,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const offPayloadJson = document.getElementById("offPayloadJson")?.value || "{}";
         const payload = JSON.parse(offPayloadJson);
         const offEndStr = document.getElementById("offEnd")?.value;
+
         const endDate = new Date(offEndStr);
         const nowDt = new Date();
+        const minAllowed = payload.minAllowedStartIso ? new Date(payload.minAllowedStartIso) : null;
+
         if (endDate > nowDt) {
           setEndInvalid(true, "End time cannot be in the future.");
+          return;
+        }
+        if (minAllowed && endDate < minAllowed) {
+          const msg = `End time cannot be before the start time (${formatForDatetimeLocal(minAllowed)}).`;
+          setEndInvalid(true, msg);
           return;
         }
         setEndInvalid(false, "");
@@ -391,18 +418,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch(() => ({ machineId, ok: false }));
     });
 
-    const results = await Promise.all([...onPromises, ...offPromises]);
+    await Promise.all([...onPromises, ...offPromises]);
 
     // Update checkboxes to reflect PREV_CHECKED (source of truth after ops)
     document.querySelectorAll(`.machine-checkbox[data-line-index="${lineIndex}"]`).forEach(cb => {
       const machineId = cb.dataset.machine;
       cb.checked = PREV_CHECKED.get(machineId) === true;
     });
-
-    return results;
   }
 });
 </script>
+
 
 
 {% endblock %}
