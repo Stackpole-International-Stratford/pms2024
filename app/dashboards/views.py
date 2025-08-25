@@ -4024,53 +4024,38 @@ def get_stale_ping_entries_dashboards():
 def send_all_dashboards(request, pwd):
     """
     Renders dashboards for the four programs, stitches them into a single
-    email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
+    email to Tyler — now with a Stale-Machines table and BOTH ProdMon ping sections
+    (New: prodmon_status) and (Legacy: prodmon_ping).
     """
     if pwd != "1352":
         # pretend it doesn’t exist
         raise Http404()
-    # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
-    stale_html = render_stale_machines_table(60, 7)
 
-    # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
-    stale_pings = get_stale_ping_entries()
-    if not stale_pings:
-        ping_html = """
-            <h2 style="font-family:Arial,sans-serif;
-                       margin:16px 0 8px;
-                       border-bottom:1px solid #444;
-                       padding-bottom:4px;">
-              ProdMon Ping Status
-            </h2>
-            <p style="font-family:Arial,sans-serif;
-                      margin:8px 0;
-                      color:#155724;
-                      background:#d4edda;
-                      padding:10px;
-                      border:1px solid #c3e6cb;
-                      border-radius:4px;">
-              All assets have pinged within the last 15 minutes.
-            </p>
-        """
-    else:
-        rows = "".join(f"""
+    # Small helper to render a ping-section (table or green notice)
+    def _render_ping_section_html(section_title, entries):
+        if not entries:
+            return f"""
+                <h3 style="font-family:Arial,sans-serif;margin:12px 0 6px;">{section_title}</h3>
+                <p style="font-family:Arial,sans-serif;
+                          margin:8px 0;
+                          color:#155724;
+                          background:#d4edda;
+                          padding:10px;
+                          border:1px solid #c3e6cb;
+                          border-radius:4px;">
+                  All assets have pinged within the last 15 minutes.
+                </p>
+            """
+        rows_html = "".join(f"""
             <tr>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
             </tr>
-        """ for e in stale_pings)
-        ping_html = f"""
-            <h2 style="font-family:Arial,sans-serif;
-                       margin:16px 0 8px;
-                       border-bottom:1px solid #444;
-                       padding-bottom:4px;">
-              ProdMon Ping Status
-            </h2>
-            <table style="font-family:Arial,sans-serif;
-                          border-collapse:collapse;
-                          width:100%;
-                          margin-bottom:16px;">
+        """ for e in entries)
+        return f"""
+            <h3 style="font-family:Arial,sans-serif;margin:12px 0 6px;">{section_title}</h3>
+            <table style="font-family:Arial,sans-serif;border-collapse:collapse;width:100%;margin-bottom:16px;">
               <thead>
                 <tr style="background:#343a40;color:#fff;">
                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Asset</th>
@@ -4079,10 +4064,28 @@ def send_all_dashboards(request, pwd):
                 </tr>
               </thead>
               <tbody>
-                {rows}
+                {rows_html}
               </tbody>
             </table>
         """
+
+    # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
+    stale_html = render_stale_machines_table(60, 7)
+
+    # ── B) PROD-MON PING STATUS (both NEW and LEGACY) ───────────────────────
+    stale_pings_new    = get_stale_ping_entries_dashboards()  # NEW: prodmon_status
+    stale_pings_legacy = get_stale_ping_entries()             # LEGACY: prodmon_ping
+
+    ping_html = f"""
+        <h2 style="font-family:Arial,sans-serif;
+                   margin:16px 0 8px;
+                   border-bottom:1px solid #444;
+                   padding-bottom:4px;">
+          ProdMon Ping Status
+        </h2>
+        {_render_ping_section_html("New (prodmon_status)", stale_pings_new)}
+        {_render_ping_section_html("Legacy (prodmon_ping)", stale_pings_legacy)}
+    """
 
     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
     programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
@@ -4135,6 +4138,7 @@ def send_all_dashboards(request, pwd):
         .values_list("email", flat=True)
     )
 
+    # TEMP override (as in your original)
     to_emails = ["tyler.careless@johnsonelectric.com"]
 
     if not to_emails:
@@ -4143,7 +4147,7 @@ def send_all_dashboards(request, pwd):
     msg = EmailMessage(
         subject=subject,
         body=full_html,
-        to=to_emails,      # ← now dynamic!
+        to=to_emails,
     )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)
