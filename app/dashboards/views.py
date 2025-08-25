@@ -3960,75 +3960,117 @@ def dashboard_current_shift_email(request, pages: str):
 #     return HttpResponse("All dashboards emailed ✅")
 
 
-def get_stale_ping_entries_dashboards():
+def get_stale_ping_entries_old():
     """
-    Fetch assets from the prodmon_status table whose last ping was over 15 minutes ago.
-    Returns a list of dicts with keys: asset_name, last_ping_time (EST), time_since_ping.
+    Legacy: prodmon_ping
+    Returns [{asset_name, last_ping_time, time_since_ping}] for assets whose latest ping >15 min ago.
     """
     try:
-        # Define the relative path to settings.py
-        settings_path = os.path.join(
-            os.path.dirname(__file__), '../../pms/settings.py'
-        )
-
-        # Dynamically import settings.py
+        # settings import
+        settings_path = os.path.join(os.path.dirname(__file__), '../../pms/settings.py')
         spec = importlib.util.spec_from_file_location("settings", settings_path)
         settings = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(settings)
-
-        # Access get_db_connection from settings
         get_db_connection = settings.get_db_connection
 
-        # Establish database connection
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        # DB
+        conn = get_db_connection()
+        cur = conn.cursor()
 
-        # Calculate the threshold time (15 minutes ago) in UTC
-        threshold_dt_utc = datetime.utcnow() - timedelta(minutes=15)
-        threshold_unix = int(threshold_dt_utc.timestamp())
+        # 15-minute UNIX threshold (UTC)
+        now_utc = datetime.utcnow()
+        threshold_unix = int((now_utc - timedelta(minutes=15)).timestamp())
 
-        # Pull the latest ping per asset from prodmon_status.
-        # (GROUP BY in case multiple rows exist for an asset; MAX(timestamp_last) is the latest.)
-        query = """
+        # Latest ping per Name, filtered by HAVING (stale)
+        # NOTE: Timestamp is stored as epoch seconds (DOUBLE). We compare numerically.
+        sql = """
+            SELECT Name, MAX(Timestamp) AS last_ping
+            FROM prodmon_ping
+            GROUP BY Name
+            HAVING last_ping <= %s
+            ORDER BY last_ping ASC
+        """
+        cur.execute(sql, (threshold_unix,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        est = pytz.timezone('America/New_York')
+        now_est = datetime.now(pytz.utc).astimezone(est)
+
+        out = []
+        for name, last_ts in rows:
+            if last_ts is None:
+                continue
+            # robust to DOUBLE/Decimal/str
+            last_epoch = float(last_ts)
+            last_dt_est = datetime.fromtimestamp(last_epoch, tz=pytz.utc).astimezone(est)
+            out.append({
+                "asset_name": str(name).strip(),
+                "last_ping_time": last_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
+                "time_since_ping": str(now_est - last_dt_est).split('.')[0],
+            })
+
+        return out
+
+    except Exception as e:
+        print(f"Error (legacy ping): {e}")
+        return []
+
+def get_stale_ping_entries_dashboards():
+    """
+    New: prodmon_status
+    Returns [{asset_name, last_ping_time, time_since_ping}] for assets whose latest ping >15 min ago.
+    """
+    try:
+        # settings import
+        settings_path = os.path.join(os.path.dirname(__file__), '../../pms/settings.py')
+        spec = importlib.util.spec_from_file_location("settings", settings_path)
+        settings = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(settings)
+        get_db_connection = settings.get_db_connection
+
+        # DB
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 15-minute UNIX threshold (UTC)
+        now_utc = datetime.utcnow()
+        threshold_unix = int((now_utc - timedelta(minutes=15)).timestamp())
+
+        # Latest ping per asset, filtered by HAVING (stale)
+        # timestamp_last is INT epoch seconds.
+        sql = """
             SELECT asset, MAX(timestamp_last) AS last_ping
             FROM prodmon_status
             GROUP BY asset
-            ORDER BY last_ping DESC
+            HAVING last_ping <= %s
+            ORDER BY last_ping ASC
         """
-        cursor.execute(query)
-        results = cursor.fetchall()
+        cur.execute(sql, (threshold_unix,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
 
-        # Close the connection
-        cursor.close()
-        connection.close()
-
-        # Process results: filter entries older than 15 minutes
-        est = pytz.timezone('US/Eastern')  # EST/EDT as per original
+        est = pytz.timezone('America/New_York')
         now_est = datetime.now(pytz.utc).astimezone(est)
 
-        stale_entries = []
-        for row in results:
-            asset = row[0]
-            last_ts = row[1]
-
+        out = []
+        for asset, last_ts in rows:
             if last_ts is None:
-                continue  # defensive: skip if no timestamp
+                continue
+            last_epoch = int(last_ts)
+            last_dt_est = datetime.fromtimestamp(last_epoch, tz=pytz.utc).astimezone(est)
+            out.append({
+                "asset_name": str(asset).strip(),  # keep key name for compatibility
+                "last_ping_time": last_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
+                "time_since_ping": str(now_est - last_dt_est).split('.')[0],
+            })
 
-            # Only include entries older than 15 minutes
-            if last_ts <= threshold_unix:
-                last_ping_dt_est = datetime.fromtimestamp(last_ts, tz=pytz.utc).astimezone(est)
-                time_since_ping = now_est - last_ping_dt_est
-
-                stale_entries.append({
-                    "asset_name": str(asset),  # keep key name for downstream compatibility
-                    "last_ping_time": last_ping_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
-                    "time_since_ping": str(time_since_ping).split('.')[0],  # strip microseconds
-                })
-
-        return stale_entries
+        return out
 
     except Exception as e:
-        print(f"An error occurred while fetching stale ping entries: {e}")
+        print(f"Error (new ping): {e}")
         return []
 
 
@@ -4036,7 +4078,7 @@ def get_stale_ping_entries_dashboards():
 def send_all_dashboards(request, pwd):
     """
     Renders dashboards for the programs, stitches them into a single
-    email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
+    email to Tyler — now with a Stale-Machines table above TWO ProdMon ping sections (old & new) and dashboards.
     """
     if pwd != "1352":
         # pretend it doesn’t exist
@@ -4045,27 +4087,26 @@ def send_all_dashboards(request, pwd):
     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
     stale_html = render_stale_machines_table(60, 7)
 
-    # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
-    stale_pings = get_stale_ping_entries_dashboards()
-    if not stale_pings:
-        ping_html = """
-            <h2 style="font-family:Arial,sans-serif;
-                       margin:16px 0 8px;
-                       border-bottom:1px solid #444;
-                       padding-bottom:4px;">
-              ProdMon Ping Status
-            </h2>
-            <p style="font-family:Arial,sans-serif;
-                      margin:8px 0;
-                      color:#155724;
-                      background:#d4edda;
-                      padding:10px;
-                      border:1px solid #c3e6cb;
-                      border-radius:4px;">
-              All assets have pinged within the last 15 minutes.
-            </p>
-        """
-    else:
+    # ── B) PROD-MON PING STATUS (OLD + NEW) ─────────────────────────────────
+    def render_ping_section(section_title, stale_pings):
+        if not stale_pings:
+            return f"""
+                <h2 style="font-family:Arial,sans-serif;
+                           margin:16px 0 8px;
+                           border-bottom:1px solid #444;
+                           padding-bottom:4px;">
+                  {section_title}
+                </h2>
+                <p style="font-family:Arial,sans-serif;
+                          margin:8px 0;
+                          color:#155724;
+                          background:#d4edda;
+                          padding:10px;
+                          border:1px solid #c3e6cb;
+                          border-radius:4px;">
+                  All assets have pinged within the last 15 minutes.
+                </p>
+            """
         rows = "".join(f"""
             <tr>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
@@ -4073,12 +4114,12 @@ def send_all_dashboards(request, pwd):
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
             </tr>
         """ for e in stale_pings)
-        ping_html = f"""
+        return f"""
             <h2 style="font-family:Arial,sans-serif;
                        margin:16px 0 8px;
                        border-bottom:1px solid #444;
                        padding-bottom:4px;">
-              ProdMon Ping Status
+              {section_title}
             </h2>
             <table style="font-family:Arial,sans-serif;
                           border-collapse:collapse;
@@ -4096,6 +4137,14 @@ def send_all_dashboards(request, pwd):
               </tbody>
             </table>
         """
+
+    # Fetch both sources
+    stale_pings_new = get_stale_ping_entries_dashboards()  # from prodmon_status
+    stale_pings_old = get_stale_ping_entries_old()         # from prodmon_ping
+
+    # Build two sections
+    ping_html_old = render_ping_section("ProdMon Ping Status — Legacy (prodmon_ping)", stale_pings_old)
+    ping_html_new = render_ping_section("ProdMon Ping Status — New (prodmon_status)",  stale_pings_new)
 
     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
     programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
@@ -4131,7 +4180,8 @@ def send_all_dashboards(request, pwd):
       </head>
       <body style="margin:0;padding:20px;background:#f0f0f0;">
         {stale_html}
-        {ping_html}
+        {ping_html_old}
+        {ping_html_new}
         {' '.join(fragments)}
       </body>
     </html>
@@ -4145,7 +4195,7 @@ def send_all_dashboards(request, pwd):
     msg = EmailMessage(
         subject=subject,
         body=full_html,
-        to=["tyler.careless@johnsonelectric.com"],  # ← hard-coded recipient
+        to=["tyler.careless@johnsonelectric.com"],  # hard-coded recipient
     )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)
