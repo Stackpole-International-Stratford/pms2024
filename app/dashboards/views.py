@@ -1220,6 +1220,14 @@ def get_db_connection():
         db=settings.DAVE_DB
     )
 
+def get_old_db_connection():
+    return MySQLdb.connect(
+        host=settings.DAVE_HOST,
+        user=settings.DAVE_USER,
+        passwd=settings.DAVE_PASSWORD,
+        db=settings.DAVE_DB
+    )
+
 
 def fetch_pie_chart_data(machine):
     now = datetime.now()
@@ -3963,32 +3971,26 @@ def dashboard_current_shift_email(request, pages: str):
  
     
 
-def get_stale_ping_entries_dashboards():
+def get_stale_ping_entries_dashboards(min_age_minutes: int = 15):
     """
     New: prodmon_status
-    Returns [{asset_name, last_ping_time, time_since_ping}] for assets whose latest ping >15 min ago.
+    Returns [{asset_name, last_ping_time, time_since_ping}] for assets whose latest ping >= min_age_minutes ago.
+    Double-filters: SQL HAVING and Python-side timedelta guard (defensive).
     """
     try:
-        # settings import
-        settings_path = os.path.join(os.path.dirname(__file__), '../../pms/settings.py')
-        spec = importlib.util.spec_from_file_location("settings", settings_path)
-        settings = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(settings)
-        get_db_connection = settings.get_db_connection
+        # DB (use your old-DB connector as in your snippet)
+        conn = get_old_db_connection()
+        cur  = conn.cursor()
 
-        # DB
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # 15-minute UNIX threshold (UTC)
+        # Threshold (UTC, seconds since epoch)
         now_utc = datetime.utcnow()
-        threshold_unix = int((now_utc - timedelta(minutes=15)).timestamp())
+        threshold_unix = int((now_utc - timedelta(minutes=min_age_minutes)).timestamp())
 
-        # Latest ping per asset, filtered by HAVING (stale)
-        # timestamp_last is INT epoch seconds.
+        # Latest ping per asset (INT epoch seconds), only stale per HAVING
         sql = """
             SELECT asset, MAX(timestamp_last) AS last_ping
             FROM prodmon_status
+            WHERE timestamp_last IS NOT NULL
             GROUP BY asset
             HAVING last_ping <= %s
             ORDER BY last_ping ASC
@@ -3998,27 +4000,36 @@ def get_stale_ping_entries_dashboards():
         cur.close()
         conn.close()
 
+        # Python-side guard: ensure ≥ min_age_minutes and clean asset names
         est = pytz.timezone('America/New_York')
         now_est = datetime.now(pytz.utc).astimezone(est)
 
         out = []
+        min_age = timedelta(minutes=min_age_minutes)
         for asset, last_ts in rows:
             if last_ts is None:
                 continue
-            last_epoch = int(last_ts)
+            name = (str(asset).strip() if asset is not None else "")
+            if not name or name.lower() == "none":
+                continue  # skip empty/null/placeholder asset names
+
+            last_epoch  = int(last_ts)
             last_dt_est = datetime.fromtimestamp(last_epoch, tz=pytz.utc).astimezone(est)
-            out.append({
-                "asset_name": str(asset).strip(),  # keep key name for compatibility
-                "last_ping_time": last_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
-                "time_since_ping": str(now_est - last_dt_est).split('.')[0],
-            })
+            age = now_est - last_dt_est
+
+            # Defensive check: only include if ≥ min_age
+            if age >= min_age:
+                out.append({
+                    "asset_name": name,
+                    "last_ping_time": last_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
+                    "time_since_ping": str(age).split('.')[0],  # drop microseconds
+                })
 
         return out
 
     except Exception as e:
         print(f"Error (new ping): {e}")
         return []
-
 
 
 def send_all_dashboards(request, pwd):
