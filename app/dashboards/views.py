@@ -4089,7 +4089,7 @@ def send_all_dashboards(request, pwd):
     stale_html = render_stale_machines_table(60, 7)
 
     # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
-    stale_pings = get_stale_ping_entries_old()
+    stale_pings = get_stale_ping_entries()
     if not stale_pings:
         ping_html = """
             <h2 style="font-family:Arial,sans-serif;
