@@ -4016,6 +4016,8 @@ def get_stale_ping_entries_old():
     except Exception as e:
         print(f"Error (legacy ping): {e}")
         return []
+    
+    
 
 def get_stale_ping_entries_dashboards():
     """
@@ -4077,36 +4079,36 @@ def get_stale_ping_entries_dashboards():
 
 def send_all_dashboards(request, pwd):
     """
-    Renders dashboards for the programs, stitches them into a single
-    email to Tyler — now with a Stale-Machines table above TWO ProdMon ping sections (old & new) and dashboards.
+    Renders dashboards for the four programs, stitches them into a single
+    email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
     """
     if pwd != "1352":
         # pretend it doesn’t exist
         raise Http404()
-
     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
     stale_html = render_stale_machines_table(60, 7)
 
-    # ── B) PROD-MON PING STATUS (OLD + NEW) ─────────────────────────────────
-    def render_ping_section(section_title, stale_pings):
-        if not stale_pings:
-            return f"""
-                <h2 style="font-family:Arial,sans-serif;
-                           margin:16px 0 8px;
-                           border-bottom:1px solid #444;
-                           padding-bottom:4px;">
-                  {section_title}
-                </h2>
-                <p style="font-family:Arial,sans-serif;
-                          margin:8px 0;
-                          color:#155724;
-                          background:#d4edda;
-                          padding:10px;
-                          border:1px solid #c3e6cb;
-                          border-radius:4px;">
-                  All assets have pinged within the last 15 minutes.
-                </p>
-            """
+    # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
+    stale_pings = get_stale_ping_entries_old()
+    if not stale_pings:
+        ping_html = """
+            <h2 style="font-family:Arial,sans-serif;
+                       margin:16px 0 8px;
+                       border-bottom:1px solid #444;
+                       padding-bottom:4px;">
+              ProdMon Ping Status
+            </h2>
+            <p style="font-family:Arial,sans-serif;
+                      margin:8px 0;
+                      color:#155724;
+                      background:#d4edda;
+                      padding:10px;
+                      border:1px solid #c3e6cb;
+                      border-radius:4px;">
+              All assets have pinged within the last 15 minutes.
+            </p>
+        """
+    else:
         rows = "".join(f"""
             <tr>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
@@ -4114,12 +4116,12 @@ def send_all_dashboards(request, pwd):
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
             </tr>
         """ for e in stale_pings)
-        return f"""
+        ping_html = f"""
             <h2 style="font-family:Arial,sans-serif;
                        margin:16px 0 8px;
                        border-bottom:1px solid #444;
                        padding-bottom:4px;">
-              {section_title}
+              ProdMon Ping Status
             </h2>
             <table style="font-family:Arial,sans-serif;
                           border-collapse:collapse;
@@ -4137,14 +4139,6 @@ def send_all_dashboards(request, pwd):
               </tbody>
             </table>
         """
-
-    # Fetch both sources
-    stale_pings_new = get_stale_ping_entries_dashboards()  # from prodmon_status
-    stale_pings_old = get_stale_ping_entries_old()         # from prodmon_ping
-
-    # Build two sections
-    ping_html_old = render_ping_section("ProdMon Ping Status — Legacy (prodmon_ping)", stale_pings_old)
-    ping_html_new = render_ping_section("ProdMon Ping Status — New (prodmon_status)",  stale_pings_new)
 
     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
     programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
@@ -4180,22 +4174,32 @@ def send_all_dashboards(request, pwd):
       </head>
       <body style="margin:0;padding:20px;background:#f0f0f0;">
         {stale_html}
-        {ping_html_old}
-        {ping_html_new}
+        {ping_html}
         {' '.join(fragments)}
       </body>
     </html>
     """
 
     # ── E) SEND EMAIL ────────────────────────────────────────────────────────
-    eastern = pytz.timezone("America/New_York")
-    now_est = timezone.now().astimezone(eastern)
-    subject = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
+    eastern   = pytz.timezone("America/New_York")
+    now_est   = timezone.now().astimezone(eastern)
+    subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
+
+    # pull active recipients from the DB
+    to_emails = list(
+        HourlyProductionReportRecipient.objects
+        .values_list("email", flat=True)
+    )
+
+    to_emails = ["tyler.careless@johnsonelectric.com"]
+
+    if not to_emails:
+        return HttpResponse("No active recipients configured.", status=204)
 
     msg = EmailMessage(
         subject=subject,
         body=full_html,
-        to=["tyler.careless@johnsonelectric.com"],  # hard-coded recipient
+        to=to_emails,      # ← now dynamic!
     )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)
