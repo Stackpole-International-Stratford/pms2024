@@ -15,6 +15,8 @@ from collections import defaultdict
 import re
 import pytz
 from django.utils import timezone
+import os
+import importlib.util
 
 from plant.models.maintenance_models import MachineDowntimeEvent
 from django.test.client import RequestFactory
@@ -3830,19 +3832,221 @@ def dashboard_current_shift_email(request, pages: str):
 
 
 
+# def send_all_dashboards(request, pwd):
+#     """
+#     Renders dashboards for the four programs, stitches them into a single
+#     email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
+#     """
+#     if pwd != "1352":
+#         # pretend it doesn’t exist
+#         raise Http404()
+#     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
+#     stale_html = render_stale_machines_table(60, 7)
+
+#     # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
+#     stale_pings = get_stale_ping_entries()
+#     if not stale_pings:
+#         ping_html = """
+#             <h2 style="font-family:Arial,sans-serif;
+#                        margin:16px 0 8px;
+#                        border-bottom:1px solid #444;
+#                        padding-bottom:4px;">
+#               ProdMon Ping Status
+#             </h2>
+#             <p style="font-family:Arial,sans-serif;
+#                       margin:8px 0;
+#                       color:#155724;
+#                       background:#d4edda;
+#                       padding:10px;
+#                       border:1px solid #c3e6cb;
+#                       border-radius:4px;">
+#               All assets have pinged within the last 15 minutes.
+#             </p>
+#         """
+#     else:
+#         rows = "".join(f"""
+#             <tr>
+#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
+#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
+#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
+#             </tr>
+#         """ for e in stale_pings)
+#         ping_html = f"""
+#             <h2 style="font-family:Arial,sans-serif;
+#                        margin:16px 0 8px;
+#                        border-bottom:1px solid #444;
+#                        padding-bottom:4px;">
+#               ProdMon Ping Status
+#             </h2>
+#             <table style="font-family:Arial,sans-serif;
+#                           border-collapse:collapse;
+#                           width:100%;
+#                           margin-bottom:16px;">
+#               <thead>
+#                 <tr style="background:#343a40;color:#fff;">
+#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Asset</th>
+#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Last Ping (EST)</th>
+#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Since Last Ping</th>
+#                 </tr>
+#               </thead>
+#               <tbody>
+#                 {rows}
+#               </tbody>
+#             </table>
+#         """
+
+#     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
+#     programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
+#     rf = RequestFactory()
+#     fragments = []
+#     for pages in programs:
+#         fake = rf.get(f"/dashboard/{pages}/")
+#         fake.user = getattr(request, "user", None)
+#         fake.session = getattr(request, "session", None)
+
+#         resp = dashboard_current_shift_email(fake, pages=pages)
+#         if resp.status_code != 200:
+#             return HttpResponse(f"Error rendering {pages}: {resp.status_code}", status=500)
+#         html = resp.content.decode("utf-8")
+#         fragments.append(f'''
+#             <h2 style="font-family:Arial,sans-serif;
+#                        margin:24px 0 8px;
+#                        border-bottom:1px solid #ccc;
+#                        padding-bottom:4px;">
+#               Dashboard — {pages}
+#             </h2>
+#             {html}
+#         ''')
+
+#     # ── D) COMBINE INTO ONE EMAIL ────────────────────────────────────────────
+#     full_html = f"""
+#     <!DOCTYPE html>
+#     <html>
+#       <head>
+#         <meta charset="utf-8" />
+#         <meta name="viewport" content="width=device-width,initial-scale=1" />
+#         <title>All Dashboards</title>
+#       </head>
+#       <body style="margin:0;padding:20px;background:#f0f0f0;">
+#         {stale_html}
+#         {ping_html}
+#         {' '.join(fragments)}
+#       </body>
+#     </html>
+#     """
+
+#     # ── E) SEND EMAIL ────────────────────────────────────────────────────────
+#     eastern   = pytz.timezone("America/New_York")
+#     now_est   = timezone.now().astimezone(eastern)
+#     subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
+
+#     # pull active recipients from the DB
+#     to_emails = list(
+#         HourlyProductionReportRecipient.objects
+#         .values_list("email", flat=True)
+#     )
+
+#     if not to_emails:
+#         return HttpResponse("No active recipients configured.", status=204)
+
+#     msg = EmailMessage(
+#         subject=subject,
+#         body=full_html,
+#         to=to_emails,      # ← now dynamic!
+#     )
+#     msg.content_subtype = "html"
+#     msg.send(fail_silently=False)
+
+#     return HttpResponse("All dashboards emailed ✅")
+
+
+def get_stale_ping_entries_dashboards():
+    """
+    Fetch assets from the prodmon_status table whose last ping was over 15 minutes ago.
+    Returns a list of dicts with keys: asset_name, last_ping_time (EST), time_since_ping.
+    """
+    try:
+        # Define the relative path to settings.py
+        settings_path = os.path.join(
+            os.path.dirname(__file__), '../../pms/settings.py'
+        )
+
+        # Dynamically import settings.py
+        spec = importlib.util.spec_from_file_location("settings", settings_path)
+        settings = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(settings)
+
+        # Access get_db_connection from settings
+        get_db_connection = settings.get_db_connection
+
+        # Establish database connection
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Calculate the threshold time (15 minutes ago) in UTC
+        threshold_dt_utc = datetime.utcnow() - timedelta(minutes=15)
+        threshold_unix = int(threshold_dt_utc.timestamp())
+
+        # Pull the latest ping per asset from prodmon_status.
+        # (GROUP BY in case multiple rows exist for an asset; MAX(timestamp_last) is the latest.)
+        query = """
+            SELECT asset, MAX(timestamp_last) AS last_ping
+            FROM prodmon_status
+            GROUP BY asset
+            ORDER BY last_ping DESC
+        """
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        # Process results: filter entries older than 15 minutes
+        est = pytz.timezone('US/Eastern')  # EST/EDT as per original
+        now_est = datetime.now(pytz.utc).astimezone(est)
+
+        stale_entries = []
+        for row in results:
+            asset = row[0]
+            last_ts = row[1]
+
+            if last_ts is None:
+                continue  # defensive: skip if no timestamp
+
+            # Only include entries older than 15 minutes
+            if last_ts <= threshold_unix:
+                last_ping_dt_est = datetime.fromtimestamp(last_ts, tz=pytz.utc).astimezone(est)
+                time_since_ping = now_est - last_ping_dt_est
+
+                stale_entries.append({
+                    "asset_name": str(asset),  # keep key name for downstream compatibility
+                    "last_ping_time": last_ping_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
+                    "time_since_ping": str(time_since_ping).split('.')[0],  # strip microseconds
+                })
+
+        return stale_entries
+
+    except Exception as e:
+        print(f"An error occurred while fetching stale ping entries: {e}")
+        return []
+
+
+
 def send_all_dashboards(request, pwd):
     """
-    Renders dashboards for the four programs, stitches them into a single
+    Renders dashboards for the programs, stitches them into a single
     email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
     """
     if pwd != "1352":
         # pretend it doesn’t exist
         raise Http404()
+
     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
     stale_html = render_stale_machines_table(60, 7)
 
     # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
-    stale_pings = get_stale_ping_entries()
+    stale_pings = get_stale_ping_entries_dashboards()
     if not stale_pings:
         ping_html = """
             <h2 style="font-family:Arial,sans-serif;
@@ -3934,23 +4138,14 @@ def send_all_dashboards(request, pwd):
     """
 
     # ── E) SEND EMAIL ────────────────────────────────────────────────────────
-    eastern   = pytz.timezone("America/New_York")
-    now_est   = timezone.now().astimezone(eastern)
-    subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
-
-    # pull active recipients from the DB
-    to_emails = list(
-        HourlyProductionReportRecipient.objects
-        .values_list("email", flat=True)
-    )
-
-    if not to_emails:
-        return HttpResponse("No active recipients configured.", status=204)
+    eastern = pytz.timezone("America/New_York")
+    now_est = timezone.now().astimezone(eastern)
+    subject = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
 
     msg = EmailMessage(
         subject=subject,
         body=full_html,
-        to=to_emails,      # ← now dynamic!
+        to=["tyler.careless@johnsonelectric.com"],  # ← hard-coded recipient
     )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)
