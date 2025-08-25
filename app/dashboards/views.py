@@ -3960,63 +3960,7 @@ def dashboard_current_shift_email(request, pages: str):
 #     return HttpResponse("All dashboards emailed ✅")
 
 
-def get_stale_ping_entries_old():
-    """
-    Legacy: prodmon_ping
-    Returns [{asset_name, last_ping_time, time_since_ping}] for assets whose latest ping >15 min ago.
-    """
-    try:
-        # settings import
-        settings_path = os.path.join(os.path.dirname(__file__), '../../pms/settings.py')
-        spec = importlib.util.spec_from_file_location("settings", settings_path)
-        settings = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(settings)
-        get_db_connection = settings.get_db_connection
-
-        # DB
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # 15-minute UNIX threshold (UTC)
-        now_utc = datetime.utcnow()
-        threshold_unix = int((now_utc - timedelta(minutes=15)).timestamp())
-
-        # Latest ping per Name, filtered by HAVING (stale)
-        # NOTE: Timestamp is stored as epoch seconds (DOUBLE). We compare numerically.
-        sql = """
-            SELECT Name, MAX(Timestamp) AS last_ping
-            FROM prodmon_ping
-            GROUP BY Name
-            HAVING last_ping <= %s
-            ORDER BY last_ping ASC
-        """
-        cur.execute(sql, (threshold_unix,))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        est = pytz.timezone('America/New_York')
-        now_est = datetime.now(pytz.utc).astimezone(est)
-
-        out = []
-        for name, last_ts in rows:
-            if last_ts is None:
-                continue
-            # robust to DOUBLE/Decimal/str
-            last_epoch = float(last_ts)
-            last_dt_est = datetime.fromtimestamp(last_epoch, tz=pytz.utc).astimezone(est)
-            out.append({
-                "asset_name": str(name).strip(),
-                "last_ping_time": last_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
-                "time_since_ping": str(now_est - last_dt_est).split('.')[0],
-            })
-
-        return out
-
-    except Exception as e:
-        print(f"Error (legacy ping): {e}")
-        return []
-    
+ 
     
 
 def get_stale_ping_entries_dashboards():
