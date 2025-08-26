@@ -12,14 +12,12 @@
         <!-- Date -->
         <div class="col-md-3">
           <label for="start-date" class="form-label">Date</label>
-          <input type="date" id="start-date" name="start_date"
-                 class="form-control" required>
+          <input type="date" name="start_date" id="start_date" value="{{ default_date }}">
         </div>
         <!-- Time -->
         <div class="col-md-3">
           <label for="start-time" class="form-label">Time</label>
-          <input type="time" id="start-time" name="start_time"
-                 class="form-control" required>
+          <input type="time" name="start_time" id="start_time" value="{{ default_time }}">
         </div>
         <!-- Production Line -->
         <div class="col-md-3">
@@ -221,9 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 6) Initialize date & time inputs to “now”
-  const now = new Date();
-  startDate.value = now.toISOString().slice(0, 10);
-  startTime.value = now.toTimeString().slice(0, 5);
+  // New: rely on server-local defaults (America/Toronto)
+  document.getElementById('start_date').value = "{{ default_date }}";
+  document.getElementById('start_time').value = "{{ default_time }}";
 });
 </script>
 {% endblock %}

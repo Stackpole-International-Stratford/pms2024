@@ -1,0 +1,434 @@
+{% extends "parent.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Heat Breaks Toggle</h1>
+
+  <a href="{% url 'maintenance_all' %}" class="btn btn-warning mb-3">
+    ← Back to app
+  </a>
+
+  <p><strong>This is to be used when a machine is DOWN because of heatbreaks</strong></p>
+  <p>
+    Use the checkboxes to mark which machines are on a heat break. Choose a duration for this line
+    (applies to machines you’re turning ON) and hit “Apply changes to this line”.
+    Turning OFF any active machines will ask you to confirm one end time for all of them.
+  </p>
+
+  <div class="accordion" id="linesAccordion">
+    {% for line, machines in grouped_data.items %}
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading-{{ forloop.counter }}">
+          <button class="accordion-button collapsed"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#collapse-{{ forloop.counter }}"
+                  aria-expanded="false"
+                  aria-controls="collapse-{{ forloop.counter }}">
+            {{ line }}
+          </button>
+        </h2>
+
+        <div id="collapse-{{ forloop.counter }}"
+             class="accordion-collapse collapse"
+             aria-labelledby="heading-{{ forloop.counter }}"
+             data-bs-parent="#linesAccordion">
+          <div class="accordion-body">
+            <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+              <div>
+                <label class="form-label mb-0">Duration for ON selections</label>
+                <select class="form-select" style="width:auto"
+                        id="duration-select-{{ forloop.counter }}"
+                        data-line-index="{{ forloop.counter }}">
+                  {% for mins in durations %}
+                    <option value="{{ mins }}">{{ mins }} min</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button class="btn btn-info"
+                      data-line-index="{{ forloop.counter }}"
+                      data-line-name="{{ line }}"
+                      id="apply-btn-{{ forloop.counter }}">
+                Apply changes to this line
+              </button>
+              <div class="text-muted small">
+                Tip: Use the header checkbox below to (de)select all.
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered align-middle mb-0"
+                     data-line-index="{{ forloop.counter }}">
+                <thead class="table-dark">
+                  <tr>
+                    <th style="width: 50px;">
+                      <input type="checkbox"
+                             class="form-check-input"
+                             id="select-all-{{ forloop.counter }}"
+                             data-line-index="{{ forloop.counter }}">
+                    </th>
+                    <th>Operation</th>
+                    <th>Machine #</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for machine in machines %}
+                    <tr id="row-{{ machine.id }}"
+                        data-machine="{{ machine.id }}"
+                        {% if machine.active_hb %}
+                          data-active-hb-id="{{ machine.active_hb.id }}"
+                          data-active-duration="{{ machine.active_hb.duration }}"
+                          data-start-time-iso="{{ machine.active_hb.start_time_iso }}"
+                        {% endif %}>
+                      <td class="text-center">
+                        <input type="checkbox"
+                               class="form-check-input machine-checkbox"
+                               id="cb-{{ machine.id }}"
+                               data-machine="{{ machine.id }}"
+                               data-line-index="{{ forloop.parentloop.counter }}">
+                      </td>
+                      <td>{{ machine.operation }}</td>
+                      <td>{{ machine.machine_number }}</td>
+                      <td>
+                        <span class="badge rounded-pill
+                          {% if machine.active_hb %} text-bg-danger {% else %} text-bg-secondary {% endif %}"
+                          id="status-{{ machine.id }}">
+                          {% if machine.active_hb %}
+                            Active heat break {{ machine.active_hb.duration }} min
+                          {% else %}
+                            No heat break
+                          {% endif %}
+                        </span>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No tracked machines found.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Bulk OFF modal -->
+<div class="modal fade" id="offModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="offForm" method="post">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Heat Break End</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <p class="mb-2">
+            You’re ending heat breaks for
+            <strong id="offCount">0</strong> machine(s).
+          </p>
+          <p class="text-muted">
+            Choose one end time to apply to all selected machines being turned OFF.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label">End Time</label>
+            <input type="datetime-local" class="form-control" name="end_time" id="offEnd">
+            <div id="offEndFeedback" class="invalid-feedback">
+              End time cannot be in the future.
+            </div>
+          </div>
+
+          <!-- The IDs of machines to turn OFF will be injected here -->
+          <input type="hidden" id="offPayloadJson">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning">Confirm</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // ---------- constants / selectors ----------
+  const ROW_SELECTOR = "tr[id^='row-']";
+  const CHECKBOX_SELECTOR = ".machine-checkbox";
+  const ACTIVE = new Map(); // machineId -> { hbId, startIso, duration }
+  const PREV_CHECKED = new Map(); // machineId -> boolean; mirrors initial active state
+
+  // ---------- helpers ----------
+  const pad2 = (n) => String(n).padStart(2, "0");
+
+  function formatForDatetimeLocal(d) {
+    return [
+      d.getFullYear(), "-", pad2(d.getMonth() + 1), "-", pad2(d.getDate()),
+      "T", pad2(d.getHours()), ":", pad2(d.getMinutes())
+    ].join("");
+  }
+
+  function getCsrfToken() {
+    return "{{ csrf_token }}";
+  }
+
+  function setStatusBadge(machineId, isActive, duration) {
+    const badge = document.getElementById(`status-${machineId}`);
+    if (!badge) return;
+    badge.classList.toggle("text-bg-danger", !!isActive);
+    badge.classList.toggle("text-bg-secondary", !isActive);
+    if (isActive) {
+      const label = `Active heat break${duration ? " " + String(duration) + " min" : ""}`;
+      badge.textContent = label;
+    } else {
+      badge.textContent = "No heat break";
+    }
+  }
+
+  function setEndInvalid(isInvalid, message) {
+    const endInput = document.getElementById("offEnd");
+    const feedback = document.getElementById("offEndFeedback");
+    if (!endInput) return;
+    endInput.classList.toggle("is-invalid", !!isInvalid);
+    if (feedback && message) feedback.textContent = message;
+  }
+
+  function selectAllInLine(lineIndex, checked) {
+    document.querySelectorAll(`.machine-checkbox[data-line-index="${lineIndex}"]`)
+      .forEach(cb => cb.checked = !!checked);
+  }
+
+  // ---------- initialize UI from server-emitted data-* ----------
+  document.querySelectorAll(ROW_SELECTOR).forEach((row) => {
+    const machineId = row.dataset.machine;
+    const hbId      = row.dataset.activeHbId || null;
+    const duration  = row.dataset.activeDuration || null;
+    const startIso  = row.dataset.startTimeIso || null;
+
+    const cb = document.getElementById(`cb-${machineId}`);
+    if (hbId && duration) {
+      ACTIVE.set(machineId, { hbId, startIso, duration });
+      PREV_CHECKED.set(machineId, true);
+      if (cb) cb.checked = true;
+      setStatusBadge(machineId, true, duration);
+    } else {
+      PREV_CHECKED.set(machineId, false);
+      if (cb) cb.checked = false;
+      setStatusBadge(machineId, false);
+    }
+  });
+
+  // ---------- header "select all" per line ----------
+  document.querySelectorAll('[id^="select-all-"]').forEach((hdr) => {
+    hdr.addEventListener("change", function () {
+      selectAllInLine(this.dataset.lineIndex, this.checked);
+    });
+  });
+
+  // ---------- Apply changes per line ----------
+  document.querySelectorAll('[id^="apply-btn-"]').forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const lineIndex = this.dataset.lineIndex;
+      const lineName  = this.dataset.lineName;
+      const durationSel = document.getElementById(`duration-select-${lineIndex}`);
+      const chosenDuration = durationSel ? durationSel.value : "15";
+
+      // Determine deltas for this line
+      const toTurnOn = [];
+      const toTurnOff = [];
+
+      document.querySelectorAll(`.machine-checkbox[data-line-index="${lineIndex}"]`).forEach((cb) => {
+        const machineId = cb.dataset.machine;
+        const wasActive = PREV_CHECKED.get(machineId) === true;
+        const nowChecked = cb.checked === true;
+
+        if (!wasActive && nowChecked) {
+          toTurnOn.push(machineId);
+        } else if (wasActive && !nowChecked) {
+          toTurnOff.push(machineId);
+        }
+      });
+
+      if (toTurnOn.length === 0 && toTurnOff.length === 0) {
+        // Nothing changed
+        return;
+      }
+
+      // If we have OFF actions, prompt once for an end time
+      if (toTurnOff.length > 0) {
+        const modalEl = document.getElementById("offModal");
+        const offCount = document.getElementById("offCount");
+        const offEnd = document.getElementById("offEnd");
+        const offPayloadJson = document.getElementById("offPayloadJson");
+
+        offCount.textContent = String(toTurnOff.length);
+
+        const now = new Date();
+        const nowLocalStr = formatForDatetimeLocal(now);
+        offEnd.value = nowLocalStr;
+        offEnd.max = nowLocalStr; // prevent future end times
+
+        // >>> NEW: compute the latest (max) start among selected OFF machines and enforce as min <<<
+        const startDates = toTurnOff
+          .map(id => ACTIVE.get(id)?.startIso)
+          .filter(Boolean)
+          .map(iso => new Date(iso));
+        let latestStart = null;
+        if (startDates.length > 0) {
+          latestStart = new Date(Math.max(...startDates.map(d => d.getTime())));
+          offEnd.min = formatForDatetimeLocal(latestStart);
+        } else {
+          // Fallback: no known starts (shouldn't happen). Don't allow past.
+          offEnd.min = ""; // no min restriction beyond future cap
+        }
+
+        setEndInvalid(false, "");
+
+        offEnd.oninput = function () {
+          const end = new Date(offEnd.value);
+          const nowDt = new Date();
+
+          if (end > nowDt) {
+            setEndInvalid(true, "End time cannot be in the future.");
+          } else if (latestStart && end < latestStart) {
+            const msg = `End time cannot be before the start time (${formatForDatetimeLocal(latestStart)}).`;
+            setEndInvalid(true, msg);
+          } else {
+            setEndInvalid(false, "");
+          }
+        };
+
+        // stash payload, including the min allowed start for server-side safety if needed later
+        offPayloadJson.value = JSON.stringify({
+          lineIndex,
+          lineName,
+          toTurnOn,
+          toTurnOff,
+          duration: chosenDuration,
+          minAllowedStartIso: latestStart ? latestStart.toISOString() : null
+        });
+
+        new bootstrap.Modal(modalEl).show();
+      } else {
+        // Only ON actions → execute immediately
+        await executeBulkChanges({ toTurnOn, toTurnOff: [], duration: chosenDuration, lineIndex });
+      }
+    });
+  });
+
+  // ---------- Modal submit (handles OFF and possibly ON together) ----------
+  const offForm = document.getElementById("offForm");
+  if (offForm) {
+    offForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      try {
+        const offPayloadJson = document.getElementById("offPayloadJson")?.value || "{}";
+        const payload = JSON.parse(offPayloadJson);
+        const offEndStr = document.getElementById("offEnd")?.value;
+
+        const endDate = new Date(offEndStr);
+        const nowDt = new Date();
+        const minAllowed = payload.minAllowedStartIso ? new Date(payload.minAllowedStartIso) : null;
+
+        if (endDate > nowDt) {
+          setEndInvalid(true, "End time cannot be in the future.");
+          return;
+        }
+        if (minAllowed && endDate < minAllowed) {
+          const msg = `End time cannot be before the start time (${formatForDatetimeLocal(minAllowed)}).`;
+          setEndInvalid(true, msg);
+          return;
+        }
+        setEndInvalid(false, "");
+
+        const modalEl = document.getElementById("offModal");
+        const modal = bootstrap.Modal.getInstance(modalEl);
+
+        await executeBulkChanges({
+          toTurnOn: payload.toTurnOn || [],
+          toTurnOff: payload.toTurnOff || [],
+          duration: payload.duration || "15",
+          lineIndex: payload.lineIndex,
+          offEnd: offEndStr
+        });
+
+        if (modal) modal.hide();
+      } catch (err) {
+        setEndInvalid(true, "Something went wrong. Please try again.");
+      }
+    });
+  }
+
+  // ---------- Core executor ----------
+  async function executeBulkChanges({ toTurnOn, toTurnOff, duration, lineIndex, offEnd }) {
+    const headers = { "X-CSRFToken": getCsrfToken() };
+
+    // 1) Turn ON
+    const onPromises = toTurnOn.map(machineId =>
+      fetch(`/plant/heat/${machineId}/on/`, {
+        method: "POST",
+        headers,
+        body: new URLSearchParams({ duration: String(duration) })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.status === "ok") {
+          ACTIVE.set(machineId, {
+            hbId: String(data.heatbreak_id),
+            startIso: data.start_time_iso,
+            duration: String(duration)
+          });
+          PREV_CHECKED.set(machineId, true);
+          setStatusBadge(machineId, true, duration);
+          return { machineId, ok: true };
+        }
+        throw new Error(data?.msg || "Failed to turn on");
+      })
+      .catch(() => ({ machineId, ok: false }))
+    );
+
+    // 2) Turn OFF
+    const offPromises = (toTurnOff || []).map(machineId => {
+      const active = ACTIVE.get(machineId);
+      if (!active) return Promise.resolve({ machineId, ok: true }); // nothing to do
+      const hbId = active.hbId;
+
+      return fetch(`/plant/heat/${hbId}/off/`, {
+        method: "POST",
+        headers,
+        body: new URLSearchParams({ end_time: offEnd || "" })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.status === "ok") {
+          ACTIVE.delete(machineId);
+          PREV_CHECKED.set(machineId, false);
+          setStatusBadge(machineId, false);
+          return { machineId, ok: true };
+        }
+        throw new Error(data?.msg || "Failed to turn off");
+      })
+      .catch(() => ({ machineId, ok: false }));
+    });
+
+    await Promise.all([...onPromises, ...offPromises]);
+
+    // Update checkboxes to reflect PREV_CHECKED (source of truth after ops)
+    document.querySelectorAll(`.machine-checkbox[data-line-index="${lineIndex}"]`).forEach(cb => {
+      const machineId = cb.dataset.machine;
+      cb.checked = PREV_CHECKED.get(machineId) === true;
+    });
+  }
+});
+</script>
+
+
+
+{% endblock %}
