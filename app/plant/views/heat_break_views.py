@@ -17,7 +17,7 @@ DAVE_PASSWORD = settings.DAVE_PASSWORD
 DAVE_DB = settings.DAVE_DB
 # ---------- helpers ----------
 
-def floor_to_hour_epoch(epoch: int) -> int:
+def floor_to_hour_epoch(epoch):
     """
     Floor an epoch timestamp to the top of the hour in the current Django timezone,
     then convert back to epoch.
@@ -27,7 +27,7 @@ def floor_to_hour_epoch(epoch: int) -> int:
     dt_hour = dt.replace(minute=0, second=0, microsecond=0)
     return int(dt_hour.timestamp())
 
-def hour_range(start_floor_epoch: int, end_epoch: int):
+def hour_range(start_floor_epoch, end_epoch):
     """
     Yield hour-start epochs [start_floor_epoch, ..., <= end_epoch] stepping by 1 hour.
     """
@@ -194,7 +194,7 @@ def turn_off_heat(request, heatbreak_id):
 # ======================================================================
 
 
-def create_heatbreak_downtime_rows(heatbreak_id: int):
+def create_heatbreak_downtime_rows(heatbreak_id):
     """
     Create MachineDowntimeEvent rows for a HeatBreak, one per hour anchored
     to the top of the hour. Idempotent-ish: skips rows that already exist
