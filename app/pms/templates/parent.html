@@ -518,10 +518,8 @@
               <li><a class="dropdown-item" href="{% url 'display_parts' %}">Parts</a></li>
               <li><a class="dropdown-item" href="{% url 'auth_page' %}">Asset Authentication Management</a></li>
               <li><a class="dropdown-item" href="{% url 'prodmon_ping' %}">Prodmon Ping</a></li>
-              {% if user.is_authenticated %}
-              <li>
-                  <a class="dropdown-item" href="{% url 'temp-display' %}">Temp Sensors</a>
-              </li>
+              {% if can_view_temp %}
+                <li><a class="dropdown-item" href="{% url 'temp-display' %}">Temp Sensors</a></li>
               {% endif %}
               <li><a class="dropdown-item" href="{% url 'absentee_forms' %}">Absentee Forms (HR Only)</a></li>
             </ul>
