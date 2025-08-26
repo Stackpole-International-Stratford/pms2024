@@ -140,12 +140,14 @@
                     <p class="mb-1">View historical and add new ideal cycle times for assets and parts</p>
                 </a>
             </li> -->
+            {% if user.is_authenticated %}
             <li class="list-group-item card-hover">
                 <a href="{% url 'temp-display' %}" class="text-decoration-none text-dark">
                     <h5 class="mb-1">Temperature Sensors Display</h5>
                     <p class="mb-1">View all live readings of humidity, temperature and humidex values across the plant.</p>
                 </a>
             </li>
+            {% endif %}
             <li class="list-group-item card-hover">
                 <a href="{% url 'absentee_forms' %}" class="text-decoration-none text-dark">
                     <h5 class="mb-1">Absentee Forms (HR Only)</h5>

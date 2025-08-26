@@ -218,7 +218,6 @@ def delete_temp_sensor_email(request):
 # =========================================================================
 
 
-@login_required(login_url='login')
 def temp_display(request):
     # Figure out when the session will expire
     expiry_timestamp = request.session.get_expiry_date()
