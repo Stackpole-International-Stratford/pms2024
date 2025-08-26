@@ -4149,8 +4149,6 @@ def send_all_dashboards(request, pwd):
         .values_list("email", flat=True)
     )
 
-    # TEMP override (as in your original)
-    to_emails = ["tyler.careless@johnsonelectric.com"]
 
     if not to_emails:
         return HttpResponse("No active recipients configured.", status=204)
