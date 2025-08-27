@@ -2720,49 +2720,96 @@ def get_cycle_time_seconds(
     as_of_epoch: Optional[int] = None,
 ) -> Optional[float]:
     """
-    If `part` is a list of strings, return the *max* cycle time among those parts.
-    Otherwise, behave exactly as before. Adds debug prints when machine_id == "1703L".
+    Returns the expected cycle time (seconds) for a machine (and optional part)
+    based on OAMachineTargets. Behavior:
+
+    - If `part` is a list of strings, compute each individually (as if called
+      with a single part) and return the *max* of the available cycle times.
+    - If `part` is a string, prefer the most recent (<= as_of) row for
+        1) (machine, that part)
+        2) (machine, part is NULL)
+        3) (machine, any part)   ← last resort
+    - If `part` is None, prefer
+        1) (machine, part is NULL)
+        2) (machine, any part)   ← last resort
+
+    Rows with target <= 0 are ignored. Returns None if nothing valid is found.
+
+    Adds debug prints for machine_id == "1703L".
     """
     if as_of_epoch is None:
         as_of_epoch = int(timezone.now().timestamp())
 
-    # If part is a list, compute each individually and take max
-    if isinstance(part, list):
+    # ── Helper to fetch the most recent valid row for (machine, part_filter) ──
+    def _fetch_row(machine: str, part_filter: Optional[object]) -> Optional["OAMachineTargets"]:
+        """
+        part_filter:
+          - None           → query for part__isnull=True
+          - "ANY"          → query for any non-null part
+          - <str partname> → query for that exact part
+        """
+        qs = (
+            OAMachineTargets.objects
+            .filter(
+                machine_id=machine,
+                isDeleted=False,
+                effective_date_unix__lte=as_of_epoch,
+            )
+        )
+        if part_filter is None:
+            qs = qs.filter(part__isnull=True)
+        elif part_filter == "ANY":
+            qs = qs.filter(part__isnull=False)
+        else:
+            qs = qs.filter(part=part_filter)
 
-        cts = []
+        # newest first
+        row = qs.order_by("-effective_date_unix").first()
+        if not row or not row.target or row.target <= 0:
+            return None
+        return row
+
+    # ── If part is a list, compute each and return the MAX of available cts ──
+    if isinstance(part, list):
+        cts: List[float] = []
         for p in part:
             single_ct = get_cycle_time_seconds(machine_id, p, as_of_epoch)
             if single_ct is not None:
                 cts.append(single_ct)
-
         if not cts:
-            # print(f"NA: {machine_id} /{','.join(part)}")
+            # if machine_id == "1703L": print(f"NA(list): {machine_id} /{','.join(part)}")
             return None
-
         chosen = max(cts)
+        # if machine_id == "1703L": print(f"LIST→MAX: {machine_id} /{','.join(part)} → {chosen:.2f}s")
         return chosen
 
-    # Single-part (or no-part) logic
-    qs = (
-        OAMachineTargets.objects
-        .filter(machine_id=machine_id, isDeleted=False, effective_date_unix__lte=as_of_epoch)
-    )
-    if part:
-        qs = qs.filter(part=part)
+    # ── Build lookup order based on whether a specific part was provided ──
+    if isinstance(part, str) and part.strip():
+        # exact part → generic → any-part
+        lookup_chain = [part.strip(), None, "ANY"]
+        tag_hint = f"{machine_id} /{part.strip()}"
     else:
-        qs = qs.filter(part__isnull=True)
+        # generic → any-part
+        lookup_chain = [None, "ANY"]
+        tag_hint = f"{machine_id}"
 
+    chosen_row = None
+    for pf in lookup_chain:
+        chosen_row = _fetch_row(machine_id, pf)
+        if chosen_row:
+            break
 
-    row = qs.order_by("-effective_date_unix").first()
-    tag = f"{machine_id}{' /' + part if part else ''}"
-
-
-    if not row or not row.target or row.target <= 0:
-        # print(f"NA: {tag}")
+    if not chosen_row:
+        # if machine_id == "1703L": print(f"NA: {tag_hint}")
         return None
 
-    seconds = _SECONDS_PER_WEEK_7200 / row.target
+    seconds = _SECONDS_PER_WEEK_7200 / chosen_row.target
 
+    # Optional debug trace
+    # if machine_id == "1703L":
+    #     src = "(no part)" if chosen_row.part is None else f"(part={chosen_row.part})"
+    #     print(f"CT: {machine_id} {src} eff={chosen_row.effective_date_unix} "
+    #           f"target={chosen_row.target} → {seconds:.2f}s")
 
     return seconds
 
