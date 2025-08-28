@@ -16,22 +16,6 @@ class Part(models.Model):
 
     def __str__(self):
         return f"{self.part_number} - {self.part_name}"
-    
-
-
-class Program(models.Model):
-    name = models.CharField(max_length=128, unique=True, db_index=True)
-    # This creates a separate join table and does NOT alter the Part table
-    parts = models.ManyToManyField(Part, related_name="programs", blank=True)
-
-    def __str__(self):
-        return self.name
-
-
-class ProgramPart(models.Model):
-    program = models.ForeignKey("Program", on_delete=models.CASCADE, db_index=False)
-    part = models.ForeignKey("Part", on_delete=models.CASCADE, db_index=False)
-
 
 
 class SetupForManager(models.Manager):
