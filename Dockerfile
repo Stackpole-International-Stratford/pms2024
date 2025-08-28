@@ -29,4 +29,4 @@ CMD [ "entrypoint.sh" ]
 
 
 # docker build -t <name> .
-# docker run -d --restart unless-stopped --name <imagename> -p <portyouwannaexpose>:80 <containername> 
+# docker run -d --restart unless-stopped --name <imagename> -p <portyouwannaexpose>:80 <containername>
