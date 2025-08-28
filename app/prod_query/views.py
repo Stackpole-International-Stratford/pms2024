@@ -2062,6 +2062,9 @@ lines = [
                 "machines": [
                     {"number": "1703R", "target": 1925},
                     {"number": "1704R", "target": 1925},
+                    {"number": "658", "target": 1925},
+                    {"number": "661", "target": 1925},
+                    {"number": "622", "target": 1925},
                 ],
             },
             {
@@ -2075,10 +2078,17 @@ lines = [
                 ],
             },
             {
+                "op": "40",
+                "machines": [
+                    {"number": "1727", "target": 4200},
+                ],
+            },
+            {
                 "op": "50",
                 "machines": [
                     {"number": "659", "target": 4200},
                     {"number": "626", "target": 2800},
+                    {"number": "660", "target": 2800},
                 ],
             },
             {
@@ -2091,6 +2101,12 @@ lines = [
                 "op": "70",
                 "machines": [
                     {"number": "1716L", "target": 7000},
+                ],
+            },
+            {
+                "op": "80",
+                "machines": [
+                    {"number": "1719", "target": 7000},
                 ],
             },
             {
