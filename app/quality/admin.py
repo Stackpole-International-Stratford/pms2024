@@ -41,6 +41,14 @@ class ScrapSubmissionAdmin(admin.ModelAdmin):
         cutoff = timezone.now() - timedelta(days=90)
         return super().get_queryset(request).filter(created_at__gte=cutoff)
 
+
+
+@admin.register(ScrapCategory)
+class ScrapCategoryAdmin(admin.ModelAdmin):
+    list_display  = ('name',)
+    search_fields = ('name',)
+
+
 @admin.register(ScrapSystemOperation)
 class ScrapSystemOperationAdmin(admin.ModelAdmin):
     form = ScrapSystemOperationAdminForm
