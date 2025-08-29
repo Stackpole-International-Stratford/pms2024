@@ -33,7 +33,7 @@
             <input type="hidden" id="input_program" name="program" value="{{ selected_program }}">
           </div>
 
-          <button type="submit" class="btn btn-dark">Submit All</button>
+            <button type="submit" id="submit-top" class="btn btn-dark" disabled>Submit All</button>
         </div>
 
 
@@ -212,7 +212,7 @@
         </div>
 
         <div class="d-flex justify-content-end mt-3">
-          <button type="submit" class="btn btn-dark">Submit All</button>
+            <button type="submit" id="submit-bottom" class="btn btn-dark" disabled>Submit All</button>
         </div>
       </form>
 
@@ -244,7 +244,7 @@
   // -------------------------------
   // Config & URL helpers
   // -------------------------------
-  const GET_PARTS_URL      = "{% url 'get_parts' %}";       // NEW endpoint you’ll add
+  const GET_PARTS_URL      = "{% url 'get_parts' %}";
   const GET_MACHINES_URL   = "{% url 'get_machines' %}";
   const GET_OPERATIONS_URL = "{% url 'get_operations' %}";
   const GET_CATEGORIES_URL = "{% url 'get_categories' %}";
@@ -365,7 +365,6 @@
     (new URLSearchParams(window.location.search)).get('program') ||
     "";
 
-  // Propagate to UI/state
   function setProgram(prog) {
     currentProgram = prog || "";
     if (programSelect) programSelect.value = currentProgram;
@@ -378,7 +377,6 @@
     updateQueryParam('program', currentProgram);
   }
 
-  // When program changes: clear everything, then fetch parts
   function onProgramChange() {
     setProgram(programSelect.value);
 
@@ -387,6 +385,9 @@
     clearList('list_op',      'input_op');
     clearList('list_machine', 'input_machine');
     clearList('list_cat',     'input_cat');
+
+    // clear entries too (and update submit state)
+    resetEntries();
 
     if (currentProgram) {
       ajaxList(GET_PARTS_URL, { program: currentProgram }, 'list_part', 'input_part');
@@ -450,7 +451,6 @@
     setProgram(currentProgram);
     ajaxList(GET_PARTS_URL, { program: currentProgram }, 'list_part', 'input_part');
   } else {
-    // ensure lists are empty on first load
     clearList('list_part',    'input_part');
     clearList('list_op',      'input_op');
     clearList('list_machine', 'input_machine');
@@ -458,13 +458,28 @@
   }
 
   // -------------------------------
-  // Entries accumulation
+  // Entries accumulation + submit button gating
   // -------------------------------
   const entries       = [];
   const tableBody     = document.querySelector('#entries-table tbody');
   const entriesInput  = document.getElementById('entries-json');
   const qtyField      = document.getElementById('id_quantity');
   const operatorField = document.getElementById('id_operator');
+  const formEl        = document.getElementById('scrap-form');
+  const submitTop     = document.getElementById('submit-top');
+  const submitBottom  = document.getElementById('submit-bottom');
+
+  function updateSubmitState() {
+    const hasEntries = entries.length > 0;
+    if (submitTop)    submitTop.disabled = !hasEntries;
+    if (submitBottom) submitBottom.disabled = !hasEntries;
+  }
+
+  function resetEntries() {
+    entries.length = 0;
+    renderEntries();
+    updateSubmitState();
+  }
 
   document.getElementById('add-entry').addEventListener('click', () => {
     const part      = document.getElementById('input_part').value;
@@ -485,6 +500,7 @@
 
     entries.push({ part, machine, operation, category, qty, operator: opn });
     renderEntries();
+    updateSubmitState();
     qtyField.value = '';
   });
 
@@ -512,10 +528,27 @@
         if (!Number.isNaN(idx)) {
           entries.splice(idx, 1);
           renderEntries();
+          updateSubmitState();
         }
       });
     });
   }
+
+  // Guard: don’t submit with zero entries
+  if (formEl) {
+    formEl.addEventListener('submit', (e) => {
+      if (entries.length === 0) {
+        e.preventDefault();
+        alert('Add at least one entry before submitting.');
+        return;
+      }
+      // ensure JSON is fresh just before submit
+      entriesInput.value = JSON.stringify(entries);
+    });
+  }
+
+  // Initialize disabled state on load
+  updateSubmitState();
 
   // -------------------------------
   // Alerts auto-dismiss
@@ -527,6 +560,7 @@
     });
   }, 3000);
 </script>
+
 
 
 
