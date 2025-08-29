@@ -21,9 +21,18 @@
         {% csrf_token %}
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <a href="{{ toggle_url }}" class="btn btn-outline-secondary">
-            {{ toggle_label }}
-          </a>
+          <div class="d-flex align-items-center gap-2">
+            <label for="select_program" class="form-label mb-0">Program</label>
+            <select id="select_program" class="form-select form-select-sm w-auto">
+              <option value="">Select program…</option>
+              {# provide a list of program names from the view as `programs` #}
+              {% for prog in programs %}
+                <option value="{{ prog }}">{{ prog }}</option>
+              {% endfor %}
+            </select>
+            <input type="hidden" id="input_program" name="program" value="{{ selected_program }}">
+          </div>
+
           <button type="submit" class="btn btn-dark">Submit All</button>
         </div>
 
@@ -235,26 +244,36 @@
   // -------------------------------
   // Config & URL helpers
   // -------------------------------
+  const GET_PARTS_URL      = "{% url 'get_parts' %}";       // NEW endpoint you’ll add
   const GET_MACHINES_URL   = "{% url 'get_machines' %}";
   const GET_OPERATIONS_URL = "{% url 'get_operations' %}";
   const GET_CATEGORIES_URL = "{% url 'get_categories' %}";
 
-  // Current page query string (passed from view as 'extra_qs', optional)
-  // If you rendered 'extra_qs' in context, this will be that value; otherwise fallback to window.location.search
-  const EXTRA_QS_FROM_VIEW = "{{ extra_qs|default_if_none:''|escapejs }}";
-  const PAGE_QS = (EXTRA_QS_FROM_VIEW && EXTRA_QS_FROM_VIEW.trim()) || (window.location.search || "").replace(/^\?/, "");
+  // Global params that should ride along with every AJAX request (e.g., selected program)
+  const GLOBAL_PARAMS = {};
 
-  // Build a URL that merges our params with the page’s existing query string
+  // Build URL with merged params (drop empty/nulls)
   function buildUrl(base, paramsObj = {}) {
-    const localQS = new URLSearchParams(paramsObj).toString();
-    const pieces = [];
-    if (localQS) pieces.push(localQS);
-    if (PAGE_QS) pieces.push(PAGE_QS);
-    const qs = pieces.join("&");
+    const merged = { ...GLOBAL_PARAMS, ...paramsObj };
+    const clean = Object.fromEntries(
+      Object.entries(merged).filter(([_, v]) => v !== "" && v != null)
+    );
+    const qs = new URLSearchParams(clean).toString();
     return qs ? `${base}?${qs}` : base;
   }
 
-  // Small sanitizer for text injection into table cells
+  // Keep the current program reflected in the URL (bookmarkable/shareable)
+  function updateQueryParam(key, value) {
+    const url = new URL(window.location.href);
+    if (value === "" || value == null) {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, value);
+    }
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  // Small sanitizer for table cells
   function safeText(s) {
     const div = document.createElement('div');
     div.textContent = String(s ?? "");
@@ -280,22 +299,13 @@
   });
 
   // -------------------------------
-  // List selection wiring
+  // DOM helpers
   // -------------------------------
-  function wireListClicks(listId, inputId, onPick) {
+  function clearList(listId, inputId) {
     const list = document.getElementById(listId);
     const hidden = document.getElementById(inputId);
-
-    list.addEventListener('click', e => {
-      const target = e.target.closest('.list-group-item');
-      if (!target) return;
-      e.preventDefault();
-
-      list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
-      target.classList.add('active');
-      hidden.value = target.dataset.value || '';
-      onPick && onPick(hidden.value);
-    });
+    list.innerHTML = '';
+    hidden.value = '';
   }
 
   function ajaxList(url, params, listId, inputId) {
@@ -320,7 +330,6 @@
         });
       })
       .catch(() => {
-        // Simple fallback on failure
         const list = document.getElementById(listId);
         const hidden = document.getElementById(inputId);
         list.innerHTML = '';
@@ -328,20 +337,76 @@
       });
   }
 
-  function clearList(listId, inputId) {
+  function wireListClicks(listId, inputId, onPick) {
     const list = document.getElementById(listId);
     const hidden = document.getElementById(inputId);
-    list.innerHTML = '';
-    hidden.value = '';
+
+    list.addEventListener('click', e => {
+      const target = e.target.closest('.list-group-item');
+      if (!target) return;
+      e.preventDefault();
+
+      list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+      target.classList.add('active');
+      hidden.value = target.dataset.value || '';
+      onPick && onPick(hidden.value);
+    });
   }
 
   // -------------------------------
-  // Cascading selects: Part → Op → Machine → Category
+  // Program → Part → Op → Machine → Category
   // -------------------------------
-  wireListClicks('list_part', 'input_part', pn => {
-    clearList('list_op', 'input_op');
+  const programSelect = document.getElementById('select_program');
+  const programHidden = document.getElementById('input_program');
+
+  // initialize current program from hidden, then URL (?program=), then blank
+  let currentProgram =
+    (programHidden?.value || "").trim() ||
+    (new URLSearchParams(window.location.search)).get('program') ||
+    "";
+
+  // Propagate to UI/state
+  function setProgram(prog) {
+    currentProgram = prog || "";
+    if (programSelect) programSelect.value = currentProgram;
+    if (programHidden) programHidden.value = currentProgram;
+    if (currentProgram) {
+      GLOBAL_PARAMS.program = currentProgram;
+    } else {
+      delete GLOBAL_PARAMS.program;
+    }
+    updateQueryParam('program', currentProgram);
+  }
+
+  // When program changes: clear everything, then fetch parts
+  function onProgramChange() {
+    setProgram(programSelect.value);
+
+    // clear everything downstream
+    clearList('list_part',    'input_part');
+    clearList('list_op',      'input_op');
     clearList('list_machine', 'input_machine');
-    clearList('list_cat', 'input_cat');
+    clearList('list_cat',     'input_cat');
+
+    if (currentProgram) {
+      ajaxList(GET_PARTS_URL, { program: currentProgram }, 'list_part', 'input_part');
+    }
+  }
+
+  if (programSelect) {
+    programSelect.addEventListener('change', onProgramChange);
+  }
+
+  // 1) Pick a Part → load Operations
+  wireListClicks('list_part', 'input_part', pn => {
+    clearList('list_op',      'input_op');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat',     'input_cat');
+
+    if (!currentProgram) {
+      alert('Select a Program first.');
+      return;
+    }
 
     ajaxList(GET_OPERATIONS_URL,
       { part_number: pn },
@@ -349,9 +414,10 @@
     );
   });
 
+  // 2) Pick an Operation → load Machines
   wireListClicks('list_op', 'input_op', op => {
     clearList('list_machine', 'input_machine');
-    clearList('list_cat', 'input_cat');
+    clearList('list_cat',     'input_cat');
 
     ajaxList(GET_MACHINES_URL,
       {
@@ -362,6 +428,7 @@
     );
   });
 
+  // 3) Pick a Machine → load Categories
   wireListClicks('list_machine', 'input_machine', mc => {
     clearList('list_cat', 'input_cat');
 
@@ -375,7 +442,20 @@
     );
   });
 
-  wireListClicks('list_cat', 'input_cat', () => { /* no-op on final pick */ });
+  // 4) Pick a Category → just select it
+  wireListClicks('list_cat', 'input_cat', () => {});
+
+  // If page loads with a program (hidden or ?program=), auto-fetch parts
+  if (currentProgram) {
+    setProgram(currentProgram);
+    ajaxList(GET_PARTS_URL, { program: currentProgram }, 'list_part', 'input_part');
+  } else {
+    // ensure lists are empty on first load
+    clearList('list_part',    'input_part');
+    clearList('list_op',      'input_op');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat',     'input_cat');
+  }
 
   // -------------------------------
   // Entries accumulation
@@ -394,6 +474,10 @@
     const qty       = qtyField.value;
     const opn       = operatorField.value;
 
+    if (!currentProgram) {
+      alert('Select a Program first.');
+      return;
+    }
     if (!part || !machine || !operation || !category || !qty || !opn) {
       alert('Please fill out all fields (including Operator #) before adding.');
       return;
@@ -443,6 +527,7 @@
     });
   }, 3000);
 </script>
+
 
 
 {% endblock extra_scripts %}

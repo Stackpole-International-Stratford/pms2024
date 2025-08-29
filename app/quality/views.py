@@ -1243,55 +1243,58 @@ def add_new_epv(request):
 
 
 
+# views.py
+import json
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.urls import reverse
+from django.http import JsonResponse
+from .models import ScrapSystemOperation, ScrapSubmission, ScrapCategory, Program  # adjust import path if needed
+from plant.models.setupfor_models import Asset  # same as your original
 
-PUMP_GEARS_NAME = "Pump Gears"
 
-
-def _is_pumpgears_mode(request):
-    """Any presence of ?pumpgears triggers Pump Gears mode."""
-    return 'pumpgears' in request.GET
-
-
-def _sso_base_qs(request):
+# -------------------------------
+# Helpers
+# -------------------------------
+def _selected_program(request) -> str:
     """
-    Base queryset for ScrapSystemOperation respecting Pump Gears mode:
-      - if pumpgears ON: only Pump Gears program parts
-      - if pumpgears OFF: exclude Pump Gears program parts
+    Read the selected program name from GET first (bookmarkable), then POST.
+    Returns '' if none.
+    """
+    prog = (request.GET.get('program') or request.POST.get('program') or '').strip()
+    return prog
+
+
+def _sso_for_program(program_name: str):
+    """
+    Base queryset for ScrapSystemOperation limited to a given program.
+    If no program provided, return an empty queryset (so nothing shows).
     """
     qs = ScrapSystemOperation.objects.all()
-    if _is_pumpgears_mode(request):
-        return qs.filter(programs__name__iexact=PUMP_GEARS_NAME)
-    return qs.exclude(programs__name__iexact=PUMP_GEARS_NAME)
+    if not program_name:
+        return qs.none()
+    return qs.filter(programs__name__iexact=program_name)
 
 
+# -------------------------------
+# Main page
+# -------------------------------
 def scrap_entry(request):
     """
-    GET: Render the “Add & Submit All” interface.
+    GET:  Render the “Add & Submit All” interface (program-gated).
     POST: Bulk-create ScrapSubmission rows from the `entries` JSON,
           including a shared operator_number.
-    Also supports a toggle between Regular and Pump Gears views via ?pumpgears.
     """
-    # --- Toggle URL & label (preserve other query params) ---
-    pg_mode = _is_pumpgears_mode(request)
-    base_url = reverse('scrap_entry')
-    qs_copy = request.GET.copy()
+    # Which program (if any)?
+    sel_program = _selected_program(request)
+    sso_base = _sso_for_program(sel_program)
 
-    if pg_mode:
-        # We're in Pump Gears → toggle back to regular by removing param
-        qs_copy.pop('pumpgears', None)
-        toggle_label = "Regular Scrap"
-    else:
-        # Regular → toggle to Pump Gears by adding param
-        qs_copy['pumpgears'] = '1'
-        toggle_label = "Pump Gears"
+    # For the Program dropdown
+    programs = list(
+        Program.objects.order_by('name').values_list('name', flat=True)
+    )
 
-    toggle_qs = qs_copy.urlencode()
-    toggle_url = f"{base_url}?{toggle_qs}" if toggle_qs else base_url
-
-    # --- Base queryset filtered by mode ---
-    sso_base = _sso_base_qs(request)
-
-    # 1) Master list of part numbers (filtered)
+    # 1) Master list of part numbers for the selected program (or empty if none)
     part_numbers = list(
         sso_base.order_by('part_number')
                 .values_list('part_number', flat=True)
@@ -1300,15 +1303,19 @@ def scrap_entry(request):
 
     # 2) Form-state defaults (for re-render on validation errors)
     sel_pn = sel_mc = sel_op = sel_cat = sel_operator = sel_qty = ''
-    machines: list[str] = []
-    operations: list[str] = []
-    categories: list[str] = []
+    machines = []
+    operations = []
+    categories = []
 
     if request.method == 'POST':
-        # --- pull back the operator number (single field) ---
+        # --- ensure a program is selected for POST ---
+        if not sel_program:
+            messages.error(request, "Please select a Program before submitting.")
+            # fall through to render
+
         sel_operator = request.POST.get('operator', '').strip()
 
-        # --- repopulate dropdowns so they stay visible ---
+        # --- repopulate dropdowns so they stay visible on error ---
         sel_pn = request.POST.get('part_number', '').strip()
         if sel_pn:
             machines = (
@@ -1348,6 +1355,9 @@ def scrap_entry(request):
         # 4) Validation & creation
         if not entries:
             messages.error(request, "No entries to submit. Please Add at least one row.")
+        elif not sel_program:
+            # already messaged above; do nothing else
+            pass
         else:
             created = 0
             for idx, e in enumerate(entries, start=1):
@@ -1371,14 +1381,14 @@ def scrap_entry(request):
                     messages.warning(request, f"Entry #{idx} has invalid quantity “{qty_str}”—skipped.")
                     continue
 
-                # validate against filtered SSO
+                # validate against SSO limited to the selected program
                 sso = sso_base.filter(
                     part_number=part,
                     operation=operation,
                     assets__asset_number=machine
                 ).first()
                 if not sso:
-                    messages.warning(request, f"Entry #{idx} has invalid part/op/machine—skipped.")
+                    messages.warning(request, f"Entry #{idx} has invalid part/op/machine for this program—skipped.")
                     continue
 
                 # latest Asset by asset_number
@@ -1405,7 +1415,7 @@ def scrap_entry(request):
 
                 # compute & save
                 unit_cost = sso.cost  # Decimal
-                total_cost = unit_cost * qty  # Decimal * int → Decimal
+                total_cost = unit_cost * qty
 
                 ScrapSubmission.objects.create(
                     scrap_system_operation=sso,
@@ -1424,50 +1434,86 @@ def scrap_entry(request):
 
             if created:
                 messages.success(request, f"{created} scrap entr{'y' if created == 1 else 'ies'} recorded.")
-                # keep query string so we stay in (or out of) pumpgears mode
-                existing_qs = request.META.get('QUERY_STRING', '')
+                # Preserve ?program=... on redirect
                 url = reverse('scrap_entry')
-                if existing_qs:
-                    url = f"{url}?{existing_qs}"
+                if sel_program:
+                    url = f"{url}?program={sel_program}"
                 return redirect(url)
             else:
                 messages.error(request, "No valid entries were recorded.")
 
-    # 5) FINAL render (GET or POST with errors)
-    extra_qs = request.META.get('QUERY_STRING', '')  # pass through for JS/AJAX
-
+    # FINAL render
     return render(request, 'quality/scrap_entry.html', {
+        # dropdown data
+        'programs': programs,
+        'selected_program': sel_program,
+
+        # lists
         'part_numbers':         part_numbers,
         'machines':             machines,
         'operations':           operations,
         'categories':           categories,
+
+        # form state
         'selected_part_number': sel_pn,
         'selected_machine':     sel_mc,
         'selected_operation':   sel_op,
         'selected_category':    sel_cat,
         'selected_operator':    sel_operator,
         'quantity':             sel_qty,
-        'extra_qs':             extra_qs,        # used by JS to keep filters on AJAX
-        'toggle_url':           toggle_url,      # LEFT toggle button href
-        'toggle_label':         toggle_label,    # LEFT toggle button text
     })
 
 
+# -------------------------------
+# AJAX endpoints (respect program)
+# -------------------------------
+def get_parts(request):
+    """
+    ?program=<name>  ->  {"results": ["PN-001", "PN-002", ...]}
+    """
+    prog = (request.GET.get('program') or '').strip()
+    if not prog:
+        return JsonResponse({'results': []})
+    qs = _sso_for_program(prog)
+    parts = (
+        qs.order_by('part_number')
+          .values_list('part_number', flat=True)
+          .distinct()
+    )
+    return JsonResponse({'results': list(parts)})
 
 
 def get_operations(request):
+    """
+    ?program=<name>&part_number=<pn>[&machine=<asset_number>]
+    """
+    prog = (request.GET.get('program') or '').strip()
     pn = request.GET.get('part_number')
     mc = request.GET.get('machine')
-    qs = _sso_base_qs(request).filter(part_number=pn)
+
+    if not prog or not pn:
+        return JsonResponse({'results': []})
+
+    qs = _sso_for_program(prog).filter(part_number=pn)
     if mc:
         qs = qs.filter(assets__asset_number=mc)
+
     ops = qs.order_by('operation').values_list('operation', flat=True).distinct()
     return JsonResponse({'results': list(ops)})
 
+
 def get_machines(request):
+    """
+    ?program=<name>&part_number=<pn>[&operation=<op>]
+    """
+    prog = (request.GET.get('program') or '').strip()
     pn = request.GET.get('part_number')
     op = request.GET.get('operation')
-    sso_qs = _sso_base_qs(request).filter(part_number=pn)
+
+    if not prog or not pn:
+        return JsonResponse({'results': []})
+
+    sso_qs = _sso_for_program(prog).filter(part_number=pn)
     if op:
         sso_qs = sso_qs.filter(operation=op)
 
@@ -1480,12 +1526,21 @@ def get_machines(request):
     )
     return JsonResponse({'results': list(machines)})
 
+
 def get_categories(request):
+    """
+    ?program=<name>&part_number=<pn>&operation=<op>&machine=<asset_number>
+    """
+    prog = (request.GET.get('program') or '').strip()
     pn = request.GET.get('part_number')
     mc = request.GET.get('machine')
     op = request.GET.get('operation')
+
+    if not all([prog, pn, mc, op]):
+        return JsonResponse({'results': []})
+
     try:
-        sso = _sso_base_qs(request).get(
+        sso = _sso_for_program(prog).get(
             part_number=pn,
             operation=op,
             assets__asset_number=mc
