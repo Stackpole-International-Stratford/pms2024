@@ -227,45 +227,87 @@
 
 {% block extra_scripts %}
 <script>
-  // Resolve URLs
+  "use strict";
+
+  // -------------------------------
+  // Config & URL helpers
+  // -------------------------------
   const GET_MACHINES_URL   = "{% url 'get_machines' %}";
   const GET_OPERATIONS_URL = "{% url 'get_operations' %}";
   const GET_CATEGORIES_URL = "{% url 'get_categories' %}";
 
-  // Scroll helpers (unchanged)…
+  // Current page query string (passed from view as 'extra_qs', optional)
+  // If you rendered 'extra_qs' in context, this will be that value; otherwise fallback to window.location.search
+  const EXTRA_QS_FROM_VIEW = "{{ extra_qs|default_if_none:''|escapejs }}";
+  const PAGE_QS = (EXTRA_QS_FROM_VIEW && EXTRA_QS_FROM_VIEW.trim()) || (window.location.search || "").replace(/^\?/, "");
+
+  // Build a URL that merges our params with the page’s existing query string
+  function buildUrl(base, paramsObj = {}) {
+    const localQS = new URLSearchParams(paramsObj).toString();
+    const pieces = [];
+    if (localQS) pieces.push(localQS);
+    if (PAGE_QS) pieces.push(PAGE_QS);
+    const qs = pieces.join("&");
+    return qs ? `${base}?${qs}` : base;
+  }
+
+  // Small sanitizer for text injection into table cells
+  function safeText(s) {
+    const div = document.createElement('div');
+    div.textContent = String(s ?? "");
+    return div.innerHTML;
+  }
+
+  // -------------------------------
+  // Scroll helpers
+  // -------------------------------
   const SCROLL_AMOUNT = 35, SCROLL_INTERVAL = 60;
   document.querySelectorAll('.scroll-btn').forEach(btn => {
     let timer;
     const container = document.getElementById(btn.dataset.target);
     const start = dir => {
       if (timer) clearInterval(timer);
-      timer = setInterval(() => container.scrollTop += dir * SCROLL_AMOUNT, SCROLL_INTERVAL);
+      timer = setInterval(() => { container.scrollTop += dir * SCROLL_AMOUNT; }, SCROLL_INTERVAL);
     };
     const stop = () => { clearInterval(timer); timer = null; };
+
     btn.addEventListener('mousedown', () => start(btn.classList.contains('scroll-down') ? 1 : -1));
     ['mouseup','mouseleave','touchend'].forEach(evt => btn.addEventListener(evt, stop));
     btn.addEventListener('touchstart', e => { e.preventDefault(); start(btn.classList.contains('scroll-down') ? 1 : -1); });
   });
 
-  function wireListClicks(listId, inputId, callback) {
-    const list = document.getElementById(listId),
-          hidden = document.getElementById(inputId);
+  // -------------------------------
+  // List selection wiring
+  // -------------------------------
+  function wireListClicks(listId, inputId, onPick) {
+    const list = document.getElementById(listId);
+    const hidden = document.getElementById(inputId);
+
     list.addEventListener('click', e => {
-      if (!e.target.matches('.list-group-item')) return;
+      const target = e.target.closest('.list-group-item');
+      if (!target) return;
+      e.preventDefault();
+
       list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
-      e.target.classList.add('active');
-      hidden.value = e.target.dataset.value;
-      callback(e.target.dataset.value);
+      target.classList.add('active');
+      hidden.value = target.dataset.value || '';
+      onPick && onPick(hidden.value);
     });
   }
 
   function ajaxList(url, params, listId, inputId) {
-    fetch(`${url}?${new URLSearchParams(params)}`, { credentials: 'same-origin' })
-      .then(r => r.json()).then(json => {
-        const list = document.getElementById(listId),
-              hidden = document.getElementById(inputId);
-        list.innerHTML = ''; hidden.value = '';
-        json.results.forEach(val => {
+    const fullUrl = buildUrl(url, params);
+
+    fetch(fullUrl, { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(json => {
+        const list = document.getElementById(listId);
+        const hidden = document.getElementById(inputId);
+
+        list.innerHTML = '';
+        hidden.value = '';
+
+        (json.results || []).forEach(val => {
           const a = document.createElement('a');
           a.href = '#';
           a.className = 'list-group-item list-group-item-action';
@@ -273,103 +315,131 @@
           a.textContent = val;
           list.appendChild(a);
         });
+      })
+      .catch(() => {
+        // Simple fallback on failure
+        const list = document.getElementById(listId);
+        const hidden = document.getElementById(inputId);
+        list.innerHTML = '';
+        hidden.value = '';
       });
   }
 
-  function clear(listId, inputId) {
-    document.getElementById(listId).innerHTML = '';
-    document.getElementById(inputId).value = '';
+  function clearList(listId, inputId) {
+    const list = document.getElementById(listId);
+    const hidden = document.getElementById(inputId);
+    list.innerHTML = '';
+    hidden.value = '';
   }
 
-  // wire cascading selects: Part → Operation → Machine → Category
-
-  // 1) Pick a Part → load Operations
+  // -------------------------------
+  // Cascading selects: Part → Op → Machine → Category
+  // -------------------------------
   wireListClicks('list_part', 'input_part', pn => {
-    clear('list_op', 'input_op');
-    clear('list_machine', 'input_machine');
-    clear('list_cat', 'input_cat');
+    clearList('list_op', 'input_op');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat', 'input_cat');
+
     ajaxList(GET_OPERATIONS_URL,
-             { part_number: pn },
-             'list_op', 'input_op');
+      { part_number: pn },
+      'list_op', 'input_op'
+    );
   });
 
-  // 2) Pick an Operation → load Machines
   wireListClicks('list_op', 'input_op', op => {
-    clear('list_machine', 'input_machine');
-    clear('list_cat', 'input_cat');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat', 'input_cat');
+
     ajaxList(GET_MACHINES_URL,
-             {
-               part_number: document.getElementById('input_part').value,
-               operation:   op
-             },
-             'list_machine', 'input_machine');
+      {
+        part_number: document.getElementById('input_part').value,
+        operation:   op
+      },
+      'list_machine', 'input_machine'
+    );
   });
 
-  // 3) Pick a Machine → load Categories
   wireListClicks('list_machine', 'input_machine', mc => {
-    clear('list_cat', 'input_cat');
+    clearList('list_cat', 'input_cat');
+
     ajaxList(GET_CATEGORIES_URL,
-             {
-               part_number: document.getElementById('input_part').value,
-               operation:   document.getElementById('input_op').value,
-               machine:     mc
-             },
-             'list_cat', 'input_cat');
+      {
+        part_number: document.getElementById('input_part').value,
+        operation:   document.getElementById('input_op').value,
+        machine:     mc
+      },
+      'list_cat', 'input_cat'
+    );
   });
 
-  // 4) Pick a Category → just select it
-  wireListClicks('list_cat', 'input_cat', () => {});
+  wireListClicks('list_cat', 'input_cat', () => { /* no-op on final pick */ });
 
-  // entries accumulation (unchanged)…
-  const entries       = [],
-        tableBody     = document.querySelector('#entries-table tbody'),
-        entriesInput  = document.getElementById('entries-json'),
-        qtyField      = document.getElementById('id_quantity'),
-        operatorField = document.getElementById('id_operator');
+  // -------------------------------
+  // Entries accumulation
+  // -------------------------------
+  const entries       = [];
+  const tableBody     = document.querySelector('#entries-table tbody');
+  const entriesInput  = document.getElementById('entries-json');
+  const qtyField      = document.getElementById('id_quantity');
+  const operatorField = document.getElementById('id_operator');
 
   document.getElementById('add-entry').addEventListener('click', () => {
-    const part      = document.getElementById('input_part').value,
-          machine   = document.getElementById('input_machine').value,
-          operation = document.getElementById('input_op').value,
-          category  = document.getElementById('input_cat').value,
-          qty       = qtyField.value,
-          opn       = operatorField.value;
+    const part      = document.getElementById('input_part').value;
+    const machine   = document.getElementById('input_machine').value;
+    const operation = document.getElementById('input_op').value;
+    const category  = document.getElementById('input_cat').value;
+    const qty       = qtyField.value;
+    const opn       = operatorField.value;
 
-    if (!part||!machine||!operation||!category||!qty||!opn) {
-      return alert('Please fill out all fields (including Operator #) before adding.');
+    if (!part || !machine || !operation || !category || !qty || !opn) {
+      alert('Please fill out all fields (including Operator #) before adding.');
+      return;
     }
+
     entries.push({ part, machine, operation, category, qty, operator: opn });
     renderEntries();
     qtyField.value = '';
   });
 
-  function renderEntries(){
+  function renderEntries() {
     tableBody.innerHTML = '';
-    entries.forEach((e,i) => {
+
+    entries.forEach((e, i) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${e.part}</td>
-        <td>${e.machine}</td>
-        <td>${e.operation}</td>
-        <td>${e.category}</td>
-        <td>${e.qty}</td>
+        <td>${safeText(e.part)}</td>
+        <td>${safeText(e.machine)}</td>
+        <td>${safeText(e.operation)}</td>
+        <td>${safeText(e.category)}</td>
+        <td>${safeText(e.qty)}</td>
         <td><button type="button" class="btn btn-sm btn-danger remove-entry" data-index="${i}">&times;</button></td>
       `;
       tableBody.appendChild(tr);
     });
+
     entriesInput.value = JSON.stringify(entries);
-    document.querySelectorAll('.remove-entry').forEach(btn => {
+
+    tableBody.querySelectorAll('.remove-entry').forEach(btn => {
       btn.addEventListener('click', () => {
-        entries.splice(btn.dataset.index, 1);
-        renderEntries();
+        const idx = Number(btn.dataset.index);
+        if (!Number.isNaN(idx)) {
+          entries.splice(idx, 1);
+          renderEntries();
+        }
       });
     });
   }
 
-  // auto-dismiss alerts (unchanged)…
-  setTimeout(() => document.querySelectorAll('.alert').forEach(el =>
-    bootstrap.Alert.getOrCreateInstance(el).close()
-  ), 3000);
+  // -------------------------------
+  // Alerts auto-dismiss
+  // -------------------------------
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(el => {
+      const inst = bootstrap.Alert.getOrCreateInstance(el);
+      inst.close();
+    });
+  }, 3000);
 </script>
+
 
 {% endblock extra_scripts %}
