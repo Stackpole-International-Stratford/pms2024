@@ -1246,21 +1246,49 @@ def add_new_epv(request):
 
 PUMP_GEARS_NAME = "Pump Gears"
 
+
 def _is_pumpgears_mode(request):
-    # Any presence of the param triggers pumpgears mode (e.g., ?pumpgears=1)
+    """Any presence of ?pumpgears triggers Pump Gears mode."""
     return 'pumpgears' in request.GET
 
+
 def _sso_base_qs(request):
+    """
+    Base queryset for ScrapSystemOperation respecting Pump Gears mode:
+      - if pumpgears ON: only Pump Gears program parts
+      - if pumpgears OFF: exclude Pump Gears program parts
+    """
     qs = ScrapSystemOperation.objects.all()
     if _is_pumpgears_mode(request):
         return qs.filter(programs__name__iexact=PUMP_GEARS_NAME)
-    else:
-        return qs.exclude(programs__name__iexact=PUMP_GEARS_NAME)
-
+    return qs.exclude(programs__name__iexact=PUMP_GEARS_NAME)
 
 
 def scrap_entry(request):
+    """
+    GET: Render the “Add & Submit All” interface.
+    POST: Bulk-create ScrapSubmission rows from the `entries` JSON,
+          including a shared operator_number.
+    Also supports a toggle between Regular and Pump Gears views via ?pumpgears.
+    """
+    # --- Toggle URL & label (preserve other query params) ---
     pg_mode = _is_pumpgears_mode(request)
+    base_url = reverse('scrap_entry')
+    qs_copy = request.GET.copy()
+
+    if pg_mode:
+        # We're in Pump Gears → toggle back to regular by removing param
+        qs_copy.pop('pumpgears', None)
+        toggle_label = "Regular Scrap"
+    else:
+        # Regular → toggle to Pump Gears by adding param
+        qs_copy['pumpgears'] = '1'
+        toggle_label = "Pump Gears"
+
+    toggle_qs = qs_copy.urlencode()
+    toggle_url = f"{base_url}?{toggle_qs}" if toggle_qs else base_url
+
+    # --- Base queryset filtered by mode ---
     sso_base = _sso_base_qs(request)
 
     # 1) Master list of part numbers (filtered)
@@ -1270,18 +1298,19 @@ def scrap_entry(request):
                 .distinct()
     )
 
-    # defaults...
+    # 2) Form-state defaults (for re-render on validation errors)
     sel_pn = sel_mc = sel_op = sel_cat = sel_operator = sel_qty = ''
-    machines = []
-    operations = []
-    categories = []
+    machines: list[str] = []
+    operations: list[str] = []
+    categories: list[str] = []
 
     if request.method == 'POST':
+        # --- pull back the operator number (single field) ---
         sel_operator = request.POST.get('operator', '').strip()
 
+        # --- repopulate dropdowns so they stay visible ---
         sel_pn = request.POST.get('part_number', '').strip()
         if sel_pn:
-            # machines limited by filtered SSO
             machines = (
                 Asset.objects
                      .filter(scrapsystemoperation__in=sso_base.filter(part_number=sel_pn))
@@ -1301,21 +1330,22 @@ def scrap_entry(request):
 
         sel_op = request.POST.get('operation', '').strip()
         if sel_pn and sel_mc and sel_op:
-            qs = sso_base.filter(
+            qs_ops = sso_base.filter(
                 part_number=sel_pn,
                 operation=sel_op,
                 assets__asset_number=sel_mc
             )
-            if qs.exists():
-                categories = list(qs.first().scrap_categories.values_list('name', flat=True))
+            if qs_ops.exists():
+                categories = list(qs_ops.first().scrap_categories.values_list('name', flat=True))
 
-        # entries JSON
+        # 3) pull in the JSON array of “added” rows
         raw_entries = request.POST.get('entries', '[]')
         try:
             entries = json.loads(raw_entries)
         except json.JSONDecodeError:
             entries = []
 
+        # 4) Validation & creation
         if not entries:
             messages.error(request, "No entries to submit. Please Add at least one row.")
         else:
@@ -1327,10 +1357,12 @@ def scrap_entry(request):
                 category = e.get('category')
                 qty_str = e.get('qty')
 
+                # presence check
                 if not all([part, machine, operation, category, qty_str, sel_operator]):
                     messages.warning(request, f"Entry #{idx} missing data or operator—skipped.")
                     continue
 
+                # parse qty
                 try:
                     qty = int(qty_str)
                     if qty < 1:
@@ -1339,7 +1371,7 @@ def scrap_entry(request):
                     messages.warning(request, f"Entry #{idx} has invalid quantity “{qty_str}”—skipped.")
                     continue
 
-                # IMPORTANT: validate against filtered SSO
+                # validate against filtered SSO
                 sso = sso_base.filter(
                     part_number=part,
                     operation=operation,
@@ -1349,6 +1381,7 @@ def scrap_entry(request):
                     messages.warning(request, f"Entry #{idx} has invalid part/op/machine—skipped.")
                     continue
 
+                # latest Asset by asset_number
                 asset = (
                     Asset.objects
                          .filter(asset_number=machine)
@@ -1359,6 +1392,7 @@ def scrap_entry(request):
                     messages.warning(request, f"Entry #{idx} machine not found—skipped.")
                     continue
 
+                # latest category by name
                 cat = (
                     ScrapCategory.objects
                                  .filter(name=category)
@@ -1369,8 +1403,9 @@ def scrap_entry(request):
                     messages.warning(request, f"Entry #{idx} category not found—skipped.")
                     continue
 
-                unit_cost = sso.cost
-                total_cost = unit_cost * qty
+                # compute & save
+                unit_cost = sso.cost  # Decimal
+                total_cost = unit_cost * qty  # Decimal * int → Decimal
 
                 ScrapSubmission.objects.create(
                     scrap_system_operation=sso,
@@ -1390,16 +1425,16 @@ def scrap_entry(request):
             if created:
                 messages.success(request, f"{created} scrap entr{'y' if created == 1 else 'ies'} recorded.")
                 # keep query string so we stay in (or out of) pumpgears mode
-                qs = request.META.get('QUERY_STRING', '')
+                existing_qs = request.META.get('QUERY_STRING', '')
                 url = reverse('scrap_entry')
-                if qs:
-                    url = f"{url}?{qs}"
+                if existing_qs:
+                    url = f"{url}?{existing_qs}"
                 return redirect(url)
             else:
                 messages.error(request, "No valid entries were recorded.")
 
-    # pass through the existing query string to JS so AJAX keeps the filter
-    extra_qs = request.META.get('QUERY_STRING', '')
+    # 5) FINAL render (GET or POST with errors)
+    extra_qs = request.META.get('QUERY_STRING', '')  # pass through for JS/AJAX
 
     return render(request, 'quality/scrap_entry.html', {
         'part_numbers':         part_numbers,
@@ -1412,9 +1447,10 @@ def scrap_entry(request):
         'selected_category':    sel_cat,
         'selected_operator':    sel_operator,
         'quantity':             sel_qty,
-        'extra_qs':             extra_qs,     # NEW
+        'extra_qs':             extra_qs,        # used by JS to keep filters on AJAX
+        'toggle_url':           toggle_url,      # LEFT toggle button href
+        'toggle_label':         toggle_label,    # LEFT toggle button text
     })
-
 
 
 
