@@ -23,7 +23,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="d-flex align-items-center gap-2">
             <label for="select_program" class="form-label mb-0">Program</label>
-            <select id="select_program" class="form-select form-select-sm w-auto">
+            <select id="select_program" class="form-select form-select-sm bigger-dropdown">
               <option value="">Select program…</option>
               {# provide a list of program names from the view as `programs` #}
               {% for prog in programs %}
@@ -231,6 +231,14 @@
           border-color:#000 !important;
           color:#fff !important;
         }
+
+        .bigger-dropdown {
+            min-width: 250px;   /* control width */
+            font-size: 1rem;    /* default Bootstrap ~14px, try 1.1rem (≈17px) or 1.25rem (≈20px) */
+            padding: 0.5rem 1rem; /* gives a bit more clickable area */
+          }
+
+
       </style>
     </div>
   </div>
