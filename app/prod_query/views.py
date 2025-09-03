@@ -2503,6 +2503,65 @@ lines = [
             },
         ],
     },
+     {
+        "line": "Magna",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "Sinter Assembler",
+                "machines": [
+                    {"number": "859", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Sinter Unload",
+                "machines": [
+                    {"number": "992", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Optimized Heat",
+                "machines": [
+                    {"number": "770", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Optimized Machine",
+                "machines": [
+                    {"number": "618", "target": 27496,},
+                    {"number": "575", "target": 27496,},
+                    {"number": "624", "target": 27496,},
+                    {"number": "619", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Trilobe Heat",
+                "machines": [
+                    {"number": "728", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Trilobe Machine",
+                "machines": [
+                    {"number": "644", "target": 27496,},
+                    {"number": "649", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Trilobe Slurry",
+                "machines": [
+                    {"number": "742", "target": 27496,},
+                ],
+            },
+            {
+                "op": "Offline Machine",
+                "machines": [
+                    {"number": "636", "target": 27496,},
+                    {"number": "625", "target": 27496,},
+                ],
+            },
+        ],
+    },
     {
         "line": "ZF",
         "scrap_line": "NA",
