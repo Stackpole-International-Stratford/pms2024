@@ -2483,6 +2483,40 @@ lines = [
         ],
     },
     {
+        "line": "GFX",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "30",
+                "machines": [
+                    {"number": "1605", "target": 27496,},
+                    {"number": "1606", "target": 29592,},
+                    {"number": "1607", "target": 57600,},
+                    {"number": "1608", "target": 43116,},
+                ],
+            },
+            {
+                "op": "80",
+                "machines": [
+                    {"number": "1617", "target": 27496,},
+                ],
+            },
+        ],
+    },
+    {
+        "line": "ZF",
+        "scrap_line": "NA",
+        "operations": [
+            {
+                "op": "autoguage",
+                "machines": [
+                    {"number": "797", "target": 27496,},
+
+                ],
+            },
+        ],
+    },
+    {
         "line": "Presses",
         "scrap_line": "NA",
         "operations": [
