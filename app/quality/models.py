@@ -284,7 +284,7 @@ class ScrapSubmission(models.Model):
 # ==========================================================================
 
 class TPCRequest(models.Model):
-    date_requested   = models.DateField(default=timezone.now)
+    date_requested   = models.DateTimeField()
     issuer_name      = models.CharField(max_length=120)
     parts            = models.JSONField(default=list)
     reason           = models.CharField(max_length=200)

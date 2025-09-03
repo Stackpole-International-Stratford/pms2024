@@ -1587,24 +1587,65 @@ def tpc_request(request):
     page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
-    tpcs = (
+    base_qs = (
         TPCRequest.objects
-        .filter(rejected=False)                      # hide soft-rejected
-        .order_by('-id')
+        .filter(rejected=False)
+        .order_by('-date_requested')
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
             )
         )
-        .prefetch_related("approvals", "verbal_approvals")[:page_size]
+        .prefetch_related("approvals", "verbal_approvals")
     )
 
-    return render(request, "quality/tpc_requests.html", {
-        "tpcs": tpcs,
-        "is_tpc_approver": is_tpc_approver,         # approvers can also reject
-        "tpc_page_size": settings.TPC_PAGE_SIZE,
-    })
+    first_page = list(base_qs[:page_size])
 
+    rows = []
+    build_abs = request.build_absolute_uri
+    for t in first_page:
+        # guard against any stray date objects:
+        dr = t.date_requested
+        ed = t.expiration_date
+        try:
+            dr_str = timezone.localtime(dr).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            # if it’s a date, stringify it safely
+            dr_str = getattr(dr, "strftime", lambda *_: str(dr))("%Y-%m-%d")
+
+        try:
+            ed_str = timezone.localtime(ed).strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            ed_str = getattr(ed, "strftime", lambda *_: str(ed))("%Y-%m-%d")
+
+        has_verbal = t.verbal_approvals.all().exists()
+        pdf_url = build_abs(f"/quality/tpc/{t.pk}/pdf/") if (t.approved or has_verbal) else None
+
+        rows.append({
+            "pk": t.pk,
+            "date_requested": dr_str,
+            "issuer_name": t.issuer_name,
+            "parts": ", ".join(t.parts) if t.parts else "—",
+            "reason": t.reason,
+            "process": t.process,
+            "supplier_issue": "Yes" if t.supplier_issue else "No",
+            "machines": ", ".join(t.machines) if t.machines else "—",
+            "expiration_date": ed_str,
+            "approved": t.approved,
+            "has_verbal": has_verbal,
+            "approvals_got": t.approvals.count(),
+            "approvals_req": t.required_approvals_count(),
+            "approvers": ", ".join(a.user.get_full_name() or a.user.username for a in t.approvals.all()) or "—",
+            "user_has_approved": t.user_has_approved,
+            "pdf_url": pdf_url,
+        })
+
+    return render(request, "quality/tpc_requests.html", {
+        "rows": rows,                                # 👈 pass strings, not model objs
+        "is_tpc_approver": is_tpc_approver,
+        "tpc_page_size": settings.TPC_PAGE_SIZE,
+        "initial_count": len(rows),
+    })
 
 
 @login_required(login_url='/login/')
@@ -1640,14 +1681,14 @@ def tpc_request_load_more(request):
 
         rows.append({
             "pk": t.pk,
-            "date_requested": t.date_requested.strftime("%Y-%m-%d %H:%M"),
+            "date_requested": timezone.localtime(t.date_requested).strftime("%Y-%m-%d %H:%M"),
             "issuer_name": t.issuer_name,
             "parts": ", ".join(t.parts) if t.parts else "—",
             "reason": t.reason,
             "process": t.process,
             "supplier_issue": "Yes" if t.supplier_issue else "No",
             "machines": ", ".join(t.machines) if t.machines else "—",
-            "expiration_date": t.expiration_date.strftime("%Y-%m-%d %H:%M"),
+            "expiration_date": timezone.localtime(t.expiration_date).strftime("%Y-%m-%d %H:%M"),
             "approved": t.approved,
             "has_verbal": has_verbal,
             "approvals_got": t.approvals.count(),
@@ -1733,6 +1774,7 @@ def tpc_request_create(request):
         # Create TPCRequest with JSON fields
         try:
             tpc = TPCRequest.objects.create(
+                date_requested=timezone.now(),     # 👈 add this
                 issuer_name=issuer_name,
                 parts=parts,                # stored as JSON list
                 reason=reason,
