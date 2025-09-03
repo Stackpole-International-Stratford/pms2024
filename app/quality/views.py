@@ -38,6 +38,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseForbidden, Http404
 from django.shortcuts import redirect, render
 from .models import TPCRequest
+from django.urls import reverse
+
 
 def index(request):
     is_quality_manager = False
@@ -1254,42 +1256,86 @@ def add_new_epv(request):
 # =============================================================================
 # =============================================================================
 
+
+
+# views.py
+import json
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.urls import reverse
+from django.http import JsonResponse
+from .models import ScrapSystemOperation, ScrapSubmission, ScrapCategory, Program  # adjust import path if needed
+from plant.models.setupfor_models import Asset  # same as your original
+
+
+# -------------------------------
+# Helpers
+# -------------------------------
+def _selected_program(request) -> str:
+    """
+    Read the selected program name from GET first (bookmarkable), then POST.
+    Returns '' if none.
+    """
+    prog = (request.GET.get('program') or request.POST.get('program') or '').strip()
+    return prog
+
+
+def _sso_for_program(program_name: str):
+    """
+    Base queryset for ScrapSystemOperation limited to a given program.
+    If no program provided, return an empty queryset (so nothing shows).
+    """
+    qs = ScrapSystemOperation.objects.all()
+    if not program_name:
+        return qs.none()
+    return qs.filter(programs__name__iexact=program_name)
+
+
+# -------------------------------
+# Main page
+# -------------------------------
 def scrap_entry(request):
     """
-    GET:  Render the “Add & Submit All” interface.
+    GET:  Render the “Add & Submit All” interface (program-gated).
     POST: Bulk-create ScrapSubmission rows from the `entries` JSON,
           including a shared operator_number.
     """
-    # 1) Master list of part numbers
+    # Which program (if any)?
+    sel_program = _selected_program(request)
+    sso_base = _sso_for_program(sel_program)
+
+    # For the Program dropdown
+    programs = list(
+        Program.objects.order_by('name').values_list('name', flat=True)
+    )
+
+    # 1) Master list of part numbers for the selected program (or empty if none)
     part_numbers = list(
-        ScrapSystemOperation.objects
-            .order_by('part_number')
-            .values_list('part_number', flat=True)
-            .distinct()
+        sso_base.order_by('part_number')
+                .values_list('part_number', flat=True)
+                .distinct()
     )
 
     # 2) Form-state defaults (for re-render on validation errors)
-    sel_pn        = ''
-    sel_mc        = ''
-    sel_op        = ''
-    sel_cat       = ''
-    sel_operator  = ''   # ← your new operator field
-    sel_qty       = ''   # ← start blank
-
-    machines   = []
+    sel_pn = sel_mc = sel_op = sel_cat = sel_operator = sel_qty = ''
+    machines = []
     operations = []
     categories = []
 
     if request.method == 'POST':
-        # --- pull back the operator number (single field) ---
+        # --- ensure a program is selected for POST ---
+        if not sel_program:
+            messages.error(request, "Please select a Program before submitting.")
+            # fall through to render
+
         sel_operator = request.POST.get('operator', '').strip()
 
-        # --- repopulate any dropdowns so they stay visible ---
+        # --- repopulate dropdowns so they stay visible on error ---
         sel_pn = request.POST.get('part_number', '').strip()
         if sel_pn:
             machines = (
                 Asset.objects
-                     .filter(scrapsystemoperation__part_number=sel_pn)
+                     .filter(scrapsystemoperation__in=sso_base.filter(part_number=sel_pn))
                      .order_by('asset_number')
                      .values_list('asset_number', flat=True)
                      .distinct()
@@ -1298,26 +1344,21 @@ def scrap_entry(request):
         sel_mc = request.POST.get('machine', '').strip()
         if sel_pn and sel_mc:
             operations = list(
-                ScrapSystemOperation.objects
-                    .filter(part_number=sel_pn, assets__asset_number=sel_mc)
-                    .order_by('operation')
-                    .values_list('operation', flat=True)
-                    .distinct()
+                sso_base.filter(part_number=sel_pn, assets__asset_number=sel_mc)
+                        .order_by('operation')
+                        .values_list('operation', flat=True)
+                        .distinct()
             )
 
         sel_op = request.POST.get('operation', '').strip()
         if sel_pn and sel_mc and sel_op:
-            qs = ScrapSystemOperation.objects.filter(
+            qs_ops = sso_base.filter(
                 part_number=sel_pn,
                 operation=sel_op,
                 assets__asset_number=sel_mc
             )
-            if qs.exists():
-                categories = list(
-                    qs.first()
-                      .scrap_categories
-                      .values_list('name', flat=True)
-                )
+            if qs_ops.exists():
+                categories = list(qs_ops.first().scrap_categories.values_list('name', flat=True))
 
         # 3) pull in the JSON array of “added” rows
         raw_entries = request.POST.get('entries', '[]')
@@ -1326,23 +1367,24 @@ def scrap_entry(request):
         except json.JSONDecodeError:
             entries = []
 
-        # 4) Validation: need at least one entry
+        # 4) Validation & creation
         if not entries:
             messages.error(request, "No entries to submit. Please Add at least one row.")
+        elif not sel_program:
+            # already messaged above; do nothing else
+            pass
         else:
             created = 0
             for idx, e in enumerate(entries, start=1):
-                part      = e.get('part')
-                machine   = e.get('machine')
+                part = e.get('part')
+                machine = e.get('machine')
                 operation = e.get('operation')
-                category  = e.get('category')
-                qty_str   = e.get('qty')
+                category = e.get('category')
+                qty_str = e.get('qty')
 
                 # presence check
                 if not all([part, machine, operation, category, qty_str, sel_operator]):
-                    messages.warning(request,
-                        f"Entry #{idx} missing data or operator—skipped."
-                    )
+                    messages.warning(request, f"Entry #{idx} missing data or operator—skipped.")
                     continue
 
                 # parse qty
@@ -1351,28 +1393,20 @@ def scrap_entry(request):
                     if qty < 1:
                         raise ValueError
                 except ValueError:
-                    messages.warning(request,
-                        f"Entry #{idx} has invalid quantity “{qty_str}”—skipped."
-                    )
+                    messages.warning(request, f"Entry #{idx} has invalid quantity “{qty_str}”—skipped.")
                     continue
 
-                # find matching ScrapSystemOperation
-                sso = (
-                    ScrapSystemOperation.objects
-                        .filter(
-                            part_number=part,
-                            operation=operation,
-                            assets__asset_number=machine
-                        )
-                        .first()
-                )
+                # validate against SSO limited to the selected program
+                sso = sso_base.filter(
+                    part_number=part,
+                    operation=operation,
+                    assets__asset_number=machine
+                ).first()
                 if not sso:
-                    messages.warning(request,
-                        f"Entry #{idx} has invalid part/op/machine—skipped."
-                    )
+                    messages.warning(request, f"Entry #{idx} has invalid part/op/machine for this program—skipped.")
                     continue
 
-                # latest Asset
+                # latest Asset by asset_number
                 asset = (
                     Asset.objects
                          .filter(asset_number=machine)
@@ -1380,12 +1414,10 @@ def scrap_entry(request):
                          .first()
                 )
                 if not asset:
-                    messages.warning(request,
-                        f"Entry #{idx} machine not found—skipped."
-                    )
+                    messages.warning(request, f"Entry #{idx} machine not found—skipped.")
                     continue
 
-                # latest Category
+                # latest category by name
                 cat = (
                     ScrapCategory.objects
                                  .filter(name=category)
@@ -1393,44 +1425,51 @@ def scrap_entry(request):
                                  .first()
                 )
                 if not cat:
-                    messages.warning(request,
-                        f"Entry #{idx} category not found—skipped."
-                    )
+                    messages.warning(request, f"Entry #{idx} category not found—skipped.")
                     continue
 
                 # compute & save
-                unit_cost  = sso.cost
+                unit_cost = sso.cost  # Decimal
                 total_cost = unit_cost * qty
 
                 ScrapSubmission.objects.create(
                     scrap_system_operation=sso,
                     asset=asset,
                     scrap_category=cat,
-
-                    part_number     = part,
-                    machine         = machine,
-                    operation_name  = operation,
-                    category_name   = category,
-                    operator_number = sel_operator,
-
-                    quantity   = qty,
-                    unit_cost  = unit_cost,
-                    total_cost = total_cost,
+                    part_number=part,
+                    machine=machine,
+                    operation_name=operation,
+                    category_name=category,
+                    operator_number=sel_operator,
+                    quantity=qty,
+                    unit_cost=unit_cost,
+                    total_cost=total_cost,
                 )
                 created += 1
 
             if created:
                 messages.success(request, f"{created} scrap entr{'y' if created == 1 else 'ies'} recorded.")
-                return redirect('scrap_entry')
+                # Preserve ?program=... on redirect
+                url = reverse('scrap_entry')
+                if sel_program:
+                    url = f"{url}?program={sel_program}"
+                return redirect(url)
             else:
                 messages.error(request, "No valid entries were recorded.")
 
-    # 5) FINAL render (GET or POST with errors)
+    # FINAL render
     return render(request, 'quality/scrap_entry.html', {
+        # dropdown data
+        'programs': programs,
+        'selected_program': sel_program,
+
+        # lists
         'part_numbers':         part_numbers,
         'machines':             machines,
         'operations':           operations,
         'categories':           categories,
+
+        # form state
         'selected_part_number': sel_pn,
         'selected_machine':     sel_mc,
         'selected_operation':   sel_op,
@@ -1439,53 +1478,84 @@ def scrap_entry(request):
         'quantity':             sel_qty,
     })
 
+
+# -------------------------------
+# AJAX endpoints (respect program)
+# -------------------------------
+def get_parts(request):
+    """
+    ?program=<name>  ->  {"results": ["PN-001", "PN-002", ...]}
+    """
+    prog = (request.GET.get('program') or '').strip()
+    if not prog:
+        return JsonResponse({'results': []})
+    qs = _sso_for_program(prog)
+    parts = (
+        qs.order_by('part_number')
+          .values_list('part_number', flat=True)
+          .distinct()
+    )
+    return JsonResponse({'results': list(parts)})
+
+
 def get_operations(request):
     """
-    AJAX: return all operations for a given part_number.
-    If machine is provided, only operations valid on that machine.
+    ?program=<name>&part_number=<pn>[&machine=<asset_number>]
     """
+    prog = (request.GET.get('program') or '').strip()
     pn = request.GET.get('part_number')
-    mc = request.GET.get('machine')  # may be None
+    mc = request.GET.get('machine')
 
-    qs = ScrapSystemOperation.objects.filter(part_number=pn)
+    if not prog or not pn:
+        return JsonResponse({'results': []})
+
+    qs = _sso_for_program(prog).filter(part_number=pn)
     if mc:
         qs = qs.filter(assets__asset_number=mc)
 
-    ops = (
-        qs.order_by('operation')
-          .values_list('operation', flat=True)
-          .distinct()
-    )
+    ops = qs.order_by('operation').values_list('operation', flat=True).distinct()
     return JsonResponse({'results': list(ops)})
 
 
 def get_machines(request):
     """
-    AJAX: return one machine per asset_number (latest if duplicates) for a part.
-    If operation is provided, only machines that perform that operation.
+    ?program=<name>&part_number=<pn>[&operation=<op>]
     """
+    prog = (request.GET.get('program') or '').strip()
     pn = request.GET.get('part_number')
-    op = request.GET.get('operation')  # may be None
+    op = request.GET.get('operation')
 
-    qs = Asset.objects.filter(scrapsystemoperation__part_number=pn)
+    if not prog or not pn:
+        return JsonResponse({'results': []})
+
+    sso_qs = _sso_for_program(prog).filter(part_number=pn)
     if op:
-        qs = qs.filter(scrapsystemoperation__operation=op)
+        sso_qs = sso_qs.filter(operation=op)
 
     machines = (
-        qs.order_by('asset_number', '-id')
-          .values_list('asset_number', flat=True)
-          .distinct()
+        Asset.objects
+             .filter(scrapsystemoperation__in=sso_qs)
+             .order_by('asset_number', '-id')
+             .values_list('asset_number', flat=True)
+             .distinct()
     )
     return JsonResponse({'results': list(machines)})
 
 
 def get_categories(request):
-    """AJAX: return all scrap categories for PN + machine + operation."""
+    """
+    ?program=<name>&part_number=<pn>&operation=<op>&machine=<asset_number>
+    """
+    prog = (request.GET.get('program') or '').strip()
     pn = request.GET.get('part_number')
     mc = request.GET.get('machine')
     op = request.GET.get('operation')
+
+    if not all([prog, pn, mc, op]):
+        return JsonResponse({'results': []})
+
     try:
-        sso = ScrapSystemOperation.objects.get(
+        sso = _sso_for_program(prog).get(
             part_number=pn,
             operation=op,
             assets__asset_number=mc

@@ -6,6 +6,9 @@ from .models import TPCRequest
 from .models import RedRabbitType
 from .models import QualityPDFDocument
 
+from plant.models.setupfor_models import Part
+from django.contrib import admin
+from .models import ScrapSystemOperation, Program
 
 class FeatForm(forms.ModelForm):
     part = forms.ModelChoiceField(queryset=Part.objects.all(), label="Part Number")
@@ -45,3 +48,24 @@ class RedRabbitTypeForm(forms.ModelForm):
         }
 
 
+
+
+
+class ScrapSystemOperationAdminForm(forms.ModelForm):
+    # Single-select dropdown instead of the M2M widget
+    program = forms.ModelChoiceField(
+        queryset=Program.objects.all(),
+        required=False,
+        help_text="Select the single Program for this operation."
+    )
+
+    class Meta:
+        model  = ScrapSystemOperation
+        fields = "__all__"
+        exclude = ("programs",)  # hide the M2M on the form
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pre-fill with the first (if any) to reflect current state
+        if self.instance and self.instance.pk:
+            self.fields["program"].initial = self.instance.programs.first()
