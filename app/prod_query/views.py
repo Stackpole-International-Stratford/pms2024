@@ -2060,43 +2060,43 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1703R", "target": 1925},
-                    {"number": "1704R", "target": 1925},
+                    {"number": "1703R",},
+                    {"number": "1704R",},
                 ],
             },
             {
                 "op": "20/30",
                 "machines": [
-                    {"number": "1703L", "target": 1925},
-                    {"number": "1704L", "target": 1925},
-                    {"number": "616", "target": 1050},
-                    {"number": "623", "target": 1050},
-                    {"number": "617", "target": 1050},
+                    {"number": "1703L",},
+                    {"number": "1704L",},
+                    {"number": "616",},
+                    {"number": "623",},
+                    {"number": "617",},
                 ],
             },
             {
                 "op": "50",
                 "machines": [
-                    {"number": "659", "target": 4200},
-                    {"number": "626", "target": 2800},
+                    {"number": "659",},
+                    {"number": "626",},
                 ],
             },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "1712", "target": 7000},
+                    {"number": "1712",},
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "1716L", "target": 7000},
+                    {"number": "1716L",},
                 ],
             },
             {
                 "op": "90",
                 "machines": [
-                    {"number": "1723", "target": 7000, "part_numbers": ["50-0450", "50-8670"]
+                    {"number": "1723", "part_numbers": ["50-0450", "50-8670"]
                     }
                 ]
             }
@@ -2110,60 +2110,60 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1740L", "target": 3500},
-                    {"number": "1740R", "target": 3500},
+                    {"number": "1740L",},
+                    {"number": "1740R",},
                 ],
             },
             {
                 "op": "40",
                 "machines": [
-                    {"number": "1701L", "target": 3500},
-                    {"number": "1701R", "target": 3500},
+                    {"number": "1701L",},
+                    {"number": "1701R",},
                 ],
             },
             # This one is also not tracking... found 3 not tracking so far. this will boost oee
             # {
             #     "op": "50",
             #     "machines": [
-            #         {"number": "733", "target": 7000},
+            #         {"number": "733",},
             #     ],
             # },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "775", "target": 3500},
-                    {"number": "1702", "target": 3500},
+                    {"number": "775",},
+                    {"number": "1702",},
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "581", "target": 3500},
-                    {"number": "788", "target": 3500},
+                    {"number": "581",},
+                    {"number": "788",},
                 ],
             },
             {
                 "op": "80",
                 "machines": [
-                    {"number": "1714", "target": 7000},
+                    {"number": "1714",},
                 ],
             },
             {
                 "op": "90",
                 "machines": [
-                    {"number": "1717L", "target": 7000},
+                    {"number": "1717L",},
                 ],
             },
             {
                 "op": "100",
                 "machines": [
-                    {"number": "1706", "target": 7000},
+                    {"number": "1706",},
                 ],
             },
             {
                 "op": "110",
                 "machines": [
-                    {"number": "1723", "target": 7000, "part_numbers": ["50-0447", "50-5401"]
+                    {"number": "1723", "part_numbers": ["50-0447", "50-5401"]
                     }
                 ]
             }
@@ -2177,59 +2177,59 @@ lines = [
             {
                 "op": "20",
                 "machines": [
-                    {"number": "1705L", "target": 3500},
-                    {"number": "1746R", "target": 3500},
+                    {"number": "1705L",},
+                    {"number": "1746R",},
                 ],
             },
             {
                 "op": "25",
                 "machines": [
-                    {"number": "621", "target": 3500},
-                    {"number": "629", "target": 3500},
+                    {"number": "621",},
+                    {"number": "629",},
                 ],
             },
             {
                 "op": "30",
                 "machines": [
-                    {"number": "785", "target": 700},
-                    {"number": "1748", "target": 3150},
-                    {"number": "1718", "target": 3150},
+                    {"number": "785",},
+                    {"number": "1748",},
+                    {"number": "1718",},
                 ],
             },
             {
                 "op": "35",
                 "machines": [
-                    {"number": "669", "target": 7000},
+                    {"number": "669",},
                 ],
             },
             {
                 "op": "40",
                 "machines": [
-                    {"number": "1726", "target": 7000},
+                    {"number": "1726",},
                 ],
             },
             {
                 "op": "50",
                 "machines": [
-                    {"number": "1722", "target": 7000},
+                    {"number": "1722",},
                 ],
             },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "1713", "target": 7000},
+                    {"number": "1713",},
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "1716R", "target": 7000},
+                    {"number": "1716R",},
                 ],
             },
             {
                 "op": "90",
                 "machines": [
-                    {"number": "1723", "target": 7000, "part_numbers": ["50-0519", "50-5404"]
+                    {"number": "1723", "part_numbers": ["50-0519", "50-5404"]
                     }
                 ]
             }
@@ -2243,87 +2243,87 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1504", "target": 6187},  
-                    {"number": "1506", "target": 6187},  
-                    {"number": "1519", "target": 5625},  
-                    {"number": "1520", "target": 5625},
-                    {"number": "1518", "target": 5625},  
-                    {"number": "1521", "target": 5625},  
-                    {"number": "1522", "target": 6187}, 
-                    {"number": "1523", "target": 5625}, 
+                    {"number": "1504",},  
+                    {"number": "1506",},  
+                    {"number": "1519",},  
+                    {"number": "1520",},
+                    {"number": "1518",},  
+                    {"number": "1521",},  
+                    {"number": "1522",}, 
+                    {"number": "1523",}, 
                 ],
             },
             {
                 "op": "30",
                 "machines": [
-                    {"number": "1502", "target": 11250}, 
-                    {"number": "1507", "target": 11250},  
-                    {"number": "1539", "target": 11250}, 
-                    {"number": "1540", "target": 11250}, 
+                    {"number": "1502",}, 
+                    {"number": "1507",},  
+                    {"number": "1539",}, 
+                    {"number": "1540",}, 
                 ],
             },
             {
                 "op": "40",
                 "machines": [
-                    {"number": "1501", "target": 11250},  
-                    {"number": "1515", "target": 11250},  
-                    {"number": "1524", "target": 11250}, 
-                    {"number": "1525", "target": 11250}, 
+                    {"number": "1501",},  
+                    {"number": "1515",},  
+                    {"number": "1524",}, 
+                    {"number": "1525",}, 
                 ],
             },
             {
                 "op": "50",
                 "machines": [
-                    {"number": "1508", "target": 13500},  
-                    {"number": "1532", "target": 15750},  
-                    {"number": "1538", "target": 15750}, 
+                    {"number": "1508",},  
+                    {"number": "1532",},  
+                    {"number": "1538",}, 
                 ],
             },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "1509", "target": 22500},  
-                    {"number": "1541", "target": 22500}, 
+                    {"number": "1509",},  
+                    {"number": "1541",}, 
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "1514", "target": 22500}, 
-                    {"number": "1531", "target": 22500}, 
+                    {"number": "1514",}, 
+                    {"number": "1531",}, 
                 ],
             },
             {
                 "op": "80",
                 "machines": [
-                    {"number": "1510", "target": 22500},  
-                    {"number": "1527", "target": 22500}, 
+                    {"number": "1510",},  
+                    {"number": "1527",}, 
                 ],
             },
             {
                 "op": "90",
                 "machines": [
-                    {"number": "1513", "target": 45000}, 
+                    {"number": "1513",}, 
                 ],
             },
             {
                 "op": "100",
                 "machines": [
-                    {"number": "1503", "target": 22500},  
-                    {"number": "1530", "target": 22500}, 
+                    {"number": "1503",},  
+                    {"number": "1530",}, 
                 ],
             },
             {
                 "op": "110",
                 "machines": [
-                    {"number": "1511", "target": 22500},
-                    {"number": "1528", "target": 22500},  
+                    {"number": "1511",},
+                    {"number": "1528",},  
                 ],
             },
             {
                 "op": "120",
                 "machines": [
-                    {"number": "1533", "target": 45000}, 
+                    {"number": "1533",}, 
                 ],
             },
         ],
@@ -2335,74 +2335,74 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1800", "target": 5918},
-                    {"number": "1801", "target": 5918},
-                    {"number": "1802", "target": 5072},
+                    {"number": "1800",},
+                    {"number": "1801",},
+                    {"number": "1802",},
                 ],
             },
             {
                 "op": "30",
                 "machines": [
-                    {"number": "1529", "target": 4227},
-                    {"number": "776", "target": 4227},
-                    {"number": "1824", "target": 4227},
-                    {"number": "1543", "target": 4227},
+                    {"number": "1529",},
+                    {"number": "776",},
+                    {"number": "1824",},
+                    {"number": "1543",},
                 ],
             },
             {
                 "op": "40",
                 "machines": [
-                    {"number": "1804", "target": 8454},
-                    {"number": "1805", "target": 8454},
+                    {"number": "1804",},
+                    {"number": "1805",},
                 ],
             },
             {
                 "op": "50",
                 "machines": [
-                    {"number": "1806", "target": 16908},
+                    {"number": "1806",},
                 ],
             },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "1808", "target": 16908},
+                    {"number": "1808",},
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "1810", "target": 16908},
+                    {"number": "1810",},
                 ],
             },
             {
                 "op": "80",
                 "machines": [
-                    {"number": "1815", "target": 16908},
+                    {"number": "1815",},
                 ],
             },
             # I don't believe this machine is even being tracked, there are no records for it
             # {
             #     "op": "90",
             #     "machines": [
-            #         {"number": "1542", "target": 16908},
+            #         {"number": "1542",},
             #     ],
             # },
             {
                 "op": "100",
                 "machines": [
-                    {"number": "1812", "target": 1908},
+                    {"number": "1812",},
                 ],
             },
                         {
                 "op": "110",
                 "machines": [
-                    {"number": "1813", "target": 16908},
+                    {"number": "1813",},
                 ],
             },
                         {
                 "op": "120",
                 "machines": [
-                    {"number": "1816", "target": 16908},
+                    {"number": "1816",},
                 ],
             },
         ],
@@ -2414,70 +2414,70 @@ lines = [
             {
                 "op": "10",
                 "machines": [
-                    {"number": "1708L", "target": 3600},
-                    {"number": "1708R", "target": 3600},
+                    {"number": "1708L",},
+                    {"number": "1708R",},
                 ],
             },
             # {
             #     "op": "20",
             #     "machines": [
-            #         {"number": "1709", "target": 4227},
+            #         {"number": "1709",},
             #     ],
             # },
             {
                 "op": "30",
                 "machines": [
-                    {"number": "1710", "target": 7200},
+                    {"number": "1710",},
                 ],
             },
             {
                 "op": "40",
                 "machines": [
-                    {"number": "1711", "target": 7200},
+                    {"number": "1711",},
                 ],
             },
             {
                 "op": "50",
                 "machines": [
-                    {"number": "1715", "target": 7200},
+                    {"number": "1715",},
                 ],
             },
             {
                 "op": "60",
                 "machines": [
-                    {"number": "1717R", "target": 7200},
+                    {"number": "1717R",},
                 ],
             },
             {
                 "op": "70",
                 "machines": [
-                    {"number": "1706", "target": 5000},
+                    {"number": "1706",},
                 ],
             },
             # I don't think this machine is being tracked either
             # {
             #     "op": "80",
             #     "machines": [
-            #         {"number": "1720", "target": 5000},
+            #         {"number": "1720",},
             #     ],
             # },
             {
                 "op": "90",
                 "machines": [
-                    {"number": "748", "target": 5000},
-                    {"number": "677", "target": 5000},
+                    {"number": "748",},
+                    {"number": "677",},
                 ],
             },
                         {
                 "op": "100",
                 "machines": [
-                    {"number": "1723", "target": 7200, "part_numbers": ["50-5214", "50-3214"]},
+                    {"number": "1723", "part_numbers": ["50-5214", "50-3214"]},
                 ],
             },
                         {
                 "op": "110",
                 "machines": [
-                    {"number": "1752", "target": 7200},
+                    {"number": "1752",},
                 ],
             },
         ],
@@ -2489,16 +2489,16 @@ lines = [
             {
                 "op": "30",
                 "machines": [
-                    {"number": "1605", "target": 27496,},
-                    {"number": "1606", "target": 29592,},
-                    {"number": "1607", "target": 57600,},
-                    {"number": "1608", "target": 43116,},
+                    {"number": "1605",},
+                    {"number": "1606",},
+                    {"number": "1607",},
+                    {"number": "1608",},
                 ],
             },
             {
                 "op": "80",
                 "machines": [
-                    {"number": "1617", "target": 27496,},
+                    {"number": "1617",},
                 ],
             },
         ],
@@ -2510,54 +2510,54 @@ lines = [
             {
                 "op": "Sinter Assembler",
                 "machines": [
-                    {"number": "859", "target": 27496,},
+                    {"number": "859",},
                 ],
             },
             {
                 "op": "Sinter Unload",
                 "machines": [
-                    {"number": "992", "target": 27496,},
+                    {"number": "992",},
                 ],
             },
             {
                 "op": "Optimized Heat",
                 "machines": [
-                    {"number": "770", "target": 27496,},
+                    {"number": "770",},
                 ],
             },
             {
                 "op": "Optimized Machine",
                 "machines": [
-                    {"number": "618", "target": 27496,},
-                    {"number": "575", "target": 27496,},
-                    {"number": "624", "target": 27496,},
-                    {"number": "619", "target": 27496,},
+                    {"number": "618",},
+                    {"number": "575",},
+                    {"number": "624",},
+                    {"number": "619",},
                 ],
             },
             {
                 "op": "Trilobe Heat",
                 "machines": [
-                    {"number": "728", "target": 27496,},
+                    {"number": "728",},
                 ],
             },
             {
                 "op": "Trilobe Machine",
                 "machines": [
-                    {"number": "644", "target": 27496,},
-                    {"number": "649", "target": 27496,},
+                    {"number": "644",},
+                    {"number": "649",},
                 ],
             },
             {
                 "op": "Trilobe Slurry",
                 "machines": [
-                    {"number": "742", "target": 27496,},
+                    {"number": "742",},
                 ],
             },
             {
                 "op": "Offline Machine",
                 "machines": [
-                    {"number": "636", "target": 27496,},
-                    {"number": "625", "target": 27496,},
+                    {"number": "636",},
+                    {"number": "625",},
                 ],
             },
         ],
@@ -2569,7 +2569,7 @@ lines = [
             {
                 "op": "autoguage",
                 "machines": [
-                    {"number": "797", "target": 27496,},
+                    {"number": "797",},
 
                 ],
             },
@@ -2582,15 +2582,15 @@ lines = [
             {
                 "op": "compact",
                 "machines": [
-                    {"number": "272", "target": 27496,},
-                    {"number": "273", "target": 29592,},
-                    {"number": "277", "target": 57600,},
-                    {"number": "278", "target": 43116,},
-                    {"number": "262", "target": 43711,},
-                    {"number": "240", "target": 59659,},
-                    {"number": "280", "target": 49888,},
-                    {"number": "242", "target": 53355,},
-                    {"number": "245", "target": 50000,},
+                    {"number": "272",},
+                    {"number": "273",},
+                    {"number": "277",},
+                    {"number": "278",},
+                    {"number": "262",},
+                    {"number": "240",},
+                    {"number": "280",},
+                    {"number": "242",},
+                    {"number": "245",},
                 ],
             },
         ],
