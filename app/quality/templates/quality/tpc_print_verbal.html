@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>TPC #{{ tpc.pk }} – Verbal Approval Print</title>
+<title>TPC #{{ tpc.pk }} – Print</title>
 <style>
   /* A4 portrait, zero margins */
   @page { size: A4; margin: 0; }
@@ -30,21 +30,9 @@
   .hdr-ttl { font-weight: 800; font-size: 18pt; text-align:center; line-height: 1.1; }
   .hdr-num { font-weight: 900; font-size: 22pt; text-align:center; margin-top: 2pt; }
 
-  /* Verbal banner */
-  .verbal-banner {
-    background:#ffd84d;
-    color:#000;
-    text-align:center;
-    font-weight:900;
-    letter-spacing:.02em;
-    padding: 6pt 8pt;
-    border-bottom: 1px solid #000;
-  }
-
   /* Tables */
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   td { border: 1px solid #000; vertical-align: top; padding: 0; word-wrap: break-word; overflow-wrap: break-word; }
-
   .cell { padding: 3pt 5pt; }
   .lbl { color:#b00; font-weight:700; font-size:9pt; margin-bottom: 2pt; }
   .val { word-break: break-word; white-space: pre-wrap; }
@@ -72,14 +60,9 @@
 </head>
 <body>
 
-  <!-- ===== Copy 1 ===== -->
+  <!-- COPY 1 -->
   <div class="page">
     <section class="copy">
-
-      <div class="verbal-banner">
-        VERBAL APPROVAL (TEMPORARY) — Pending formal TPC approver sign-off
-      </div>
-
       <div class="hdr">
         <div class="hdr-ttl">Temporary Process Change</div>
         <div class="hdr-num">TPC #{{ tpc.pk }}</div>
@@ -125,37 +108,51 @@
         </tr>
       </table>
 
-      <!-- Row 5: Changed To / blank -->
+      <!-- Row 5: Changed To / QE Risk Assessment -->
       <table class="g2 h-md2">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Changed To</div><div class="val">{{ tpc.changed_to|default:"—" }}</div></div></td>
-          <td><div class="cell"></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Changed To</div>
+              <div class="val">{{ tpc.changed_to|default:"—" }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">QE Risk Assessment</div>
+              <div class="val">{{ tpc.qe_risk_assessment|default:"—" }}</div>
+            </div>
+          </td>
         </tr>
       </table>
 
-      <!-- Row 6: Length of Change / Expired notice -->
+      <!-- Row 6: Expired notice -->
       <table class="g2 h-note">
         <colgroup><col><col></colgroup>
         <tr>
           <td><div class="cell"><div class="lbl">If Expired Notify Supervisor – Do Not Remove</div></div></td>
+          <td><div class="cell"></div></td>
         </tr>
       </table>
 
-      <!-- Verbal Approval block -->
+      <!-- Approvals -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
           <td colspan="2">
             <div class="cell">
-              <div class="lbl">Verbal Approval</div>
+              <div class="lbl">Approvals</div>
               <div class="val">
-                VERBALLY APPROVED BY {{ verbal.approver_name|default:"—" }}
-                AT {{ verbal.created_at|default:"—" }}
-                <br>Phone: {{ verbal.approver_phone|default:"—" }}
-                <br>Response / Conditions: {{ verbal.approver_response|default:"—" }}
-                <br>Status: {% if verbal.approved %}Approved{% else %}Not Approved{% endif %}
-                <div class="muted">This is a temporary authorization pending formal approval by the TPC approver group.</div>
+                {{ tpc.approvals.count }}/{{ tpc.required_approvals_count }}
+                {% if tpc.approvals.count %} —
+                  {% for a in tpc.approvals.all %}
+                    {{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% endif %}
+                {% if tpc.approved_by %}
+                  <div class="muted">Last approved by {{ tpc.approved_by.get_full_name|default:tpc.approved_by.username }} on {{ tpc.approved_at }}</div>
+                {% endif %}
               </div>
             </div>
           </td>
@@ -167,20 +164,15 @@
     </section>
   </div>
 
-  <!-- ===== Copy 2 (duplicate) ===== -->
+  <!-- COPY 2 -->
   <div class="page">
     <section class="copy">
-
-      <div class="verbal-banner">
-        VERBAL APPROVAL (TEMPORARY) — Pending formal TPC approver sign-off
-      </div>
-
       <div class="hdr">
         <div class="hdr-ttl">Temporary Process Change</div>
         <div class="hdr-num">TPC #{{ tpc.pk }}</div>
       </div>
 
-      <!-- Row 1: Date / Issuer / Reason / Expiration -->
+      <!-- Row 1 -->
       <table class="g4 h-sm">
         <colgroup><col><col><col><col></colgroup>
         <tr>
@@ -191,7 +183,7 @@
         </tr>
       </table>
 
-      <!-- Row 2: Process / Supplier Issue / Parts / Machines -->
+      <!-- Row 2 -->
       <table class="g4 h-sm">
         <colgroup><col><col><col><col></colgroup>
         <tr>
@@ -202,7 +194,7 @@
         </tr>
       </table>
 
-      <!-- Row 3: Reason Note / Feature -->
+      <!-- Row 3 -->
       <table class="g2 h-md">
         <colgroup><col><col></colgroup>
         <tr>
@@ -211,7 +203,7 @@
         </tr>
       </table>
 
-      <!-- Row 4: Current Process / blank -->
+      <!-- Row 4 -->
       <table class="g2 h-lg">
         <colgroup><col><col></colgroup>
         <tr>
@@ -220,16 +212,26 @@
         </tr>
       </table>
 
-      <!-- Row 5: Changed To / blank -->
+      <!-- Row 5: Changed To / QE Risk Assessment -->
       <table class="g2 h-md2">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Changed To</div><div class="val">{{ tpc.changed_to|default:"—" }}</div></div></td>
-          <td><div class="cell"></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Changed To</div>
+              <div class="val">{{ tpc.changed_to|default:"—" }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">QE Risk Assessment</div>
+              <div class="val">{{ tpc.qe_risk_assessment|default:"—" }}</div>
+            </div>
+          </td>
         </tr>
       </table>
 
-      <!-- Row 6: Length of Change / Expired notice -->
+      <!-- Row 6 -->
       <table class="g2 h-note">
         <colgroup><col><col></colgroup>
         <tr>
@@ -238,20 +240,23 @@
         </tr>
       </table>
 
-      <!-- Verbal Approval block -->
+      <!-- Approvals -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
           <td colspan="2">
             <div class="cell">
-              <div class="lbl">Verbal Approval</div>
+              <div class="lbl">Approvals</div>
               <div class="val">
-                VERBALLY APPROVED BY {{ verbal.approver_name|default:"—" }}
-                AT {{ verbal.created_at|default:"—" }}
-                <br>Phone: {{ verbal.approver_phone|default:"—" }}
-                <br>Response / Conditions: {{ verbal.approver_response|default:"—" }}
-                <br>Status: {% if verbal.approved %}Approved{% else %}Not Approved{% endif %}
-                <div class="muted">This is a temporary authorization pending formal approval by the TPC approver group.</div>
+                {{ tpc.approvals.count }}/{{ tpc.required_approvals_count }}
+                {% if tpc.approvals.count %} —
+                  {% for a in tpc.approvals.all %}
+                    {{ a.user.get_full_name|default:a.user.username }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% endif %}
+                {% if tpc.approved_by %}
+                  <div class="muted">Last approved by {{ tpc.approved_by.get_full_name|default:tpc.approved_by.username }} on {{ tpc.approved_at }}</div>
+                {% endif %}
               </div>
             </div>
           </td>
