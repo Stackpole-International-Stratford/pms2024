@@ -2520,13 +2520,13 @@ lines = [
                 ],
             },
             {
-                "op": "Optimized Heat",
+                "op": "Optimized Heat Treat",
                 "machines": [
                     {"number": "770",},
                 ],
             },
             {
-                "op": "Optimized Machine",
+                "op": "Optimized Machining",
                 "machines": [
                     {"number": "618",},
                     {"number": "575",},
@@ -2535,26 +2535,26 @@ lines = [
                 ],
             },
             {
-                "op": "Trilobe Heat",
+                "op": "Trilobe Heat Treat",
                 "machines": [
                     {"number": "728",},
                 ],
             },
             {
-                "op": "Trilobe Machine",
+                "op": "Trilobe Machining",
                 "machines": [
                     {"number": "644",},
                     {"number": "649",},
                 ],
             },
             {
-                "op": "Trilobe Slurry",
+                "op": "Trilobe Slurry Deburr",
                 "machines": [
                     {"number": "742",},
                 ],
             },
             {
-                "op": "Offline Machine",
+                "op": "Offline Machining",
                 "machines": [
                     {"number": "636",},
                     {"number": "625",},
@@ -2567,7 +2567,7 @@ lines = [
         "scrap_line": "NA",
         "operations": [
             {
-                "op": "autoguage",
+                "op": "Inspection",
                 "machines": [
                     {"number": "797",},
 
