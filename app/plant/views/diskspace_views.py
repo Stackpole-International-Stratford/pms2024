@@ -6,6 +6,8 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils.html import escape
 
+THRESHOLD = 90  # Only send if disk_used >= THRESHOLD
+
 # IP -> (host_name, color_emoji, hex_color)
 HOST_MAP = {
     "10.4.1.232": ("pmdsdata9",  "🟦", "#1E90FF"),
@@ -17,20 +19,32 @@ HOST_MAP = {
 
 IP_REGEX = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 # Accept "72%" or "DiskUsed: 72%" from legacy message payloads
-DISK_USED_FROM_MESSAGE = re.compile(r"(?:DiskUsed:\s*)?(\d{1,3}%)")
+DISK_USED_FROM_MESSAGE = re.compile(r"(?:DiskUsed:\s*)?(\d{1,3})%")
+
+def _parse_disk_used_int(disk_used_str: str | None) -> int | None:
+    """
+    Accepts '92%', '92', ' 92 % ' etc. Returns int 0..100 or None.
+    """
+    if not disk_used_str:
+        return None
+    m = re.search(r"(\d{1,3})", disk_used_str)
+    if not m:
+        return None
+    val = int(m.group(1))
+    # Clamp to 0..100 just to be safe
+    return max(0, min(val, 100))
 
 @require_GET
 def send_health_disk(request):
     """
-    Sends an email with host + IP derived from the message, and a clean line:
-    'Disk Space Used: <value>'.
-    Prefer ?disk_used=72% ; falls back to parsing from legacy 'message'.
+    Sends an email *only if* disk_used >= THRESHOLD.
+    Prefer ?disk_used=92% ; falls back to parsing from legacy 'message' (DiskUsed: 92%).
     """
     recipient = "tyler.careless@johnsonelectric.com"
     raw_message = (request.GET.get("message") or "").strip()
-    disk_used = (request.GET.get("disk_used") or "").strip()
+    disk_used_raw = (request.GET.get("disk_used") or "").strip()
 
-    # Try to extract IP from either disk_used param (unlikely) or legacy message
+    # Extract IP from legacy 'message' if present
     ip_match = IP_REGEX.search(raw_message)
     ip = ip_match.group(0) if ip_match else None
 
@@ -39,19 +53,42 @@ def send_health_disk(request):
     if ip and ip in HOST_MAP:
         host_name, emoji, color_hex = HOST_MAP[ip]
 
-    # Extract disk_used if not explicitly provided
+    # Derive disk_used %
+    disk_used = disk_used_raw
     if not disk_used:
         m = DISK_USED_FROM_MESSAGE.search(raw_message)
         if m:
-            disk_used = m.group(1)  # e.g. "72%"
+            disk_used = m.group(1) + "%"  # e.g. "72%"
 
-    # Build subject
+    disk_used_pct = _parse_disk_used_int(disk_used)
+
+    if disk_used_pct is None:
+        return JsonResponse({
+            "ok": False,
+            "error": "disk_used_missing_or_invalid",
+            "hint": "Pass ?disk_used=NN% or include 'DiskUsed: NN%' in message."
+        })
+
+    # If below threshold, do NOT send the email—just report back
+    if disk_used_pct < THRESHOLD:
+        return JsonResponse({
+            "ok": True,
+            "email_sent": False,
+            "suppressed_due_to_threshold": True,
+            "threshold": THRESHOLD,
+            "disk_used_percent": disk_used_pct,
+            "ip_detected": ip,
+            "host_mapped": host_name,
+        })
+
+    # Build subject (severity + host color emoji if mapped)
+    severity_emoji = "🚨"
     if host_name:
-        subject = f"{emoji} Disk Space Report [{host_name} | {ip}]"
+        subject = f"{severity_emoji} {emoji} Disk Space Report [{host_name} | {ip}]"
     elif ip:
-        subject = f"Disk Space Report [{ip}]"
+        subject = f"{severity_emoji} Disk Space Report [{ip}]"
     else:
-        subject = "Disk Space Report"
+        subject = f"{severity_emoji} Disk Space Report"
 
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
 
@@ -60,11 +97,11 @@ def send_health_disk(request):
         f"Host: {host_name}" if host_name else "Host: Unknown",
         f"IP: {ip}" if ip else "IP: Not detected",
         "",
-        f"Disk Space Used: {disk_used or 'Unknown'}",
+        f"Disk Space Used: {disk_used_pct}%",
     ]
     text_body = "\n".join(text_lines)
 
-    # HTML body (with colored badge for mapped hosts)
+    # HTML body with a colored host badge (if mapped)
     badge_html = ""
     if host_name and color_hex:
         badge_html = (
@@ -81,7 +118,8 @@ def send_health_disk(request):
       <p style="margin:4px 0;"><strong>Host:</strong> {escape(host_name) if host_name else 'Unknown'}</p>
       <p style="margin:4px 0;"><strong>IP:</strong> {escape(ip) if ip else 'Not detected'}</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:12px 0;" />
-      <p style="margin:4px 0;"><strong>Disk Space Used:</strong> {escape(disk_used or 'Unknown')}</p>
+      <p style="margin:4px 0;"><strong>Disk Space Used:</strong> {disk_used_pct}%</p>
+      <p style="margin:4px 0;color:#b91c1c;"><strong>Alert:</strong> Usage at or above {THRESHOLD}%.</p>
     </div>
     """.strip()
 
@@ -96,11 +134,13 @@ def send_health_disk(request):
         )
         return JsonResponse({
             "ok": bool(sent),
+            "email_sent": bool(sent),
             "sent_to": recipient,
             "subject": subject,
             "ip_detected": ip,
             "host_mapped": host_name,
-            "disk_used": disk_used or None,
+            "disk_used_percent": disk_used_pct,
+            "threshold": THRESHOLD,
         })
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)})
