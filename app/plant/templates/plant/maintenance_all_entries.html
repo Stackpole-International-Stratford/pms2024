@@ -1521,7 +1521,7 @@ function initPersonalFilter(){
           checked: prefs.lines.includes(l),
           kind:    'line'
         })).join('');
-        const ROLE_MAP = ['tech','electrician','millwright', "na", "plctech", "imt", "plumber"];
+        const ROLE_MAP = ['tech','electrician','millwright', "na", "plctech", "imt", "plumber", "wfp"];
         const rolesHTML = ROLE_MAP.map(r=> mkChk({
           id:      `ex_role_${r}`,
           label:   r.charAt(0).toUpperCase() + r.slice(1),
