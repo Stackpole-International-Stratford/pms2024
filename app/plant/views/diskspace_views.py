@@ -19,3 +19,8 @@ def send_health_disk(request):
     print("=======================")
 
     return JsonResponse({"ok": True, "printed_to_console": True, "message": message})
+
+
+
+# curl "http://10.4.1.232:8082/plant/health/disk/?message=IP:%20$(hostname -I | awk '{print $1}')%20DiskUsed:%20$(df -h / | awk 'NR==2 {print $5}')"
+
