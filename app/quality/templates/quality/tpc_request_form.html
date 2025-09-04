@@ -19,11 +19,12 @@
         <label class="form-label fw-bold">Reason</label>
         <input type="text" name="reason" class="form-control" required>
       </div>
-      
+
+      <!-- Process -->
       <div class="col-md-12">
         <label class="form-label fw-bold">Process</label>
         <input type="text" name="process" class="form-control" required>
-        </div>
+      </div>
 
       <!-- Parts -->
       <div class="col-md-6">
@@ -56,6 +57,7 @@
           <a href="{% url 'display_assets' %}">(manage <u>machines</u>)</a>
         </div>
       </div>
+
       <!-- Supplier issue -->
       <div class="col-md-6">
         <div class="form-check mt-4">
@@ -92,6 +94,17 @@
       <div class="col-md-6">
         <label class="form-label fw-bold">Changed To</label>
         <textarea name="changed_to" class="form-control" rows="3" required></textarea>
+      </div>
+
+      <!-- QE Risk Assessment (optional) -->
+      <div class="col-md-12">
+        <label class="form-label fw-bold">QE Risk Assessment</label>
+        <textarea
+          name="qe_risk_assessment"
+          class="form-control"
+          rows="4"
+          placeholder="Notes from Quality Engineer, risk level (e.g., Low/Med/High), mitigations, special instructions..."
+        ></textarea>
       </div>
 
     </div>

@@ -1713,17 +1713,19 @@ def tpc_request_create(request):
         print("---- TPC Request Create POST ----")
         print("POST data:", request.POST)
 
-        issuer_name = request.POST.get("issuer_name", "").strip()
-        parts = request.POST.getlist("parts")
-        reason = request.POST.get("reason", "").strip()
-        process = request.POST.get("process", "").strip()
-        supplier_issue = bool(request.POST.get("supplier_issue"))
-        machines = request.POST.getlist("machines")
-        reason_note = request.POST.get("reason_note", "").strip()
-        feature = request.POST.get("feature", "").strip()
-        expiration_date_str = request.POST.get("expiration_date", "").strip()
-        current_process = request.POST.get("current_process", "").strip()
-        changed_to = request.POST.get("changed_to", "").strip()
+        # Parse posted values (QE Risk Assessment is OPTIONAL)
+        issuer_name          = request.POST.get("issuer_name", "").strip()
+        parts                = request.POST.getlist("parts")
+        reason               = request.POST.get("reason", "").strip()
+        process              = request.POST.get("process", "").strip()
+        supplier_issue       = bool(request.POST.get("supplier_issue"))
+        machines             = request.POST.getlist("machines")
+        reason_note          = request.POST.get("reason_note", "").strip()
+        feature              = request.POST.get("feature", "").strip()
+        expiration_date_str  = request.POST.get("expiration_date", "").strip()
+        current_process      = request.POST.get("current_process", "").strip()
+        changed_to           = request.POST.get("changed_to", "").strip()
+        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # NEW (optional)
 
         print("Parsed values:")
         print("  issuer_name:", issuer_name)
@@ -1737,17 +1739,18 @@ def tpc_request_create(request):
         print("  expiration_date_str:", expiration_date_str)
         print("  current_process:", current_process)
         print("  changed_to:", changed_to)
+        print("  qe_risk_assessment:", qe_risk_assessment)
 
-        # --- Validation ---
+        # --- Validation (unchanged; QE field stays optional) ---
         missing = []
-        if not issuer_name: missing.append("Issuer name")
-        if not parts: missing.append("At least one part")
-        if not reason: missing.append("Reason")
-        if not process: missing.append("Process")
-        if not machines: missing.append("At least one machine")
-        if not expiration_date_str: missing.append("Expiration date")
-        if not current_process: missing.append("Current process")
-        if not changed_to: missing.append("Changed to")
+        if not issuer_name:        missing.append("Issuer name")
+        if not parts:              missing.append("At least one part")
+        if not reason:             missing.append("Reason")
+        if not process:            missing.append("Process")
+        if not machines:           missing.append("At least one machine")
+        if not expiration_date_str:missing.append("Expiration date")
+        if not current_process:    missing.append("Current process")
+        if not changed_to:         missing.append("Changed to")
 
         if missing:
             print("Missing fields:", missing)
@@ -1759,44 +1762,45 @@ def tpc_request_create(request):
 
         # Parse datetime-local input (YYYY-MM-DDTHH:MM)
         try:
-            expiration_dt = timezone.make_aware(
-                timezone.datetime.fromisoformat(expiration_date_str)
-            )
+            # fromisoformat returns naive dt for 'YYYY-MM-DDTHH:MM'; localize to current TZ
+            expiration_dt = timezone.datetime.fromisoformat(expiration_date_str)
+            if timezone.is_naive(expiration_dt):
+                expiration_dt = timezone.make_aware(expiration_dt)
             print("Parsed expiration_dt:", expiration_dt)
         except Exception as e:
             print("Expiration date parse error:", e)
             return render(request, "quality/tpc_request_form.html", {
-                "issuer_default": issuer_name,
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
                 "parts_qs": Part.objects.all().order_by("part_number"),
                 "machines_qs": Asset.objects.all().order_by("asset_number"),
             })
 
-        # Create TPCRequest with JSON fields
+        # Create TPCRequest
         try:
             tpc = TPCRequest.objects.create(
-                date_requested=timezone.now(),     # 👈 add this
+                date_requested=timezone.now(),
                 issuer_name=issuer_name,
-                parts=parts,                # stored as JSON list
+                parts=parts,                      # JSON list
                 reason=reason,
                 process=process,
                 supplier_issue=supplier_issue,
-                machines=machines,          # stored as JSON list
+                machines=machines,                # JSON list
                 reason_note=reason_note,
                 feature=feature,
                 expiration_date=expiration_dt,
                 current_process=current_process,
                 changed_to=changed_to,
+                qe_risk_assessment=qe_risk_assessment,  # NEW
             )
             print("Created TPC with PK:", tpc.pk)
         except Exception as e:
             print("Error creating TPCRequest:", e)
             raise
         else:
-            # Send the “TPC Request Initiated” broadcast after commit (safe if not in an atomic block too)
+            # Fire “TPC Request Initiated” after commit
             try:
                 transaction.on_commit(lambda: send_tpc_initiated_email(tpc.pk))
             except Exception as e:
-                # Never break the user flow if email fails
                 print(f"[ERROR] Could not queue 'TPC Request Initiated' email: {e}")
 
         return redirect("tpc_request_list")
@@ -1810,6 +1814,7 @@ def tpc_request_create(request):
     })
 
 
+
 @login_required(login_url='/login/')
 def tpc_request_edit(request, pk):
     tpc = get_object_or_404(
@@ -1821,17 +1826,19 @@ def tpc_request_edit(request, pk):
         print("---- TPC Request Edit POST ----")
         print("POST data:", request.POST)
 
-        issuer_name = request.POST.get("issuer_name", "").strip()
-        parts = request.POST.getlist("parts")
-        reason = request.POST.get("reason", "").strip()
-        process = request.POST.get("process", "").strip()
-        supplier_issue = bool(request.POST.get("supplier_issue"))
-        machines = request.POST.getlist("machines")
-        reason_note = request.POST.get("reason_note", "").strip()
-        feature = request.POST.get("feature", "").strip()
-        expiration_date_str = request.POST.get("expiration_date", "").strip()
-        current_process = request.POST.get("current_process", "").strip()
-        changed_to = request.POST.get("changed_to", "").strip()
+        # Parse posted values (QE Risk Assessment remains OPTIONAL)
+        issuer_name          = request.POST.get("issuer_name", "").strip()
+        parts                = request.POST.getlist("parts")
+        reason               = request.POST.get("reason", "").strip()
+        process              = request.POST.get("process", "").strip()
+        supplier_issue       = bool(request.POST.get("supplier_issue"))
+        machines             = request.POST.getlist("machines")
+        reason_note          = request.POST.get("reason_note", "").strip()
+        feature              = request.POST.get("feature", "").strip()
+        expiration_date_str  = request.POST.get("expiration_date", "").strip()
+        current_process      = request.POST.get("current_process", "").strip()
+        changed_to           = request.POST.get("changed_to", "").strip()
+        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # NEW (optional)
 
         print("Parsed values:")
         print("  issuer_name:", issuer_name)
@@ -1845,22 +1852,23 @@ def tpc_request_edit(request, pk):
         print("  expiration_date_str:", expiration_date_str)
         print("  current_process:", current_process)
         print("  changed_to:", changed_to)
+        print("  qe_risk_assessment:", qe_risk_assessment)
 
-        # --- Validation (same rules as create) ---
+        # --- Validation (same as create; QE optional) ---
         missing = []
-        if not issuer_name: missing.append("Issuer name")
-        if not parts: missing.append("At least one part")
-        if not reason: missing.append("Reason")
-        if not process: missing.append("Process")
-        if not machines: missing.append("At least one machine")
-        if not expiration_date_str: missing.append("Expiration date")
-        if not current_process: missing.append("Current process")
-        if not changed_to: missing.append("Changed to")
+        if not issuer_name:        missing.append("Issuer name")
+        if not parts:              missing.append("At least one part")
+        if not reason:             missing.append("Reason")
+        if not process:            missing.append("Process")
+        if not machines:           missing.append("At least one machine")
+        if not expiration_date_str:missing.append("Expiration date")
+        if not current_process:    missing.append("Current process")
+        if not changed_to:         missing.append("Changed to")
 
         if missing:
             print("Missing fields:", missing)
             return render(request, "quality/tpc_edit.html", {
-                "tpc": tpc,  # re-show existing DB values below if parsing fails
+                "tpc": tpc,  # re-show existing DB values if parsing fails
                 "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
                 "parts_qs": Part.objects.all().order_by("part_number"),
                 "machines_qs": Asset.objects.all().order_by("asset_number"),
@@ -1869,32 +1877,33 @@ def tpc_request_edit(request, pk):
 
         # Parse datetime-local input (YYYY-MM-DDTHH:MM)
         try:
-            expiration_dt = timezone.make_aware(
-                timezone.datetime.fromisoformat(expiration_date_str)
-            )
+            expiration_dt = timezone.datetime.fromisoformat(expiration_date_str)
+            if timezone.is_naive(expiration_dt):
+                expiration_dt = timezone.make_aware(expiration_dt)
         except Exception as e:
             print("Expiration date parse error:", e)
             return render(request, "quality/tpc_edit.html", {
                 "tpc": tpc,
-                "issuer_default": issuer_name,
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
                 "parts_qs": Part.objects.all().order_by("part_number"),
                 "machines_qs": Asset.objects.all().order_by("asset_number"),
                 "form_error": "Invalid expiration date."
             })
 
-        # Update fields
+        # Update
         try:
-            tpc.issuer_name = issuer_name
-            tpc.parts = parts
-            tpc.reason = reason
-            tpc.process = process
-            tpc.supplier_issue = supplier_issue
-            tpc.machines = machines
-            tpc.reason_note = reason_note
-            tpc.feature = feature
-            tpc.expiration_date = expiration_dt
-            tpc.current_process = current_process
-            tpc.changed_to = changed_to
+            tpc.issuer_name         = issuer_name
+            tpc.parts               = parts
+            tpc.reason              = reason
+            tpc.process             = process
+            tpc.supplier_issue      = supplier_issue
+            tpc.machines            = machines
+            tpc.reason_note         = reason_note
+            tpc.feature             = feature
+            tpc.expiration_date     = expiration_dt
+            tpc.current_process     = current_process
+            tpc.changed_to          = changed_to
+            tpc.qe_risk_assessment  = qe_risk_assessment  # NEW
             tpc.save()
             print("Updated TPC with PK:", tpc.pk)
         except Exception as e:

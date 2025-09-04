@@ -283,6 +283,7 @@ class ScrapSubmission(models.Model):
 # ==========================================================================
 # ==========================================================================
 
+
 class TPCRequest(models.Model):
     date_requested   = models.DateTimeField()
     issuer_name      = models.CharField(max_length=120)
@@ -296,6 +297,9 @@ class TPCRequest(models.Model):
     current_process  = models.TextField(blank=True)
     changed_to       = models.TextField(blank=True)
     expiration_date  = models.DateTimeField()
+
+    # NEW FIELD (optional)
+    qe_risk_assessment = models.TextField(blank=True)
 
     # approvals
     approved         = models.BooleanField(default=False)
@@ -316,6 +320,8 @@ class TPCRequest(models.Model):
     def __str__(self):
         return f"TPC #{self.pk} – {self.issuer_name} on {self.date_requested}"
 
+    # ------- added back below -------
+
     def approver_queryset(self):
         return User.objects.filter(is_active=True, groups__name="tpc_approvers").distinct()
 
@@ -334,6 +340,8 @@ class TPCRequest(models.Model):
         if not user.groups.filter(name="tpc_approvers").exists():
             raise PermissionError("User is not allowed to approve TPCs.")
 
+        # create (idempotent) approval record
+        from .models import TPCApproval  # local import to avoid circulars if needed
         TPCApproval.objects.get_or_create(tpc=self, user=user)
 
         if self.approvals_count() >= self.required_approvals_count() and self.required_approvals_count() > 0:
@@ -341,6 +349,8 @@ class TPCRequest(models.Model):
             self.approved_by = user
             self.approved_at = timezone.now()
             self.save(update_fields=["approved", "approved_by", "approved_at"])
+
+
 
 class TPCApproval(models.Model):
     tpc = models.ForeignKey(TPCRequest, related_name="approvals", on_delete=models.CASCADE)
