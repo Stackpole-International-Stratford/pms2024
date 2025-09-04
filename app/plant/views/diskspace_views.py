@@ -76,7 +76,7 @@ def send_health_disk(request):
     html_body = f"""
     <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5;">
       <h2 style="margin:0 0 8px 0;">
-        {badge_html}<span>Plant Health – Disk Report</span>
+        {badge_html}<span>Health Disk Report</span>
       </h2>
       <p style="margin:4px 0;"><strong>Host:</strong> {escape(host_name) if host_name else 'Unknown'}</p>
       <p style="margin:4px 0;"><strong>IP:</strong> {escape(ip) if ip else 'Not detected'}</p>
