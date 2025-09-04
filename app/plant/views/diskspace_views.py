@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
 @require_GET
-def send_test_email(request):
+def send_health_disk(request):
     """
     Hitting this URL will print whatever message is passed in the query string.
     Example:

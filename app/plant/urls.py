@@ -118,7 +118,7 @@ urlpatterns = [
     path('heat/<int:machine_id>/on/', turn_on_heat, name='turn_on_heat'),
     path('heat/<int:heatbreak_id>/off/', turn_off_heat, name='turn_off_heat'),
 
-    path('email/test/', send_test_email, name='send_test_email'),
+    path('health/disk/', send_health_disk, name='send_test_email'),
 
 
 
