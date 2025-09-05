@@ -5,6 +5,23 @@
 <div class="d-flex justify-content-center align-items-center" style="min-height: 90vh;">
   <div class="w-100" style="max-width: 500px;">
 
+
+    {# Show only if they have access #}
+    {% if perms.plant.view_paycodegroup or perms.plant.change_paycodegroup %}
+      <a
+        href="{% url 'admin:plant_paycodegroup_changelist' %}"
+        class="btn btn-light w-100 mt-2 mb-3"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Manage Pay Code Mappings
+      </a>
+    {% endif %}
+
+
+
+
+
     <div class="card shadow-lg">
       <div class="card-body p-4">
         <h3 class="card-title text-center mb-4">Upload an Excel File</h3>
