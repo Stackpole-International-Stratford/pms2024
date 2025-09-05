@@ -1,14 +1,39 @@
-# views.py
+# plant/views/hr_views.py
+from datetime import datetime, timedelta
 
-from datetime import datetime, timedelta, time
-from django.shortcuts import render
-from django.http import HttpResponseForbidden
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.db.models.functions import TruncDate
 import pandas as pd
-from ..models.absentee_models import AbsenteeReport
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models.functions import TruncDate
+from django.http import HttpResponseForbidden
+from django.shortcuts import render
+from django.utils import timezone
+
+# IMPORTANT: import both models
+from ..models.absentee_models import AbsenteeReport, PayCodeGroup
+
+
+def _norm_code(val) -> str:
+    """
+    Normalize a pay code for matching:
+    - None / NaN / '' -> ''
+    - strip whitespace
+    - uppercase
+    - collapse internal whitespace (optional, helps with weird exports)
+    """
+    if val is None:
+        return ""
+    try:
+        if pd.isna(val):
+            return ""
+    except Exception:
+        pass
+    s = str(val).strip()
+    if not s:
+        return ""
+    # If you want to preserve internal spaces, remove the next line.
+    s = " ".join(s.split())
+    return s.upper()
 
 
 @login_required(login_url='/login/')
@@ -20,6 +45,9 @@ def absentee_forms(request):
       falls within that chosen DAY (UTC-converted).
     - On POST with an Excel file, bulk-insert new rows and stamp each row’s uploaded_at
       with the user’s chosen date (in UTC).
+    - NEW: While uploading, set AbsenteeReport.pay_group and AbsenteeReport.is_scheduled
+      from PayCodeGroup when there's a matching pay_code (case-insensitive, trimmed).
+      If no match, leave both fields NULL/blank.
     """
     # ----- Guard: group membership -----
     if not request.user.groups.filter(name="hr_managers").exists():
@@ -133,9 +161,18 @@ def absentee_forms(request):
         except Exception:
             chosen_upload_utc = timezone.now()
 
+        # NEW: Build an in-memory mapping for pay code → (group_name, is_scheduled)
+        # This supports managers changing the mapping over time without code changes.
+        code_map = {
+            _norm_code(code): (grp, is_sched)
+            for code, grp, is_sched in PayCodeGroup.objects.values_list(
+                "pay_code", "group_name", "is_scheduled"
+            )
+        }
+
         # 3b.3) Build model instances safely
         objs_to_create = []
-        for idx, row in df.iterrows():
+        for _, row in df.iterrows():
             # Pay Date can be Excel serial, datetime, or string; coerce robustly
             pay_dt = pd.to_datetime(row.get("Pay Date"), errors="coerce")
             if pd.isna(pay_dt):
@@ -143,16 +180,24 @@ def absentee_forms(request):
                 continue
             pay_date = pay_dt.date()
 
+            raw_code = to_clean_str(row.get("Pay Code"))
+            norm_code = _norm_code(raw_code)
+            mapping = code_map.get(norm_code)  # None if not found
+
             report = AbsenteeReport(
                 employee_name=              to_clean_str(row.get("Employee Name")),
                 job=                        to_clean_str(row.get("Job")),
                 pay_date=                   pay_date,
-                pay_code=                   to_clean_str(row.get("Pay Code")),
-                pay_category=               to_clean_str(row.get("Pay Category")),  # e.g. "Hol1.0" preserved
+                pay_code=                   raw_code,
+                pay_category=               to_clean_str(row.get("Pay Category")),
                 hours=                      float(row.get("Hours", 0)) if not pd.isna(row.get("Hours", 0)) else 0.0,
                 pay_group_name=             to_clean_str(row.get("Pay Group Name")),
                 shift_rotation_description= to_clean_str(row.get("Shift Rotation Description")),
                 uploaded_at=                chosen_upload_utc,
+
+                # NEW: only set when mapping exists; else leave NULL
+                pay_group=                  mapping[0] if mapping else None,
+                is_scheduled=               mapping[1] if mapping else None,
             )
             objs_to_create.append(report)
 
