@@ -2,6 +2,8 @@
 from django.contrib import admin
 from .models.maintenance_models import DowntimeMachine
 from .models.email_models import EmailRecipient, EmailCampaign
+from .models.maintenance_models import *
+from .models.absentee_models import *
 
 @admin.register(DowntimeMachine)
 class DowntimeMachineAdmin(admin.ModelAdmin):
@@ -82,3 +84,22 @@ class EmailCampaignAdmin(admin.ModelAdmin):
         if obj is not None and not request.user.is_superuser:
             ro += ['name', 'description', 'editors']
         return ro
+@admin.register(PayCodeGroup)
+class PayCodeGroupAdmin(admin.ModelAdmin):
+    list_display  = ("pay_code", "group_name", "is_scheduled")
+    list_editable = ("group_name", "is_scheduled")   # inline editing from the list view
+    search_fields = ("pay_code", "group_name")
+    list_filter   = ("group_name", "is_scheduled")
+    ordering      = ("pay_code",)
+
+    actions = ["mark_scheduled", "mark_unscheduled"]
+
+    @admin.action(description="Mark selected as Scheduled")
+    def mark_scheduled(self, request, queryset):
+        updated = queryset.update(is_scheduled=True)
+        self.message_user(request, f"Updated {updated} row(s) to Scheduled.")
+
+    @admin.action(description="Mark selected as Unscheduled")
+    def mark_unscheduled(self, request, queryset):
+        updated = queryset.update(is_scheduled=False)
+        self.message_user(request, f"Updated {updated} row(s) to Unscheduled.")
