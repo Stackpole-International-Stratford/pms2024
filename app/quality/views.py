@@ -1582,6 +1582,8 @@ def get_categories(request):
 # =====================================================================
 # =====================================================================
 
+
+# ----- unchanged helper -----
 def _fmt_dt(dt):
     """
     Return a consistent string for datetimes or dates.
@@ -1614,6 +1616,9 @@ def _fmt_dt(dt):
         return str(dt)
 
 
+# -------------------------------------------------------------------
+# LIST PAGE (first page rendered server-side) — includes repeat_deviation
+# -------------------------------------------------------------------
 @login_required(login_url="/login/")
 def tpc_request(request):
     """
@@ -1655,6 +1660,7 @@ def tpc_request(request):
             "reason": t.reason,
             "process": t.process,
             "supplier_issue": "Yes" if t.supplier_issue else "No",
+            "repeat_deviation": "Yes" if t.repeat_deviation else "No",  # NEW
             "machines": ", ".join(t.machines) if t.machines else "—",
             "expiration_date": _fmt_dt(t.expiration_date),
             "approved": t.approved,
@@ -1666,7 +1672,6 @@ def tpc_request(request):
             ) or "—",
             "user_has_approved": t.user_has_approved,
             "pdf_url": pdf_url,
-            # include QE text so the UI can expose it later if desired
             "qe_risk_assessment": t.qe_risk_assessment or "—",
         })
 
@@ -1679,6 +1684,9 @@ def tpc_request(request):
     })
 
 
+# -------------------------------------------------------------------
+# LOAD MORE API — includes repeat_deviation
+# -------------------------------------------------------------------
 @login_required(login_url="/login/")
 def tpc_request_load_more(request):
     """
@@ -1723,6 +1731,7 @@ def tpc_request_load_more(request):
             "reason": t.reason,
             "process": t.process,
             "supplier_issue": "Yes" if t.supplier_issue else "No",
+            "repeat_deviation": "Yes" if t.repeat_deviation else "No",  # NEW
             "machines": ", ".join(t.machines) if t.machines else "—",
             "expiration_date": _fmt_dt(t.expiration_date),
             "approved": t.approved,
@@ -1744,7 +1753,9 @@ def tpc_request_load_more(request):
     })
 
 
-
+# -------------------------------------------------------------------
+# CREATE — parse/save repeat_deviation
+# -------------------------------------------------------------------
 @login_required(login_url='/login/')
 def tpc_request_create(request):
     if request.method == "POST":
@@ -1757,13 +1768,14 @@ def tpc_request_create(request):
         reason               = request.POST.get("reason", "").strip()
         process              = request.POST.get("process", "").strip()
         supplier_issue       = bool(request.POST.get("supplier_issue"))
+        repeat_deviation     = bool(request.POST.get("repeat_deviation"))  # NEW
         machines             = request.POST.getlist("machines")
         reason_note          = request.POST.get("reason_note", "").strip()
         feature              = request.POST.get("feature", "").strip()
         expiration_date_str  = request.POST.get("expiration_date", "").strip()
         current_process      = request.POST.get("current_process", "").strip()
         changed_to           = request.POST.get("changed_to", "").strip()
-        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # NEW (optional)
+        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # optional
 
         print("Parsed values:")
         print("  issuer_name:", issuer_name)
@@ -1771,6 +1783,7 @@ def tpc_request_create(request):
         print("  reason:", reason)
         print("  process:", process)
         print("  supplier_issue:", supplier_issue)
+        print("  repeat_deviation:", repeat_deviation)  # NEW log
         print("  machines:", machines)
         print("  reason_note:", reason_note)
         print("  feature:", feature)
@@ -1779,7 +1792,7 @@ def tpc_request_create(request):
         print("  changed_to:", changed_to)
         print("  qe_risk_assessment:", qe_risk_assessment)
 
-        # --- Validation (unchanged; QE field stays optional) ---
+        # Validation (QE + repeat_deviation are optional booleans/strings)
         missing = []
         if not issuer_name:        missing.append("Issuer name")
         if not parts:              missing.append("At least one part")
@@ -1800,7 +1813,6 @@ def tpc_request_create(request):
 
         # Parse datetime-local input (YYYY-MM-DDTHH:MM)
         try:
-            # fromisoformat returns naive dt for 'YYYY-MM-DDTHH:MM'; localize to current TZ
             expiration_dt = timezone.datetime.fromisoformat(expiration_date_str)
             if timezone.is_naive(expiration_dt):
                 expiration_dt = timezone.make_aware(expiration_dt)
@@ -1822,13 +1834,14 @@ def tpc_request_create(request):
                 reason=reason,
                 process=process,
                 supplier_issue=supplier_issue,
+                repeat_deviation=repeat_deviation,  # NEW
                 machines=machines,                # JSON list
                 reason_note=reason_note,
                 feature=feature,
                 expiration_date=expiration_dt,
                 current_process=current_process,
                 changed_to=changed_to,
-                qe_risk_assessment=qe_risk_assessment,  # NEW
+                qe_risk_assessment=qe_risk_assessment,  # optional
             )
             print("Created TPC with PK:", tpc.pk)
         except Exception as e:
@@ -1852,7 +1865,9 @@ def tpc_request_create(request):
     })
 
 
-
+# -------------------------------------------------------------------
+# EDIT — parse/save repeat_deviation
+# -------------------------------------------------------------------
 @login_required(login_url='/login/')
 def tpc_request_edit(request, pk):
     tpc = get_object_or_404(
@@ -1870,13 +1885,14 @@ def tpc_request_edit(request, pk):
         reason               = request.POST.get("reason", "").strip()
         process              = request.POST.get("process", "").strip()
         supplier_issue       = bool(request.POST.get("supplier_issue"))
+        repeat_deviation     = bool(request.POST.get("repeat_deviation"))  # NEW
         machines             = request.POST.getlist("machines")
         reason_note          = request.POST.get("reason_note", "").strip()
         feature              = request.POST.get("feature", "").strip()
         expiration_date_str  = request.POST.get("expiration_date", "").strip()
         current_process      = request.POST.get("current_process", "").strip()
         changed_to           = request.POST.get("changed_to", "").strip()
-        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # NEW (optional)
+        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # optional
 
         print("Parsed values:")
         print("  issuer_name:", issuer_name)
@@ -1884,6 +1900,7 @@ def tpc_request_edit(request, pk):
         print("  reason:", reason)
         print("  process:", process)
         print("  supplier_issue:", supplier_issue)
+        print("  repeat_deviation:", repeat_deviation)  # NEW log
         print("  machines:", machines)
         print("  reason_note:", reason_note)
         print("  feature:", feature)
@@ -1892,7 +1909,7 @@ def tpc_request_edit(request, pk):
         print("  changed_to:", changed_to)
         print("  qe_risk_assessment:", qe_risk_assessment)
 
-        # --- Validation (same as create; QE optional) ---
+        # Validation (QE + repeat_deviation are optional)
         missing = []
         if not issuer_name:        missing.append("Issuer name")
         if not parts:              missing.append("At least one part")
@@ -1935,13 +1952,14 @@ def tpc_request_edit(request, pk):
             tpc.reason              = reason
             tpc.process             = process
             tpc.supplier_issue      = supplier_issue
+            tpc.repeat_deviation    = repeat_deviation  # NEW
             tpc.machines            = machines
             tpc.reason_note         = reason_note
             tpc.feature             = feature
             tpc.expiration_date     = expiration_dt
             tpc.current_process     = current_process
             tpc.changed_to          = changed_to
-            tpc.qe_risk_assessment  = qe_risk_assessment  # NEW
+            tpc.qe_risk_assessment  = qe_risk_assessment  # optional
             tpc.save()
             print("Updated TPC with PK:", tpc.pk)
         except Exception as e:
