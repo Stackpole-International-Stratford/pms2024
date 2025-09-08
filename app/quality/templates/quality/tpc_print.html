@@ -91,7 +91,7 @@
         </tr>
       </table>
 
-      <!-- Row 3: Reason Note / Feature -->
+      <!-- Row 3: Reason for Deviation / Feature -->
       <table class="g2 h-md">
         <colgroup><col><col></colgroup>
         <tr>
@@ -100,25 +100,39 @@
         </tr>
       </table>
 
-      <!-- Row 4: Current Process / blank -->
+      <!-- Row 4: QE Risk Assessment -->
+      <table class="g2 h-md">
+        <colgroup><col><col></colgroup>
+        <tr>
+          <td colspan="2">
+            <div class="cell">
+              <div class="lbl">QE Risk Assessment</div>
+              <div class="val" style="white-space: pre-wrap;">{{ tpc.qe_risk_assessment|default:"—" }}</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Row 5: Current Process (left) / Changed To (right) -->
       <table class="g2 h-lg">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Current Process</div><div class="val">{{ tpc.current_process|default:"—" }}</div></div></td>
-          <td><div class="cell"></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Current Process</div>
+              <div class="val">{{ tpc.current_process|default:"—" }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Changed To</div>
+              <div class="val">{{ tpc.changed_to|default:"—" }}</div>
+            </div>
+          </td>
         </tr>
       </table>
 
-      <!-- Row 5: Changed To / blank -->
-      <table class="g2 h-md2">
-        <colgroup><col><col></colgroup>
-        <tr>
-          <td><div class="cell"><div class="lbl">Changed To</div><div class="val">{{ tpc.changed_to|default:"—" }}</div></div></td>
-          <td><div class="cell"></div></td>
-        </tr>
-      </table>
-
-      <!-- Row 6: Length of Change / Expired notice -->
+      <!-- Row 6: Notice -->
       <table class="g2 h-note">
         <colgroup><col><col></colgroup>
         <tr>
@@ -126,7 +140,7 @@
         </tr>
       </table>
 
-      <!-- Approvals now moved here -->
+      <!-- Approvals -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
@@ -153,7 +167,9 @@
       <div class="notice">PRINT ON ORANGE PAPER</div>
     </section>
   </div>
-    <div class="page">
+
+  <!-- Duplicate copy for page 2 -->
+  <div class="page">
     <section class="copy">
       <div class="hdr">
         <div class="hdr-ttl">Temporary Process Change</div>
@@ -191,21 +207,35 @@
         </tr>
       </table>
 
-      <!-- Row 4: Current Process / blank -->
-      <table class="g2 h-lg">
+      <!-- Row 4: QE Risk Assessment -->
+      <table class="g2 h-md">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Current Process</div><div class="val">{{ tpc.current_process|default:"—" }}</div></div></td>
-          <td><div class="cell"></div></td>
+          <td colspan="2">
+            <div class="cell">
+              <div class="lbl">QE Risk Assessment (optional)</div>
+              <div class="val" style="white-space: pre-wrap;">{{ tpc.qe_risk_assessment|default:"—" }}</div>
+            </div>
+          </td>
         </tr>
       </table>
 
-      <!-- Row 5: Changed To / blank -->
-      <table class="g2 h-md2">
+      <!-- Row 5: Current Process (left) / Changed To (right) -->
+      <table class="g2 h-lg">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Changed To</div><div class="val">{{ tpc.changed_to|default:"—" }}</div></div></td>
-          <td><div class="cell"></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Current Process</div>
+              <div class="val">{{ tpc.current_process|default:"—" }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Changed To</div>
+              <div class="val">{{ tpc.changed_to|default:"—" }}</div>
+            </div>
+          </td>
         </tr>
       </table>
 
@@ -218,7 +248,7 @@
         </tr>
       </table>
 
-      <!-- Approvals now moved here -->
+      <!-- Approvals -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
