@@ -4,56 +4,60 @@
 <div class="container mt-5">
   <h2 class="mb-4">New TPC Request</h2>
 
+  {% if form_error %}
+    <div class="alert alert-danger">{{ form_error }}</div>
+  {% endif %}
+
   <form id="tpcForm" method="post" novalidate>
     {% csrf_token %}
 
     <div class="row g-3">
       <!-- Issuer -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Issuer Name</label>
-        <input type="text" name="issuer_name" value="{{ issuer_default }}" class="form-control" required>
+        <label class="form-label fw-bold" for="issuer_name">Issuer Name</label>
+        <input id="issuer_name" type="text" name="issuer_name" value="{{ issuer_default }}" class="form-control" required>
       </div>
 
       <!-- Reason -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Brief Description of Deviation</label>
-        <input type="text" name="reason" class="form-control" required>
+        <label class="form-label fw-bold" for="reason">Brief Description of Deviation</label>
+        <input id="reason" type="text" name="reason" class="form-control" required>
       </div>
 
       <!-- Process -->
       <div class="col-md-12">
-        <label class="form-label fw-bold">Process</label>
-        <input type="text" name="process" class="form-control" required>
+        <label class="form-label fw-bold" for="process">Process</label>
+        <input id="process" type="text" name="process" class="form-control" required>
       </div>
 
       <!-- Parts -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Parts</label>
-        <div class="border p-2" style="height: 200px; overflow-y: auto;">
+        <label class="form-label fw-bold">Parts <span class="text-muted">(select at least one)</span></label>
+        <div class="border p-2 rounded" style="height: 220px; overflow-y: auto;">
           {% for p in parts_qs %}
             <div class="form-check">
-              <input type="checkbox" name="parts" value="{{ p.part_number }}" class="form-check-input">
-              <label class="form-check-label">{{ p.part_number }} – {{ p.part_name }}</label>
+              <input id="part_{{ forloop.counter }}" type="checkbox" name="parts" value="{{ p.part_number }}" class="form-check-input">
+              <label class="form-check-label" for="part_{{ forloop.counter }}">{{ p.part_number }} – {{ p.part_name }}</label>
             </div>
           {% endfor %}
         </div>
-        <div class="mt-2">
+        <div class="mt-2 small">
           <a href="{% url 'display_parts' %}">(manage <u>parts</u>)</a>
         </div>
       </div>
 
       <!-- Machines -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Machines</label>
-        <div class="border p-2" style="height: 200px; overflow-y: auto;">
+        <label class="form-label fw-bold">Machines <span class="text-muted">(select at least one)</span></label>
+        <div class="border p-2 rounded" style="height: 220px; overflow-y: auto;">
           {% for m in machines_qs %}
             <div class="form-check">
-              <input type="checkbox" name="machines" value="{{ m.asset_number }}" class="form-check-input">
-              <label class="form-check-label">{{ m.asset_number }} – {{ m.asset_name }}</label>
+              <input id="machine_{{ forloop.counter }}" type="checkbox" name="machines" value="{{ m.asset_number }}" class="form-check-input">
+              <label class="form-check-label" for="machine_{{ forloop.counter }}">{{ m.asset_number }} – {{ m.asset_name }}</label>
             </div>
           {% endfor %}
         </div>
-        <div class="mt-2">
+        <div class="mt-2 small">
           <a href="{% url 'display_assets' %}">(manage <u>machines</u>)</a>
         </div>
       </div>
@@ -61,46 +65,54 @@
       <!-- Supplier issue -->
       <div class="col-md-6">
         <div class="form-check mt-4">
-          <input type="checkbox" name="supplier_issue" class="form-check-input">
-          <label class="form-check-label fw-bold">Supplier Issue?</label>
+          <input id="supplier_issue" type="checkbox" name="supplier_issue" class="form-check-input">
+          <label class="form-check-label fw-bold" for="supplier_issue">Supplier Issue?</label>
         </div>
       </div>
 
-      <!-- Feature -->
+      <!-- Repeat deviation -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Feature number as per process sheet</label>
-        <input type="text" name="feature" class="form-control" required>
+        <div class="form-check mt-4">
+          <input id="repeat_deviation" type="checkbox" name="repeat_deviation" class="form-check-input">
+          <label class="form-check-label fw-bold" for="repeat_deviation" title="Check if a similar deviation was approved in the past.">Repeat Deviation?</label>
+        </div>
+      </div>
+
+      <!-- Feature (optional in backend) -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold" for="feature">Feature number as per process sheet</label>
+        <input id="feature" type="text" name="feature" class="form-control">
       </div>
 
       <!-- Expiration date -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Expiration Date</label>
-        <input type="datetime-local" name="expiration_date" class="form-control" required>
+        <label class="form-label fw-bold" for="expiration_date">Expiration Date</label>
+        <input id="expiration_date" type="datetime-local" name="expiration_date" class="form-control" required>
       </div>
 
       <!-- Current process -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Current Process</label>
-        <textarea name="current_process" class="form-control" rows="3" required></textarea>
+        <label class="form-label fw-bold" for="current_process">Current Process</label>
+        <textarea id="current_process" name="current_process" class="form-control" rows="3" required></textarea>
       </div>
 
       <!-- Changed to -->
       <div class="col-md-6">
-        <label class="form-label fw-bold">Changed To</label>
-        <textarea name="changed_to" class="form-control" rows="3" required></textarea>
+        <label class="form-label fw-bold" for="changed_to">Changed To</label>
+        <textarea id="changed_to" name="changed_to" class="form-control" rows="3" required></textarea>
       </div>
 
       <!-- QE Risk Assessment (optional) -->
       <div class="col-md-12">
-        <label class="form-label fw-bold">QE Risk Assessment</label>
+        <label class="form-label fw-bold" for="qe_risk_assessment">QE Risk Assessment</label>
         <textarea
+          id="qe_risk_assessment"
           name="qe_risk_assessment"
           class="form-control"
           rows="4"
           placeholder="Notes from Quality Engineer, risk level (e.g., Low/Med/High), mitigations, special instructions..."
         ></textarea>
       </div>
-
     </div>
 
     <!-- Actions -->
@@ -112,34 +124,35 @@
 </div>
 
 <script>
-document.getElementById('tpcForm').addEventListener('submit', function(e) {
-  const requiredFields = this.querySelectorAll('[required]');
-  for (let field of requiredFields) {
-    if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) {
-      if (field.name === 'supplier_issue') {
-        alert('Please check Supplier Issue.');
-        e.preventDefault();
-        return;
+(function() {
+  const form = document.getElementById('tpcForm');
+  form.addEventListener('submit', function(e) {
+    // required text/textarea/datetime
+    const requiredFields = form.querySelectorAll('[required]');
+    for (let field of requiredFields) {
+      if ((field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') && field.type !== 'checkbox') {
+        if (!field.value || field.value.trim() === '') {
+          alert('Please fill all required fields.');
+          e.preventDefault();
+          return;
+        }
       }
-    } else if (field.value.trim() === '') {
-      alert('Please fill all fields.');
+    }
+
+    // at least one part
+    if (!form.querySelectorAll('input[name="parts"]:checked').length) {
+      alert('Please select at least one Part.');
       e.preventDefault();
       return;
     }
-  }
 
-  // Check at least one part selected
-  if (!this.querySelectorAll('input[name="parts"]:checked').length) {
-    alert('Please select at least one Part.');
-    e.preventDefault();
-    return;
-  }
-  // Check at least one machine selected
-  if (!this.querySelectorAll('input[name="machines"]:checked').length) {
-    alert('Please select at least one Machine.');
-    e.preventDefault();
-    return;
-  }
-});
+    // at least one machine
+    if (!form.querySelectorAll('input[name="machines"]:checked').length) {
+      alert('Please select at least one Machine.');
+      e.preventDefault();
+      return;
+    }
+  });
+})();
 </script>
 {% endblock %}

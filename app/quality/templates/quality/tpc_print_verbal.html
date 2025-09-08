@@ -78,18 +78,25 @@
         </tr>
       </table>
 
-      <!-- Row 2: Process / Supplier Issue / Parts / Machines -->
+      <!-- Row 2: Process / Supplier Issue + Repeat / Parts / Machines -->
       <table class="g4 h-sm">
         <colgroup><col><col><col><col></colgroup>
         <tr>
           <td><div class="cell"><div class="lbl">Process Initiating TPC</div><div class="val">{{ tpc.process|default:"—" }}</div></div></td>
-          <td><div class="cell"><div class="lbl">Supplier Issue</div><div class="val">{{ tpc.supplier_issue|yesno:"Yes,No" }}</div></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Supplier Issue || Repeat Deviation</div>
+              <div class="val">
+                {{ tpc.supplier_issue|yesno:"Yes,No" }} || {{ tpc.repeat_deviation|yesno:"Yes,No" }}
+              </div>
+            </div>
+          </td>
           <td><div class="cell"><div class="lbl">Part Number(s)</div><div class="val">{% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}</div></div></td>
           <td><div class="cell"><div class="lbl">Machine(s)</div><div class="val">{% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}</div></div></td>
         </tr>
       </table>
 
-      <!-- Row 3: Reason Note / Feature -->
+      <!-- Row 3: Feature -->
       <table class="g2 h-md">
         <colgroup><col><col></colgroup>
         <tr>
@@ -143,7 +150,6 @@
                 <div class="muted">Recorded by {{ verbal.issuer.get_full_name|default:verbal.issuer.username }} at {{ verbal.created_at }}</div>
               </div>
 
-              <!-- inline note saves space -->
               <p class="muted small" style="margin:6px 0 0;">
                 If Expired Notify Supervisor – Do Not Remove
               </p>
@@ -151,7 +157,6 @@
           </td>
         </tr>
       </table>
-
 
       <div class="banner">Ensure the TPC # is recorded on the Process Sheet</div>
       <div class="notice">PRINT ON ORANGE PAPER</div>
@@ -182,7 +187,14 @@
         <colgroup><col><col><col><col></colgroup>
         <tr>
           <td><div class="cell"><div class="lbl">Process</div><div class="val">{{ tpc.process|default:"—" }}</div></div></td>
-          <td><div class="cell"><div class="lbl">Supplier Issue</div><div class="val">{{ tpc.supplier_issue|yesno:"Yes,No" }}</div></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Supplier Issue / Repeat Deviation</div>
+              <div class="val">
+                {{ tpc.supplier_issue|yesno:"Yes,No" }} / {{ tpc.repeat_deviation|yesno:"Yes,No" }}
+              </div>
+            </div>
+          </td>
           <td><div class="cell"><div class="lbl">Parts</div><div class="val">{% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}</div></div></td>
           <td><div class="cell"><div class="lbl">Machines</div><div class="val">{% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}</div></div></td>
         </tr>
@@ -238,7 +250,7 @@
         </tr>
       </table>
 
-      <!-- Approvals -->
+      <!-- Approvals (verbal summary on second copy too) -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
@@ -246,9 +258,9 @@
             <div class="cell">
               <div class="lbl">Verbal Approval</div>
               <div class="val">
-                By {{ verbal.approver_name }} ({{ verbal.approver_phone }})  
-                — Response: {{ verbal.approver_response }}  
-                — {{ verbal.approved|yesno:"Approved,Rejected" }}  
+                By {{ verbal.approver_name }} ({{ verbal.approver_phone }})
+                — Response: {{ verbal.approver_response }}
+                — {{ verbal.approved|yesno:"Approved,Rejected" }}
                 <div class="muted">Recorded by {{ verbal.issuer.get_full_name|default:verbal.issuer.username }} at {{ verbal.created_at }}</div>
               </div>
             </div>
