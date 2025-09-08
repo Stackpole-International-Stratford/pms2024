@@ -120,26 +120,129 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const tbody = document.getElementById('tpc-tbody');
+  const loadMoreContainer = document.getElementById('load-more-container');
   const loadBtn = document.getElementById('load-more');
-  let offset = {{ tpcs|length }};
+
+  let offset = {{ initial_count }};
   const pageSize = {{ tpc_page_size }};
   const isTpcApprover = {{ is_tpc_approver|yesno:"true,false" }};
 
-  // Filtering
-  document.querySelectorAll('thead tr:nth-child(2) input').forEach(inp => {
+  // If the first page had fewer than pageSize rows, hide the load-more UI.
+  if (tbody && loadMoreContainer && tbody.children.length < pageSize) {
+    loadMoreContainer.style.display = 'none';
+  }
+
+  // --- Utilities ---
+  function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  const pdfIconSvg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
+         fill="currentColor" class="bi bi-filetype-pdf" viewBox="0 0 16 16"
+         aria-hidden="true" focusable="false">
+      <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v3.999h.791v-1.342h.803q.43 0 .732-.173.305-.175.463-.474a1.4 1.4 0 0 0 .161-.677q0-.375-.158-.677a1.2 1.2 0 0 0-.46-.477q-.3-.18-.732-.179m.545 1.333a.8.8 0 0 1-.085.38.57.57 0 0 1-.238.241.8.8 0 0 1-.375.082H.788V12.48h.66q.327 0 .512.181.185.183.185.522m1.217-1.333v3.999h1.46q.602 0 .998-.237a1.45 1.45 0 0 0 .595-.689q.196-.45.196-1.084 0-.63-.196-1.075a1.43 1.43 0 0 0-.589-.68q-.396-.234-1.005-.234zm.791.645h.563q.371 0 .609.152a.9.9 0 0 1 .354.454q.118.302.118.753a2.3 2.3 0 0 1-.068.592 1.1 1.1 0 0 1-.196.422.8.8 0 0 1-.334.252 1.3 1.3 0 0 1-.483.082h-.563zm3.743 1.763v1.591h-.79V11.85h2.548v.653H7.896v1.117h1.606v.638z"/>
+    </svg>
+  `.trim();
+
+  function t15(s) {
+    const v = (s ?? '').toString();
+    return v.length > 15 ? v.slice(0, 15) : v;
+  }
+
+  function buildStatusHtml(t) {
+    if (t.approved) return '<span class="text-success">Fully approved</span>';
+
+    let html = '';
+    if (t.has_verbal) {
+      html += '<span class="text-warning me-2"><strong>Verbally approved</strong></span>';
+    }
+    html += `<span class="badge text-bg-secondary">${t.approvals_got}/${t.approvals_req}</span>`;
+
+    if (isTpcApprover) {
+      if (!t.user_has_approved) {
+        html += ` <button data-approve="${t.pk}" class="btn btn-sm btn-success ms-2" data-row-safe-click>Approve</button>`;
+      } else {
+        html += ` <span class="text-muted ms-2">You’ve approved</span>`;
+      }
+      if (!t.approved) {
+        html += ` <button data-reject="${t.pk}" class="btn btn-outline-danger btn-sm py-0 px-1 lh-1 ms-2" data-row-safe-click>Reject</button>`;
+      }
+    } else if (!t.has_verbal) {
+      html += ` <a href="/quality/tpc-requests/${t.pk}/verbal/" class="btn btn-outline-warning btn-sm py-0 px-1 lh-1 ms-2" data-row-safe-click>Verbal approval</a>`;
+    }
+
+    return html;
+  }
+
+  
+
+  function buildPdfHtml(t) {
+    if (!t.pdf_url) return '';
+    const title = t.approved ? 'View official PDF' : 'View verbal approval PDF';
+    return `<a href="${t.pdf_url}" target="_blank" title="${title}" class="text-dark" data-row-safe-click>${pdfIconSvg}</a>`;
+  }
+
+  function appendRow(t) {
+    const tr = document.createElement('tr');
+    tr.className = 'tpc-row';
+    tr.style.cursor = 'pointer';
+
+    // Data attributes (useful for detail drawers, etc.)
+    tr.dataset.pk = t.pk;
+    tr.dataset.dateRequested = t.date_requested;
+    tr.dataset.expirationDate = t.expiration_date;
+    tr.dataset.issuerName = t.issuer_name;
+    tr.dataset.part = t.parts;
+    tr.dataset.reason = t.reason;
+    tr.dataset.process = t.process;
+    tr.dataset.supplierIssue = t.supplier_issue;
+    tr.dataset.machineNumber = t.machines;
+    tr.dataset.approved = t.approved ? 'Yes' : 'No';
+    tr.dataset.approvalsGot = t.approvals_got;
+    tr.dataset.approvalsReq = t.approvals_req;
+    tr.dataset.approvers = t.approvers;
+    tr.dataset.userHasApproved = t.user_has_approved ? 'true' : 'false';
+    tr.dataset.href = `/quality/tpc-requests/${t.pk}/edit/`;
+
+    const statusHtml = buildStatusHtml(t);
+    const pdfHtml = buildPdfHtml(t);
+
+    tr.innerHTML = `
+      <td>${t.pk}</td>
+      <td title="${(t.date_requested ?? '').toString()}">${t15(t.date_requested)}</td>
+      <td title="${(t.issuer_name ?? '').toString()}">${t15(t.issuer_name)}</td>
+      <td title="${(t.parts ?? '').toString()}">${t.parts ? t15(t.parts) : '—'}</td>
+      <td title="${(t.reason ?? '').toString()}">${t15(t.reason)}</td>
+      <td title="${(t.process ?? '').toString()}">${t15(t.process)}</td>
+      <td>${t.supplier_issue}</td>
+      <td title="${(t.machines ?? '').toString()}">${t.machines ? t15(t.machines) : '—'}</td>
+      <td title="${(t.expiration_date ?? '').toString()}">${t15(t.expiration_date)}</td>
+      <td>${statusHtml}</td>
+      <td>${pdfHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // --- Filtering (per-column text inputs in the 2nd header row) ---
+  document.querySelectorAll('thead tr:nth-child(2) input').forEach((inp) => {
     inp.addEventListener('input', () => {
       const filters = Array.from(document.querySelectorAll('thead tr:nth-child(2) input'));
-      tbody.querySelectorAll('tr').forEach(row => {
-        const visible = filters.every((input, idx) =>
-          !input.value || row.cells[idx].textContent.toLowerCase().includes(input.value.toLowerCase())
-        );
+      tbody.querySelectorAll('tr').forEach((row) => {
+        const visible = filters.every((input, idx) => {
+          if (!input.value) return true;
+          const cellText = (row.cells[idx]?.textContent || '').toLowerCase();
+          return cellText.includes(input.value.toLowerCase());
+        });
         row.classList.toggle('d-none', !visible);
       });
     });
   });
 
-  // Row click => navigate to detail page
-  tbody.addEventListener('click', e => {
+  // --- Row click => navigate to edit/view page (ignore safe elements) ---
+  tbody.addEventListener('click', (e) => {
     if (e.target.closest('a, button, form, [data-row-safe-click]')) return;
     const row = e.target.closest('tr');
     if (!row) return;
@@ -147,113 +250,65 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = href;
   });
 
-  const pdfIconSvg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-         fill="currentColor" class="bi bi-filetype-pdf" viewBox="0 0 16 16"
-         aria-hidden="true" focusable="false">
-      <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.6 11.85H0v3.999h.791v-1.342h.803q.43 0 .732-.173.305-.175.463-.474a1.4 1.4 0 0 0 .161-.677q0-.375-.158-.677a1.2 1.2 0 0 0-.46-.477q-.3-.18-.732-.179m.545 1.333a.8.8 0 0 1-.085.38.57.57 0 0 1-.238.241.8.8 0 0 1-.375.082H.788V12.48h.66q.327 0 .512.181.185.183.185.522m1.217-1.333v3.999h1.46q.602 0 .998-.237a1.45 1.45 0 0 0 .595-.689q.196-.45.196-1.084 0-.63-.196-1.075a1.43 1.43 0 0 0-.589-.68q-.396-.234-1.005-.234zm.791.645h.563q.371 0 .609.152a.9.9 0 0 1 .354.454q.118.302.118.753a2.3 2.3 0 0 1-.068.592 1.1 1.1 0 0 1-.196.422.8.8 0 0 1-.334.252 1.3 1.3 0 0 1-.483.082h-.563zm3.743 1.763v1.591h-.79V11.85h2.548v.653H7.896v1.117h1.606v.638z"/>
-    </svg>`.trim();
+  // --- Delegated actions for Approve / Reject (works for appended rows) ---
+  tbody.addEventListener('click', async (e) => {
+    const approveBtn = e.target.closest('button[data-approve]');
+    const rejectBtn = e.target.closest('button[data-reject]');
+    if (!approveBtn && !rejectBtn) return;
 
-  // Load more
-  loadBtn.addEventListener('click', () => {
-    loadBtn.disabled = true;
-    loadBtn.textContent = 'Loading...';
-    fetch(`{% url 'tpc_request_load_more' %}?offset=${offset}`)
-      .then(res => res.json())
-      .then(data => {
-        data.rows.forEach(t => {
-          const tr = document.createElement('tr');
-          tr.className = 'tpc-row';
-          tr.style.cursor = 'pointer';
-          tr.dataset.pk = t.pk;
-          tr.dataset.dateRequested = t.date_requested;
-          tr.dataset.expirationDate = t.expiration_date;
-          tr.dataset.issuerName = t.issuer_name;
-          tr.dataset.part = t.parts;
-          tr.dataset.reason = t.reason;
-          tr.dataset.process = t.process;
-          tr.dataset.supplierIssue = t.supplier_issue;
-          tr.dataset.machineNumber = t.machines;
-          tr.dataset.approved = t.approved ? 'Yes' : 'No';
-          tr.dataset.approvalsGot = t.approvals_got;
-          tr.dataset.approvalsReq = t.approvals_req;
-          tr.dataset.approvers = t.approvers;
-          tr.dataset.userHasApproved = t.user_has_approved;
-          tr.dataset.href = `/quality/tpc-requests/${t.pk}/edit/`;
+    e.preventDefault();
+    const pk = approveBtn ? approveBtn.dataset.approve : rejectBtn.dataset.reject;
+    const url = approveBtn
+      ? `/quality/tpc-requests/${pk}/approve/`
+      : `/quality/tpc-requests/${pk}/reject/`;
 
-          const statusHtml = t.approved
-            ? '<span class="text-success">Fully approved</span>'
-            : `
-                ${t.has_verbal ? '<span class="text-warning me-2"><strong>Verbally approved</strong></span>' : ''}
-                <span class="badge text-bg-secondary">${t.approvals_got}/${t.approvals_req}</span>
-                ${
-                  isTpcApprover
-                    ? (!t.user_has_approved
-                        ? `<form action="/quality/tpc-requests/${t.pk}/approve/" method="post" class="d-inline ms-2" data-row-safe-click>
-                             {% csrf_token %}
-                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                           </form>`
-                        : `<span class="text-muted ms-2">You’ve approved</span>`)
-                    : ''
-                }
-                ${
-                  (!isTpcApprover && !t.has_verbal)
-                    ? `<a href="/quality/tpc-requests/${t.pk}/verbal/"
-                         class="btn btn-outline-warning btn-sm py-0 px-1 lh-1 ms-2"
-                         data-row-safe-click>Verbal approval</a>`
-                    : ''
-                }
-                ${
-                  (isTpcApprover && !t.approved)
-                    ? `<form action="/quality/tpc-requests/${t.pk}/reject/" method="post"
-                             class="d-inline ms-2" data-row-safe-click
-                             onsubmit="return confirm('Reject this TPC request?');">
-                         {% csrf_token %}
-                         <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1 lh-1">Reject</button>
-                       </form>`
-                    : ''
-                }
-              `;
+    if (rejectBtn && !confirm('Reject this TPC request?')) return;
 
-          const pdfHtml = t.pdf_url
-            ? `<a href="${t.pdf_url}" target="_blank"
-                  title="${t.approved ? 'View official PDF' : 'View verbal approval PDF'}"
-                  class="text-info"
-                  data-row-safe-click>${pdfIconSvg}</a>`
-            : '';
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken },
+      });
+      if (!resp.ok) throw new Error('Request failed');
+      // simplest: refresh to reflect state changes
+      location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('Action failed.');
+    }
+  });
 
-          tr.innerHTML = `
-            <td>${t.pk}</td>
-            <td title="${t.date_requested}">${t.date_requested.substring(0,15)}</td>
-            <td title="${t.issuer_name}">${t.issuer_name.substring(0,15)}</td>
-            <td title="${t.parts}">${t.parts ? (t.parts.length > 15 ? t.parts.substring(0,15) : t.parts) : '—'}</td>
-            <td title="${t.reason}">${t.reason.substring(0,15)}</td>
-            <td title="${t.process}">${t.process.substring(0,15)}</td>
-            <td>${t.supplier_issue}</td>
-            <td title="${t.machines}">${t.machines ? (t.machines.length > 15 ? t.machines.substring(0,15) : t.machines) : '—'}</td>
-            <td title="${t.expiration_date}">${t.expiration_date.substring(0,15)}</td>
-            <td>${statusHtml}</td>
-            <td>${pdfHtml}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+  // --- Load more ---
+  if (loadBtn) {
+    loadBtn.addEventListener('click', () => {
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Loading...';
 
-        offset += pageSize;
-        if (data.has_more) {
+      fetch(`{% url 'tpc_request_load_more' %}?offset=${offset}`)
+        .then((res) => res.json())
+        .then((data) => {
+          (data.rows || []).forEach(appendRow);
+
+          // Advance by what we actually added
+          offset += (data.rows || []).length;
+
+          if (data.has_more) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load more';
+          } else if (loadMoreContainer) {
+            loadMoreContainer.remove();
+          }
+        })
+        .catch((err) => {
+          console.error(err);
           loadBtn.disabled = false;
           loadBtn.textContent = 'Load more';
-        } else {
-          document.getElementById('load-more-container').remove();
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        loadBtn.disabled = false;
-        loadBtn.textContent = 'Load more';
-      });
-  });
+        });
+    });
+  }
 });
 </script>
+
 
 
 {% endblock %}

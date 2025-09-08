@@ -1582,15 +1582,51 @@ def get_categories(request):
 # =====================================================================
 # =====================================================================
 
-@login_required(login_url='/login/')
+def _fmt_dt(dt):
+    """
+    Return a consistent string for datetimes or dates.
+    - If dt is timezone-aware: convert to local time and format 'YYYY-MM-DD HH:MM'
+    - If dt is naive datetime: make aware (current TZ) then format
+    - If dt is a date: format 'YYYY-MM-DD'
+    - If anything else: str(dt)
+    """
+    if dt is None:
+        return "—"
+
+    try:
+        # datetimes
+        if hasattr(dt, "tzinfo"):
+            # datetime-like
+            if timezone.is_naive(dt):
+                try:
+                    dt = timezone.make_aware(dt)
+                except Exception:
+                    # Fall back to str
+                    return getattr(dt, "strftime", lambda *_: str(dt))("%Y-%m-%d %H:%M")
+            try:
+                return timezone.localtime(dt).strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                return getattr(dt, "strftime", lambda *_: str(dt))("%Y-%m-%d %H:%M")
+
+        # dates
+        return getattr(dt, "strftime", lambda *_: str(dt))("%Y-%m-%d")
+    except Exception:
+        return str(dt)
+
+
+@login_required(login_url="/login/")
 def tpc_request(request):
+    """
+    Render the TPC list page with the first page of rows.
+    Adds has_more_first_page so the frontend can decide whether to show the Load More button immediately.
+    """
     page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
     base_qs = (
         TPCRequest.objects
         .filter(rejected=False)
-        .order_by('-date_requested')
+        .order_by("-date_requested")
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
@@ -1599,75 +1635,75 @@ def tpc_request(request):
         .prefetch_related("approvals", "verbal_approvals")
     )
 
-    first_page = list(base_qs[:page_size])
+    # Fetch one extra to detect "has more"
+    window = list(base_qs[: page_size + 1])
+    first_page = window[:page_size]
+    has_more_first_page = len(window) > page_size
 
     rows = []
     build_abs = request.build_absolute_uri
+
     for t in first_page:
-        # guard against any stray date objects:
-        dr = t.date_requested
-        ed = t.expiration_date
-        try:
-            dr_str = timezone.localtime(dr).strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            # if it’s a date, stringify it safely
-            dr_str = getattr(dr, "strftime", lambda *_: str(dr))("%Y-%m-%d")
-
-        try:
-            ed_str = timezone.localtime(ed).strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            ed_str = getattr(ed, "strftime", lambda *_: str(ed))("%Y-%m-%d")
-
         has_verbal = t.verbal_approvals.all().exists()
         pdf_url = build_abs(f"/quality/tpc/{t.pk}/pdf/") if (t.approved or has_verbal) else None
 
         rows.append({
             "pk": t.pk,
-            "date_requested": dr_str,
+            "date_requested": _fmt_dt(t.date_requested),
             "issuer_name": t.issuer_name,
             "parts": ", ".join(t.parts) if t.parts else "—",
             "reason": t.reason,
             "process": t.process,
             "supplier_issue": "Yes" if t.supplier_issue else "No",
             "machines": ", ".join(t.machines) if t.machines else "—",
-            "expiration_date": ed_str,
+            "expiration_date": _fmt_dt(t.expiration_date),
             "approved": t.approved,
             "has_verbal": has_verbal,
             "approvals_got": t.approvals.count(),
             "approvals_req": t.required_approvals_count(),
-            "approvers": ", ".join(a.user.get_full_name() or a.user.username for a in t.approvals.all()) or "—",
+            "approvers": ", ".join(
+                (a.user.get_full_name() or a.user.username) for a in t.approvals.all()
+            ) or "—",
             "user_has_approved": t.user_has_approved,
             "pdf_url": pdf_url,
+            # include QE text so the UI can expose it later if desired
+            "qe_risk_assessment": t.qe_risk_assessment or "—",
         })
 
     return render(request, "quality/tpc_requests.html", {
-        "rows": rows,                                # 👈 pass strings, not model objs
+        "rows": rows,                       # strings/primitives only (safe for data-attrs)
         "is_tpc_approver": is_tpc_approver,
-        "tpc_page_size": settings.TPC_PAGE_SIZE,
+        "tpc_page_size": page_size,
         "initial_count": len(rows),
+        "has_more_first_page": has_more_first_page,
     })
 
 
-@login_required(login_url='/login/')
+@login_required(login_url="/login/")
 def tpc_request_load_more(request):
+    """
+    Returns JSON payload with next page of TPC rows.
+    Uses the same row shape as the initial page for consistent client code.
+    """
     try:
         offset = int(request.GET.get("offset", 0))
-    except ValueError:
+    except (TypeError, ValueError):
         offset = 0
 
     page_size = settings.TPC_PAGE_SIZE
     is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
 
+    # Slice one extra to determine "has_more"
     tpc_qs = (
         TPCRequest.objects
         .filter(rejected=False)
-        .order_by('-date_requested')
+        .order_by("-date_requested")
         .annotate(
             user_has_approved=Exists(
                 TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
             )
         )
-        .prefetch_related("approvals", "verbal_approvals")[offset:offset + page_size + 1]
+        .prefetch_related("approvals", "verbal_approvals")[offset : offset + page_size + 1]
     )
 
     tpcs = list(tpc_qs[:page_size])
@@ -1681,21 +1717,24 @@ def tpc_request_load_more(request):
 
         rows.append({
             "pk": t.pk,
-            "date_requested": timezone.localtime(t.date_requested).strftime("%Y-%m-%d %H:%M"),
+            "date_requested": _fmt_dt(t.date_requested),
             "issuer_name": t.issuer_name,
             "parts": ", ".join(t.parts) if t.parts else "—",
             "reason": t.reason,
             "process": t.process,
             "supplier_issue": "Yes" if t.supplier_issue else "No",
             "machines": ", ".join(t.machines) if t.machines else "—",
-            "expiration_date": timezone.localtime(t.expiration_date).strftime("%Y-%m-%d %H:%M"),
+            "expiration_date": _fmt_dt(t.expiration_date),
             "approved": t.approved,
             "has_verbal": has_verbal,
             "approvals_got": t.approvals.count(),
             "approvals_req": t.required_approvals_count(),
-            "approvers": ", ".join(a.user.get_full_name() or a.user.username for a in t.approvals.all()) or "—",
+            "approvers": ", ".join(
+                (a.user.get_full_name() or a.user.username) for a in t.approvals.all()
+            ) or "—",
             "user_has_approved": t.user_has_approved,
             "pdf_url": pdf_url,
+            "qe_risk_assessment": t.qe_risk_assessment or "—",
         })
 
     return JsonResponse({
@@ -1703,7 +1742,6 @@ def tpc_request_load_more(request):
         "has_more": has_more,
         "is_tpc_approver": is_tpc_approver,   # frontend uses this for approve+reject visibility
     })
-
 
 
 
