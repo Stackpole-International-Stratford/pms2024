@@ -2,11 +2,19 @@
 {% load static %}
 
 {% block content %}
-<div class="container mt-5">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">TPC Requests</h2>
-    <a href="{% url 'tpc_request_new' %}" class="btn btn-warning">+ New TPC request</a>
+    <div class="d-flex gap-2">
+      <a href="http://pmdsdata8.stackpole.ca:6176/public/dashboard/4c97852a-922e-4a71-933b-c4a370e612b0"
+        target="_blank"
+        class="btn btn-info">
+        Metabase Dashboard
+      </a>
+      <a href="{% url 'tpc_request_new' %}" class="btn btn-warning">+ New TPC request</a>
+    </div>
   </div>
+
 
   <div class="table-responsive">
       <table id="tpc-table" class="table table-sm table-bordered table-striped table-hover align-middle">
