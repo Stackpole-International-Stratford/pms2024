@@ -121,8 +121,16 @@
       <!-- Changed to -->
       <div class="col-md-6">
         <label class="form-label fw-bold" for="changed_to">Changed To</label>
-        <textarea id="changed_to" name="changed_to" class="form-control" rows="3" required>{{ tpc.changed_to }}</textarea>
+        <textarea
+          id="changed_to"
+          name="changed_to"
+          class="form-control"
+          rows="3"
+          placeholder="Include checks bypassed..."
+          required
+        >{{ tpc.changed_to }}</textarea>
       </div>
+
 
       <!-- QE Risk Assessment (optional) -->
       <div class="col-md-12">
