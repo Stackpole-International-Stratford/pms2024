@@ -75,7 +75,7 @@
         <tr>
           <td><div class="cell"><div class="lbl">Date</div><div class="val">{{ tpc.date_requested }}</div></div></td>
           <td><div class="cell"><div class="lbl">TPC Created By</div><div class="val">{{ tpc.issuer_name|default:"—" }}</div></div></td>
-          <td><div class="cell"><div class="lbl">Reason</div><div class="val">{{ tpc.reason|default:"—" }}</div></div></td>
+          <td><div class="cell"><div class="lbl">Desc of Deviation</div><div class="val">{{ tpc.reason|default:"—" }}</div></div></td>
           <td><div class="cell"><div class="lbl">Expiration</div><div class="val">{{ tpc.expiration_date|default:"—" }}</div></div></td>
         </tr>
       </table>
@@ -95,7 +95,6 @@
       <table class="g2 h-md">
         <colgroup><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Reason for Deviation</div><div class="val">{{ tpc.reason_note|default:"—" }}</div></div></td>
           <td><div class="cell"><div class="lbl">Feature as per process sheet</div><div class="val">{{ tpc.feature|default:"—" }}</div></div></td>
         </tr>
       </table>
@@ -132,15 +131,7 @@
         </tr>
       </table>
 
-      <!-- Row 6: Notice -->
-      <table class="g2 h-note">
-        <colgroup><col><col></colgroup>
-        <tr>
-          <td><div class="cell"><div class="lbl">If Expired Notify Supervisor – Do Not Remove</div></div></td>
-        </tr>
-      </table>
-
-      <!-- Approvals -->
+      <!-- Approvals (with inline expired notice) -->
       <table class="g2 h-sm">
         <colgroup><col><col></colgroup>
         <tr>
@@ -158,10 +149,17 @@
                   <div class="muted">Last approved by {{ tpc.approved_by.get_full_name|default:tpc.approved_by.username }} on {{ tpc.approved_at }}</div>
                 {% endif %}
               </div>
+
+              <!-- inline note saves space -->
+              <p class="muted small" style="margin:6px 0 0;">
+                If Expired Notify Supervisor – Do Not Remove
+              </p>
             </div>
           </td>
         </tr>
       </table>
+
+
 
       <div class="banner">Ensure the TPC # is recorded on the Process Sheet</div>
       <div class="notice">PRINT ON ORANGE PAPER</div>
