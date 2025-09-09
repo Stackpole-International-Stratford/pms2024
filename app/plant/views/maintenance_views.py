@@ -4,6 +4,7 @@ from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from datetime import datetime
 from ..models.maintenance_models import *
+from ..models.maintenance_test_models import *
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
@@ -52,11 +53,11 @@ can use it. Before we had this, we had it in 2 separate json objects, which was 
 def get_prod_lines():
     """
     Return a list of { line, scrap_line, operations:[ { op, machines:[{number,target}] } ] }
-    built fresh from the DowntimeMachine table.
+    built fresh from the DowntimeMachineNEWTEST table.
     """
     _by_name = {}
 
-    for dm in DowntimeMachine.objects.all():
+    for dm in DowntimeMachineNEWTEST.objects.all():
         # 1) ensure the line‐block
         blk = _by_name.setdefault(
             dm.line,
@@ -102,12 +103,12 @@ def delete_downtime_entry(request):
 
     # fetch only non-deleted events
     try:
-        e = MachineDowntimeEventTEST.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEventTEST.DoesNotExist:
+        e = MachineDowntimeEventNEWTEST.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEventNEWTEST.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
     # ✏️ NEW: ensure no open participants
-    if DowntimeParticipation.objects.filter(event=e, leave_epoch__isnull=True).exists():
+    if DowntimeParticipationNEWTEST.objects.filter(event=e, leave_epoch__isnull=True).exists():
         return HttpResponseForbidden("Cannot delete until all participants have left.")
 
     # soft-delete
@@ -142,14 +143,14 @@ def closeout_downtime_entry(request):
 
     # 2) fetch event
     event = get_object_or_404(
-        MachineDowntimeEventTEST,
+        MachineDowntimeEventNEWTEST,
         pk=entry_id,
         is_deleted=False,
         closeout_epoch__isnull=True
     )
 
     # 3) ensure no open participants
-    if DowntimeParticipation.objects.filter(event=event, leave_epoch__isnull=True).exists():
+    if DowntimeParticipationNEWTEST.objects.filter(event=event, leave_epoch__isnull=True).exists():
         return HttpResponseForbidden("Cannot close out until all participants have left.")
 
     # 4) localize and convert to UTC epoch
@@ -174,7 +175,7 @@ def closeout_downtime_entry(request):
 
 def maintenance_entries(request: HttpRequest) -> JsonResponse:
     """
-    Returns a page of open MachineDowntimeEventTEST entries plus:
+    Returns a page of open MachineDowntimeEventNEWTEST entries plus:
       - has_more: whether there are more to load
       - is_guest: true if the user is anonymous (not logged in)
     """
@@ -183,7 +184,7 @@ def maintenance_entries(request: HttpRequest) -> JsonResponse:
     page_size = 300
 
     # only live, un‐closed events
-    qs = MachineDowntimeEventTEST.objects.filter(
+    qs = MachineDowntimeEventNEWTEST.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
     ).order_by('-start_epoch')
@@ -266,7 +267,7 @@ def maintenance_form(request):
         # Validate category
         if not raw_cat:
             return HttpResponseBadRequest("You must choose a category.")
-        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        cat_obj = DowntimeCodeNEWTEST.objects.filter(code__startswith=raw_cat + "-").first()
         if not cat_obj:
             return HttpResponseBadRequest("Invalid category code.")
         category_name = cat_obj.category
@@ -274,8 +275,8 @@ def maintenance_form(request):
         # Validate subcategory
         if raw_sub:
             try:
-                sub_obj = DowntimeCode.objects.get(code=raw_sub)
-            except DowntimeCode.DoesNotExist:
+                sub_obj = DowntimeCodeNEWTEST.objects.get(code=raw_sub)
+            except DowntimeCodeNEWTEST.DoesNotExist:
                 return HttpResponseBadRequest("Invalid subcategory code.")
             subcategory_name = sub_obj.subcategory
             code_value       = raw_sub
@@ -294,7 +295,7 @@ def maintenance_form(request):
 
         # Create or update
         if entry_id:
-            e = get_object_or_404(MachineDowntimeEventTEST, pk=entry_id, is_deleted=False)
+            e = get_object_or_404(MachineDowntimeEventNEWTEST, pk=entry_id, is_deleted=False)
             e.line         = line
             e.machine      = machine
             e.category     = category_name
@@ -310,7 +311,7 @@ def maintenance_form(request):
                 'labour_types','employee_id'
             ])
         else:
-            MachineDowntimeEventTEST.objects.create(
+            MachineDowntimeEventNEWTEST.objects.create(
                 line         = line,
                 machine      = machine,
                 category     = category_name,
@@ -326,26 +327,26 @@ def maintenance_form(request):
         return redirect(request.get_full_path())
 
     # GET: render form
-    qs = MachineDowntimeEventTEST.objects.filter(
+    qs = MachineDowntimeEventNEWTEST.objects.filter(
         is_deleted=False,
         closeout_epoch__isnull=True
     ).annotate(
         has_electrician=Exists(
-            DowntimeParticipation.objects.filter(
+            DowntimeParticipationNEWTEST.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_electrician'
             )
         ),
         has_millwright=Exists(
-            DowntimeParticipation.objects.filter(
+            DowntimeParticipationNEWTEST.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_millwright'
             )
         ),
         has_tech=Exists(
-            DowntimeParticipation.objects.filter(
+            DowntimeParticipationNEWTEST.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_tech'
@@ -357,21 +358,21 @@ def maintenance_form(request):
             output_field=BooleanField(),
         ),
         has_plctech=Exists(
-            DowntimeParticipation.objects.filter(
+            DowntimeParticipationNEWTEST.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_plctech'
             )
         ),
         has_imt=Exists(
-            DowntimeParticipation.objects.filter(
+            DowntimeParticipationNEWTEST.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_imt'
             )
         ),
          has_plumber=Exists(
-            DowntimeParticipation.objects.filter(
+            DowntimeParticipationNEWTEST.objects.filter(
                 event=OuterRef('pk'),
                 leave_epoch__isnull=True,
                 user__groups__name='maintenance_plumber'
@@ -384,7 +385,7 @@ def maintenance_form(request):
     has_more = (offset + page_size) < total
 
     # Build downtime_codes_list and prod_lines JSON...
-    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by('category','subcategory','code')
     structured = {}
     for c in downtime_codes:
         cat = c.code.split('-',1)[0]
@@ -453,13 +454,13 @@ def user_has_maintenance_access(user) -> bool:
 
 def annotate_being_worked_on(qs):
     """
-    Takes a MachineDowntimeEventTEST queryset `qs` and returns it
+    Takes a MachineDowntimeEventNEWTEST queryset `qs` and returns it
     annotated with a boolean `being_worked_on` that’s True
-    if any DowntimeParticipation for that event has no leave_epoch.
+    if any DowntimeParticipationNEWTEST for that event has no leave_epoch.
     """
     return qs.annotate(
         being_worked_on=Exists(
-            DowntimeParticipation.objects
+            DowntimeParticipationNEWTEST.objects
               .filter(event_id=OuterRef('pk'), leave_epoch__isnull=True)
         )
     )
@@ -509,7 +510,7 @@ from django.db.models import Q
 
 def filter_out_operator_only_events(qs):
     """
-    Given a MachineDowntimeEventTEST queryset, return a new queryset
+    Given a MachineDowntimeEventNEWTEST queryset, return a new queryset
     with all events whose labour_types == ["OPERATOR"] OR ["NA"] removed.
     """
     # Exclude any event whose labour_types exactly equals ["OPERATOR"] or ["NA"]
@@ -548,12 +549,12 @@ def list_all_downtime_entries(request):
 
     # 2) Fetch & annotate live events
     priority_sq = (
-        LinePriority.objects
+        LinePriorityNEWTEST.objects
         .filter(line=OuterRef("line"))
         .values("priority")[:1]
     )
     base_qs = (
-        MachineDowntimeEventTEST.objects
+        MachineDowntimeEventNEWTEST.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
         .annotate(
             line_priority=Coalesce(
@@ -627,7 +628,7 @@ def list_all_downtime_entries(request):
             roles       = [
                 r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
             ]
-            parts = DowntimeParticipation.objects.filter(
+            parts = DowntimeParticipationNEWTEST.objects.filter(
                 user=u,
                 leave_epoch__isnull=True,
                 event__closeout_epoch__isnull=True
@@ -661,7 +662,7 @@ def list_all_downtime_entries(request):
     is_supervisor = "maintenance_supervisors" in user_grps
 
     # 8) Build the labour_choices list
-    full_choices = MachineDowntimeEventTEST.LABOUR_CHOICES
+    full_choices = MachineDowntimeEventNEWTEST.LABOUR_CHOICES
     allowed_groups = {
         ROLE_TO_GROUP["electrician"],
         ROLE_TO_GROUP["millwright"],
@@ -681,7 +682,7 @@ def list_all_downtime_entries(request):
         ]
 
     # 9) Downtime‐codes JSON for the modal
-    downtime_codes = DowntimeCode.objects.all().order_by(
+    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by(
         "category", "subcategory", "code"
     )
     structured = {}
@@ -710,7 +711,7 @@ def list_all_downtime_entries(request):
     return render(request, "plant/maintenance_all_entries.html", {
         "entries":                  entries,
         "page_size":                PAGE_SIZE,
-        "line_priorities":          LinePriority.objects.all(),
+        "line_priorities":          LinePriorityNEWTEST.objects.all(),
         "is_manager":               is_manager,
         "is_supervisor":            is_supervisor,
         "is_eam":                   is_eam,
@@ -733,7 +734,7 @@ def load_more_downtime_entries(request):
 
     # base queryset
     base_qs = (
-        MachineDowntimeEventTEST.objects
+        MachineDowntimeEventNEWTEST.objects
         .filter(is_deleted=False, closeout_epoch__isnull=True)
         .order_by("-start_epoch")
         .prefetch_related("participants__user")
@@ -798,14 +799,14 @@ def downtime_history(request, event_id):
     """
     # 1) validate event
     event = get_object_or_404(
-        MachineDowntimeEventTEST,
+        MachineDowntimeEventNEWTEST,
         pk=event_id,
         is_deleted=False
     )
 
     # 2) collect participations
     parts = (
-        DowntimeParticipation.objects
+        DowntimeParticipationNEWTEST.objects
         .filter(event=event)
         .order_by('join_epoch')
         .select_related('user')
@@ -871,7 +872,7 @@ def join_downtime_event(request):
         return HttpResponseBadRequest("Invalid payload")
 
     # fetch the event…
-    event = MachineDowntimeEventTEST.objects.filter(pk=event_id, is_deleted=False).first()
+    event = MachineDowntimeEventNEWTEST.objects.filter(pk=event_id, is_deleted=False).first()
     if not event:
         return HttpResponseBadRequest("Event not found")
 
@@ -885,7 +886,7 @@ def join_downtime_event(request):
     utc_dt   = aware_dt.astimezone(utc)
     epoch_ts = int(utc_dt.timestamp())
 
-    participation = DowntimeParticipation.objects.create(
+    participation = DowntimeParticipationNEWTEST.objects.create(
         event        = event,
         user         = request.user,
         join_epoch   = epoch_ts,
@@ -910,7 +911,7 @@ def leave_downtime_event(request):
         return HttpResponseBadRequest("Invalid payload")
 
     # find the open participation…
-    part = (DowntimeParticipation.objects
+    part = (DowntimeParticipationNEWTEST.objects
             .filter(event__pk=event_id, user=request.user, leave_epoch__isnull=True)
             .order_by('-join_epoch')
             .first())
@@ -946,12 +947,12 @@ def get_machine_priority_map():
     prod_lines = get_prod_lines()
     """
     Returns a dict: { machine_number (str) → priority (int) } by
-    walking prod_lines and the LinePriority table.
+    walking prod_lines and the LinePriorityNEWTEST table.
     """
     # grab all line→priority pairs in one query
     line_prios = {
         lp.line: lp.priority
-        for lp in LinePriority.objects.all()
+        for lp in LinePriorityNEWTEST.objects.all()
     }
 
     mp = {}
@@ -969,26 +970,26 @@ def get_machine_priority_map():
 @require_POST
 def move_line_priority(request, pk, direction):
     """
-    Swap the priority of LinePriority(pk) with its neighbor:
+    Swap the priority of LinePriorityNEWTEST(pk) with its neighbor:
     - direction='up'   → swap with the next-higher-urgency (lower number)
     - direction='down' → swap with the next-lower-urgency (higher number)
     """
     if direction not in ('up', 'down'):
         return HttpResponseBadRequest("Invalid move direction.")
 
-    current = get_object_or_404(LinePriority, pk=pk)
+    current = get_object_or_404(LinePriorityNEWTEST, pk=pk)
 
     # find the neighbor to swap with
     if direction == 'up':
         neighbor = (
-            LinePriority.objects
+            LinePriorityNEWTEST.objects
             .filter(priority__lt=current.priority)
             .order_by('-priority')
             .first()
         )
     else:  # down
         neighbor = (
-            LinePriority.objects
+            LinePriorityNEWTEST.objects
             .filter(priority__gt=current.priority)
             .order_by('priority')
             .first()
@@ -1147,8 +1148,8 @@ def maintenance_edit(request):
 
     # Fetch the downtime event
     try:
-        e = MachineDowntimeEventTEST.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEventTEST.DoesNotExist:
+        e = MachineDowntimeEventNEWTEST.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEventNEWTEST.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
     # Convert epoch to human-readable local datetime
@@ -1166,7 +1167,7 @@ def maintenance_edit(request):
     })
 
     # Fetch all downtime codes from the database
-    downtime_codes = DowntimeCode.objects.all().order_by('category', 'subcategory', 'code')
+    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by('category', 'subcategory', 'code')
 
     # Structure categories and subcategories
     categories_dict = {}
@@ -1233,17 +1234,17 @@ def maintenance_update_event(request):
 
     # 1) Lookup the event
     try:
-        event = MachineDowntimeEventTEST.objects.get(pk=entry_id, is_deleted=False)
-    except MachineDowntimeEventTEST.DoesNotExist:
+        event = MachineDowntimeEventNEWTEST.objects.get(pk=entry_id, is_deleted=False)
+    except MachineDowntimeEventNEWTEST.DoesNotExist:
         return HttpResponseBadRequest("Entry not found")
 
-    # 2) Derive display names from DowntimeCode model
+    # 2) Derive display names from DowntimeCodeNEWTEST model
     try:
-        # Fetch the DowntimeCode instance for subcategory
-        sub_code_obj = DowntimeCode.objects.get(code=subcategory_code)
+        # Fetch the DowntimeCodeNEWTEST instance for subcategory
+        sub_code_obj = DowntimeCodeNEWTEST.objects.get(code=subcategory_code)
         category_name = sub_code_obj.category
         subcategory_name = sub_code_obj.subcategory
-    except DowntimeCode.DoesNotExist:
+    except DowntimeCodeNEWTEST.DoesNotExist:
         return HttpResponseBadRequest("Invalid category or subcategory code")
 
     # 3) Parse start_at into an epoch
@@ -1303,7 +1304,7 @@ def downtime_codes_list(request):
         category   = request.POST.get('category')
         subcategory= request.POST.get('subcategory')
         if code and category and subcategory:
-            DowntimeCode.objects.create(
+            DowntimeCodeNEWTEST.objects.create(
                 code=code,
                 category=category,
                 subcategory=subcategory
@@ -1311,12 +1312,12 @@ def downtime_codes_list(request):
         return redirect('downtime_codes_list')
 
     # For GET: list all codes and supply existing cats/subcats
-    codes = DowntimeCode.objects.all()
-    categories   = (DowntimeCode.objects
+    codes = DowntimeCodeNEWTEST.objects.all()
+    categories   = (DowntimeCodeNEWTEST.objects
                     .order_by('category')
                     .values_list('category', flat=True)
                     .distinct())
-    subcategories= (DowntimeCode.objects
+    subcategories= (DowntimeCodeNEWTEST.objects
                     .order_by('subcategory')
                     .values_list('subcategory', flat=True)
                     .distinct())
@@ -1341,10 +1342,10 @@ def downtime_codes_create(request):
     if not all([code, category, subcat]):
         return JsonResponse({'error': 'All fields are required.'}, status=400)
 
-    if DowntimeCode.objects.filter(code=code).exists():
+    if DowntimeCodeNEWTEST.objects.filter(code=code).exists():
         return JsonResponse({'error': f'Code "{code}" already exists.'}, status=400)
 
-    obj = DowntimeCode.objects.create(
+    obj = DowntimeCodeNEWTEST.objects.create(
         code=code, category=category, subcategory=subcat
     )
     data = {
@@ -1360,7 +1361,7 @@ def downtime_codes_create(request):
 @require_POST
 def downtime_codes_edit(request, pk):
     """AJAX: update an existing code"""
-    obj = get_object_or_404(DowntimeCode, pk=pk)
+    obj = get_object_or_404(DowntimeCodeNEWTEST, pk=pk)
     code     = request.POST.get('code', '').strip()
     category = request.POST.get('category', '').strip()
     subcat   = request.POST.get('subcategory', '').strip()
@@ -1369,7 +1370,7 @@ def downtime_codes_edit(request, pk):
         return JsonResponse({'error': 'All fields are required.'}, status=400)
 
     # if they changed the code, ensure uniqueness
-    if obj.code != code and DowntimeCode.objects.filter(code=code).exists():
+    if obj.code != code and DowntimeCodeNEWTEST.objects.filter(code=code).exists():
         return JsonResponse({'error': f'Code "{code}" already exists.'}, status=400)
 
     obj.code = code
@@ -1390,7 +1391,7 @@ def downtime_codes_edit(request, pk):
 @require_POST
 def downtime_codes_delete(request, pk):
     """AJAX: delete a code"""
-    obj = get_object_or_404(DowntimeCode, pk=pk)
+    obj = get_object_or_404(DowntimeCodeNEWTEST, pk=pk)
     obj.delete()
     return JsonResponse({'success': True})
 
@@ -1420,7 +1421,7 @@ def machine_history(request):
         return JsonResponse({"error": "Machine parameter is required."}, status=400)
 
     events = (
-        MachineDowntimeEventTEST.objects
+        MachineDowntimeEventNEWTEST.objects
         .filter(machine=machine, is_deleted=False)
         .order_by("-start_epoch")[:500]
     )
@@ -1639,7 +1640,7 @@ def force_leave_participation(request, pk):
     # -------------------------------------------------------
 
     part = get_object_or_404(
-        DowntimeParticipation,
+        DowntimeParticipationNEWTEST,
         pk=pk,
         leave_epoch__isnull=True,
         event__is_deleted=False,
@@ -1695,15 +1696,15 @@ def maintenance_bulk_form(request):
             return HttpResponseBadRequest("You must select at least one machine.")
         if not raw_cat:
             return HttpResponseBadRequest("You must choose a category.")
-        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        cat_obj = DowntimeCodeNEWTEST.objects.filter(code__startswith=raw_cat + "-").first()
         if not cat_obj:
             return HttpResponseBadRequest("Invalid category code.")
         category_name = cat_obj.category
 
         if raw_sub:
             try:
-                sub_obj = DowntimeCode.objects.get(code=raw_sub)
-            except DowntimeCode.DoesNotExist:
+                sub_obj = DowntimeCodeNEWTEST.objects.get(code=raw_sub)
+            except DowntimeCodeNEWTEST.DoesNotExist:
                 return HttpResponseBadRequest("Invalid subcategory code.")
             subcategory_name = sub_obj.subcategory
             code_value       = raw_sub
@@ -1733,7 +1734,7 @@ def maintenance_bulk_form(request):
 
         # create one event per machine
         for machine in machines:
-            MachineDowntimeEventTEST.objects.create(
+            MachineDowntimeEventNEWTEST.objects.create(
                 line         = line,
                 machine      = machine,
                 category     = category_name,
@@ -1748,7 +1749,7 @@ def maintenance_bulk_form(request):
         return redirect('maintenance_all')
 
     # GET → build JSON for selects
-    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by('category','subcategory','code')
     structured = {}
     for c in downtime_codes:
         cat = c.code.split('-',1)[0]
@@ -1803,17 +1804,17 @@ def quick_add(request):
             return HttpResponseBadRequest("You must select a machine.")
         if not raw_cat:
             return HttpResponseBadRequest("You must choose a category.")
-        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
+        cat_obj = DowntimeCodeNEWTEST.objects.filter(code__startswith=raw_cat + "-").first()
         if not cat_obj:
             return HttpResponseBadRequest("Invalid category code.")
         category_name = cat_obj.category
 
         if raw_sub:
             try:
-                sub_obj = DowntimeCode.objects.get(code=raw_sub)
+                sub_obj = DowntimeCodeNEWTEST.objects.get(code=raw_sub)
                 subcategory_name = sub_obj.subcategory
                 code_value       = raw_sub
-            except DowntimeCode.DoesNotExist:
+            except DowntimeCodeNEWTEST.DoesNotExist:
                 return HttpResponseBadRequest("Invalid subcategory code.")
         else:
             subcategory_name = "NOTSELECTED"
@@ -1837,7 +1838,7 @@ def quick_add(request):
         epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
         # --- single event create ---
-        MachineDowntimeEventTEST.objects.create(
+        MachineDowntimeEventNEWTEST.objects.create(
             line         = line,
             machine      = machine,
             category     = category_name,
@@ -1853,7 +1854,7 @@ def quick_add(request):
         return redirect('maintenance_all')
 
     # GET → build JSON for selects (unchanged)
-    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
+    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by('category','subcategory','code')
     structured = {}
     for c in downtime_codes:
         cat = c.code.split('-',1)[0]
@@ -1873,7 +1874,7 @@ def quick_add(request):
     return render(request, 'plant/quick_add.html', {
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
-        'labour_choices':      MachineDowntimeEventTEST.LABOUR_CHOICES,
+        'labour_choices':      MachineDowntimeEventNEWTEST.LABOUR_CHOICES,
     })
 
 
@@ -2041,7 +2042,7 @@ def _post_to_litmus(equipment: str, payload_base: dict, headers: dict, *, timeou
 
 def _create_workorder_for_event(event, user, *, timeout: int = 30):
     """
-    Create a work order for the given MachineDowntimeEventTEST instance by
+    Create a work order for the given MachineDowntimeEventNEWTEST instance by
     calling the Litmus API. Saves event.work_order_id on success.
     Returns a dict with ok/message/work_order_id/status_code.
     """
@@ -2134,7 +2135,7 @@ def _create_workorder_for_event(event, user, *, timeout: int = 30):
 @login_required
 @require_POST
 def generate_workorder(request, entry_id):
-    event = get_object_or_404(MachineDowntimeEventTEST, pk=entry_id, is_deleted=False)
+    event = get_object_or_404(MachineDowntimeEventNEWTEST, pk=entry_id, is_deleted=False)
     result = _create_workorder_for_event(event, request.user)
 
     status = 200 if result.get("ok") else 400

@@ -1,6 +1,7 @@
 # plant/admin.py
 from django.contrib import admin
 from .models.maintenance_models import *
+from .models.maintenance_test_models import *
 from .models.absentee_models import *
 
 @admin.register(DowntimeMachine)
@@ -30,3 +31,13 @@ class PayCodeGroupAdmin(admin.ModelAdmin):
     def mark_unscheduled(self, request, queryset):
         updated = queryset.update(is_scheduled=False)
         self.message_user(request, f"Updated {updated} row(s) to Unscheduled.")
+
+
+
+
+@admin.register(DowntimeMachineNEWTEST)
+class DowntimeMachineNEWTESTAdmin(admin.ModelAdmin):
+    list_display   = ('line', 'operation', 'machine_number', 'is_tracked', 'created_at_UTC')
+    list_filter    = ('line', 'operation', 'is_tracked')
+    search_fields  = ('line', 'operation', 'machine_number')
+    readonly_fields = ('created_at_UTC', 'updated_at_UTC')

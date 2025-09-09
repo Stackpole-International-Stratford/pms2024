@@ -215,7 +215,7 @@ class DowntimeMachineNEWTEST(models.Model):
         unique_together = ('line', 'operation', 'machine_number')
         ordering = ['line', 'operation', 'machine_number']
         verbose_name = "Downtime Machine"
-        verbose_name_plural = "Downtime Machines"
+        verbose_name_plural = "NEWTEST Downtime Machines"
 
     def __str__(self):
         return f"{self.line} / {self.operation} / #{self.machine_number}"
