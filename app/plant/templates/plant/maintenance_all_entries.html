@@ -897,7 +897,14 @@ Add New or Update Employee
 const IS_MANAGER     = {{ is_manager|yesno:"true,false" }};
 const IS_SUPERVISOR  = {{ is_supervisor|yesno:"true,false" }};
 const CURRENT_USER   = "{{ request.user.username }}";
-const CSRF_TOKEN     = document.querySelector('[name=csrfmiddlewaretoken]').value;
+// Prefer the cookie (what Django checks for on AJAX). Fallback to hidden input if present.
+function getCookie(name){
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g,'\\$1') + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+const CSRF_TOKEN = getCookie('csrftoken') ||
+                   (document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+
 const IS_EAM         = {{ is_eam|yesno:"true,false" }};
 
 const URLS = {
@@ -915,7 +922,9 @@ const URLS = {
 };
 
 // Build the generate-wo URL based on your path('downtime/<int:entry_id>/generate-wo/', …)
-const woUrl = (id) => `/plant/downtime/${id}/generate-wo/`;
+// Matches: path('downtime/<int:entry_id>/generate-wo/', …)
+const woUrl = (id) => `/plant/downtime/${id}/generate-wo/`; // adjust /plant if your app root differs
+
 
 
 
@@ -1059,53 +1068,50 @@ function initCloseoutModal(){
             woBadge.classList.add('d-none');
             woBtn.classList.remove('d-none');
 
-            woBtn.onclick = async ()=>{
-              // disable while posting
-              woBtn.disabled = true;
-              try {
-                const res = await fetch(woUrl(idIn.value), {
-                  method: 'POST',
-                  credentials: 'same-origin',
-                  headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': CSRF_TOKEN
-                  }
-                });
+          woBtn.onclick = async ()=>{
+            woBtn.disabled = true;
+            try {
+              // Send as a regular form post so Django CSRF sees the token in body.
+              const fd = new FormData();
+              fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
 
-                let dataWO = null;
-                try { dataWO = await res.json(); } catch {}
+              const res = await fetch(woUrl(idIn.value), {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: fd
+                // No custom headers; let the browser set multipart/form-data.
+              });
 
-                if (!res.ok || (dataWO && dataWO.ok === false)) {
-                  const msg = (dataWO && dataWO.message) ? dataWO.message : `Failed to generate work order (HTTP ${res.status}).`;
-                  alert(msg);
-                  return;
-                }
+              let dataWO = null;
+              try { dataWO = await res.json(); } catch {}
 
-                // If backend returns the new number, prefer it
-                const newId = (dataWO && (dataWO.work_order_id || dataWO.id)) || null;
-
-                alert((dataWO && dataWO.message) || 'Work order generated.');
-
-                // Refresh the WO UI in-place without reloading
-                if (newId) {
-                  woBadge.textContent = `WO #${newId}`;
-                  woBadge.classList.remove('d-none');
-                  woBtn.classList.add('d-none');
-                } else {
-                  // if backend didn't return an id, fall back to a reload to reflect it
-                  location.reload();
-                }
-              } catch (err) {
-                alert(`Could not generate work order: ${err?.message || err}`);
-              } finally {
-                woBtn.disabled = false;
+              if (!res.ok || (dataWO && dataWO.ok === false)) {
+                const msg = (dataWO && dataWO.message) ? dataWO.message : `Failed to generate work order (HTTP ${res.status}).`;
+                alert(msg);
+                return;
               }
-            };
+
+              const newId = (dataWO && (dataWO.work_order_id || dataWO.id)) || null;
+              alert((dataWO && dataWO.message) || 'Work order generated.');
+              if (newId) {
+                woBadge.textContent = `WO #${newId}`;
+                woBadge.classList.remove('d-none');
+                woBtn.classList.add('d-none');
+              } else {
+                location.reload();
+              }
+            } catch (err) {
+              alert(`Could not generate work order: ${err?.message || err}`);
+            } finally {
+              woBtn.disabled = false;
+            }
+          };
+
+            }
+          } else {
+            // Non-EAM users never see WO controls
+            woRow.style.display = 'none';
           }
-        } else {
-          // Non-EAM users never see WO controls
-          woRow.style.display = 'none';
-        }
 
 
         bsModal.show();
