@@ -194,132 +194,127 @@ Add New or Update Employee
       <!-- 1) Table header with a warning‐style button -->
       <!-- Trigger button (in your <th> next to “Open Jobs”) -->
         <thead class="table-light">
-  <tr>
-    <th class="py-1 d-flex align-items-center">
-      <span>Open Jobs</span>
+          <tr>
+            {% if is_manager or is_supervisor %}
+              <th class="text-center align-middle" style="width:32px;">
+                <input type="checkbox" id="bulk-check-all" aria-label="Select all">
+              </th>
+            {% endif %}
+            <th class="py-1 d-flex align-items-center">
+              <span>Open Jobs</span>
 
-      <button
-        id="machine-history-btn"
-        type="button"
-        class="btn btn-warning btn-sm ms-2"
-        aria-label="Machine History"
-        data-bs-toggle="modal"
-        data-bs-target="#machineHistoryModal">
-        Machine History
-      </button>
+              <button
+                id="machine-history-btn"
+                type="button"
+                class="btn btn-warning btn-sm ms-2"
+                aria-label="Machine History"
+                data-bs-toggle="modal"
+                data-bs-target="#machineHistoryModal">
+                Machine History
+              </button>
 
-      {% if is_manager or is_supervisor %}
-      <button
-        id="quick-add-btn"
-        class="btn btn-dark btn-sm ms-2"
-        data-url="{% url 'quick_add' %}"
-        type="button"
-      >Quick Add</button>
+              {% if is_manager or is_supervisor %}
+              <button
+                id="quick-add-btn"
+                class="btn btn-dark btn-sm ms-2"
+                data-url="{% url 'quick_add' %}"
+                type="button"
+              >Quick Add</button>
 
-      <script>
-        document.getElementById('quick-add-btn')
-          .addEventListener('click', function() {
-            // Redirect in the same tab instead of opening a new one
-            window.location.href = this.dataset.url;
-          });
-      </script>
-      {% endif %}
+              <script>
+                document.getElementById('quick-add-btn')
+                  .addEventListener('click', function() {
+                    window.location.href = this.dataset.url;
+                  });
+              </script>
+              {% endif %}
 
+              <input
+                id="job-filter"
+                type="text"
+                class="form-control form-control-sm ms-2"
+                placeholder="Filter jobs…"
+                style="max-width: 150px;"
+              >
 
+              <span id="target-lines-icon" class="ms-2" style="cursor: pointer;" title="Show Target Lines">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#CC0000" class="bi bi-crosshair2" viewBox="0 0 16 16">
+                  <path d="M8 0a.5.5 0 0 1 .5.5v.518A7 7 0 0 1 14.982 7.5h.518a.5.5 0 0 1 0 1h-.518A7 7 0 0 1 8.5 14.982v.518a.5.5 0 0 1-1 0v-.518A7 7 0 0 1 1.018 8.5H.5a.5.5 0 0 1 0-1h.518A7 7 0 0 1 7.5 1.018V.5A.5.5 0 0 1 8 0m-.5 2.02A6 6 0 0 0 2.02 7.5h1.005A5 5 0 0 1 7.5 3.025zm1 1.005A5 5 0 0 1 12.975 7.5h1.005A6 6 0 0 0 8.5 2.02zM12.975 8.5A5 5 0 0 1 8.5 12.975v1.005a6 6 0 0 0 5.48-5.48zM7.5 12.975A5 5 0 0 1 3.025 8.5H2.02a6 6 0 0 0 5.48 5.48zM10 8a2 2 0 1 0-4 0 2 2 0 0 0 4 0"/>
+                </svg>
+              </span>
 
+              {% if is_manager or is_supervisor %}
+                <a id="heat-breaks-icon"
+                  class="ms-2 d-inline-flex align-items-center"
+                  href="{% url 'heat_toggle_view' %}"
+                  title="Heat Breaks"
+                  aria-label="Heat Breaks"
+                  style="color: #E65100; cursor: pointer; text-decoration: none;">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                      width="20" height="20"
+                      fill="currentColor"
+                      class="bi bi-fire"
+                      viewBox="0 0 16 16">
+                    <path d="M8 16c3.314 0 6-2 6-5.5 0-1.5-.5-4-2.5-6 .25 1.5-1.25 2-1.25 2C11 4 9 .5 6 0c.357 2 .5 4-2 6-1.25 1-2 2.729-2 4.5C2 14 4.686 16 8 16m0-1c-1.657 0-3-1-3-2.75 0-.75.25-2 1.25-3C6.125 10 7 10.5 7 10.5c-.375-1.25.5-3.25 2-3.5-.179 1-.25 2 1 3 .625.5 1 1.364 1 2.25C11 14 9.657 15 8 15"/>
+                  </svg>
+                </a>
+              {% endif %}
+            </th>
+          </tr>
+        </thead>
 
-      <!-- New filter input -->
-      <input
-        id="job-filter"
-        type="text"
-        class="form-control form-control-sm ms-2"
-        placeholder="Filter jobs…"
-        style="max-width: 150px;"
-      >
-
-      <!-- ► our new SVG button: -->
-      <span id="target-lines-icon" class="ms-2" style="cursor: pointer;" title="Show Target Lines">
-        <!-- ─── replace the contents of this <svg> with your actual icon ─── -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#CC0000" class="bi bi-crosshair2" viewBox="0 0 16 16">
-          <path d="M8 0a.5.5 0 0 1 .5.5v.518A7 7 0 0 1 14.982 7.5h.518a.5.5 0 0 1 0 1h-.518A7 7 0 0 1 8.5 14.982v.518a.5.5 0 0 1-1 0v-.518A7 7 0 0 1 1.018 8.5H.5a.5.5 0 0 1 0-1h.518A7 7 0 0 1 7.5 1.018V.5A.5.5 0 0 1 8 0m-.5 2.02A6 6 0 0 0 2.02 7.5h1.005A5 5 0 0 1 7.5 3.025zm1 1.005A5 5 0 0 1 12.975 7.5h1.005A6 6 0 0 0 8.5 2.02zM12.975 8.5A5 5 0 0 1 8.5 12.975v1.005a6 6 0 0 0 5.48-5.48zM7.5 12.975A5 5 0 0 1 3.025 8.5H2.02a6 6 0 0 0 5.48 5.48zM10 8a2 2 0 1 0-4 0 2 2 0 0 0 4 0"/>
-        </svg>
-      </span>
-
-      {% if is_manager or is_supervisor %}
-          <!-- NEW: Heat Breaks fire icon link -->
-          <a id="heat-breaks-icon"
-            class="ms-2 d-inline-flex align-items-center"
-            href="{% url 'heat_toggle_view' %}"
-            title="Heat Breaks"
-            aria-label="Heat Breaks"
-            style="color: #E65100; cursor: pointer; text-decoration: none;">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                width="20" height="20"
-                fill="currentColor"
-                class="bi bi-fire"
-                viewBox="0 0 16 16">
-              <path d="M8 16c3.314 0 6-2 6-5.5 0-1.5-.5-4-2.5-6 .25 1.5-1.25 2-1.25 2C11 4 9 .5 6 0c.357 2 .5 4-2 6-1.25 1-2 2.729-2 4.5C2 14 4.686 16 8 16m0-1c-1.657 0-3-1-3-2.75 0-.75.25-2 1.25-3C6.125 10 7 10.5 7 10.5c-.375-1.25.5-3.25 2-3.5-.179 1-.25 2 1 3 .625.5 1 1.364 1 2.25C11 14 9.657 15 8 15"/>
-            </svg>
-          </a>
-      {% endif %}
-
-    </th>
-  </tr>
-</thead>
 
       <tbody>
         {% for e in entries %}
           <tr
-            class="editable-row {% if not e.closeout_epoch %}table-light{% endif %}"
-            data-entry-id="{{ e.id }}"
-            data-line="{{ e.line }}"
-            data-roles="{{ e.labour_types|join:',' }}"        {#  ← NEW  #}
-            data-busy="{{ e.being_worked_on|yesno:'1,0' }}"   {#  ← NEW  #}
-          >
-            <td class="py-1">
-              <div class="d-flex align-items-center">
-                
-                <!-- Left block: info + labour -->
-                <div class="d-flex align-items-center flex-grow-1">
-                  <span>
-                    {{ e.start_display }} – {{ e.machine }}{% if e.areazone %} ({{ e.areazone }}){% endif %} – 
-                    {% if e.labour_types %}
-                      {% for code in e.labour_types %}
-                        {% with code|lower as rolekey %}
-                            <button
-                              type="button"
-                              class="btn {% if rolekey in e.current_worker_roles %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
-                              data-event-id="{{ e.id }}"
-                              data-role="{{ rolekey }}"
-                            >{{ rolekey|slice:":3"|upper }}</button>
-                          {% endwith %}
-                      {% endfor %}
-                    {% else %}
-                      <span class="text-muted ms-2">–</span>
-                    {% endif %}
-                     – {{ e.category }}
-                          {% if e.comment %}
-                      – {{ e.comment|slice:":40" }}{% if e.comment|length > 40 %}…{% endif %}
-                    {% endif %}
-                    {% if e.current_usernames %}
-                      – <small>{{ e.current_usernames|join:", " }}</small>
-                    {% endif %}
-
-                  </span>
-                </div>
-      
-                {# hidden, used by row-click to trigger the same handler #}
-                {% if not e.closeout_epoch %}
-                  <button
-                    type="button"
-                    class="closeout-btn d-none"
-                    data-entry-id="{{ e.id }}"
-                  ></button>
-                {% endif %}
-              
-              </div>
+          class="editable-row {% if not e.closeout_epoch %}table-light{% endif %}"
+          data-entry-id="{{ e.id }}"
+          data-line="{{ e.line }}"
+          data-roles="{{ e.labour_types|join:',' }}"
+          data-busy="{{ e.being_worked_on|yesno:'1,0' }}"
+        >
+          {% if is_manager or is_supervisor %}
+            <td class="text-center align-middle" style="width:32px;">
+              <input type="checkbox" class="bulk-select" value="{{ e.id }}">
             </td>
-          </tr>
+          {% endif %}
+
+          <td class="py-1">
+            <div class="d-flex align-items-center">
+              <div class="d-flex align-items-center flex-grow-1">
+                <span>
+                  {{ e.start_display }} – {{ e.machine }}{% if e.areazone %} ({{ e.areazone }}){% endif %} – 
+                  {% if e.labour_types %}
+                    {% for code in e.labour_types %}
+                      {% with code|lower as rolekey %}
+                        <button
+                          type="button"
+                          class="btn {% if rolekey in e.current_worker_roles %}btn-dark{% else %}btn-outline-dark{% endif %} labour-btn ms-2 py-1 px-2"
+                          data-event-id="{{ e.id }}"
+                          data-role="{{ rolekey }}"
+                        >{{ rolekey|slice:":3"|upper }}</button>
+                      {% endwith %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="text-muted ms-2">–</span>
+                  {% endif %}
+                  – {{ e.category }}
+                  {% if e.comment %} – {{ e.comment|slice:":40" }}{% if e.comment|length > 40 %}…{% endif %}{% endif %}
+                  {% if e.current_usernames %} – <small>{{ e.current_usernames|join:", " }}</small>{% endif %}
+                </span>
+              </div>
+
+              {% if not e.closeout_epoch %}
+                <button
+                  type="button"
+                  class="closeout-btn d-none"
+                  data-entry-id="{{ e.id }}"
+                ></button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+
         {% empty %}
           <tr>
             <td class="text-center py-2">No downtime events found.</td>
@@ -328,6 +323,19 @@ Add New or Update Employee
       </tbody>
       
     </table>
+
+    {% if is_manager or is_supervisor %}
+    <div id="bulk-bar" class="d-none mt-2">
+      <form id="bulk-form" method="post" action="{% url 'bulk_closeout_page' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-sm">
+          Review Bulk Close-out (<span id="bulk-count">0</span>)
+        </button>
+        {# hidden <input name="ids"> elements will be injected here by JS #}
+      </form>
+    </div>
+    {% endif %}
+
   </div>
 </div>
 
@@ -1443,11 +1451,15 @@ function initMachineHistory(){
 function initRowShortcut(){
   $$('.editable-row').forEach(row=>{
     row.addEventListener('click', e=>{
+      // don’t open the close-out modal if the click was on:
+      // a labour button OR any checkbox (bulk selection)
       if (e.target.closest('.labour-btn')) return;
+      if (e.target.closest('input[type="checkbox"]')) return;
       row.querySelector('.closeout-btn')?.click();
     });
   });
 }
+
 
 
 /* ------------------------------------------------------------------
@@ -1552,6 +1564,54 @@ function initJobFilter(){
     });
   };
 }
+
+/* ------------------------------------------------------------------
+ *  BULK SELECT (checkboxes + bar)
+ * ------------------------------------------------------------------ */
+function initBulkSelect(){
+  const form      = $('#bulk-form');
+  const bulkBar   = $('#bulk-bar');
+  const countSpan = $('#bulk-count');
+  const master    = $('#bulk-check-all');
+
+  if (!form || !bulkBar) return; // only for mgr/super
+
+  const checks = ()=> [...$$('.bulk-select')];
+
+  function refresh(){
+    const selected = checks().filter(c=>c.checked).map(c=>c.value);
+    if (selected.length){
+      countSpan.textContent = selected.length;
+      bulkBar.classList.remove('d-none');
+
+      // rebuild hidden ids in the form
+      form.querySelectorAll('input[name="ids"]').forEach(n=>n.remove());
+      selected.forEach(id=>{
+        const i = document.createElement('input');
+        i.type  = 'hidden';
+        i.name  = 'ids';
+        i.value = id;
+        form.appendChild(i);
+      });
+    } else {
+      bulkBar.classList.add('d-none');
+      form.querySelectorAll('input[name="ids"]').forEach(n=>n.remove());
+    }
+  }
+
+  document.addEventListener('change', e=>{
+    if (e.target.classList.contains('bulk-select')) refresh();
+  });
+
+  if (master){
+    master.addEventListener('change', ()=>{
+      const want = master.checked;
+      checks().forEach(cb=> cb.checked = want);
+      refresh();
+    });
+  }
+}
+
 
 /* ------------------------------------------------------------------
  *  PERSONAL “EXCLUDE LINES” FILTER
@@ -1708,6 +1768,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initJobFilter();
   initPersonalFilter();
   initAutoReload();
+  initBulkSelect();              // ← add this line
 });
 </script>
 

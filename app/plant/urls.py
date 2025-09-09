@@ -121,4 +121,8 @@ urlpatterns = [
     path('heat/<int:machine_id>/on/', turn_on_heat, name='turn_on_heat'),
     path('heat/<int:heatbreak_id>/off/', turn_off_heat, name='turn_off_heat'),
 
+
+    path('maintenance/bulk-closeout/',          bulk_closeout_page,   name='bulk_closeout_page'),
+    path('maintenance/bulk-closeout/submit/',   bulk_closeout_submit, name='bulk_closeout_submit'),
+
 ]

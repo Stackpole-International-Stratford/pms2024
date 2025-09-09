@@ -2192,3 +2192,145 @@ def generate_workorder(request, entry_id):
         },
         status=status
     )
+
+
+
+
+
+
+
+# ===========================================================================
+# ===========================================================================
+# ============== Bulk Closeout - You're welcome Andrew and Saurabh ==========
+# ===========================================================================
+# ===========================================================================
+
+
+# helper
+def _is_mgr_or_super(user):
+    names = set(user.groups.values_list("name", flat=True))
+    return "maintenance_managers" in names or "maintenance_supervisors" in names
+
+
+@login_required
+def bulk_closeout_page(request):
+    """
+    Landing page that lists the selected open events and lets the user
+    enter close-out time/comment (per-row or apply-to-all).
+    Accepts ids via POST (ids=... or multiple ids=...) or GET (?ids=1,2,3).
+    """
+    if not _is_mgr_or_super(request.user):
+        return HttpResponseForbidden("Not authorized.")
+
+    # collect ids
+    if request.method == "POST":
+        raw = request.POST.getlist("ids")
+        if not raw:
+            # also accept comma-separated in a single field
+            comma = request.POST.get("ids", "")
+            raw = [x for x in comma.split(",") if x.strip()]
+    else:
+        comma = request.GET.get("ids", "")
+        raw = [x for x in comma.split(",") if x.strip()]
+
+    try:
+        ids = [int(x) for x in raw]
+    except ValueError:
+        return HttpResponseBadRequest("Bad ids.")
+
+    if not ids:
+        return HttpResponseBadRequest("No entries selected.")
+
+    qs = (
+        MachineDowntimeEventNEWTEST.objects
+        .filter(is_deleted=False, closeout_epoch__isnull=True, id__in=ids)
+        .order_by("line", "machine", "-start_epoch")
+    )
+    events = list(qs)
+
+    # basic local display helpers (keep it simple)
+    tz = timezone.get_current_timezone()
+    today = timezone.localdate()
+    for e in events:
+        dt = e.start_at
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt, tz)
+        ldt = timezone.localtime(dt)
+        e.start_display = (ldt.strftime("%H:%M")
+                           if ldt.date() == today
+                           else ldt.strftime("%m/%d %H:%M"))
+    return render(request, "plant/bulk_closeout.html", {
+        "events": events,
+    })
+
+
+@login_required
+def bulk_closeout_submit(request):
+    """
+    POST JSON:
+    {
+      "items": [
+        {"entry_id": 123, "closeout": "YYYY-MM-DD HH:MM", "comment": "..." },
+        ...
+      ]
+    }
+    Returns per-row results.
+    """
+    if not _is_mgr_or_super(request.user):
+        return HttpResponseForbidden("Not authorized.")
+
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required.")
+
+    try:
+        payload = json.loads(request.body or b"{}")
+        items = payload["items"]
+    except Exception:
+        return HttpResponseBadRequest("Invalid JSON.")
+
+    results = []
+
+    for item in items:
+        try:
+            entry_id = int(item["entry_id"])
+            naive_dt = datetime.strptime(item["closeout"], "%Y-%m-%d %H:%M")
+            comment  = (item.get("comment") or "").strip()
+        except Exception:
+            results.append({"entry_id": item.get("entry_id"), "ok": False, "error": "Bad fields"})
+            continue
+
+        local_tz = timezone.get_current_timezone()
+        aware_local = timezone.make_aware(naive_dt, local_tz)
+        epoch_ts = int(aware_local.astimezone(timezone.utc).timestamp())
+
+        try:
+            with transaction.atomic():
+                ev = (
+                    MachineDowntimeEventNEWTEST.objects
+                    .select_for_update()
+                    .filter(is_deleted=False, closeout_epoch__isnull=True)
+                    .only("id", "start_epoch")
+                    .get(pk=entry_id)
+                )
+
+                # all participants must have left
+                if DowntimeParticipationNEWTEST.objects.filter(event=ev, leave_epoch__isnull=True).exists():
+                    raise ValueError("Participants still active")
+
+                if epoch_ts <= ev.start_epoch:
+                    raise ValueError("Close-out must be after start")
+
+                ev.closeout_epoch   = epoch_ts
+                ev.closeout_comment = comment
+                ev.closedout_by     = request.user.username
+                ev.save(update_fields=["closeout_epoch", "closeout_comment", "closedout_by"])
+
+            results.append({"entry_id": entry_id, "ok": True})
+        except MachineDowntimeEventNEWTEST.DoesNotExist:
+            results.append({"entry_id": entry_id, "ok": False, "error": "Not found or already closed"})
+        except ValueError as ve:
+            results.append({"entry_id": entry_id, "ok": False, "error": str(ve)})
+        except Exception as e:
+            results.append({"entry_id": entry_id, "ok": False, "error": "Unexpected error"})
+
+    return JsonResponse({"results": results})
