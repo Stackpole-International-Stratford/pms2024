@@ -214,10 +214,10 @@ class LinePriority(models.Model):
 
 
 class DowntimeParticipation(models.Model):
-    event_id = models.BigIntegerField(
-        db_column="event_id",
-        null=True,   # <— make it nullable so Django won’t ask for a default
-        blank=True
+    event = models.ForeignKey(
+        MachineDowntimeEventTEST,
+        related_name='participants',
+        on_delete=models.CASCADE
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
