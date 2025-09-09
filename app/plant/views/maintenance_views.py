@@ -132,43 +132,49 @@ def closeout_downtime_entry(request):
         "closeout_comment": <string>
       }
     """
-    # 1) payload
+    # 1) Parse & validate payload
     try:
-        p             = json.loads(request.body)
-        entry_id      = p["entry_id"]
-        naive_dt      = datetime.strptime(p["closeout"], "%Y-%m-%d %H:%M")
-        close_comment = p["closeout_comment"].strip()
+        p = json.loads(request.body or b"{}")
+        entry_id = int(p["entry_id"])
+        naive_dt = datetime.strptime(p["closeout"], "%Y-%m-%d %H:%M")
+        close_comment = (p.get("closeout_comment") or "").strip()
     except (ValueError, KeyError):
-        return HttpResponseBadRequest("Invalid payload")
+        return HttpResponseBadRequest("Invalid payload.")
 
-    # 2) fetch event
-    event = get_object_or_404(
-        MachineDowntimeEventNEWTEST,
-        pk=entry_id,
-        is_deleted=False,
-        closeout_epoch__isnull=True
-    )
-
-    # 3) ensure no open participants
-    if DowntimeParticipationNEWTEST.objects.filter(event=event, leave_epoch__isnull=True).exists():
-        return HttpResponseForbidden("Cannot close out until all participants have left.")
-
-    # 4) localize and convert to UTC epoch
-    local_tz    = timezone.get_current_timezone()  # America/Toronto
+    # 2) Convert provided local time -> UTC epoch
+    local_tz = timezone.get_current_timezone()  # e.g. America/Toronto
     aware_local = timezone.make_aware(naive_dt, local_tz)
-    epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
+    epoch_ts = int(aware_local.astimezone(timezone.utc).timestamp())
 
-    # 5) sanity check: must be after the start
-    if epoch_ts <= event.start_epoch:
-        return HttpResponseBadRequest("Close-out time must be after the start time.")
+    # Optional: don't allow future closeouts (uncomment if you want this)
+    # if epoch_ts > int(timezone.now().timestamp()):
+    #     return HttpResponseBadRequest("Close-out time cannot be in the future.")
 
-    # 6) save
-    event.closeout_epoch   = epoch_ts
-    event.closeout_comment = close_comment
-    event.save(update_fields=["closeout_epoch", "closeout_comment"])
+    with transaction.atomic():
+        # 3) Fetch event (lock row for update to avoid race conditions)
+        event = (
+            MachineDowntimeEventNEWTEST.objects
+            .select_for_update()
+            .filter(is_deleted=False, closeout_epoch__isnull=True)
+            .only("id", "start_epoch")  # minimal columns
+            .get(pk=entry_id)
+        )
+
+        # 4) Ensure no open participants
+        if DowntimeParticipationNEWTEST.objects.filter(event=event, leave_epoch__isnull=True).exists():
+            return HttpResponseForbidden("Cannot close out until all participants have left.")
+
+        # 5) Sanity checks
+        if epoch_ts <= event.start_epoch:
+            return HttpResponseBadRequest("Close-out time must be after the start time.")
+
+        # 6) Persist closeout (including who closed it)
+        event.closeout_epoch = epoch_ts
+        event.closeout_comment = close_comment
+        event.closedout_by = request.user.username if request.user.is_authenticated else None
+        event.save(update_fields=["closeout_epoch", "closeout_comment", "closedout_by"])
 
     return JsonResponse({"status": "ok", "closed_at_epoch": epoch_ts})
-
 
 
 

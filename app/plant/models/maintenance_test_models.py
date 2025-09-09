@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.conf import settings
 from datetime import datetime
 
-
 class MachineDowntimeEventNEWTEST(models.Model):
     """
     Represents a single downtime event on a production line.
@@ -37,15 +36,32 @@ class MachineDowntimeEventNEWTEST(models.Model):
     created_at_UTC     = models.DateTimeField(auto_now_add=True)
     updated_at_UTC     = models.DateTimeField(auto_now=True)
 
+    # 🔥 NEW: store the generated work-order ID from the API
+    work_order_id      = models.IntegerField(
+        "Work Order #",
+        null=True,
+        blank=True,
+        default=None,
+        help_text="ID returned by the work-order API"
+    )
+
+    closedout_by = models.CharField(
+        "Closed-out By",
+        max_length=150,
+        null=True,
+        blank=True,
+        help_text="Username of the person who closed out the downtime event"
+    )
+
     # new:
     LABOUR_CHOICES = [
         ('ELECTRICIAN', 'Need Electrician'),
         ('TECH',        'Need Tech'),
         ('MILLWRIGHT',  'Need Millwright'),
-        ('PLCTECH',    'Need PLC Technician'),
-        ('IMT',        'Need IMT'),
+        ('PLCTECH',     'Need PLC Technician'),
+        ('IMT',         'Need IMT'),
         ('PLUMBER',     'Need Plumber'),
-        ('WFP',        'Need Parts'),
+        ('WFP',         'Need Parts'),
         ('NA',          'N/A'),
     ]
     labour_types = models.JSONField(
@@ -88,12 +104,11 @@ class MachineDowntimeEventNEWTEST(models.Model):
         else None.
         """
         if self.closeout_epoch:
-            return datetime.fromtimestamp(self.closeout_epoch)
+            return _datetime.fromtimestamp(self.closeout_epoch)
         return None
 
     def __str__(self):
         return f"{self.code} @ {self.start_epoch} on {self.line}/{self.machine}"
-    
 
 
 
