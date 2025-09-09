@@ -1432,18 +1432,17 @@ def machine_history(request):
         .order_by("-start_epoch")[:500]
     )
 
+    local_tz = timezone.get_current_timezone()
     payload = []
     for e in events:
         parts = []
+        # assumes reverse M2O as e.participants; adjust if your related_name differs
         for p in e.participants.all().order_by("join_epoch"):
-            # build a python datetime (in local time) from your epoch seconds
-            join_dt = datetime.fromtimestamp(p.join_epoch, tz=timezone.get_current_timezone())
+            join_dt = datetime.fromtimestamp(p.join_epoch, tz=local_tz)
             leave_dt = (
-                datetime.fromtimestamp(p.leave_epoch, tz=timezone.get_current_timezone())
-                if p.leave_epoch
-                else None
+                datetime.fromtimestamp(p.leave_epoch, tz=local_tz)
+                if p.leave_epoch else None
             )
-
             parts.append({
                 "user": p.user.get_full_name() or p.user.username,
                 "join_epoch": p.join_epoch,
@@ -1466,11 +1465,11 @@ def machine_history(request):
             "code": e.code,
             "comment": e.comment,
             "closeout_comment": e.closeout_comment,
+            "closedout_by": e.closedout_by or "",     # ← NEW: who closed it
             "participations": parts,
         })
 
     return JsonResponse({"events": payload})
-
 
 
 
