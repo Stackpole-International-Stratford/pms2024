@@ -282,7 +282,7 @@ Add New or Update Employee
                 <!-- Left block: info + labour -->
                 <div class="d-flex align-items-center flex-grow-1">
                   <span>
-                    {{ e.start_display }} – {{ e.machine }} – 
+                    {{ e.start_display }} – {{ e.machine }}{% if e.areazone %} ({{ e.areazone }}){% endif %} – 
                     {% if e.labour_types %}
                       {% for code in e.labour_types %}
                         {% with code|lower as rolekey %}

@@ -547,8 +547,8 @@ def group_by_role(workers):
 
 @login_required(login_url="login")
 def list_all_downtime_entries(request):
-
     prod_lines = get_prod_lines()
+
     # 1) Access control
     if not user_has_maintenance_access(request.user):
         return HttpResponseForbidden("Not authorized; please ask a manager.")
@@ -566,7 +566,7 @@ def list_all_downtime_entries(request):
             line_priority=Coalesce(
                 Subquery(priority_sq, output_field=IntegerField()),
                 Value(999),
-                output_field=IntegerField()
+                output_field=IntegerField(),
             )
         )
         .order_by("line_priority", "-start_epoch")
@@ -581,7 +581,7 @@ def list_all_downtime_entries(request):
     tz      = get_default_timezone()
 
     for e in entries:
-        # — display timestamp as “HH:MM” if today, else “MM/DD”
+        # display timestamp as “HH:MM” if today, else “MM/DD”
         dt = e.start_at
         if is_naive(dt):
             dt = make_aware(dt, tz)
@@ -592,13 +592,13 @@ def list_all_downtime_entries(request):
             else local_dt.strftime("%m/%d")
         )
 
-        # — flag if *this user* is currently on the job
+        # flag if *this user* is currently on the job
         e.user_has_open = e.participants.filter(
             user=request.user,
             leave_epoch__isnull=True
         ).exists()
 
-        # ── NEW ── determine exactly which maintenance-roles are active on this event
+        # determine exactly which maintenance-roles are active on this event
         open_parts   = [p for p in e.participants.all() if p.leave_epoch is None]
         active_roles = set()
         for p in open_parts:
@@ -608,8 +608,29 @@ def list_all_downtime_entries(request):
                     active_roles.add(role)
         e.current_worker_roles = active_roles
 
-        # ── NEW ── record the usernames who are currently joined
+        # record the usernames who are currently joined
         e.current_usernames = [p.user.username for p in open_parts]
+
+    # ── NEW: attach area/zone to each entry (by line + machine_number)
+    keyset = {(e.line, e.machine) for e in entries}
+    if keyset:
+        lines = {ln for ln, _ in keyset}
+        machines = {mn for _, mn in keyset}
+        dm_rows = (
+            DowntimeMachineNEWTEST.objects
+            .select_related("areazone")
+            .filter(line__in=lines, machine_number__in=machines)
+            .only("line", "machine_number", "areazone__name")
+        )
+        zone_map = {}
+        for m in dm_rows:
+            key = (m.line, m.machine_number)
+            zone_map.setdefault(key, m.areazone.name if (m.areazone and m.areazone.name) else None)
+        for e in entries:
+            e.areazone = zone_map.get((e.line, e.machine), None)
+    else:
+        for e in entries:
+            e.areazone = None
 
     # 4) Collect all maintenance‐role users
     User            = get_user_model()
@@ -620,25 +641,28 @@ def list_all_downtime_entries(request):
         .distinct()
         .order_by("username")
     )
-    active_group, _    = Group.objects.get_or_create(name="maintenance_active")
-    active_users       = all_maint_users.filter(groups=active_group)
-    inactive_users     = all_maint_users.exclude(groups=active_group)
+    active_group, _ = Group.objects.get_or_create(name="maintenance_active")
+    active_users    = all_maint_users.filter(groups=active_group)
+    inactive_users  = all_maint_users.exclude(groups=active_group)
 
     # 5) Build per‐user dicts (with their open jobs)
     machine_priority_map = get_machine_priority_map()
+
     def build_worker_list(user_qs):
         lst = []
         for u in user_qs:
             name        = u.get_full_name() or u.username
             user_groups = set(u.groups.values_list("name", flat=True))
-            roles       = [
-                r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups
-            ]
-            parts = DowntimeParticipationNEWTEST.objects.filter(
-                user=u,
-                leave_epoch__isnull=True,
-                event__closeout_epoch__isnull=True
-            ).select_related("event")
+            roles       = [r for r, grp in ROLE_TO_GROUP.items() if grp in user_groups]
+            parts = (
+                DowntimeParticipationNEWTEST.objects
+                .filter(
+                    user=u,
+                    leave_epoch__isnull=True,
+                    event__closeout_epoch__isnull=True
+                )
+                .select_related("event")
+            )
             jobs = [
                 {
                     "machine":     p.event.machine,
@@ -688,34 +712,27 @@ def list_all_downtime_entries(request):
         ]
 
     # 9) Downtime‐codes JSON for the modal
-    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by(
-        "category", "subcategory", "code"
-    )
+    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by("category", "subcategory", "code")
     structured = {}
     for c in downtime_codes:
         cat = c.code.split("-", 1)[0]
-        structured.setdefault(cat, {
-            "name":          cat,
-            "code":          cat,
-            "subcategories": []
-        })["subcategories"].append({
+        structured.setdefault(cat, {"name": cat, "code": cat, "subcategories": []})["subcategories"].append({
             "code": c.code,
             "name": c.subcategory
         })
 
-
-    # ← NEW: which groups count as “EAM”?
+    # which groups count as “EAM”?
     eam_group_names = {
-        ROLE_TO_GROUP["plctech"],     # e.g. "maintenance_plctech"
-        ROLE_TO_GROUP["millwright"],  # e.g. "maintenance_millwright"
-        ROLE_TO_GROUP["electrician"], # e.g. "maintenance_electrician"
-        ROLE_TO_GROUP["imt"], # e.g. "maintenance_imt"
+        ROLE_TO_GROUP["plctech"],
+        ROLE_TO_GROUP["millwright"],
+        ROLE_TO_GROUP["electrician"],
+        ROLE_TO_GROUP["imt"],
     }
     is_eam = bool(user_grps & eam_group_names)
 
     # 10) Final render
     return render(request, "plant/maintenance_all_entries.html", {
-        "entries":                  entries,
+        "entries":                  entries,            # each e has e.areazone now
         "page_size":                PAGE_SIZE,
         "line_priorities":          LinePriorityNEWTEST.objects.all(),
         "is_manager":               is_manager,
@@ -729,12 +746,11 @@ def list_all_downtime_entries(request):
     })
 
 
-
 @login_required
 def load_more_downtime_entries(request):
     # parse offset
     try:
-        offset = int(request.GET.get('offset', 0))
+        offset = int(request.GET.get("offset", 0))
     except (TypeError, ValueError):
         offset = 0
 
@@ -749,7 +765,25 @@ def load_more_downtime_entries(request):
     qs = annotate_being_worked_on(base_qs)
 
     total = qs.count()
-    batch = qs[offset:offset + PAGE_SIZE]
+    batch = list(qs[offset:offset + PAGE_SIZE])
+
+    # ── NEW: prefetch area/zone for this batch (by line + machine_number)
+    keyset = {(e.line, e.machine) for e in batch}
+    if keyset:
+        lines = {ln for ln, _ in keyset}
+        machines = {mn for _, mn in keyset}
+        dm_rows = (
+            DowntimeMachineNEWTEST.objects
+            .select_related("areazone")
+            .filter(line__in=lines, machine_number__in=machines)
+            .only("line", "machine_number", "areazone__name")
+        )
+        zone_map = {}
+        for m in dm_rows:
+            key = (m.line, m.machine_number)
+            zone_map.setdefault(key, m.areazone.name if (m.areazone and m.areazone.name) else None)
+    else:
+        zone_map = {}
 
     today = timezone.localdate()
     default_tz = get_default_timezone()
@@ -763,9 +797,9 @@ def load_more_downtime_entries(request):
         local_dt = timezone.localtime(dt)
 
         start_display = (
-            local_dt.strftime('%H:%M')
+            local_dt.strftime("%H:%M")
             if local_dt.date() == today
-            else local_dt.strftime('%m/%d')
+            else local_dt.strftime("%m/%d")
         )
 
         # gather open participants
@@ -773,27 +807,27 @@ def load_more_downtime_entries(request):
         users = [p.user.username for p in open_parts]
 
         data.append({
-            'id':                e.id,
-            'start_at':          e.start_at.strftime('%Y-%m-%d %H:%M'),
-            'start_display':     start_display,
-            'closeout_at':       (
-                                    e.closeout_epoch and
-                                    datetime.fromtimestamp(e.closeout_epoch)
-                                            .strftime('%Y-%m-%d %H:%M')
-                                  ) or None,
-            'line':              e.line,
-            'machine':           e.machine,
-            'category':          e.category,
-            'subcategory':       e.subcategory,
-            'labour_types':      e.labour_types,
-            'assigned_to':       users,
-            'being_worked_on':   e.being_worked_on,
-            'comment':           e.comment,
+            "id":               e.id,
+            "start_at":         e.start_at.strftime("%Y-%m-%d %H:%M"),
+            "start_display":    start_display,
+            "closeout_at":      (
+                                  e.closeout_epoch and
+                                  datetime.fromtimestamp(e.closeout_epoch).strftime("%Y-%m-%d %H:%M")
+                                ) or None,
+            "line":             e.line,
+            "machine":          e.machine,
+            "areazone":         zone_map.get((e.line, e.machine), None),   # ← NEW
+            "category":         e.category,
+            "subcategory":      e.subcategory,
+            "labour_types":     e.labour_types,
+            "assigned_to":      users,
+            "being_worked_on":  e.being_worked_on,
+            "comment":          e.comment,
         })
 
     return JsonResponse({
-        'entries':  data,
-        'has_more': total > offset + PAGE_SIZE,
+        "entries":  data,
+        "has_more": total > offset + PAGE_SIZE,
     })
 
 
