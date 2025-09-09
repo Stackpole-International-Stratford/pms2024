@@ -1250,6 +1250,8 @@ def maintenance_edit(request):
         'categories':       unique_categories,
         'subcategories':    subcategories,
         'lines_data':       prod_lines,
+        "work_order_id":    e.work_order_id,       # number or None
+        "has_work_order":   bool(e.work_order_id) # True/False
     })
 
 
