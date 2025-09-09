@@ -1472,6 +1472,10 @@ def machine_history(request):
     return JsonResponse({"events": payload})
 
 
+
+
+
+
 @login_required
 def employee_login_status(request):
     # ── access control ──
