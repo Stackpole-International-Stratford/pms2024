@@ -3,7 +3,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from datetime import datetime
-from ..models.maintenance_models import MachineDowntimeEventTEST, LinePriority, DowntimeParticipation, DowntimeCode, DowntimeMachine
+from ..models.maintenance_models import *
+from ..models.maintenance_test_models import *
 from django.http import JsonResponse
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponseBadRequest
