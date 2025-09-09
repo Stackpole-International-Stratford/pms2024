@@ -1055,63 +1055,69 @@ function initCloseoutModal(){
           if (cb) cb.click();
         });
 
-        // Work Order UI (inline, no confirm modal)
-        if (IS_EAM) {
-          woRow.style.display = ''; // show the row area for EAM users
-          const existingWO = data.work_order_id || null;
+        // ---------- Work Order UI (robust display + post) ----------
+        function renderWO(id, hasOnlyFlag=false) {
+          if (!IS_EAM) { woRow.style.display = 'none'; return; }
 
-          if (existingWO) {
-            woBadge.textContent = `WO #${existingWO}`;
+          woRow.style.display = '';
+          if (id || hasOnlyFlag) {
+            // Prefer an actual id; fall back to a generic label if we only know it exists.
+            woBadge.textContent = id ? `WO #${id}` : 'WO created';
             woBadge.classList.remove('d-none');
             woBtn.classList.add('d-none');
           } else {
             woBadge.classList.add('d-none');
             woBtn.classList.remove('d-none');
-
-          woBtn.onclick = async ()=>{
-            woBtn.disabled = true;
-            try {
-              // Send as a regular form post so Django CSRF sees the token in body.
-              const fd = new FormData();
-              fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
-
-              const res = await fetch(woUrl(idIn.value), {
-                method: 'POST',
-                credentials: 'same-origin',
-                body: fd
-                // No custom headers; let the browser set multipart/form-data.
-              });
-
-              let dataWO = null;
-              try { dataWO = await res.json(); } catch {}
-
-              if (!res.ok || (dataWO && dataWO.ok === false)) {
-                const msg = (dataWO && dataWO.message) ? dataWO.message : `Failed to generate work order (HTTP ${res.status}).`;
-                alert(msg);
-                return;
-              }
-
-              const newId = (dataWO && (dataWO.work_order_id || dataWO.id)) || null;
-              alert((dataWO && dataWO.message) || 'Work order generated.');
-              if (newId) {
-                woBadge.textContent = `WO #${newId}`;
-                woBadge.classList.remove('d-none');
-                woBtn.classList.add('d-none');
-              } else {
-                location.reload();
-              }
-            } catch (err) {
-              alert(`Could not generate work order: ${err?.message || err}`);
-            } finally {
-              woBtn.disabled = false;
-            }
-          };
-
-            }
-          } else {
-            // Non-EAM users never see WO controls
-            woRow.style.display = 'none';
           }
+        }
+
+        // Accept several possible keys from the edit payload
+        const existingWO =
+          data.work_order_id ??
+          data.work_order_number ??
+          data.work_order ??
+          data.workorder_id ??
+          null;
+
+        // Render initial state (if backend only gives a flag, still hide the button)
+        renderWO(existingWO, Boolean(data.has_work_order) && !existingWO);
+
+        // Wire up the generate action (only runs if the button is visible)
+        woBtn.onclick = async ()=>{
+          woBtn.disabled = true;
+          try {
+            const fd = new FormData();
+            fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
+            const res = await fetch(woUrl(idIn.value), {
+              method: 'POST',
+              credentials: 'same-origin',
+              body: fd
+            });
+
+            let dataWO = null;
+            try { dataWO = await res.json(); } catch {}
+
+            if (!res.ok || (dataWO && dataWO.ok === false)) {
+              const msg = (dataWO && dataWO.message) ? dataWO.message : `Failed to generate work order (HTTP ${res.status}).`;
+              alert(msg);
+              return;
+            }
+
+            const newId = (dataWO && (dataWO.work_order_id || dataWO.work_order_number || dataWO.id)) || null;
+            alert((dataWO && dataWO.message) || 'Work order generated.');
+
+            // Flip UI to badge (even if id not returned, we still hide the button)
+            renderWO(newId, !newId);
+          } catch (err) {
+            alert(`Could not generate work order: ${err?.message || err}`);
+          } finally {
+            woBtn.disabled = false;
+          }
+        };
+        // ---------- end Work Order UI ----------
+
+        
 
 
         bsModal.show();
