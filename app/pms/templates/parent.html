@@ -429,7 +429,7 @@
             <a class="nav-link" href="/prod-query/index">production</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="{% url 'prod_query:prod-query' %}">Production Query</a></li>
-              <li><a class="dropdown-item" href="{% url 'prod_query:rejects' %}">Rejects</a></li>
+              <!-- <li><a class="dropdown-item" href="{% url 'prod_query:rejects' %}">Rejects</a></li> -->
               <li><a class="dropdown-item" href="{% url 'prod_query:cycle-times' %}">Cycle Time</a></li>
               <li><a class="dropdown-item" href="{% url 'prod_query:weekly-prod' %}">Weekly Production</a></li>
               <li><a class="dropdown-item" href="{% url 'prod_query:strokes-per-minute' %}">Strokes Per Minute</a></li>
@@ -472,6 +472,8 @@
               </li>
               <li><a class="dropdown-item" href="/dashboard/trilobe/">Trilobe</a></li>
               <li><a class="dropdown-item" href="/dashboard/9341/">9341</a></li>
+              <li><a class="dropdown-item" href="/dashboard/GFX/">GFX</a></li>
+              <li><a class="dropdown-item" href="/dashboard/ZF/">ZF</a></li>
               <li><a class="dropdown-item" href="{% url 'dashboards:list_and_update_shift_points' %}">Shift Points Management</a></li>
               <li><a class="dropdown-item" href="{% url 'dashboards:rejects_dashboard' %}">Reject Dashboards</a></li>
             </ul>
@@ -511,12 +513,14 @@
                   </svg>
                 </a>
               </li>
-              <li><a class="dropdown-item" href="{% url 'display_setups' %}">Changeovers</a></li>
+              <!-- <li><a class="dropdown-item" href="{% url 'display_setups' %}">Changeovers</a></li> -->
               <li><a class="dropdown-item" href="{% url 'display_assets' %}">Assets</a></li>
               <li><a class="dropdown-item" href="{% url 'display_parts' %}">Parts</a></li>
               <li><a class="dropdown-item" href="{% url 'auth_page' %}">Asset Authentication Management</a></li>
               <li><a class="dropdown-item" href="{% url 'prodmon_ping' %}">Prodmon Ping</a></li>
-              <li><a class="dropdown-item" href="{% url 'temp-display' %}">Temp Sensors</a></li>
+              {% if can_view_temp %}
+                <li><a class="dropdown-item" href="{% url 'temp-display' %}">Temp Sensors</a></li>
+              {% endif %}
               <li><a class="dropdown-item" href="{% url 'absentee_forms' %}">Absentee Forms (HR Only)</a></li>
             </ul>
           </li>

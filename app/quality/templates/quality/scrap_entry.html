@@ -29,10 +29,22 @@
       <form method="post" id="scrap-form">
         {% csrf_token %}
 
-        <!-- second submit button at top right -->
-        <div class="d-flex justify-content-end mb-3">
-          <button type="submit" class="btn btn-dark">Submit All</button>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <label for="select_program" class="form-label mb-0">Program</label>
+            <select id="select_program" class="form-select form-select-sm bigger-dropdown">
+              <option value="">Select program…</option>
+              {# provide a list of program names from the view as `programs` #}
+              {% for prog in programs %}
+                <option value="{{ prog }}">{{ prog }}</option>
+              {% endfor %}
+            </select>
+            <input type="hidden" id="input_program" name="program" value="{{ selected_program }}">
+          </div>
+
+            <button type="submit" id="submit-top" class="btn btn-dark" disabled>Submit All</button>
         </div>
+
 
         <div class="row gx-3">
           {# Part Number #}
@@ -209,7 +221,7 @@
         </div>
 
         <div class="d-flex justify-content-end mt-3">
-          <button type="submit" class="btn btn-dark">Submit All</button>
+            <button type="submit" id="submit-bottom" class="btn btn-dark" disabled>Submit All</button>
         </div>
       </form>
 
@@ -228,6 +240,14 @@
           border-color:#000 !important;
           color:#fff !important;
         }
+
+        .bigger-dropdown {
+            min-width: 250px;   /* control width */
+            font-size: 1rem;    /* default Bootstrap ~14px, try 1.1rem (≈17px) or 1.25rem (≈20px) */
+            padding: 0.5rem 1rem; /* gives a bit more clickable area */
+          }
+
+
       </style>
     </div>
   </div>
@@ -236,45 +256,88 @@
 
 {% block extra_scripts %}
 <script>
-  // Resolve URLs
+  "use strict";
+
+  // -------------------------------
+  // Config & URL helpers
+  // -------------------------------
+  const GET_PARTS_URL      = "{% url 'get_parts' %}";
   const GET_MACHINES_URL   = "{% url 'get_machines' %}";
   const GET_OPERATIONS_URL = "{% url 'get_operations' %}";
   const GET_CATEGORIES_URL = "{% url 'get_categories' %}";
 
-  // Scroll helpers (unchanged)…
+  // Global params that should ride along with every AJAX request (e.g., selected program)
+  const GLOBAL_PARAMS = {};
+
+  // Build URL with merged params (drop empty/nulls)
+  function buildUrl(base, paramsObj = {}) {
+    const merged = { ...GLOBAL_PARAMS, ...paramsObj };
+    const clean = Object.fromEntries(
+      Object.entries(merged).filter(([_, v]) => v !== "" && v != null)
+    );
+    const qs = new URLSearchParams(clean).toString();
+    return qs ? `${base}?${qs}` : base;
+  }
+
+  // Keep the current program reflected in the URL (bookmarkable/shareable)
+  function updateQueryParam(key, value) {
+    const url = new URL(window.location.href);
+    if (value === "" || value == null) {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, value);
+    }
+    window.history.replaceState({}, "", url.toString());
+  }
+
+  // Small sanitizer for table cells
+  function safeText(s) {
+    const div = document.createElement('div');
+    div.textContent = String(s ?? "");
+    return div.innerHTML;
+  }
+
+  // -------------------------------
+  // Scroll helpers
+  // -------------------------------
   const SCROLL_AMOUNT = 35, SCROLL_INTERVAL = 60;
   document.querySelectorAll('.scroll-btn').forEach(btn => {
     let timer;
     const container = document.getElementById(btn.dataset.target);
     const start = dir => {
       if (timer) clearInterval(timer);
-      timer = setInterval(() => container.scrollTop += dir * SCROLL_AMOUNT, SCROLL_INTERVAL);
+      timer = setInterval(() => { container.scrollTop += dir * SCROLL_AMOUNT; }, SCROLL_INTERVAL);
     };
     const stop = () => { clearInterval(timer); timer = null; };
+
     btn.addEventListener('mousedown', () => start(btn.classList.contains('scroll-down') ? 1 : -1));
     ['mouseup','mouseleave','touchend'].forEach(evt => btn.addEventListener(evt, stop));
     btn.addEventListener('touchstart', e => { e.preventDefault(); start(btn.classList.contains('scroll-down') ? 1 : -1); });
   });
 
-  function wireListClicks(listId, inputId, callback) {
-    const list = document.getElementById(listId),
-          hidden = document.getElementById(inputId);
-    list.addEventListener('click', e => {
-      if (!e.target.matches('.list-group-item')) return;
-      list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
-      e.target.classList.add('active');
-      hidden.value = e.target.dataset.value;
-      callback(e.target.dataset.value);
-    });
+  // -------------------------------
+  // DOM helpers
+  // -------------------------------
+  function clearList(listId, inputId) {
+    const list = document.getElementById(listId);
+    const hidden = document.getElementById(inputId);
+    list.innerHTML = '';
+    hidden.value = '';
   }
 
   function ajaxList(url, params, listId, inputId) {
-    fetch(`${url}?${new URLSearchParams(params)}`, { credentials: 'same-origin' })
-      .then(r => r.json()).then(json => {
-        const list = document.getElementById(listId),
-              hidden = document.getElementById(inputId);
-        list.innerHTML = ''; hidden.value = '';
-        json.results.forEach(val => {
+    const fullUrl = buildUrl(url, params);
+
+    fetch(fullUrl, { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(json => {
+        const list = document.getElementById(listId);
+        const hidden = document.getElementById(inputId);
+
+        list.innerHTML = '';
+        hidden.value = '';
+
+        (json.results || []).forEach(val => {
           const a = document.createElement('a');
           a.href = '#';
           a.className = 'list-group-item list-group-item-action';
@@ -282,103 +345,240 @@
           a.textContent = val;
           list.appendChild(a);
         });
+      })
+      .catch(() => {
+        const list = document.getElementById(listId);
+        const hidden = document.getElementById(inputId);
+        list.innerHTML = '';
+        hidden.value = '';
       });
   }
 
-  function clear(listId, inputId) {
-    document.getElementById(listId).innerHTML = '';
-    document.getElementById(inputId).value = '';
+  function wireListClicks(listId, inputId, onPick) {
+    const list = document.getElementById(listId);
+    const hidden = document.getElementById(inputId);
+
+    list.addEventListener('click', e => {
+      const target = e.target.closest('.list-group-item');
+      if (!target) return;
+      e.preventDefault();
+
+      list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+      target.classList.add('active');
+      hidden.value = target.dataset.value || '';
+      onPick && onPick(hidden.value);
+    });
   }
 
-  // wire cascading selects: Part → Operation → Machine → Category
+  // -------------------------------
+  // Program → Part → Op → Machine → Category
+  // -------------------------------
+  const programSelect = document.getElementById('select_program');
+  const programHidden = document.getElementById('input_program');
+
+  // initialize current program from hidden, then URL (?program=), then blank
+  let currentProgram =
+    (programHidden?.value || "").trim() ||
+    (new URLSearchParams(window.location.search)).get('program') ||
+    "";
+
+  function setProgram(prog) {
+    currentProgram = prog || "";
+    if (programSelect) programSelect.value = currentProgram;
+    if (programHidden) programHidden.value = currentProgram;
+    if (currentProgram) {
+      GLOBAL_PARAMS.program = currentProgram;
+    } else {
+      delete GLOBAL_PARAMS.program;
+    }
+    updateQueryParam('program', currentProgram);
+  }
+
+  function onProgramChange() {
+    setProgram(programSelect.value);
+
+    // clear everything downstream
+    clearList('list_part',    'input_part');
+    clearList('list_op',      'input_op');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat',     'input_cat');
+
+    // clear entries too (and update submit state)
+    resetEntries();
+
+    if (currentProgram) {
+      ajaxList(GET_PARTS_URL, { program: currentProgram }, 'list_part', 'input_part');
+    }
+  }
+
+  if (programSelect) {
+    programSelect.addEventListener('change', onProgramChange);
+  }
 
   // 1) Pick a Part → load Operations
   wireListClicks('list_part', 'input_part', pn => {
-    clear('list_op', 'input_op');
-    clear('list_machine', 'input_machine');
-    clear('list_cat', 'input_cat');
+    clearList('list_op',      'input_op');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat',     'input_cat');
+
+    if (!currentProgram) {
+      alert('Select a Program first.');
+      return;
+    }
+
     ajaxList(GET_OPERATIONS_URL,
-             { part_number: pn },
-             'list_op', 'input_op');
+      { part_number: pn },
+      'list_op', 'input_op'
+    );
   });
 
   // 2) Pick an Operation → load Machines
   wireListClicks('list_op', 'input_op', op => {
-    clear('list_machine', 'input_machine');
-    clear('list_cat', 'input_cat');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat',     'input_cat');
+
     ajaxList(GET_MACHINES_URL,
-             {
-               part_number: document.getElementById('input_part').value,
-               operation:   op
-             },
-             'list_machine', 'input_machine');
+      {
+        part_number: document.getElementById('input_part').value,
+        operation:   op
+      },
+      'list_machine', 'input_machine'
+    );
   });
 
   // 3) Pick a Machine → load Categories
   wireListClicks('list_machine', 'input_machine', mc => {
-    clear('list_cat', 'input_cat');
+    clearList('list_cat', 'input_cat');
+
     ajaxList(GET_CATEGORIES_URL,
-             {
-               part_number: document.getElementById('input_part').value,
-               operation:   document.getElementById('input_op').value,
-               machine:     mc
-             },
-             'list_cat', 'input_cat');
+      {
+        part_number: document.getElementById('input_part').value,
+        operation:   document.getElementById('input_op').value,
+        machine:     mc
+      },
+      'list_cat', 'input_cat'
+    );
   });
 
   // 4) Pick a Category → just select it
   wireListClicks('list_cat', 'input_cat', () => {});
 
-  // entries accumulation (unchanged)…
-  const entries       = [],
-        tableBody     = document.querySelector('#entries-table tbody'),
-        entriesInput  = document.getElementById('entries-json'),
-        qtyField      = document.getElementById('id_quantity'),
-        operatorField = document.getElementById('id_operator');
+  // If page loads with a program (hidden or ?program=), auto-fetch parts
+  if (currentProgram) {
+    setProgram(currentProgram);
+    ajaxList(GET_PARTS_URL, { program: currentProgram }, 'list_part', 'input_part');
+  } else {
+    clearList('list_part',    'input_part');
+    clearList('list_op',      'input_op');
+    clearList('list_machine', 'input_machine');
+    clearList('list_cat',     'input_cat');
+  }
+
+  // -------------------------------
+  // Entries accumulation + submit button gating
+  // -------------------------------
+  const entries       = [];
+  const tableBody     = document.querySelector('#entries-table tbody');
+  const entriesInput  = document.getElementById('entries-json');
+  const qtyField      = document.getElementById('id_quantity');
+  const operatorField = document.getElementById('id_operator');
+  const formEl        = document.getElementById('scrap-form');
+  const submitTop     = document.getElementById('submit-top');
+  const submitBottom  = document.getElementById('submit-bottom');
+
+  function updateSubmitState() {
+    const hasEntries = entries.length > 0;
+    if (submitTop)    submitTop.disabled = !hasEntries;
+    if (submitBottom) submitBottom.disabled = !hasEntries;
+  }
+
+  function resetEntries() {
+    entries.length = 0;
+    renderEntries();
+    updateSubmitState();
+  }
 
   document.getElementById('add-entry').addEventListener('click', () => {
-    const part      = document.getElementById('input_part').value,
-          machine   = document.getElementById('input_machine').value,
-          operation = document.getElementById('input_op').value,
-          category  = document.getElementById('input_cat').value,
-          qty       = qtyField.value,
-          opn       = operatorField.value;
+    const part      = document.getElementById('input_part').value;
+    const machine   = document.getElementById('input_machine').value;
+    const operation = document.getElementById('input_op').value;
+    const category  = document.getElementById('input_cat').value;
+    const qty       = qtyField.value;
+    const opn       = operatorField.value;
 
-    if (!part||!machine||!operation||!category||!qty||!opn) {
-      return alert('Please fill out all fields (including Operator #) before adding.');
+    if (!currentProgram) {
+      alert('Select a Program first.');
+      return;
     }
+    if (!part || !machine || !operation || !category || !qty || !opn) {
+      alert('Please fill out all fields (including Operator #) before adding.');
+      return;
+    }
+
     entries.push({ part, machine, operation, category, qty, operator: opn });
     renderEntries();
+    updateSubmitState();
     qtyField.value = '';
   });
 
-  function renderEntries(){
+  function renderEntries() {
     tableBody.innerHTML = '';
-    entries.forEach((e,i) => {
+
+    entries.forEach((e, i) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${e.part}</td>
-        <td>${e.machine}</td>
-        <td>${e.operation}</td>
-        <td>${e.category}</td>
-        <td>${e.qty}</td>
+        <td>${safeText(e.part)}</td>
+        <td>${safeText(e.machine)}</td>
+        <td>${safeText(e.operation)}</td>
+        <td>${safeText(e.category)}</td>
+        <td>${safeText(e.qty)}</td>
         <td><button type="button" class="btn btn-sm btn-danger remove-entry" data-index="${i}">&times;</button></td>
       `;
       tableBody.appendChild(tr);
     });
+
     entriesInput.value = JSON.stringify(entries);
-    document.querySelectorAll('.remove-entry').forEach(btn => {
+
+    tableBody.querySelectorAll('.remove-entry').forEach(btn => {
       btn.addEventListener('click', () => {
-        entries.splice(btn.dataset.index, 1);
-        renderEntries();
+        const idx = Number(btn.dataset.index);
+        if (!Number.isNaN(idx)) {
+          entries.splice(idx, 1);
+          renderEntries();
+          updateSubmitState();
+        }
       });
     });
   }
 
-  // auto-dismiss alerts (unchanged)…
-  setTimeout(() => document.querySelectorAll('.alert').forEach(el =>
-    bootstrap.Alert.getOrCreateInstance(el).close()
-  ), 3000);
+  // Guard: don’t submit with zero entries
+  if (formEl) {
+    formEl.addEventListener('submit', (e) => {
+      if (entries.length === 0) {
+        e.preventDefault();
+        alert('Add at least one entry before submitting.');
+        return;
+      }
+      // ensure JSON is fresh just before submit
+      entriesInput.value = JSON.stringify(entries);
+    });
+  }
+
+  // Initialize disabled state on load
+  updateSubmitState();
+
+  // -------------------------------
+  // Alerts auto-dismiss
+  // -------------------------------
+  setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(el => {
+      const inst = bootstrap.Alert.getOrCreateInstance(el);
+      inst.close();
+    });
+  }, 3000);
 </script>
+
+
+
 
 {% endblock extra_scripts %}

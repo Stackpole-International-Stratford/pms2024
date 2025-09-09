@@ -15,6 +15,8 @@ from collections import defaultdict
 import re
 import pytz
 from django.utils import timezone
+import os
+import importlib.util
 
 from plant.models.maintenance_models import MachineDowntimeEvent
 from django.test.client import RequestFactory
@@ -1218,6 +1220,14 @@ def get_db_connection():
         db=settings.DAVE_DB
     )
 
+def get_old_db_connection():
+    return MySQLdb.connect(
+        host=settings.DAVE_HOST,
+        user=settings.DAVE_USER,
+        passwd=settings.DAVE_PASSWORD,
+        db=settings.DAVE_DB
+    )
+
 
 def fetch_pie_chart_data(machine):
     now = datetime.now()
@@ -1907,6 +1917,63 @@ PAGES = {
             },
         ],
     },
+        "ZF": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+            "program": "ZF",
+            "lines": [
+                {
+                    "line": "ZF",
+                    "scrap_line": "ZF",
+                    "operations": [
+                        {
+                            "op": "autoguage",
+                            "machines": [
+                                {"number": "797"},
+                            ],
+                        },
+                        
+                    ],
+                }
+            ],
+        },
+        ],
+    },
+     "GFX": {
+        "dayshift_start": "07:00",
+        "programs": [
+            {
+            "program": "GFX",
+            "lines": [
+                {
+                    "line": "GFX",
+                    "scrap_line": "GFX",
+                    "operations": [
+                        {
+                            "op": "OP30",
+                            "machines": [
+                                {"number": "1605"},
+                                {"number": "1606"},
+                                {"number": "1607"},
+                                {"number": "1608"},
+                            ],
+                        },
+                        {
+                            "op": "OP80",
+                            "machines": [
+                                {"number": "1617"},
+                            ],
+                        },
+                        
+                    ],
+                }
+            ],
+        },
+        ],
+    },
+
+
     "trilobe": {
         "dayshift_start": "07:00",
         "programs": [
@@ -2653,49 +2720,96 @@ def get_cycle_time_seconds(
     as_of_epoch: Optional[int] = None,
 ) -> Optional[float]:
     """
-    If `part` is a list of strings, return the *max* cycle time among those parts.
-    Otherwise, behave exactly as before. Adds debug prints when machine_id == "1703L".
+    Returns the expected cycle time (seconds) for a machine (and optional part)
+    based on OAMachineTargets. Behavior:
+
+    - If `part` is a list of strings, compute each individually (as if called
+      with a single part) and return the *max* of the available cycle times.
+    - If `part` is a string, prefer the most recent (<= as_of) row for
+        1) (machine, that part)
+        2) (machine, part is NULL)
+        3) (machine, any part)   ← last resort
+    - If `part` is None, prefer
+        1) (machine, part is NULL)
+        2) (machine, any part)   ← last resort
+
+    Rows with target <= 0 are ignored. Returns None if nothing valid is found.
+
+    Adds debug prints for machine_id == "1703L".
     """
     if as_of_epoch is None:
         as_of_epoch = int(timezone.now().timestamp())
 
-    # If part is a list, compute each individually and take max
-    if isinstance(part, list):
+    # ── Helper to fetch the most recent valid row for (machine, part_filter) ──
+    def _fetch_row(machine: str, part_filter: Optional[object]) -> Optional["OAMachineTargets"]:
+        """
+        part_filter:
+          - None           → query for part__isnull=True
+          - "ANY"          → query for any non-null part
+          - <str partname> → query for that exact part
+        """
+        qs = (
+            OAMachineTargets.objects
+            .filter(
+                machine_id=machine,
+                isDeleted=False,
+                effective_date_unix__lte=as_of_epoch,
+            )
+        )
+        if part_filter is None:
+            qs = qs.filter(part__isnull=True)
+        elif part_filter == "ANY":
+            qs = qs.filter(part__isnull=False)
+        else:
+            qs = qs.filter(part=part_filter)
 
-        cts = []
+        # newest first
+        row = qs.order_by("-effective_date_unix").first()
+        if not row or not row.target or row.target <= 0:
+            return None
+        return row
+
+    # ── If part is a list, compute each and return the MAX of available cts ──
+    if isinstance(part, list):
+        cts: List[float] = []
         for p in part:
             single_ct = get_cycle_time_seconds(machine_id, p, as_of_epoch)
             if single_ct is not None:
                 cts.append(single_ct)
-
         if not cts:
-            # print(f"NA: {machine_id} /{','.join(part)}")
+            # if machine_id == "1703L": print(f"NA(list): {machine_id} /{','.join(part)}")
             return None
-
         chosen = max(cts)
+        # if machine_id == "1703L": print(f"LIST→MAX: {machine_id} /{','.join(part)} → {chosen:.2f}s")
         return chosen
 
-    # Single-part (or no-part) logic
-    qs = (
-        OAMachineTargets.objects
-        .filter(machine_id=machine_id, isDeleted=False, effective_date_unix__lte=as_of_epoch)
-    )
-    if part:
-        qs = qs.filter(part=part)
+    # ── Build lookup order based on whether a specific part was provided ──
+    if isinstance(part, str) and part.strip():
+        # exact part → generic → any-part
+        lookup_chain = [part.strip(), None, "ANY"]
+        tag_hint = f"{machine_id} /{part.strip()}"
     else:
-        qs = qs.filter(part__isnull=True)
+        # generic → any-part
+        lookup_chain = [None, "ANY"]
+        tag_hint = f"{machine_id}"
 
+    chosen_row = None
+    for pf in lookup_chain:
+        chosen_row = _fetch_row(machine_id, pf)
+        if chosen_row:
+            break
 
-    row = qs.order_by("-effective_date_unix").first()
-    tag = f"{machine_id}{' /' + part if part else ''}"
-
-
-    if not row or not row.target or row.target <= 0:
-        # print(f"NA: {tag}")
+    if not chosen_row:
+        # if machine_id == "1703L": print(f"NA: {tag_hint}")
         return None
 
-    seconds = _SECONDS_PER_WEEK_7200 / row.target
+    seconds = _SECONDS_PER_WEEK_7200 / chosen_row.target
 
+    # Optional debug trace
+    # if machine_id == "1703L":
+    #     src = "(no part)" if chosen_row.part is None else f"(part={chosen_row.part})"
+    #     print(f"CT: {machine_id} {src} eff={chosen_row.effective_date_unix} "
+    #           f"target={chosen_row.target} → {seconds:.2f}s")
 
     return seconds
 
@@ -2882,7 +2996,7 @@ def dashboard_current_shift(request, pages: str):
 
     # ── Helper for deciding base hour per program ───────────────────────────
     def get_base_hour_for(program: str) -> int:
-        return 7 if program in ("8670", "plant3", "trilobe", "Area2") else 6
+        return 7 if program in ("8670", "plant3", "trilobe", "Area2", "ZF", "GFX") else 6
 
     # ── Compute “now” once, in EST ───────────────────────────────────────────
     tz_est  = pytz.timezone("America/New_York")
@@ -3773,56 +3887,233 @@ def dashboard_current_shift_email(request, pages: str):
 
 
 
+# def send_all_dashboards(request, pwd):
+#     """
+#     Renders dashboards for the four programs, stitches them into a single
+#     email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
+#     """
+#     if pwd != "1352":
+#         # pretend it doesn’t exist
+#         raise Http404()
+#     # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
+#     stale_html = render_stale_machines_table(60, 7)
+
+#     # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
+#     stale_pings = get_stale_ping_entries()
+#     if not stale_pings:
+#         ping_html = """
+#             <h2 style="font-family:Arial,sans-serif;
+#                        margin:16px 0 8px;
+#                        border-bottom:1px solid #444;
+#                        padding-bottom:4px;">
+#               ProdMon Ping Status
+#             </h2>
+#             <p style="font-family:Arial,sans-serif;
+#                       margin:8px 0;
+#                       color:#155724;
+#                       background:#d4edda;
+#                       padding:10px;
+#                       border:1px solid #c3e6cb;
+#                       border-radius:4px;">
+#               All assets have pinged within the last 15 minutes.
+#             </p>
+#         """
+#     else:
+#         rows = "".join(f"""
+#             <tr>
+#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
+#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
+#               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
+#             </tr>
+#         """ for e in stale_pings)
+#         ping_html = f"""
+#             <h2 style="font-family:Arial,sans-serif;
+#                        margin:16px 0 8px;
+#                        border-bottom:1px solid #444;
+#                        padding-bottom:4px;">
+#               ProdMon Ping Status
+#             </h2>
+#             <table style="font-family:Arial,sans-serif;
+#                           border-collapse:collapse;
+#                           width:100%;
+#                           margin-bottom:16px;">
+#               <thead>
+#                 <tr style="background:#343a40;color:#fff;">
+#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Asset</th>
+#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Last Ping (EST)</th>
+#                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Since Last Ping</th>
+#                 </tr>
+#               </thead>
+#               <tbody>
+#                 {rows}
+#               </tbody>
+#             </table>
+#         """
+
+#     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
+#     programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
+#     rf = RequestFactory()
+#     fragments = []
+#     for pages in programs:
+#         fake = rf.get(f"/dashboard/{pages}/")
+#         fake.user = getattr(request, "user", None)
+#         fake.session = getattr(request, "session", None)
+
+#         resp = dashboard_current_shift_email(fake, pages=pages)
+#         if resp.status_code != 200:
+#             return HttpResponse(f"Error rendering {pages}: {resp.status_code}", status=500)
+#         html = resp.content.decode("utf-8")
+#         fragments.append(f'''
+#             <h2 style="font-family:Arial,sans-serif;
+#                        margin:24px 0 8px;
+#                        border-bottom:1px solid #ccc;
+#                        padding-bottom:4px;">
+#               Dashboard — {pages}
+#             </h2>
+#             {html}
+#         ''')
+
+#     # ── D) COMBINE INTO ONE EMAIL ────────────────────────────────────────────
+#     full_html = f"""
+#     <!DOCTYPE html>
+#     <html>
+#       <head>
+#         <meta charset="utf-8" />
+#         <meta name="viewport" content="width=device-width,initial-scale=1" />
+#         <title>All Dashboards</title>
+#       </head>
+#       <body style="margin:0;padding:20px;background:#f0f0f0;">
+#         {stale_html}
+#         {ping_html}
+#         {' '.join(fragments)}
+#       </body>
+#     </html>
+#     """
+
+#     # ── E) SEND EMAIL ────────────────────────────────────────────────────────
+#     eastern   = pytz.timezone("America/New_York")
+#     now_est   = timezone.now().astimezone(eastern)
+#     subject   = f"[Hourly Report] All Dashboards — {now_est:%Y-%m-%d %H:%M}"
+
+#     # pull active recipients from the DB
+#     to_emails = list(
+#         HourlyProductionReportRecipient.objects
+#         .values_list("email", flat=True)
+#     )
+
+#     if not to_emails:
+#         return HttpResponse("No active recipients configured.", status=204)
+
+#     msg = EmailMessage(
+#         subject=subject,
+#         body=full_html,
+#         to=to_emails,      # ← now dynamic!
+#     )
+#     msg.content_subtype = "html"
+#     msg.send(fail_silently=False)
+
+#     return HttpResponse("All dashboards emailed ✅")
+
+
+ 
+    
+
+def get_stale_ping_entries_dashboards(min_age_minutes: int = 15):
+    """
+    New: prodmon_status
+    Returns [{asset_name, last_ping_time, time_since_ping}] for assets whose latest ping >= min_age_minutes ago.
+    Double-filters: SQL HAVING and Python-side timedelta guard (defensive).
+    """
+    try:
+        # DB (use your old-DB connector as in your snippet)
+        conn = get_old_db_connection()
+        cur  = conn.cursor()
+
+        # Threshold (UTC, seconds since epoch)
+        now_utc = datetime.utcnow()
+        threshold_unix = int((now_utc - timedelta(minutes=min_age_minutes)).timestamp())
+
+        # Latest ping per asset (INT epoch seconds), only stale per HAVING
+        sql = """
+            SELECT asset, MAX(timestamp_last) AS last_ping
+            FROM prodmon_status
+            WHERE timestamp_last IS NOT NULL
+            GROUP BY asset
+            HAVING last_ping <= %s
+            ORDER BY last_ping ASC
+        """
+        cur.execute(sql, (threshold_unix,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Python-side guard: ensure ≥ min_age_minutes and clean asset names
+        est = pytz.timezone('America/New_York')
+        now_est = datetime.now(pytz.utc).astimezone(est)
+
+        out = []
+        min_age = timedelta(minutes=min_age_minutes)
+        for asset, last_ts in rows:
+            if last_ts is None:
+                continue
+            name = (str(asset).strip() if asset is not None else "")
+            if not name or name.lower() == "none":
+                continue  # skip empty/null/placeholder asset names
+
+            last_epoch  = int(last_ts)
+            last_dt_est = datetime.fromtimestamp(last_epoch, tz=pytz.utc).astimezone(est)
+            age = now_est - last_dt_est
+
+            # Defensive check: only include if ≥ min_age
+            if age >= min_age:
+                out.append({
+                    "asset_name": name,
+                    "last_ping_time": last_dt_est.strftime('%Y-%m-%d %H:%M:%S'),
+                    "time_since_ping": str(age).split('.')[0],  # drop microseconds
+                })
+
+        return out
+
+    except Exception as e:
+        print(f"Error (new ping): {e}")
+        return []
+
+
 def send_all_dashboards(request, pwd):
     """
     Renders dashboards for the four programs, stitches them into a single
-    email to Tyler — now with a Stale-Machines table above ProdMon-ping and dashboards.
+    email to Tyler — now with a Stale-Machines table and BOTH ProdMon ping sections
+    (New: prodmon_status) and (Legacy: prodmon_ping).
     """
     if pwd != "1352":
         # pretend it doesn’t exist
         raise Http404()
-    # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
-    stale_html = render_stale_machines_table(60, 7)
 
-    # ── B) PROD-MON PING STATUS ──────────────────────────────────────────────
-    stale_pings = get_stale_ping_entries()
-    if not stale_pings:
-        ping_html = """
-            <h2 style="font-family:Arial,sans-serif;
-                       margin:16px 0 8px;
-                       border-bottom:1px solid #444;
-                       padding-bottom:4px;">
-              ProdMon Ping Status
-            </h2>
-            <p style="font-family:Arial,sans-serif;
-                      margin:8px 0;
-                      color:#155724;
-                      background:#d4edda;
-                      padding:10px;
-                      border:1px solid #c3e6cb;
-                      border-radius:4px;">
-              All assets have pinged within the last 15 minutes.
-            </p>
-        """
-    else:
-        rows = "".join(f"""
+    # Small helper to render a ping-section (table or green notice)
+    def _render_ping_section_html(section_title, entries):
+        if not entries:
+            return f"""
+                <h3 style="font-family:Arial,sans-serif;margin:12px 0 6px;">{section_title}</h3>
+                <p style="font-family:Arial,sans-serif;
+                          margin:8px 0;
+                          color:#155724;
+                          background:#d4edda;
+                          padding:10px;
+                          border:1px solid #c3e6cb;
+                          border-radius:4px;">
+                  All assets have pinged within the last 15 minutes.
+                </p>
+            """
+        rows_html = "".join(f"""
             <tr>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['asset_name']}</td>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['last_ping_time']}</td>
               <td style="padding:4px 8px;border:1px solid #ccc;">{e['time_since_ping']}</td>
             </tr>
-        """ for e in stale_pings)
-        ping_html = f"""
-            <h2 style="font-family:Arial,sans-serif;
-                       margin:16px 0 8px;
-                       border-bottom:1px solid #444;
-                       padding-bottom:4px;">
-              ProdMon Ping Status
-            </h2>
-            <table style="font-family:Arial,sans-serif;
-                          border-collapse:collapse;
-                          width:100%;
-                          margin-bottom:16px;">
+        """ for e in entries)
+        return f"""
+            <h3 style="font-family:Arial,sans-serif;margin:12px 0 6px;">{section_title}</h3>
+            <table style="font-family:Arial,sans-serif;border-collapse:collapse;width:100%;margin-bottom:16px;">
               <thead>
                 <tr style="background:#343a40;color:#fff;">
                   <th style="padding:6px 8px;border:1px solid #ccc;text-align:left;">Asset</th>
@@ -3831,13 +4122,31 @@ def send_all_dashboards(request, pwd):
                 </tr>
               </thead>
               <tbody>
-                {rows}
+                {rows_html}
               </tbody>
             </table>
         """
 
+    # ── A) STALE MACHINES TABLE ─────────────────────────────────────────────
+    stale_html = render_stale_machines_table(60, 7)
+
+    # ── B) PROD-MON PING STATUS (both NEW and LEGACY) ───────────────────────
+    stale_pings_new    = get_stale_ping_entries_dashboards()  # NEW: prodmon_status
+    stale_pings_legacy = get_stale_ping_entries()             # LEGACY: prodmon_ping
+
+    ping_html = f"""
+        <h2 style="font-family:Arial,sans-serif;
+                   margin:16px 0 8px;
+                   border-bottom:1px solid #444;
+                   padding-bottom:4px;">
+          ProdMon Ping Status
+        </h2>
+        {_render_ping_section_html("New (prodmon_status)", stale_pings_new)}
+        {_render_ping_section_html("Legacy (prodmon_ping)", stale_pings_legacy)}
+    """
+
     # ── C) RENDER EACH DASHBOARD ────────────────────────────────────────────
-    programs = ["8670", "Area1&Area2", "trilobe", "9341"]
+    programs = ["8670", "Area1&Area2", "trilobe", "9341", "ZF", "GFX"]
     rf = RequestFactory()
     fragments = []
     for pages in programs:
@@ -3887,13 +4196,14 @@ def send_all_dashboards(request, pwd):
         .values_list("email", flat=True)
     )
 
+
     if not to_emails:
         return HttpResponse("No active recipients configured.", status=204)
 
     msg = EmailMessage(
         subject=subject,
         body=full_html,
-        to=to_emails,      # ← now dynamic!
+        to=to_emails,
     )
     msg.content_subtype = "html"
     msg.send(fail_silently=False)

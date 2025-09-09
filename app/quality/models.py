@@ -188,6 +188,15 @@ class RedRabbitsEntry(models.Model):
 # =================================================================
 
 
+class Program(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ("name",)
+
 class ScrapCategory(models.Model):
     name = models.CharField(max_length=100)
 
@@ -196,13 +205,13 @@ class ScrapCategory(models.Model):
 
     class Meta:
         verbose_name_plural = "Scrap categories"
-    
-
 
 class ScrapSystemOperation(models.Model):
-    # an operation can have 0 or many machines...
+    # NEW: each op can belong to one or more programs
+    programs = models.ManyToManyField(Program, blank=True, related_name="operations")
+
+    # existing fields
     assets = models.ManyToManyField(Asset, blank=True)
-    # ...and 0 or many scrap categories
     scrap_categories = models.ManyToManyField(ScrapCategory, blank=True)
 
     part_number = models.CharField(max_length=100)
@@ -212,11 +221,9 @@ class ScrapSystemOperation(models.Model):
 
     def __str__(self):
         return f"{self.part_number} – {self.operation}"
-    
-
 
 class ScrapSubmission(models.Model):
-    # keep the FKs for referential integrity
+    # (unchanged)
     scrap_system_operation = models.ForeignKey(
         ScrapSystemOperation,
         on_delete=models.CASCADE,
@@ -233,12 +240,12 @@ class ScrapSubmission(models.Model):
         related_name='scrap_submissions'
     )
 
-    # denormalized fields for easy reporting
+    # denormalized fields for reporting (unchanged)
     part_number     = models.CharField(max_length=100)
     machine         = models.CharField(max_length=100)
     operation_name  = models.CharField(max_length=256)
     category_name   = models.CharField(max_length=100)
-    came_from_op = models.CharField(
+    came_from_op    = models.CharField(
         max_length=256,
         blank=True,
         default='',
@@ -248,11 +255,10 @@ class ScrapSubmission(models.Model):
 
     operator_number = models.CharField(max_length=50)
 
-
-    quantity        = models.PositiveIntegerField()
-    unit_cost       = models.DecimalField(max_digits=10, decimal_places=2)
-    total_cost      = models.DecimalField(max_digits=12, decimal_places=2)
-    created_at      = models.DateTimeField(auto_now_add=True)
+    quantity   = models.PositiveIntegerField()
+    unit_cost  = models.DecimalField(max_digits=10, decimal_places=2)
+    total_cost = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return (

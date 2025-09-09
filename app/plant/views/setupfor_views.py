@@ -15,11 +15,21 @@ import pytz
 from django.views.decorators.http import require_POST
 from django.utils.dateparse import parse_datetime
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+
 
 
 
 def index(request):
-    return render(request, 'setupfor/index.html')
+    context = {
+        "can_view_temp": (
+            request.user.is_authenticated
+            and request.user.groups.filter(
+                name__in=["maintenance_supervisors", "maintenance_managers"]
+            ).exists()
+        )
+    }
+    return render(request, 'setupfor/index.html', context)
 
 def natural_sort_key(s):
     # Split the string into numeric and non-numeric parts

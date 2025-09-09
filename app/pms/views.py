@@ -43,13 +43,17 @@ def login_view(request):
 
 
 def pms_index_view(request):
-    context = {}
-    context["main_heading"] = "PMS Index"
-    context["title"] = "Index - pmdsdata12"
-    
+    context = {
+        "main_heading": "PMS Index",
+        "title": "Index - pmdsdata12",
+    }
+
     app_infos = []
     for app in settings.INSTALLED_APPS:
-        if app.startswith('django.') or app in ['whitenoise.runserver_nostatic', 'debug_toolbar', 'django_bootstrap5', 'widget_tweaks', 'corsheaders']:
+        if app.startswith('django.') or app in [
+            'whitenoise.runserver_nostatic', 'debug_toolbar',
+            'django_bootstrap5', 'widget_tweaks', 'corsheaders'
+        ]:
             continue
 
         try:
@@ -59,10 +63,17 @@ def pms_index_view(request):
                 app_infos.append(app_info)
         except ModuleNotFoundError:
             pass
-        except AttributeError as e:
+        except AttributeError:
             pass
 
+    # ✅ who can see “Temp Sensors” links
+    context["can_view_temp"] = (
+        request.user.is_authenticated
+        and request.user.groups.filter(
+            name__in=["maintenance_supervisors", "maintenance_managers"]
+        ).exists()
+    )
+
     context["app_infos"] = app_infos
-    
     return render(request, 'index_pms.html', context)
 

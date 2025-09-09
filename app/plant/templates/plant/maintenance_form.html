@@ -24,12 +24,14 @@
                     id="start-date"
                     name="start_date"
                     class="form-control form-control-sm"
-                    required>
+                    required
+                    value="{{ default_date }}">
               <input type="time"
                     id="start-time"
                     name="start_time"
                     class="form-control form-control-sm mt-1"
-                    required>
+                    required
+                    value="{{ default_time }}">
             </th>
             <th style="min-width:100px">
               Line<br>
@@ -415,9 +417,9 @@
 
   // ─── ADD-FORM DEFAULTS & VALIDATION ──────────────────────────────────
   ;(() => {
-    const now = new Date();
-    add.dateInput.value = now.toISOString().slice(0,10);
-    add.timeInput.value = now.toTimeString().slice(0,5);
+    // Use server-local defaults to avoid UTC date drift
+    add.dateInput.value = "{{ default_date|escapejs }}";
+    add.timeInput.value = "{{ default_time|escapejs }}";
   })();
   function validateAdd(){
     add.submitBtn.disabled = !(

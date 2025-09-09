@@ -807,6 +807,141 @@ def fetch_chart_data(machine, start, end, interval=5, group_by_shift=False):
         return labels, counts
 
 
+
+def get_reject_totals_for_machine(machine, start_timestamp, times, part_list_str):
+    """
+    Returns rows shaped like your GFxPRoduction result:
+      [ f"{machine}REJ", Part, bucket1, bucket2, ..., bucketN ]
+
+    Buckets align with your 'times' codes:
+      - times <= 6: 8 hourly buckets
+      - times <= 8: 3 shifts (24h)
+      - times in [9,10]: 7 days
+      - times in [11,12]: 21 buckets (3 shifts × 7 days)
+
+    Uses MySQLdb and the same DAVE_* creds pattern as get_reject_data.
+    Aggregates across ALL reject reasons.
+    """
+    times = int(times)
+    start_ts = int(start_timestamp)
+
+    # Build bucket expressions
+    buckets_sql = []
+    where_window_end = None
+
+    if times <= 6:
+        # 8 x 1-hour buckets in an 8-hour window
+        edges = [0, 3600, 7200, 10800, 14400, 18000, 21600, 25200, 28800]
+        for i in range(8):
+            lo = start_ts + edges[i]
+            hi = start_ts + edges[i + 1]
+            if i == 0:
+                buckets_sql.append(
+                    f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp <= {hi} THEN 1 ELSE 0 END) AS hour{i+1}"
+                )
+            else:
+                buckets_sql.append(
+                    f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS hour{i+1}"
+                )
+        where_window_end = start_ts + 28800
+
+    elif times <= 8:
+        # 3 shifts (24h)
+        s1_lo, s1_hi = start_ts, start_ts + 28800
+        s2_lo, s2_hi = start_ts + 28800, start_ts + 57600
+        s3_lo = start_ts + 57600
+        buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {s1_lo} AND TimeStamp <= {s1_hi} THEN 1 ELSE 0 END) AS shift1")
+        buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {s2_lo} AND TimeStamp < {s2_hi} THEN 1 ELSE 0 END) AS shift2")
+        buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {s3_lo} THEN 1 ELSE 0 END) AS shift3")
+        where_window_end = start_ts + 86400
+
+    elif times in (9, 10):
+        # 7 days
+        day = 86400
+        labels = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
+        for d, label in enumerate(labels):
+            lo = start_ts + d * day
+            hi = start_ts + (d + 1) * day
+            if d == 0:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp <= {hi} THEN 1 ELSE 0 END) AS {label}")
+            elif d < 6:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS {label}")
+            else:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} THEN 1 ELSE 0 END) AS {label}")
+        where_window_end = start_ts + 7 * day
+
+    elif times in (11, 12):
+        # 21 buckets: 3 shifts × 7 days (each shift = 8h)
+        shift = 28800
+        total_shifts = 21
+        for i in range(total_shifts):
+            lo = start_ts + i * shift
+            hi = start_ts + (i + 1) * shift
+            buckets_sql.append(
+                f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS shift{i+1}"
+            )
+        where_window_end = start_ts + total_shifts * shift
+
+    else:
+        # fallback → 7 days
+        day = 86400
+        labels = ["mon", "tue", "wed", "thur", "fri", "sat", "sun"]
+        for d, label in enumerate(labels):
+            lo = start_ts + d * day
+            hi = start_ts + (d + 1) * day
+            if d == 0:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp <= {hi} THEN 1 ELSE 0 END) AS {label}")
+            elif d < 6:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} AND TimeStamp < {hi} THEN 1 ELSE 0 END) AS {label}")
+            else:
+                buckets_sql.append(f"SUM(CASE WHEN TimeStamp >= {lo} THEN 1 ELSE 0 END) AS {label}")
+        where_window_end = start_ts + 7 * day
+
+    select_buckets = ", ".join(buckets_sql)
+
+    # Build SQL (aggregate across ALL reject reasons)
+    sql = [
+        "SELECT Part,",
+        select_buckets,
+        "FROM `prodmon_prodction_rejects`",
+        f"WHERE TimeStamp >= {start_ts} AND TimeStamp < {where_window_end}",
+        "AND Machine = %s",
+    ]
+    if part_list_str:
+        sql.append(f"AND Part IN ({part_list_str})")
+    sql.append("GROUP BY Part")
+    sql.append("ORDER BY Part ASC;")
+    sql = " ".join(sql)
+
+    rows_out = []
+    conn = MySQLdb.connect(
+        host=DAVE_HOST,
+        user=DAVE_USER,
+        passwd=DAVE_PASSWORD,
+        db=DAVE_DB
+    )
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(sql, (machine,))
+        for row in cursor.fetchall():
+            # row: (Part, bucket1, ..., bucketN)
+            part = row[0]
+            buckets = list(row[1:])
+            shaped = [f"{machine}REJ", part] + buckets
+            shaped.append(sum(shaped[2:]))   # <<< add the Total here
+            rows_out.append(shaped)
+    except Exception as e:
+        print("Oops!", e, "occurred while running SQL (rejects).")
+        logger.exception("get_reject_totals_for_machine failed. SQL: %s", sql)
+    finally:
+        cursor.close()
+        conn.close()
+
+    return rows_out
+
+
+
 def prod_query(request):
     context = {}
     if request.method == 'GET':
@@ -827,12 +962,10 @@ def prod_query(request):
 
             machines = form.cleaned_data.get('machines')
 
-            machine_list = []
-            for machine in machines:
-                machine = machine.strip()
-                machine_list.append(machine)
-                machine_list.append(f'{machine}REJ')
-                machine_list.append(f'{machine}AS')
+
+            shift_start, shift_end = shift_start_end_from_form_times(inquiry_date, times)
+
+            shift_start_ts = datetime.timestamp(shift_start)
 
             # build list of parts with quotes and commas for sql IN clause
             parts = form.cleaned_data.get('parts')
@@ -842,9 +975,27 @@ def prod_query(request):
                 part_list += f'"{part.strip()}", '
             part_list = part_list[:-2]
 
-            shift_start, shift_end = shift_start_end_from_form_times(inquiry_date, times)
 
-            shift_start_ts = datetime.timestamp(shift_start)
+
+            machine_list = []
+            for machine in machines:
+                machine = machine.strip()
+                # keep the normal/base machine in the main query
+                machine_list.append(machine)
+
+                # add “reject rows” by querying the new table,
+                # shaped exactly like rows from the main query
+                rej_rows = get_reject_totals_for_machine(
+                    machine=machine,
+                    start_timestamp=shift_start_ts,
+                    times=int(times),
+                    part_list_str=part_list  # this is your already-quoted IN-list string (e.g. '"A","B"')
+                )
+                # append them into results so the rest of your pipeline (totals, template, etc.) stays the same
+                results.extend(rej_rows)
+
+
+
             
             # Initialize 'sql' to none before building it
             sql = None
@@ -1321,7 +1472,8 @@ def reject_query(request):
 
 
 def machine_detail(request, machine, start_timestamp, times):
-
+    if machine.endswith("REJ"):
+        machine = machine[:-3]
     tic = time.time()
     part_list = request.GET.get('parts')
     context = {}
@@ -1361,129 +1513,98 @@ def machine_detail(request, machine, start_timestamp, times):
 
 
 def get_reject_data(machine, start_timestamp, times, part_list):
-    if int(times) <= 6:  # 8 hour query
-        sql = 'SELECT Part, Reason, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp) + ' AND TimeStamp <= ' + \
-            str(start_timestamp + 3600) + ' THEN 1 ELSE 0 END) as hour1, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 3600) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 7200) + ' THEN 1 ELSE 0 END) as hour2, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 7200) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 10800) + ' THEN 1 ELSE 0 END) as hour3, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 10800) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 14400) + ' THEN 1 ELSE 0 END) as hour4, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 14400) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 18000) + ' THEN 1 ELSE 0 END) as hour5, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 18000) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 21600) + ' THEN 1 ELSE 0 END) as hour6, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 21600) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 25200) + ' THEN 1 ELSE 0 END) as hour7, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 25200) + ' THEN 1 ELSE 0 END) AS hour8 '
-        sql += 'FROM `01_vw_production_rejects` '
-        sql += 'WHERE TimeStamp >= ' + \
-            str(start_timestamp) + ' AND TimeStamp < ' + \
-            str(start_timestamp + 28800) + ' '
-        if not machine.endswith("REJ"):
-            machine_for_query = machine + "REJ"
-        else:
-            machine_for_query = machine
-        sql += 'AND Machine = "' + machine_for_query + '" '
+    results = []
 
-        if (part_list):
-            sql += 'AND Part IN (' + part_list + ') '
-        sql += 'GROUP BY Part, Reason '
-        sql += 'ORDER BY Part ASC, Reason ASC;'
+    start_timestamp = int(start_timestamp)
+    times = int(times)
 
-    elif int(times) <= 8:  # 24 hour by shift query
-        sql = 'SELECT Part, Reason, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp) + ' AND TimeStamp <= ' + \
-            str(start_timestamp + 28800) + ' THEN 1 ELSE 0 END) as shift1, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 28800) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 57600) + ' THEN 1 ELSE 0 END) as shift2, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 57600) + ' THEN 1 ELSE 0 END) AS shift3 '
-        sql += 'FROM `01_vw_production_rejects` '
-        sql += 'WHERE TimeStamp >= ' + \
-            str(start_timestamp) + ' AND TimeStamp < ' + \
-            str(start_timestamp + 86400) + ' '
-        if not machine.endswith("REJ"):
-            machine_for_query = machine + "REJ"
-        else:
-            machine_for_query = machine
-        sql += 'AND Machine = "' + machine_for_query + '" '
+    print(f"[DEBUG] get_reject_data called with machine={machine}, start_timestamp={start_timestamp}, times={times}, part_list={part_list}")
 
-        if (part_list):
-            sql += 'AND Part IN (' + part_list + ') '
-        sql += 'GROUP BY Part, Reason '
-        sql += 'ORDER BY Part ASC, Reason ASC;'
+    if times <= 6:  # 8 hour query
+        sql = 'SELECT Part, Reject_Reason AS Reason, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp} AND TimeStamp <= {start_timestamp + 3600} THEN 1 ELSE 0 END) as hour1, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 3600} AND TimeStamp < {start_timestamp + 7200} THEN 1 ELSE 0 END) as hour2, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 7200} AND TimeStamp < {start_timestamp + 10800} THEN 1 ELSE 0 END) as hour3, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 10800} AND TimeStamp < {start_timestamp + 14400} THEN 1 ELSE 0 END) as hour4, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 14400} AND TimeStamp < {start_timestamp + 18000} THEN 1 ELSE 0 END) as hour5, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 18000} AND TimeStamp < {start_timestamp + 21600} THEN 1 ELSE 0 END) as hour6, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 21600} AND TimeStamp < {start_timestamp + 25200} THEN 1 ELSE 0 END) as hour7, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 25200} THEN 1 ELSE 0 END) AS hour8 '
+        sql += 'FROM `prodmon_prodction_rejects` '
+        sql += f'WHERE TimeStamp >= {start_timestamp} AND TimeStamp < {start_timestamp + 28800} '
+        sql += f'AND Machine = "{machine}" '
+        if part_list:
+            sql += f'AND Part IN ({part_list}) '
+        sql += 'GROUP BY Part, Reject_Reason ORDER BY Part ASC, Reason ASC;'
+
+    elif times <= 8:  # 24 hour by shift query
+        sql = 'SELECT Part, Reject_Reason AS Reason, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp} AND TimeStamp <= {start_timestamp + 28800} THEN 1 ELSE 0 END) as shift1, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 28800} AND TimeStamp < {start_timestamp + 57600} THEN 1 ELSE 0 END) as shift2, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 57600} THEN 1 ELSE 0 END) AS shift3 '
+        sql += 'FROM `prodmon_prodction_rejects` '
+        sql += f'WHERE TimeStamp >= {start_timestamp} AND TimeStamp < {start_timestamp + 86400} '
+        sql += f'AND Machine = "{machine}" '
+        if part_list:
+            sql += f'AND Part IN ({part_list}) '
+        sql += 'GROUP BY Part, Reject_Reason ORDER BY Part ASC, Reason ASC;'
 
     else:  # week at a time query
-        sql = 'SELECT Part, Reason, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp) + ' AND TimeStamp <= ' + \
-            str(start_timestamp + 86400) + ' THEN 1 ELSE 0 END) as mon, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 86400) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 172800) + ' THEN 1 ELSE 0 END) as tue, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 172800) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 259200) + ' THEN 1 ELSE 0 END) as wed, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 259200) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 345600) + ' THEN 1 ELSE 0 END) as thur, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 345600) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 432000) + ' THEN 1 ELSE 0 END) as fri, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + str(start_timestamp + 432000) + \
-            ' AND TimeStamp < ' + \
-            str(start_timestamp + 518400) + ' THEN 1 ELSE 0 END) as sat, '
-        sql += 'SUM(CASE WHEN TimeStamp >= ' + \
-            str(start_timestamp + 518400) + ' THEN 1 ELSE 0 END) AS sun '
-        sql += 'FROM `01_vw_production_rejects` '
-        sql += 'WHERE TimeStamp >= ' + \
-            str(start_timestamp) + ' AND TimeStamp < ' + \
-            str(start_timestamp + 604800) + ' '
-        if not machine.endswith("REJ"):
-            machine_for_query = machine + "REJ"
-        else:
-            machine_for_query = machine
-        sql += 'AND Machine = "' + machine_for_query + '" '
+        sql = 'SELECT Part, Reject_Reason AS Reason, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp} AND TimeStamp <= {start_timestamp + 86400} THEN 1 ELSE 0 END) as mon, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 86400} AND TimeStamp < {start_timestamp + 172800} THEN 1 ELSE 0 END) as tue, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 172800} AND TimeStamp < {start_timestamp + 259200} THEN 1 ELSE 0 END) as wed, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 259200} AND TimeStamp < {start_timestamp + 345600} THEN 1 ELSE 0 END) as thur, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 345600} AND TimeStamp < {start_timestamp + 432000} THEN 1 ELSE 0 END) as fri, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 432000} AND TimeStamp < {start_timestamp + 518400} THEN 1 ELSE 0 END) as sat, '
+        sql += f'SUM(CASE WHEN TimeStamp >= {start_timestamp + 518400} THEN 1 ELSE 0 END) AS sun '
+        sql += 'FROM `prodmon_prodction_rejects` '
+        sql += f'WHERE TimeStamp >= {start_timestamp} AND TimeStamp < {start_timestamp + 604800} '
+        sql += f'AND Machine = "{machine}" '
+        if part_list:
+            sql += f'AND Part IN ({part_list}) '
+        sql += 'GROUP BY Part, Reject_Reason ORDER BY Part ASC, Reason ASC;'
 
-        if (part_list):
-            sql += 'AND Part IN (' + part_list + ') '
-        sql += 'GROUP BY Part, Reason '
-        sql += 'ORDER BY Part ASC, Reason ASC;'
+    print(f"[DEBUG] Generated SQL:\n{sql}")
 
-    cursor = connections['prodrpt-md'].cursor()
-    # print(sql)
+    conn = MySQLdb.connect(
+        host=DAVE_HOST,
+        user=DAVE_USER,
+        passwd=DAVE_PASSWORD,
+        db=DAVE_DB
+    )
+    cursor = conn.cursor()
+
     try:
+        print("[DEBUG] Executing SQL...")
         cursor.execute(sql)
-        result = cursor.fetchall()
-        results = []
-        for row in result:
+        rows = cursor.fetchall()
+        print(f"[DEBUG] Rows fetched: {len(rows)}")
+
+        for row in rows:
             row = list(row)
-            row.append(sum(row[2:]))
+            row.append(sum(row[2:]))  # add total column
             results.append(row)
 
-        if len(results):
+        if results:
             result_length = len(results[0])
             totals = [0] * result_length
-
             for row in results:
                 for idx in range(2, result_length):
                     totals[idx] += row[idx]
             totals[0] = 'Totals'
             totals[1] = ''
             results.append(totals)
+            print(f"[DEBUG] Computed totals: {totals}")
 
     except Exception as e:
-        print("Oops!", e, "occurred.")
+        print("Oops!", e, "occurred while running SQL:\n", sql)
+        logger.exception("get_reject_data failed. SQL: %s", sql)
     finally:
         cursor.close()
+        conn.close()
+        print("[DEBUG] Connection closed.")
+
     return results
 
 
@@ -2388,11 +2509,11 @@ lines = [
             {
                 "op": "furnace",
                 "machines": [
-                    {"number": "345", "target": 27496,},
-                    {"number": "344", "target": 27496,},
-                    {"number": "349", "target": 27496,},
-                    {"number": "332", "target": 27496,},
-                    {"number": "333", "target": 27496,},
+                    {"number": "345", "part_numbers": ["50-0455", "50-5404", "50-5214", "50-3214", "50-0447", "50-0519", "50-5401", "50-9341"]},
+                    {"number": "344", "part_numbers": ["50-0455", "50-5404", "50-5214", "50-3214", "50-0447", "50-0519", "50-5401", "50-9341"]},
+                    {"number": "349", },
+                    {"number": "332", },
+                    {"number": "333", },
                 ],
             },
         ],
@@ -6505,30 +6626,24 @@ def fetch_prdowntime1_entries_with_id(assetnum: str,
     Returns a list of 5-tuples:
       (id, comment, category, start_at: datetime, closeout_at: datetime or None)
     matching any MachineDowntimeEvent overlapping the given window.
-    """
-    # 1) normalize the machine identifier
-    assetnum = re.sub(r'[A-Za-z]+$', '', assetnum)
 
-    # 2) parse the ISO-8601 window into epochs
+    Changes:
+      - Exact L/R match first; fallback to base numeric only if exact returns no rows.
+      - Correct overlap condition: start <= window_end AND (end >= window_start or end is NULL).
+    """
+    # --- parse the ISO-8601 window into epochs (naive -> epoch) ---
     start_dt = datetime.fromisoformat(called4helptime)
     end_dt   = datetime.fromisoformat(completedtime)
     start_ts = int(start_dt.timestamp())
     end_ts   = int(end_dt.timestamp())
 
-    # 3) rebuild your “overlap” Q exactly as before
+    # --- build the overlap predicate ---
     overlap = (
-        (Q(start_epoch__lt=start_ts) &
-         (Q(closeout_epoch__gte=start_ts) | Q(closeout_epoch__isnull=True)))
-        |
-        Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts)
-        |
-        (Q(start_epoch__gte=start_ts, start_epoch__lte=end_ts) &
-         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
-        |
-        (Q(start_epoch__lt=start_ts) &
-         (Q(closeout_epoch__gt=end_ts) | Q(closeout_epoch__isnull=True)))
+        Q(start_epoch__lte=end_ts) &
+        (Q(closeout_epoch__isnull=True) | Q(closeout_epoch__gte=start_ts))
     )
 
+    # --- exact machine first ---
     qs = (
         MachineDowntimeEvent.objects
         .filter(machine=assetnum, is_deleted=False)
@@ -6536,16 +6651,29 @@ def fetch_prdowntime1_entries_with_id(assetnum: str,
         .order_by('start_epoch')
     )
 
+    # --- fallback to base numeric (strip a single trailing L/R) if needed ---
+    if not qs.exists() and re.fullmatch(r"\d+[LR]", assetnum):
+        base = assetnum[:-1]
+        qs = (
+            MachineDowntimeEvent.objects
+            .filter(machine=base, is_deleted=False)
+            .filter(overlap)
+            .order_by('start_epoch')
+        )
+
     rows = []
     for ev in qs:
         rows.append((
-            ev.id,              # idnumber
-            ev.comment,         # problem/comment
-            ev.category,        # new Scheduled vs. Unplanned flag
-            ev.start_at,        # datetime.fromtimestamp(ev.start_epoch)
-            ev.closeout_at      # datetime or None
+            ev.id,          # idnumber
+            ev.comment,     # problem/comment
+            ev.category,    # e.g., "Scheduled Down"
+            ev.start_at,    # datetime accessor on your model (kept as-is)
+            ev.closeout_at  # datetime or None (kept as-is)
         ))
     return rows
+
+
+
 
 def get_parts_for_machine(lines, line_name, machine_id):
     """
@@ -6996,46 +7124,50 @@ def get_pr_downtime_entries(machine_number: str,
 
     return pr_downtime_entries
 
-def calculate_planned_downtime(downtime_events, pr_downtime_entries, block_end):
+def calculate_planned_downtime(pr_downtime_entries, block_start, block_end,
+                               cap_to_window=True, cap_to_downtime_minutes=None):
     """
-    Sum only the overlap (in minutes) between your production-gap events
-    (downtime_events) and any PR entries whose category == "Scheduled Down".
-    If a PR entry has no end_time, it’s assumed to run until block_end.
-    
-    :param downtime_events: list of dicts with "start" and "end" (either datetime or "%Y-%m-%d %H:%M" strings)
-    :param pr_downtime_entries: list of dicts with "category", "start_time" (datetime), and optional "end_time" (datetime or None)
-    :param block_end: datetime marking the end of your GFX window
-    :returns: total planned downtime in minutes (int)
+    Sum the union (merged overlap) of all Scheduled-Down PR entries within [block_start, block_end].
+    - cap_to_window: if True, cap planned minutes to the window length.
+    - cap_to_downtime_minutes: if given, also cap to actual downtime minutes for the window.
     """
-    planned = 0
-
+    # 1) Collect clamped intervals for Scheduled Down
+    intervals = []
     for pr in pr_downtime_entries:
-        # only consider scheduled-down entries
         if pr.get("category") != "Scheduled Down":
             continue
-
-        pr_start = pr.get("start_time")
-        if not pr_start:
-            # no valid start → skip
+        s = pr.get("start_time")
+        if not s:
             continue
+        e = pr.get("end_time") or block_end
 
-        # if still open, treat as running until block_end
-        pr_end = pr.get("end_time") or block_end
+        # clamp to the window
+        s = max(s, block_start)
+        e = min(e, block_end)
+        if e > s:
+            intervals.append((s, e))
 
-        for ev in downtime_events:
-            # normalize event start/end to datetime
-            ev_start = ev["start"] if isinstance(ev["start"], datetime) \
-                       else datetime.strptime(ev["start"], "%Y-%m-%d %H:%M")
-            ev_end   = ev["end"]   if isinstance(ev["end"], datetime) \
-                       else datetime.strptime(ev["end"],   "%Y-%m-%d %H:%M")
+    if not intervals:
+        return 0
 
-            # compute overlap window
-            overlap_start = max(pr_start, ev_start)
-            overlap_end   = min(pr_end,   ev_end)
+    # 2) Merge overlapping intervals
+    intervals.sort(key=lambda x: x[0])
+    merged = [list(intervals[0])]
+    for s, e in intervals[1:]:
+        if s <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], e)
+        else:
+            merged.append([s, e])
 
-            if overlap_end > overlap_start:
-                mins = int((overlap_end - overlap_start).total_seconds() // 60)
-                planned += mins
+    # 3) Sum merged durations
+    planned = sum(int((e - s).total_seconds() // 60) for s, e in merged)
+
+    # 4) Caps
+    if cap_to_window:
+        window_len = int((block_end - block_start).total_seconds() // 60)
+        planned = min(planned, window_len)
+    if cap_to_downtime_minutes is not None:
+        planned = min(planned, int(cap_to_downtime_minutes))
 
     return planned
 
@@ -7540,7 +7672,14 @@ def fetch_combined_oee_production_data(request):
                     # print(f"[DEBUG] ---- Machine {machine_number}: Added {len(downtime_events)} downtime events")
 
                     # Calculate planned downtime.
-                    planned = calculate_planned_downtime(downtime_events, pr_entries, block_end)
+                    planned = calculate_planned_downtime(
+                        pr_entries,
+                        block_start, block_end,
+                        cap_to_window=True,
+                        # Optional: also cap to actual GFx downtime for that window
+                        cap_to_downtime_minutes=downtime_minutes
+                    )
+
                     machine_data["planned_downtime_minutes"] += planned
                     op_total_planned_downtime += planned
                     line_total_planned_downtime += planned

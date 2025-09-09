@@ -24,6 +24,7 @@ from django.http          import Http404
 
 
 
+
 # =========================================================================
 # =========================================================================
 # ======================= Helper Functions ================================
@@ -216,8 +217,26 @@ def delete_temp_sensor_email(request):
 # =========================================================================
 # =========================================================================
 
-@login_required(login_url='login')
+
 def temp_display(request):
+    # Figure out when the session will expire
+    expiry_timestamp = request.session.get_expiry_date()
+    now = datetime.now(pytz.utc)
+    minutes_left = int((expiry_timestamp - now).total_seconds() // 60)
+
+    # ---- refresh session for specific users ----
+    if request.user.is_authenticated and request.user.username in {"tcareless", "tyler.careless", 'itsignage'}:
+        # reset expiry to full SESSION_COOKIE_AGE (seconds)
+        request.session.set_expiry(getattr(settings, "SESSION_COOKIE_AGE", 1209600))
+        # mark modified so Django actually writes the session even if nothing else changed
+        request.session.modified = True
+    # -------------------------------------------
+
+
+    # Log user and expiry info
+    print(f"[TEMP_DISPLAY] Logged in user: {request.user.username} (id={request.user.id})")
+    print(f"[TEMP_DISPLAY] Session expires in {minutes_left} minute(s) at {expiry_timestamp}")
+
     raw_rows = []
     try:
         conn = mysql.connector.connect(
@@ -244,10 +263,8 @@ def temp_display(request):
     for temp_raw, hum_raw, hex_raw, zone, ts_raw in raw_rows:
         temp     = temp_raw   / 10.0
         humidity = hum_raw    / 10.0
-        # base humidex
-        humidex = hex_raw / 10.0
+        humidex  = hex_raw    / 10.0
 
-        # adjust for furnace zones
         if zone in FURNACE_ZONES:
             humidex += 1.0
 
@@ -275,10 +292,7 @@ def temp_display(request):
     half    = (len(processed) + 1) // 2
     columns = [processed[:half], processed[half:]]
 
-    # <-- new bit, works for anonymous or logged-in users
     is_manager = is_healthsafety_manager(request.user)
-
-     # load the current list only for managers
     email_list = TempSensorEmailList.objects.all() if is_manager else []
 
     return render(request, "plant/temp_display.html", {
