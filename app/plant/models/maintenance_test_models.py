@@ -193,38 +193,43 @@ class DowntimeCodeNEWTEST(models.Model):
 
 
 
+class AreaZoneNEWTEST(models.Model):
+        """
+        Defines an optional area/zone grouping for machines.
+        """
+        name        = models.CharField("Area/Zone", max_length=100, unique=True)
+        description = models.TextField("Description", blank=True, default="")
+
+        created_at_UTC = models.DateTimeField(auto_now_add=True)
+        updated_at_UTC = models.DateTimeField(auto_now=True)
+
+        class Meta:
+            ordering = ['name']
+            verbose_name = "Area / Zone"
+            verbose_name_plural = "NEWTEST Area / Zones"
+
+        def __str__(self):
+            return self.name
+
+
 class DowntimeMachineNEWTEST(models.Model):
-    """
-    Master list of all machines you can track downtime against.
-    """
-    line           = models.CharField(
-        "Line",
-        max_length=50,
-        help_text="Production line this machine lives on",
+    line           = models.CharField("Line", max_length=50)
+    operation      = models.CharField("Operation", max_length=100)
+    machine_number = models.CharField("Machine #", max_length=50)
+    is_tracked     = models.BooleanField("Tracked?", default=True)
+
+    # 🔥 new
+    areazone = models.ForeignKey(
+        AreaZoneNEWTEST,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="machines",
+        help_text="Optional Area/Zone this machine belongs to",
     )
-    operation      = models.CharField(
-        "Operation",
-        max_length=100,
-        help_text="Operation or process name",
-    )
-    machine_number = models.CharField(
-        "Machine #",
-        max_length=50,
-        help_text="Unique number or code for the machine",
-    )
-    is_tracked     = models.BooleanField(
-        "Tracked?",
-        default=True,
-        help_text="Whether downtime is being recorded for this machine",
-    )
-    created_at_UTC = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When this machine record was created (UTC)",
-    )
-    updated_at_UTC = models.DateTimeField(
-        auto_now=True,
-        help_text="When this machine record was last updated (UTC)",
-    )
+
+    created_at_UTC = models.DateTimeField(auto_now_add=True)
+    updated_at_UTC = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('line', 'operation', 'machine_number')
@@ -234,3 +239,5 @@ class DowntimeMachineNEWTEST(models.Model):
 
     def __str__(self):
         return f"{self.line} / {self.operation} / #{self.machine_number}"
+
+    

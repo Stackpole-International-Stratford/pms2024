@@ -35,9 +35,20 @@ class PayCodeGroupAdmin(admin.ModelAdmin):
 
 
 
+@admin.register(AreaZoneNEWTEST)
+class AreaZoneNEWTESTAdmin(admin.ModelAdmin):
+    list_display    = ('name', 'description', 'created_at_UTC', 'updated_at_UTC')
+    search_fields   = ('name', 'description')
+    readonly_fields = ('created_at_UTC', 'updated_at_UTC')
+
+
 @admin.register(DowntimeMachineNEWTEST)
 class DowntimeMachineNEWTESTAdmin(admin.ModelAdmin):
-    list_display   = ('line', 'operation', 'machine_number', 'is_tracked', 'created_at_UTC')
-    list_filter    = ('line', 'operation', 'is_tracked')
-    search_fields  = ('line', 'operation', 'machine_number')
+    list_display    = (
+        'line', 'operation', 'machine_number',
+        'areazone',   # ← show zone in list
+        'is_tracked', 'created_at_UTC'
+    )
+    list_filter     = ('line', 'operation', 'is_tracked', 'areazone')
+    search_fields   = ('line', 'operation', 'machine_number')
     readonly_fields = ('created_at_UTC', 'updated_at_UTC')
