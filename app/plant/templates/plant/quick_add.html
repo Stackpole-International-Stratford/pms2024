@@ -14,8 +14,13 @@
       <div class="row g-3 mb-4">
         <div class="col-md-4">
           <label for="machine-input" class="form-label">
-            Quick Machine Search (optional)
-          </label>
+          Quick Machine Search (optional)
+          <small>
+            <a href="{% url 'admin:plant_downtimemachine_changelist' %}" class="ms-1">
+              Edit machines
+            </a>
+          </small>
+        </label>
           <input list="machine-list" id="machine-input"
                  class="form-control"
                  placeholder="Type machine number to auto-select line">
