@@ -10,21 +10,22 @@
     <div class="card-body">
       <div class="row g-2">
         <div class="col-md-3">
-          <label class="form-label">Close-out Date</label>
+          <label class="form-label" for="all-date">Close-out Date</label>
           <input id="all-date" type="date" class="form-control">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Close-out Time</label>
+          <label class="form-label" for="all-time">Close-out Time</label>
           <input id="all-time" type="time" class="form-control">
         </div>
         <div class="col-md-6">
-          <label class="form-label">Comment (apply to all – optional)</label>
+          <label class="form-label" for="all-comment">Comment (apply to all)</label>
           <input id="all-comment" class="form-control" placeholder="Set a comment for all (optional)">
         </div>
       </div>
       <div class="form-text">Use the fields above to prefill rows; you can still edit per row.</div>
-      <div class="mt-2">
-        <button id="apply-to-all" class="btn btn-outline-secondary btn-sm">Apply to all rows</button>
+      <div class="mt-2 d-flex align-items-center gap-2">
+        <button id="apply-to-all" class="btn btn-outline-secondary btn-sm" type="button">Apply to all rows</button>
+        <span id="missing-note" class="text-danger small ms-1" role="status" aria-live="polite"></span>
       </div>
     </div>
   </div>
@@ -40,7 +41,7 @@
           <th>Started</th>
           <th style="width: 12rem;">Date</th>
           <th style="width: 10rem;">Time</th>
-          <th style="width: 28rem;">Comment</th>
+          <th style="width: 28rem;">Comment <span class="text-danger">*</span></th>
         </tr>
       </thead>
       <tbody id="bulk-tbody">
@@ -53,7 +54,10 @@
           <td>{{ e.start_display }}</td>
           <td><input type="date" class="form-control row-date"></td>
           <td><input type="time" class="form-control row-time"></td>
-          <td><input type="text"  class="form-control row-comment" placeholder="What was done?"></td>
+          <td>
+            <input type="text" class="form-control row-comment" placeholder="What was done?" aria-required="true">
+            <div class="invalid-feedback">Comment required.</div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -62,46 +66,104 @@
 
   <div class="d-flex gap-2 mt-3">
     <a href="{% url 'maintenance_all' %}" class="btn btn-secondary">Back</a>
-    <button id="bulk-submit" class="btn btn-danger">Confirm Close {{ events|length }}</button>
+    <button id="bulk-submit" class="btn btn-danger" type="button" disabled>Confirm Close {{ events|length }}</button>
   </div>
 
   <div id="bulk-results" class="mt-3"></div>
 </div>
 
+<style>
+  /* minimal highlight without relying on full Bootstrap validation cycle */
+  .row-comment.is-invalid { border-color: #dc3545; box-shadow: none; }
+</style>
+
 <script>
 (function(){
-  function pad2(n){ return String(n).padStart(2,'0'); }
-  function nowDate(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-  function nowTime(){ const d=new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+  // --- Utilities ---
+  const pad2 = n => String(n).padStart(2,'0');
+  const nowDate = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  };
+  const nowTime = () => {
+    const d = new Date();
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  };
+  const qs = sel => document.querySelector(sel);
+  const qsa = sel => Array.from(document.querySelectorAll(sel));
 
-  // defaults: now for every row
-  document.querySelectorAll('.row-date').forEach(i => i.value = nowDate());
-  document.querySelectorAll('.row-time').forEach(i => i.value = nowTime());
+  // --- Defaults: now for every row ---
+  qsa('.row-date').forEach(i => i.value = nowDate());
+  qsa('.row-time').forEach(i => i.value = nowTime());
 
+  // --- CSRF (cookie or hidden input fallback) ---
   const csrf = (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)||[])[1] ||
-               document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+               qs('[name=csrfmiddlewaretoken]')?.value || '';
 
-  document.getElementById('apply-to-all').addEventListener('click', () => {
-    const d = document.getElementById('all-date').value || nowDate();
-    const t = document.getElementById('all-time').value || nowTime();
-    const c = document.getElementById('all-comment').value || '';
-    document.querySelectorAll('.row-date').forEach(i => i.value = d);
-    document.querySelectorAll('.row-time').forEach(i => i.value = t);
-    if (c.trim()) document.querySelectorAll('.row-comment').forEach(i => i.value = c);
+  const submitBtn   = qs('#bulk-submit');
+  const resultsBox  = qs('#bulk-results');
+  const missingNote = qs('#missing-note');
+
+  // --- Validation: every row must have a non-empty comment ---
+  function validateAllRows() {
+    let missing = 0;
+    qsa('#bulk-tbody tr').forEach(r => {
+      const input = r.querySelector('.row-comment');
+      const ok = input.value.trim().length > 0;
+      input.classList.toggle('is-invalid', !ok);
+      // show/hide bootstrap invalid feedback
+      const fb = input.nextElementSibling;
+      if (fb && fb.classList.contains('invalid-feedback')) {
+        fb.style.display = ok ? 'none' : 'block';
+      }
+      if (!ok) missing += 1;
+    });
+
+    submitBtn.disabled = missing > 0;
+    missingNote.textContent = missing ? `Add a comment to all rows (${missing} missing).` : '';
+    return missing === 0;
+  }
+
+  // Run once at load
+  validateAllRows();
+
+  // Revalidate on any comment input
+  qsa('.row-comment').forEach(i => {
+    i.addEventListener('input', validateAllRows);
   });
 
-  document.getElementById('bulk-submit').addEventListener('click', async () => {
-    const rows = Array.from(document.querySelectorAll('#bulk-tbody tr'));
+  // --- Apply to all handler ---
+  qs('#apply-to-all').addEventListener('click', () => {
+    const d = qs('#all-date').value || nowDate();
+    const t = qs('#all-time').value || nowTime();
+    const c = qs('#all-comment').value || '';
+
+    qsa('.row-date').forEach(i => i.value = d);
+    qsa('.row-time').forEach(i => i.value = t);
+    if (c.trim()) qsa('.row-comment').forEach(i => i.value = c);
+
+    validateAllRows();
+  });
+
+  // --- Submit handler ---
+  qs('#bulk-submit').addEventListener('click', async () => {
+    // Block if invalid and scroll to first missing
+    if (!validateAllRows()) {
+      const firstMissing = qs('.row-comment.is-invalid');
+      if (firstMissing) firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const rows = qsa('#bulk-tbody tr');
     const items = rows.map(r => {
-      const id = r.dataset.id;
+      const id = Number(r.dataset.id);
       const d  = r.querySelector('.row-date').value;
       const t  = r.querySelector('.row-time').value;
       const c  = r.querySelector('.row-comment').value.trim();
-      return { entry_id: Number(id), closeout: `${d} ${t}`, comment: c };
+      return { entry_id: id, closeout: `${d} ${t}`, comment: c };
     });
 
-    const resBox = document.getElementById('bulk-results');
-    resBox.innerHTML = '<div class="alert alert-info">Processing…</div>';
+    resultsBox.innerHTML = '<div class="alert alert-info">Processing…</div>';
 
     try {
       const resp = await fetch("{% url 'bulk_closeout_submit' %}", {
@@ -113,20 +175,20 @@
         },
         body: JSON.stringify({ items })
       });
+
       const data = await resp.json();
-      const ok = (data.results || []).filter(r => r.ok).length;
+      const ok   = (data.results || []).filter(r => r.ok).length;
       const fail = (data.results || []).length - ok;
 
-      // render a small summary + per-row messages
-      let html = `<div class="alert alert-${fail? 'warning':'success'}">Closed ${ok} / ${items.length}${fail? ', some failed.':''}</div>`;
-      html += '<ul class="small">';
+      let html = `<div class="alert alert-${fail ? 'warning' : 'success'}">Closed ${ok} / ${items.length}${fail ? ', some failed.' : ''}</div>`;
+      html += '<ul class="small mb-0">';
       (data.results || []).forEach(r => {
         html += `<li>#${r.entry_id}: ${r.ok ? 'ok' : ('fail – ' + (r.error || 'unknown'))}</li>`;
       });
       html += '</ul>';
-      resBox.innerHTML = html;
+      resultsBox.innerHTML = html;
     } catch (e) {
-      resBox.innerHTML = '<div class="alert alert-danger">Bulk close failed.</div>';
+      resultsBox.innerHTML = '<div class="alert alert-danger">Bulk close failed.</div>';
     }
   });
 })();
