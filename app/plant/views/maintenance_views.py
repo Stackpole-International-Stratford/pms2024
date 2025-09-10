@@ -1849,17 +1849,17 @@ def quick_add(request):
             return HttpResponseBadRequest("You must select a machine.")
         if not raw_cat:
             return HttpResponseBadRequest("You must choose a category.")
-        cat_obj = DowntimeCodeNEWTEST.objects.filter(code__startswith=raw_cat + "-").first()
+        cat_obj = DowntimeCode.objects.filter(code__startswith=raw_cat + "-").first()
         if not cat_obj:
             return HttpResponseBadRequest("Invalid category code.")
         category_name = cat_obj.category
 
         if raw_sub:
             try:
-                sub_obj = DowntimeCodeNEWTEST.objects.get(code=raw_sub)
+                sub_obj = DowntimeCode.objects.get(code=raw_sub)
                 subcategory_name = sub_obj.subcategory
                 code_value       = raw_sub
-            except DowntimeCodeNEWTEST.DoesNotExist:
+            except DowntimeCode.DoesNotExist:
                 return HttpResponseBadRequest("Invalid subcategory code.")
         else:
             subcategory_name = "NOTSELECTED"
@@ -1883,7 +1883,7 @@ def quick_add(request):
         epoch_ts    = int(aware_local.astimezone(timezone.utc).timestamp())
 
         # --- single event create ---
-        MachineDowntimeEventNEWTEST.objects.create(
+        MachineDowntimeEvent.objects.create(
             line         = line,
             machine      = machine,
             category     = category_name,
@@ -1899,7 +1899,7 @@ def quick_add(request):
         return redirect('maintenance_all')
 
     # GET → build JSON for selects (unchanged)
-    downtime_codes = DowntimeCodeNEWTEST.objects.all().order_by('category','subcategory','code')
+    downtime_codes = DowntimeCode.objects.all().order_by('category','subcategory','code')
     structured = {}
     for c in downtime_codes:
         cat = c.code.split('-',1)[0]
@@ -1919,9 +1919,10 @@ def quick_add(request):
     return render(request, 'plant/quick_add.html', {
         'lines_json':           json.dumps(prod_lines),
         'downtime_codes_json':  json.dumps(downtime_codes_list),
-        'labour_choices':      MachineDowntimeEventNEWTEST.LABOUR_CHOICES,
+        'labour_choices':      MachineDowntimeEvent.LABOUR_CHOICES,
+        'default_date':         _default_date,
+        'default_time':         _default_time,
     })
-
 
 
 
