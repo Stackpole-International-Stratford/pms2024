@@ -570,7 +570,9 @@ Add New or Update Employee
 
             <!-- NEW: Work Order UI (shown only if you’re EAM via JS) -->
             <div class="mb-3 d-flex align-items-center gap-2" id="wo-row" style="display:none;">
-              <label class="form-label mb-0">Work Order</label>
+              {% if is_eam %}
+                <label class="form-label mb-0">Work Order</label>
+              {% endif %}
               <span id="wo-display" class="badge bg-secondary d-none"></span>
               <button type="button"
                       id="wo-generate-btn"
