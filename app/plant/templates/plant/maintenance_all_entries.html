@@ -1067,18 +1067,101 @@ function initCloseoutModal(){
         });
 
         // ---------- Work Order UI (robust display + post) ----------
+        // ---------- Work Order UI (robust display + post) ----------
         function renderWO(id, hasOnlyFlag=false) {
           if (!IS_EAM) { woRow.style.display = 'none'; return; }
-
           woRow.style.display = '';
+
+          // wipe dynamic controls (we'll re-create below)
+          // keep existing badge+generate nodes, but we'll toggle and append small buttons
+          // woBadge (#wo-display), woBtn (#wo-generate-btn)
+          woBadge.classList.add('d-none');
+          woBtn.classList.add('d-none');
+
+          // remove any prior dynamic buttons
+          woRow.querySelectorAll('.wo-mini-btn').forEach(b=>b.remove());
+
           if (id || hasOnlyFlag) {
-            // Prefer an actual id; fall back to a generic label if we only know it exists.
+            // SHOW: badge + [Edit] [Clear]
             woBadge.textContent = id ? `WO #${id}` : 'WO created';
             woBadge.classList.remove('d-none');
-            woBtn.classList.add('d-none');
+
+            const mkMini = (label, title) => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'btn btn-sm btn-outline-secondary wo-mini-btn';
+              btn.title = title;
+              btn.textContent = label;
+              woRow.appendChild(btn);
+              return btn;
+            };
+
+            const editBtn  = mkMini('✏ Edit', 'Edit work order number');
+            const clearBtn = mkMini('× Clear', 'Clear existing work order');
+
+            editBtn.onclick = async ()=>{
+              const val = prompt('Enter the EAM Work Order #', id || '');
+              if (val === null) return; // cancelled
+              const value = String(val).trim();
+              if (!value) return alert('Work order is required.');
+              try {
+                const res = await fetch(`/plant/downtime/${idIn.value}/workorder/set/`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                  body: JSON.stringify({ work_order_id: value })
+                });
+                const data = await res.json().catch(()=> ({}));
+                if (!res.ok || data.ok === false) throw new Error(data.message || `HTTP ${res.status}`);
+                renderWO(data.work_order_id || value, !!(data.work_order_id || value));
+              } catch (e) {
+                alert(`Could not save work order: ${e.message || e}`);
+              }
+            };
+
+            clearBtn.onclick = async ()=>{
+              if (!confirm('Clear the saved work order from this event?')) return;
+              try {
+                const res = await fetch(`/plant/downtime/${idIn.value}/workorder/clear/`, {
+                  method: 'POST',
+                  headers: { 'X-CSRFToken': CSRF_TOKEN }
+                });
+                const data = await res.json().catch(()=> ({}));
+                if (!res.ok || data.ok === false) throw new Error(data.message || `HTTP ${res.status}`);
+                renderWO(null, false);
+              } catch (e) {
+                alert(`Could not clear work order: ${e.message || e}`);
+              }
+            };
+
           } else {
-            woBadge.classList.add('d-none');
+            // SHOW: [Generate] and a tiny [Type one] button
             woBtn.classList.remove('d-none');
+
+            const typeBtn = document.createElement('button');
+            typeBtn.type = 'button';
+            typeBtn.className = 'btn btn-sm btn-outline-secondary wo-mini-btn';
+            typeBtn.title = 'Manually enter a work order number';
+            typeBtn.textContent = 'Type one';
+            woRow.appendChild(typeBtn);
+
+            typeBtn.onclick = async ()=>{
+              const val = prompt('Enter the EAM Work Order #');
+              if (val === null) return; // cancelled
+              const value = String(val).trim();
+              if (!value) return alert('Work order is required.');
+              try {
+                const res = await fetch(`/plant/downtime/${idIn.value}/workorder/set/`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                  body: JSON.stringify({ work_order_id: value })
+                });
+                const data = await res.json().catch(()=> ({}));
+                if (!res.ok || data.ok === false) throw new Error(data.message || `HTTP ${res.status}`);
+                renderWO(data.work_order_id || value, !!(data.work_order_id || value));
+              } catch (e) {
+                alert(`Could not save work order: ${e.message || e}`);
+              }
+            };
           }
         }
 
@@ -1099,26 +1182,16 @@ function initCloseoutModal(){
           try {
             const fd = new FormData();
             fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
-
-            const res = await fetch(woUrl(idIn.value), {
-              method: 'POST',
-              credentials: 'same-origin',
-              body: fd
-            });
-
+            const res = await fetch(woUrl(idIn.value), { method: 'POST', credentials: 'same-origin', body: fd });
             let dataWO = null;
             try { dataWO = await res.json(); } catch {}
-
             if (!res.ok || (dataWO && dataWO.ok === false)) {
               const msg = (dataWO && dataWO.message) ? dataWO.message : `Failed to generate work order (HTTP ${res.status}).`;
               alert(msg);
               return;
             }
-
             const newId = (dataWO && (dataWO.work_order_id || dataWO.work_order_number || dataWO.id)) || null;
             alert((dataWO && dataWO.message) || 'Work order generated.');
-
-            // Flip UI to badge (even if id not returned, we still hide the button)
             renderWO(newId, !newId);
           } catch (err) {
             alert(`Could not generate work order: ${err?.message || err}`);
@@ -1127,8 +1200,6 @@ function initCloseoutModal(){
           }
         };
         // ---------- end Work Order UI ----------
-
-        
 
 
         bsModal.show();

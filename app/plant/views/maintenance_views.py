@@ -2197,6 +2197,78 @@ def generate_workorder(request, entry_id):
 
 
 
+EAM_GROUPS = {
+    GROUP_BY_TRADE["EMTR"],  # maintenance_plctech
+    GROUP_BY_TRADE["IMT"],   # maintenance_imt
+    GROUP_BY_TRADE["MI"],    # maintenance_millwright
+    GROUP_BY_TRADE["ELA"],   # maintenance_electrician
+}
+
+def _user_is_eam(user) -> bool:
+    names = set(user.groups.values_list("name", flat=True))
+    return any(g in names for g in EAM_GROUPS)
+
+
+@login_required
+@require_POST
+def set_workorder_id(request, entry_id: int):
+    """
+    Manually set or change the WO number for an event.
+    Body: JSON { "work_order_id": "12345" }
+    """
+    if not _user_is_eam(request.user):
+        return HttpResponseForbidden("EAM permission required.")
+
+    event = get_object_or_404(MachineDowntimeEventNEWTEST, pk=entry_id, is_deleted=False)
+
+    try:
+        data = json.loads(request.body or b"{}")
+        wo_raw = str(data.get("work_order_id", "")).strip()
+    except Exception:
+        return HttpResponseBadRequest("Invalid JSON.")
+
+    if not wo_raw:
+        return HttpResponseBadRequest("work_order_id is required.")
+    if not wo_raw.isdigit():
+        return HttpResponseBadRequest("work_order_id must be numeric.")
+
+    # normalize as int, but store however your model expects
+    wo_num = int(wo_raw)
+
+    # idempotent: update only if different
+    changed = (event.work_order_id != wo_num)
+    event.work_order_id = wo_num
+    # if you keep an audit trail, add it here (e.g., EventLog)
+    event.save(update_fields=["work_order_id", "updated_at_UTC"])
+
+    return JsonResponse({
+        "ok": True,
+        "message": ("Work order saved." if changed else "Work order unchanged."),
+        "work_order_id": wo_num,
+    })
+
+@login_required
+@require_POST
+def clear_workorder_id(request, entry_id: int):
+    """
+    Clear/remove the WO number from an event (if set).
+    """
+    if not _user_is_eam(request.user):
+        return HttpResponseForbidden("EAM permission required.")
+
+    event = get_object_or_404(MachineDowntimeEventNEWTEST, pk=entry_id, is_deleted=False)
+
+    if not event.work_order_id:
+        return JsonResponse({"ok": True, "message": "No work order to clear.", "work_order_id": None})
+
+    event.work_order_id = None
+    event.save(update_fields=["work_order_id", "updated_at_UTC"])
+
+    return JsonResponse({"ok": True, "message": "Work order cleared.", "work_order_id": None})
+
+
+
+
 
 
 
@@ -2335,3 +2407,8 @@ def bulk_closeout_submit(request):
             results.append({"entry_id": entry_id, "ok": False, "error": "Unexpected error"})
 
     return JsonResponse({"results": results})
+
+
+
+
+

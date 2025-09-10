@@ -113,6 +113,9 @@ urlpatterns = [
     path('quick-add/', quick_add, name='quick_add'),
 
     path('downtime/<int:entry_id>/generate-wo/', generate_workorder, name='generate_workorder'),
+    # --- Work Order manual set / clear --------------------------------
+    path('downtime/<int:entry_id>/workorder/set/',   set_workorder_id,   name='set_workorder_id'),
+    path('downtime/<int:entry_id>/workorder/clear/', clear_workorder_id, name='clear_workorder_id'),
 
 
 
