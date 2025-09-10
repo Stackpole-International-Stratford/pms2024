@@ -190,6 +190,19 @@ Add New or Update Employee
   <!-- Left: downtime events (always col-md-8) -->
 <div class="col-md-8 mb-2">
   <div class="table-responsive mb-2">
+    {% if is_manager or is_supervisor %}
+    <div id="bulk-bar" class="d-none mt-2">
+      <form id="bulk-form" method="post" action="{% url 'bulk_closeout_page' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-sm mb-3">
+          Review Bulk Close-out (<span id="bulk-count">0</span>)
+        </button>
+        {# hidden <input name="ids"> elements will be injected here by JS #}
+      </form>
+    </div>
+    {% endif %}
+
+
     <table class="table table-striped table-hover table-bordered align-middle small mb-0">
       <!-- 1) Table header with a warning‐style button -->
       <!-- Trigger button (in your <th> next to “Open Jobs”) -->
@@ -324,17 +337,7 @@ Add New or Update Employee
       
     </table>
 
-    {% if is_manager or is_supervisor %}
-    <div id="bulk-bar" class="d-none mt-2">
-      <form id="bulk-form" method="post" action="{% url 'bulk_closeout_page' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger btn-sm">
-          Review Bulk Close-out (<span id="bulk-count">0</span>)
-        </button>
-        {# hidden <input name="ids"> elements will be injected here by JS #}
-      </form>
-    </div>
-    {% endif %}
+    
 
   </div>
 </div>
