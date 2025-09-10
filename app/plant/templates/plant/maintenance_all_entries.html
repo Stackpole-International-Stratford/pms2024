@@ -568,27 +568,33 @@ Add New or Update Employee
           <div class="col-md-6 ps-4">
             <h6>Close Out</h6>
 
-            <!-- NEW: Work Order UI (shown only if you’re EAM via JS) -->
-            <div class="mb-3 d-flex align-items-center gap-2" id="wo-row" style="display:none;">
-              {% if is_eam %}
-                <label class="form-label mb-0">Work Order</label>
-              {% endif %}
-              <span id="wo-display" class="badge bg-secondary d-none"></span>
-              <button type="button"
-                      id="wo-generate-btn"
-                      class="btn btn-sm btn-outline-warning d-none"
-                      title="Generate work order">
-                <!-- lightning icon -->
-                <svg xmlns="http://www.w3.org/2000/svg"
-                    width="16" height="16"
-                    fill="currentColor"
-                    class="bi bi-lightning-charge-fill"
-                    viewBox="0 0 16 16">
-                  <path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/>
-                </svg>
-                <span class="ms-1">Generate</span>
-              </button>
+            {% if is_eam %}
+            <!-- Work Order UI (visible only for EAM) -->
+            <div class="mb-3" id="wo-row" style="display:none;">
+              <div class="row g-2 align-items-center">
+                <div class="col-12 col-sm-auto">
+                  <label class="form-label mb-0">Work Order</label>
+                </div>
+
+                <!-- Badge -->
+                <div class="col-12 col-sm">
+                  <span id="wo-display" class="badge bg-secondary d-none w-100 text-truncate"></span>
+                </div>
+
+                <!-- Generate -->
+                <div class="col-6 col-sm-auto">
+                  <button type="button"
+                          id="wo-generate-btn"
+                          class="btn btn-sm btn-outline-warning d-none w-100"
+                          title="Generate work order">
+                    <i class="bi bi-lightning-charge-fill"></i> Generate
+                  </button>
+                </div>
+
+                <!-- JS will append Edit / Clear / Type into more col-* here -->
+              </div>
             </div>
+            {% endif %}
 
             <div class="mb-3">
               <label for="closeout-date" class="form-label">Close-out Date</label>
@@ -1070,40 +1076,47 @@ function initCloseoutModal(){
 
         // ---------- Work Order UI (robust display + post) ----------
         // ---------- Work Order UI (robust display + post) ----------
-        function renderWO(id, hasOnlyFlag=false) {
-          if (!IS_EAM) { woRow.style.display = 'none'; return; }
+        function renderWO(id, hasOnlyFlag = false) {
+          if (!IS_EAM) { if (woRow) woRow.style.display = 'none'; return; }
+          if (!woRow) return;          // defensive if template gated it out
+
           woRow.style.display = '';
 
-          // wipe dynamic controls (we'll re-create below)
-          // keep existing badge+generate nodes, but we'll toggle and append small buttons
-          // woBadge (#wo-display), woBtn (#wo-generate-btn)
+          // the grid row container inside #wo-row
+          const woGrid = woRow.querySelector('.row');
+
+          // reset base UI
           woBadge.classList.add('d-none');
           woBtn.classList.add('d-none');
 
-          // remove any prior dynamic buttons
-          woRow.querySelectorAll('.wo-mini-btn').forEach(b=>b.remove());
+          // remove any prior dynamic cols
+          woGrid.querySelectorAll('.wo-mini-col').forEach(c => c.remove());
+
+          // helper: create a responsive col with a full-width button
+          const addMiniBtn = (label, title, onClick) => {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-sm-auto wo-mini-col';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-secondary w-100';
+            btn.title = title;
+            btn.textContent = label;
+            btn.addEventListener('click', onClick);
+
+            col.appendChild(btn);
+            woGrid.appendChild(col);
+            return btn;
+          };
 
           if (id || hasOnlyFlag) {
-            // SHOW: badge + [Edit] [Clear]
+            // Show badge + Edit + Clear
             woBadge.textContent = id ? `WO #${id}` : 'WO created';
             woBadge.classList.remove('d-none');
 
-            const mkMini = (label, title) => {
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'btn btn-sm btn-outline-secondary wo-mini-btn';
-              btn.title = title;
-              btn.textContent = label;
-              woRow.appendChild(btn);
-              return btn;
-            };
-
-            const editBtn  = mkMini('✏ Edit', 'Edit work order number');
-            const clearBtn = mkMini('× Clear', 'Clear existing work order');
-
-            editBtn.onclick = async ()=>{
+            addMiniBtn('✏ Edit', 'Edit work order number', async () => {
               const val = prompt('Enter the EAM Work Order #', id || '');
-              if (val === null) return; // cancelled
+              if (val === null) return;
               const value = String(val).trim();
               if (!value) return alert('Work order is required.');
               try {
@@ -1112,43 +1125,36 @@ function initCloseoutModal(){
                   headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
                   body: JSON.stringify({ work_order_id: value })
                 });
-                const data = await res.json().catch(()=> ({}));
+                const data = await res.json().catch(() => ({}));
                 if (!res.ok || data.ok === false) throw new Error(data.message || `HTTP ${res.status}`);
                 renderWO(data.work_order_id || value, !!(data.work_order_id || value));
               } catch (e) {
                 alert(`Could not save work order: ${e.message || e}`);
               }
-            };
+            });
 
-            clearBtn.onclick = async ()=>{
+            addMiniBtn('× Clear', 'Clear existing work order', async () => {
               if (!confirm('Clear the saved work order from this event?')) return;
               try {
                 const res = await fetch(`/plant/downtime/${idIn.value}/workorder/clear/`, {
                   method: 'POST',
                   headers: { 'X-CSRFToken': CSRF_TOKEN }
                 });
-                const data = await res.json().catch(()=> ({}));
+                const data = await res.json().catch(() => ({}));
                 if (!res.ok || data.ok === false) throw new Error(data.message || `HTTP ${res.status}`);
                 renderWO(null, false);
               } catch (e) {
                 alert(`Could not clear work order: ${e.message || e}`);
               }
-            };
+            });
 
           } else {
-            // SHOW: [Generate] and a tiny [Type one] button
-            woBtn.classList.remove('d-none');
-
-            const typeBtn = document.createElement('button');
-            typeBtn.type = 'button';
-            typeBtn.className = 'btn btn-sm btn-outline-secondary wo-mini-btn';
-            typeBtn.title = 'Manually enter a work order number';
-            typeBtn.textContent = 'Type one';
-            woRow.appendChild(typeBtn);
-
-            typeBtn.onclick = async ()=>{
+            // Show Generate + Type one
+            woBtn.classList.remove('d-none'); // it already lives in a col-6 col-sm-auto
+            // add "Type one" as another column
+            addMiniBtn('Type one', 'Manually enter a work order number', async () => {
               const val = prompt('Enter the EAM Work Order #');
-              if (val === null) return; // cancelled
+              if (val === null) return;
               const value = String(val).trim();
               if (!value) return alert('Work order is required.');
               try {
@@ -1157,36 +1163,33 @@ function initCloseoutModal(){
                   headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
                   body: JSON.stringify({ work_order_id: value })
                 });
-                const data = await res.json().catch(()=> ({}));
+                const data = await res.json().catch(() => ({}));
                 if (!res.ok || data.ok === false) throw new Error(data.message || `HTTP ${res.status}`);
                 renderWO(data.work_order_id || value, !!(data.work_order_id || value));
               } catch (e) {
                 alert(`Could not save work order: ${e.message || e}`);
               }
-            };
+            });
           }
         }
 
-        // Accept several possible keys from the edit payload
+        // existingWO lookup stays the same:
         const existingWO =
           data.work_order_id ??
           data.work_order_number ??
           data.work_order ??
-          data.workorder_id ??
-          null;
+          data.workorder_id ?? null;
 
-        // Render initial state (if backend only gives a flag, still hide the button)
         renderWO(existingWO, Boolean(data.has_work_order) && !existingWO);
 
-        // Wire up the generate action (only runs if the button is visible)
-        woBtn.onclick = async ()=>{
+        // Generate handler (unchanged, now benefits from grid col)
+        woBtn.onclick = async () => {
           woBtn.disabled = true;
           try {
             const fd = new FormData();
             fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
             const res = await fetch(woUrl(idIn.value), { method: 'POST', credentials: 'same-origin', body: fd });
-            let dataWO = null;
-            try { dataWO = await res.json(); } catch {}
+            let dataWO = null; try { dataWO = await res.json(); } catch {}
             if (!res.ok || (dataWO && dataWO.ok === false)) {
               const msg = (dataWO && dataWO.message) ? dataWO.message : `Failed to generate work order (HTTP ${res.status}).`;
               alert(msg);
