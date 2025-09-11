@@ -14,6 +14,9 @@ class AbsenteeReport(models.Model):
     shift_rotation_description   = models.CharField(max_length=255)
     uploaded_at                  = models.DateTimeField(default=timezone.now)
 
+    # NEW: who uploaded the Excel file (store username string for simplicity)
+    uploaded_by                  = models.CharField(max_length=150, blank=True, null=True, db_index=True)
+
     # Derived from PayCodeGroup (if mapping exists)
     pay_group                    = models.CharField(max_length=100, blank=True, null=True, db_index=True)
 
