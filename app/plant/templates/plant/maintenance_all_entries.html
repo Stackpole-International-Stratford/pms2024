@@ -558,29 +558,24 @@ Add New or Update Employee
               </div>
 
               {% if is_eam %}
-              <!-- RIGHT: Work Order (EAM only) -->
-              <div class="col-12 col-lg-6">
-                <div class="mb-3" id="wo-row" style="display:none;">
-                  <label class="form-label mb-1">Work Order</label>
+                <!-- RIGHT: Work Order (EAM only) -->
+                <div class="col-12 col-lg-6">
+                  <div class="mb-3" id="wo-row" style="display:none;">
+                    <label class="form-label mb-1">Work Order</label>
 
-                  <!-- Input + buttons -->
-                  <div class="input-group input-group-sm">
-                    <input id="wo-input" class="form-control" placeholder="Enter work order #">
-                    <button id="wo-generate-btn" class="btn btn-outline-warning d-none" type="button">
-                      <i class="bi bi-lightning-charge-fill"></i> Generate
-                    </button>
-                    <button id="wo-save-btn" class="btn btn-outline-success d-none" type="button">Save</button>
-                    <button id="wo-edit-btn" class="btn btn-outline-secondary d-none" type="button">Edit</button>
-                    <button id="wo-clear-btn" class="btn btn-outline-secondary d-none" type="button">Clear</button>
-                  </div>
-
-                  <!-- Saved state badge -->
-                  <div id="wo-badge-wrap" class="mt-2 d-none">
-                    <span id="wo-display" class="badge bg-secondary"></span>
+                    <!-- Input + buttons -->
+                    <div class="input-group input-group-sm">
+                      <input id="wo-input" class="form-control" placeholder="Enter work order #">
+                      <button id="wo-generate-btn" class="btn btn-outline-warning d-none" type="button">
+                        <i class="bi bi-lightning-charge-fill"></i> Generate
+                      </button>
+                      <button id="wo-save-btn" class="btn btn-outline-success d-none" type="button">Save</button>
+                      <button id="wo-clear-btn" class="btn btn-outline-secondary d-none" type="button">Clear</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {% endif %}
+                {% endif %}
+
             </div>
 
             <div class="d-grid">
@@ -595,35 +590,6 @@ Add New or Update Employee
           <!-- ─── Right column: Close-out fields + Confirm button ─────────── -->
           <div class="col-md-6 ps-4">
             <h6>Close Out</h6>
-
-            {% if is_eam %}
-            <!-- Work Order UI (visible only for EAM) -->
-            <div class="mb-3" id="wo-row" style="display:none;">
-              <div class="row g-2 align-items-center">
-                <div class="col-12 col-sm-auto">
-                  <label class="form-label mb-0">Work Order</label>
-                </div>
-
-                <!-- Badge -->
-                <div class="col-12 col-sm">
-                  <span id="wo-display" class="badge bg-secondary d-none w-100 text-truncate"></span>
-                </div>
-
-                <!-- Generate -->
-                <div class="col-6 col-sm-auto">
-                  <button type="button"
-                          id="wo-generate-btn"
-                          class="btn btn-sm btn-outline-warning d-none w-100"
-                          title="Generate work order">
-                    <i class="bi bi-lightning-charge-fill"></i> Generate
-                  </button>
-                </div>
-
-                <!-- JS will append Edit / Clear / Type into more col-* here -->
-              </div>
-            </div>
-            {% endif %}
-
             <div class="mb-3">
               <label for="closeout-date" class="form-label">Close-out Date</label>
               <input type="date" id="closeout-date" class="form-control" required>
@@ -1004,9 +970,19 @@ const nowLocalDT = () => `${nowISODate()}T${nowISOTime()}`;
 /* ------------------------------------------------------------------
  *  CLOSE-OUT / EDIT MODAL
  * ------------------------------------------------------------------ */
-function initCloseoutModal(){
-  const modalEl    = $('#closeoutModal');
-  const bsModal    = new bootstrap.Modal(modalEl);
+
+const show = el => el && el.classList.remove('d-none');
+const hide = el => el && el.classList.add('d-none');
+
+function initCloseoutModal() {
+  // --- one-time guard to prevent duplicate wiring ---
+  if (window.__closeout_inited) return;
+  window.__closeout_inited = true;
+
+  // --- modal + static elements ---
+  const modalEl = $('#closeoutModal');
+  const bsModal = new bootstrap.Modal(modalEl);
+
   const idIn       = $('#closeout-entry-id');
   const lineSel    = $('#closeout-line');
   const machineSel = $('#closeout-machine');
@@ -1021,257 +997,255 @@ function initCloseoutModal(){
   const btnSave    = $('#closeout-save');
   const btnConfirm = $('#closeout-confirm');
 
-  // NEW: work-order UI
-  const woRow       = $('#wo-row');        // container (may not exist if not EAM)
-  const woInput     = $('#wo-input');
-  const woBadge     = $('#wo-display');
-  const woBadgeWrap = $('#wo-badge-wrap');
+  // Work Order bits (always-visible input UI)
+  const woRow      = document.getElementById('wo-row');
+  const woInput    = document.getElementById('wo-input');
+  const woGenBtn   = document.getElementById('wo-generate-btn');
+  const woSaveBtn  = document.getElementById('wo-save-btn');
+  const woClearBtn = document.getElementById('wo-clear-btn');
 
-  const woGenBtn    = $('#wo-generate-btn');
-  const woSaveBtn   = $('#wo-save-btn');
-  const woEditBtn   = $('#wo-edit-btn');
-  const woClearBtn  = $('#wo-clear-btn');
+  // --- helpers ---
+  const normalize = v => (v == null ? '' : String(v).trim());
+  const safeJSON  = (r) => r.json().catch(() => ({}));
+  const extractWO = (p, fallback='') =>
+    normalize(p?.work_order_id ?? p?.work_order_number ?? p?.work_order ?? p?.id ?? fallback);
 
-  const hide = el => el && el.classList.add('d-none');
-  const show = el => el && el.classList.remove('d-none');
-
-  const populate = (sel, list, simple=false, placeholder='— Select —') => {
+  const populate = (sel, list = [], asPlain = false, placeholder = '— Select —') => {
     sel.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
-    list.forEach(item=>{
-      sel.insertAdjacentHTML('beforeend',
-        simple
-          ? `<option>${item}</option>`
-          : `<option value="${item.code}">${item.name}</option>`
-      );
+    list.forEach(item => {
+      if (asPlain) {
+        sel.insertAdjacentHTML('beforeend', `<option>${normalize(item)}</option>`);
+      } else {
+        // expect {code, name}
+        const code = normalize(item.code);
+        const name = normalize(item.name);
+        sel.insertAdjacentHTML('beforeend', `<option value="${code}">${name}</option>`);
+      }
     });
   };
 
-  $$('.closeout-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      idIn.value = btn.dataset.entryId;
-      jsonFetch(URLS.edit, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': CSRF_TOKEN
-        },
-        body: JSON.stringify({ entry_id: idIn.value })
-      })
-      .then(data=>{
-        // lines & machines
-        populate(lineSel, data.lines, true, '— Select line —');
-        const setMachines = ()=>{
-          const blk = data.lines_data.find(l=>l.line===lineSel.value) || {operations:[]};
-          const machines = blk.operations.flatMap(op=>op.machines.map(m=>m.number));
-          populate(machineSel, machines, true, '— Select machine —');
-        };
-        lineSel.value = data.line;
-        setMachines();
-        machineSel.value = data.machine;
-        lineSel.onchange = ()=>{ setMachines(); machineSel.value = ''; };
+  // --- Work Order UI renderer (keeps input visible) ---
+  let savedWO = ''; // last saved/known value for current entry
 
-        // categories & subcategories
-        populate(catSel, data.categories, false, '— Select category —');
-        catSel.value = data.category_code ||
-          (data.categories.find(c=>c.name===data.category_name) || {}).code || '';
-        if (!catSel.value && data.category_name) {
-          [...catSel.options].forEach(opt=>{
-            if (opt.text.trim().toLowerCase() === data.category_name.trim().toLowerCase()) {
-              catSel.value = opt.value;
-            }
-          });
+  function renderWOUI() {
+    if (!IS_EAM || !woRow) return;
+    woRow.style.display = '';
+
+    const val = normalize(woInput?.value);
+    const empty = !val;
+
+    if (empty) {
+      show(woGenBtn);
+      hide(woSaveBtn);
+      savedWO ? show(woClearBtn) : hide(woClearBtn);
+    } else {
+      hide(woGenBtn);
+      show(woSaveBtn);
+      show(woClearBtn);
+    }
+    if (woSaveBtn) woSaveBtn.disabled = (val === normalize(savedWO));
+  }
+
+  // --- attach WO button handlers (use .onclick to avoid stacking) ---
+  if (woGenBtn) {
+    woGenBtn.onclick = async () => {
+      woGenBtn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+        const res = await fetch(woUrl(idIn.value), { method: 'POST', credentials: 'same-origin', body: fd });
+        const payload = await safeJSON(res);
+        if (!res.ok || payload.ok === false) {
+          throw new Error(payload.message || `Failed to generate work order (HTTP ${res.status})`);
         }
-        const setSubcats = ()=>{
-          const scs = data.subcategories
-            .filter(s=>s.parent===catSel.value)
-            .map(s=>({ code: s.code, name: s.name }));
-          if (data.subcategory_code === 'NOTSELECTED') {
-            scs.unshift({ code: 'NOTSELECTED', name: 'Not Selected' });
-          }
-          populate(subcatSel, scs, false, '— Select subcategory —');
-        };
-        setSubcats();
-        subcatSel.value = data.subcategory_code || '';
-        catSel.onchange = ()=>{ setSubcats(); subcatSel.value = ''; };
+        const newId = extractWO(payload, '');
+        alert(payload.message || 'Work order generated.');
+        savedWO = newId;
+        if (woInput) woInput.value = savedWO;
+        renderWOUI();
+      } catch (e) {
+        alert(`Could not generate work order: ${e.message || e}`);
+      } finally {
+        woGenBtn.disabled = false;
+      }
+    };
+  }
 
-        // start values
-        startDate.value = data.start_date;
-        startTime.value = data.start_time;
-        origComm.value  = data.comment;
-
-        // close defaults
-        closeDate.value = nowISODate();
-        closeTime.value = nowISOTime();
-        closeComm.value = '';
-
-        // labour checkboxes
-        $$('.closeout-labour-checkbox').forEach(cb=>cb.checked = false);
-        (data.labour_types || []).forEach(c=>{
-          const cb = $(`#closeout-labour-${c}`);
-          if (cb) cb.click();
+  if (woSaveBtn) {
+    woSaveBtn.onclick = async () => {
+      const value = normalize(woInput?.value);
+      if (!value) return alert('Work order is required.');
+      try {
+        const res = await fetch(`/plant/downtime/${idIn.value}/workorder/set/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ work_order_id: value })
         });
+        const payload = await safeJSON(res);
+        if (!res.ok || payload.ok === false) throw new Error(payload.message || `HTTP ${res.status}`);
+        savedWO = extractWO(payload, value);
+        if (woInput) woInput.value = savedWO;
+        renderWOUI();
+      } catch (e) {
+        alert(`Could not save work order: ${e.message || e}`);
+      }
+    };
+  }
 
-        // ---------- Work Order UI (robust display + post) ----------
-        function renderWO(id, hasOnlyFlag=false){
-          if (!IS_EAM || !woRow) return;
+  if (woClearBtn) {
+    woClearBtn.onclick = async () => {
+      if (!confirm('Clear the saved work order from this event?')) return;
+      try {
+        const res = await fetch(`/plant/downtime/${idIn.value}/workorder/clear/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': CSRF_TOKEN }
+        });
+        const payload = await safeJSON(res);
+        if (!res.ok || payload.ok === false) throw new Error(payload.message || `HTTP ${res.status}`);
+        savedWO = '';
+        if (woInput) woInput.value = '';
+        renderWOUI();
+      } catch (e) {
+        alert(`Could not clear work order: ${e.message || e}`);
+      }
+    };
+  }
 
-          woRow.style.display = '';
+  if (woInput) {
+    woInput.oninput = renderWOUI; // live toggle
+  }
 
-          const hasSaved = Boolean(id || hasOnlyFlag);
+  // --- event delegation: open modal when any .closeout-btn is clicked ---
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.closeout-btn');
+    if (!btn) return;
 
-          if (hasSaved) {
-            // Saved mode: show badge + Edit/Clear; hide input Save/Generate
-            woBadge.textContent = id ? `WO #${id}` : 'WO created';
-            show(woBadgeWrap);
+    // Load record
+    idIn.value = btn.dataset.entryId;
 
-            hide(woGenBtn);
-            hide(woSaveBtn);
-            hide(woInput);      // collapse input in saved mode
-            show(woEditBtn);
-            show(woClearBtn);
+    jsonFetch(URLS.edit, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ entry_id: idIn.value })
+    })
+    .then((data) => {
+      // ----- Lines & Machines -----
+      populate(lineSel, data.lines || [], true, '— Select line —');
 
-            // stash value on the badge so Edit can restore
-            woBadge.dataset.woValue = id || '';
-          } else {
-            // Input mode: input visible; show Generate when empty; show Save when typed
-            hide(woBadgeWrap);
-            show(woInput);
-            woInput.value = woInput.value || ''; // keep if coming from Edit
+      const setMachines = () => {
+        const blk = (data.lines_data || []).find(l => normalize(l.line) === normalize(lineSel.value)) || { operations: [] };
+        const machines = blk.operations?.flatMap(op => (op.machines || []).map(m => m.number)) || [];
+        populate(machineSel, machines, true, '— Select machine —');
+      };
 
-            const toggleButtons = () => {
-              const empty = !woInput.value.trim();
-              if (empty) { show(woGenBtn); hide(woSaveBtn); }
-              else       { hide(woGenBtn); show(woSaveBtn); }
-              hide(woEditBtn);
-              hide(woClearBtn);
-            };
+      lineSel.value = normalize(data.line);
+      setMachines();
+      machineSel.value = normalize(data.machine);
+      lineSel.onchange = () => { setMachines(); machineSel.value = ''; };
 
-            toggleButtons();
-            woInput.oninput = toggleButtons;
+      // ----- Categories & Subcategories -----
+      populate(catSel, data.categories || [], false, '— Select category —');
+
+      // Try to set by code, fallback to name
+      catSel.value =
+        normalize(data.category_code) ||
+        (data.categories || []).find(c => normalize(c.name).toLowerCase() === normalize(data.category_name).toLowerCase())?.code ||
+        '';
+
+      if (!catSel.value && data.category_name) {
+        [...catSel.options].forEach(opt => {
+          if (normalize(opt.text).toLowerCase() === normalize(data.category_name).toLowerCase()) {
+            catSel.value = opt.value;
           }
+        });
+      }
+
+      const setSubcats = () => {
+        const parent = normalize(catSel.value);
+        const scs = (data.subcategories || [])
+          .filter(s => normalize(s.parent) === parent)
+          .map(s => ({ code: s.code, name: s.name }));
+        if (normalize(data.subcategory_code) === 'NOTSELECTED') {
+          scs.unshift({ code: 'NOTSELECTED', name: 'Not Selected' });
         }
+        populate(subcatSel, scs, false, '— Select subcategory —');
+      };
 
-        // Accept several possible keys from the edit payload
-        const existingWO =
-          data.work_order_id ??
-          data.work_order_number ??
-          data.work_order ??
-          data.workorder_id ?? null;
+      setSubcats();
+      subcatSel.value = normalize(data.subcategory_code);
+      catSel.onchange = () => { setSubcats(); subcatSel.value = ''; };
 
-        // Initial render
-        renderWO(existingWO, Boolean(data.has_work_order) && !existingWO);
+      // ----- Start & Original Comment -----
+      startDate.value = normalize(data.start_date);
+      startTime.value = normalize(data.start_time);
+      origComm.value  = normalize(data.comment);
 
-        // Handlers
-        woGenBtn && (woGenBtn.onclick = async () => {
-          woGenBtn.disabled = true;
-          try {
-            const fd = new FormData();
-            fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
-            const res = await fetch(woUrl(idIn.value), { method: 'POST', credentials: 'same-origin', body: fd });
-            let payload = null; try { payload = await res.json(); } catch {}
-            if (!res.ok || (payload && payload.ok === false)) {
-              const msg = (payload && payload.message) ? payload.message : `Failed to generate work order (HTTP ${res.status}).`;
-              alert(msg); return;
-            }
-            const newId = (payload && (payload.work_order_id || payload.work_order_number || payload.id)) || null;
-            alert((payload && payload.message) || 'Work order generated.');
-            renderWO(newId, !newId);
-          } catch (e) {
-            alert(`Could not generate work order: ${e?.message || e}`);
-          } finally {
-            woGenBtn.disabled = false;
-          }
-        });
+      // ----- Close defaults -----
+      closeDate.value = nowISODate();
+      closeTime.value = nowISOTime();
+      closeComm.value = '';
 
-        woSaveBtn && (woSaveBtn.onclick = async () => {
-          const value = (woInput.value || '').trim();
-          if (!value) return alert('Work order is required.');
-          try {
-            const res = await fetch(`/plant/downtime/${idIn.value}/workorder/set/`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-              body: JSON.stringify({ work_order_id: value })
-            });
-            const payload = await res.json().catch(()=> ({}));
-            if (!res.ok || payload.ok === false) throw new Error(payload.message || `HTTP ${res.status}`);
-            renderWO(payload.work_order_id || value, true);
-          } catch (e) {
-            alert(`Could not save work order: ${e.message || e}`);
-          }
-        });
-
-        woEditBtn && (woEditBtn.onclick = () => {
-          const current = woBadge?.dataset?.woValue || '';
-          if (woInput) woInput.value = current;
-          // switch back to input mode; Save will re-post
-          renderWO(null, false);
-        });
-
-        woClearBtn && (woClearBtn.onclick = async () => {
-          if (!confirm('Clear the saved work order from this event?')) return;
-          try {
-            const res = await fetch(`/plant/downtime/${idIn.value}/workorder/clear/`, {
-              method: 'POST',
-              headers: { 'X-CSRFToken': CSRF_TOKEN }
-            });
-            const payload = await res.json().catch(()=> ({}));
-            if (!res.ok || payload.ok === false) throw new Error(payload.message || `HTTP ${res.status}`);
-            // back to blank-input mode
-            if (woInput) woInput.value = '';
-            renderWO(null, false);
-          } catch (e) {
-            alert(`Could not clear work order: ${e.message || e}`);
-          }
-        });
-        
-        // ---------- end Work Order UI ----------
-
-
-        bsModal.show();
-      })
-      .catch(()=>{
-        alert('Could not load event details.');
+      // ----- Labour checkboxes -----
+      $$('.closeout-labour-checkbox').forEach(cb => cb.checked = false);
+      (data.labour_types || []).forEach(c => {
+        const cb = $(`#closeout-labour-${c}`);
+        if (cb && !cb.checked) cb.click(); // use click to trigger any listeners
       });
+
+      // ----- Work Order UI (prefill + render) -----
+      savedWO = extractWO(data, '');
+      if (IS_EAM && woRow) {
+        woRow.style.display = '';
+        if (woInput) woInput.value = savedWO;
+        renderWOUI();
+      } else if (woRow) {
+        // hide if not EAM
+        woRow.style.display = 'none';
+      }
+
+      // show the modal
+      bsModal.show();
+    })
+    .catch(() => {
+      alert('Could not load event details.');
     });
   });
 
-  btnSave.onclick    = ()=> doUpdate(false);
-  btnConfirm.onclick = ()=> doUpdate(true);
+  // --- Save / Confirm handlers (overwrite each time, no stacking) ---
+  btnSave.onclick = () => doUpdate(false);
+  btnConfirm.onclick = () => doUpdate(true);
 
-  function gatherPayload(){
+  function gatherPayload() {
     return {
       entry_id    : idIn.value,
       line        : lineSel.value,
       machine     : machineSel.value,
       category    : catSel.value,
       subcategory : subcatSel.value,
-      start_at    : `${startDate.value} ${startTime.value}`,
-      comment     : origComm.value.trim(),
+      start_at    : `${normalize(startDate.value)} ${normalize(startTime.value)}`,
+      comment     : normalize(origComm.value),
       labour_types: [...$$('.closeout-labour-checkbox')]
-                      .filter(cb=>cb.checked)
-                      .map(cb=>cb.value)
+                      .filter(cb => cb.checked)
+                      .map(cb => cb.value)
     };
   }
 
-  function doUpdate(andClose){
+  function doUpdate(andClose) {
     if (!catSel.value || !subcatSel.value) {
       alert('Pick category & subcategory');
       return;
     }
-    if (andClose && !closeComm.value.trim()) {
+    if (andClose && !normalize(closeComm.value)) {
       alert('Close-out comment required');
       return;
     }
 
     jsonFetch(URLS.update, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF_TOKEN
-      },
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
       body: JSON.stringify(gatherPayload())
     })
-    .then(()=>{
+    .then(() => {
       if (!andClose) {
         bsModal.hide();
         location.reload();
@@ -1279,20 +1253,17 @@ function initCloseoutModal(){
       }
       return jsonFetch(URLS.closeout, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': CSRF_TOKEN
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
         body: JSON.stringify({
-          entry_id         : idIn.value,
-          closeout         : `${closeDate.value} ${closeTime.value}`,
-          closeout_comment : closeComm.value.trim()
+          entry_id        : idIn.value,
+          closeout        : `${normalize(closeDate.value)} ${normalize(closeTime.value)}`,
+          closeout_comment: normalize(closeComm.value)
         })
       });
     })
-    .then(()=>{ location.reload(); })
-    .catch(e=>{
-      if (e.status === 403) alert('All participants must leave first');
+    .then(() => { if (andClose) location.reload(); })
+    .catch((e) => {
+      if (e?.status === 403) alert('All participants must leave first');
       else alert('Save / close-out failed. Did you choose a subcategory? Is the closeout time at least 1 minute past the entry time?');
     });
   }
