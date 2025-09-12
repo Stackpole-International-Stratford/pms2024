@@ -76,7 +76,14 @@
           <td><div class="cell"><div class="lbl">Date</div><div class="val">{{ tpc.date_requested }}</div></div></td>
           <td><div class="cell"><div class="lbl">TPC Created By</div><div class="val">{{ tpc.issuer_name|default:"—" }}</div></div></td>
           <td><div class="cell"><div class="lbl">Desc of Deviation</div><div class="val">{{ tpc.reason|default:"—" }}</div></div></td>
-          <td><div class="cell"><div class="lbl">Expiration</div><div class="val">{{ tpc.expiration_date|default:"—" }}</div></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Expiration</div>
+              <div class="val">
+                {{ tpc.expiration_date|date:"M d, Y"|default:"—" }}
+              </div>
+            </div>
+          </td>
         </tr>
       </table>
 
@@ -88,12 +95,6 @@
             <div class="cell">
               <div class="lbl">Process Initiating TPC</div>
               <div class="val">{{ tpc.process|default:"—" }}</div>
-            </div>
-          </td>
-          <td>
-            <div class="cell">
-              <div class="lbl">Feature as per process sheet</div>
-              <div class="val">{{ tpc.feature|default:"—" }}</div>
             </div>
           </td>
           <td>
@@ -110,6 +111,12 @@
               <div class="val">
                 {% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}
               </div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Feature as per process sheet</div>
+              <div class="val">{{ tpc.feature|default:"—" }}</div>
             </div>
           </td>
         </tr>
