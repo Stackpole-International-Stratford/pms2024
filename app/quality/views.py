@@ -1617,7 +1617,7 @@ def _fmt_dt(dt):
 
 
 # -------------------------------------------------------------------
-# LIST PAGE (first page rendered server-side) — includes repeat_deviation
+# LIST PAGE (first page rendered server-side) —
 # -------------------------------------------------------------------
 @login_required(login_url="/login/")
 def tpc_request(request):
@@ -1659,8 +1659,6 @@ def tpc_request(request):
             "parts": ", ".join(t.parts) if t.parts else "—",
             "reason": t.reason,
             "process": t.process,
-            "supplier_issue": "Yes" if t.supplier_issue else "No",
-            "repeat_deviation": "Yes" if t.repeat_deviation else "No",  # NEW
             "machines": ", ".join(t.machines) if t.machines else "—",
             "expiration_date": _fmt_dt(t.expiration_date),
             "approved": t.approved,
@@ -1685,7 +1683,7 @@ def tpc_request(request):
 
 
 # -------------------------------------------------------------------
-# LOAD MORE API — includes repeat_deviation
+# LOAD MORE API
 # -------------------------------------------------------------------
 @login_required(login_url="/login/")
 def tpc_request_load_more(request):
@@ -1730,8 +1728,6 @@ def tpc_request_load_more(request):
             "parts": ", ".join(t.parts) if t.parts else "—",
             "reason": t.reason,
             "process": t.process,
-            "supplier_issue": "Yes" if t.supplier_issue else "No",
-            "repeat_deviation": "Yes" if t.repeat_deviation else "No",  # NEW
             "machines": ", ".join(t.machines) if t.machines else "—",
             "expiration_date": _fmt_dt(t.expiration_date),
             "approved": t.approved,
@@ -1754,7 +1750,7 @@ def tpc_request_load_more(request):
 
 
 # -------------------------------------------------------------------
-# CREATE — parse/save repeat_deviation
+# CREATE
 # -------------------------------------------------------------------
 @login_required(login_url='/login/')
 def tpc_request_create(request):
@@ -1767,8 +1763,6 @@ def tpc_request_create(request):
         parts                = request.POST.getlist("parts")
         reason               = request.POST.get("reason", "").strip()
         process              = request.POST.get("process", "").strip()
-        supplier_issue       = bool(request.POST.get("supplier_issue"))
-        repeat_deviation     = bool(request.POST.get("repeat_deviation"))  # NEW
         machines             = request.POST.getlist("machines")
         reason_note          = request.POST.get("reason_note", "").strip()
         feature              = request.POST.get("feature", "").strip()
@@ -1782,8 +1776,6 @@ def tpc_request_create(request):
         print("  parts:", parts)
         print("  reason:", reason)
         print("  process:", process)
-        print("  supplier_issue:", supplier_issue)
-        print("  repeat_deviation:", repeat_deviation)  # NEW log
         print("  machines:", machines)
         print("  reason_note:", reason_note)
         print("  feature:", feature)
@@ -1792,7 +1784,7 @@ def tpc_request_create(request):
         print("  changed_to:", changed_to)
         print("  qe_risk_assessment:", qe_risk_assessment)
 
-        # Validation (QE + repeat_deviation are optional booleans/strings)
+        # Validation
         missing = []
         if not issuer_name:        missing.append("Issuer name")
         if not parts:              missing.append("At least one part")
@@ -1833,8 +1825,6 @@ def tpc_request_create(request):
                 parts=parts,                      # JSON list
                 reason=reason,
                 process=process,
-                supplier_issue=supplier_issue,
-                repeat_deviation=repeat_deviation,  # NEW
                 machines=machines,                # JSON list
                 reason_note=reason_note,
                 feature=feature,
@@ -1866,7 +1856,7 @@ def tpc_request_create(request):
 
 
 # -------------------------------------------------------------------
-# EDIT — parse/save repeat_deviation
+# EDIT
 # -------------------------------------------------------------------
 @login_required(login_url='/login/')
 def tpc_request_edit(request, pk):
@@ -1884,8 +1874,6 @@ def tpc_request_edit(request, pk):
         parts                = request.POST.getlist("parts")
         reason               = request.POST.get("reason", "").strip()
         process              = request.POST.get("process", "").strip()
-        supplier_issue       = bool(request.POST.get("supplier_issue"))
-        repeat_deviation     = bool(request.POST.get("repeat_deviation"))  # NEW
         machines             = request.POST.getlist("machines")
         reason_note          = request.POST.get("reason_note", "").strip()
         feature              = request.POST.get("feature", "").strip()
@@ -1899,8 +1887,6 @@ def tpc_request_edit(request, pk):
         print("  parts:", parts)
         print("  reason:", reason)
         print("  process:", process)
-        print("  supplier_issue:", supplier_issue)
-        print("  repeat_deviation:", repeat_deviation)  # NEW log
         print("  machines:", machines)
         print("  reason_note:", reason_note)
         print("  feature:", feature)
@@ -1909,7 +1895,7 @@ def tpc_request_edit(request, pk):
         print("  changed_to:", changed_to)
         print("  qe_risk_assessment:", qe_risk_assessment)
 
-        # Validation (QE + repeat_deviation are optional)
+        # Validation
         missing = []
         if not issuer_name:        missing.append("Issuer name")
         if not parts:              missing.append("At least one part")
@@ -1951,8 +1937,6 @@ def tpc_request_edit(request, pk):
             tpc.parts               = parts
             tpc.reason              = reason
             tpc.process             = process
-            tpc.supplier_issue      = supplier_issue
-            tpc.repeat_deviation    = repeat_deviation  # NEW
             tpc.machines            = machines
             tpc.reason_note         = reason_note
             tpc.feature             = feature
@@ -2017,7 +2001,6 @@ def _render_tpc_initiated_html(tpc) -> str:
     local_exp = timezone.localtime(tpc.expiration_date) if timezone.is_aware(tpc.expiration_date) else tpc.expiration_date
     approver_names = [a.user.get_full_name() or a.user.username for a in tpc.approvals.all()]
     approvals_block = ", ".join(approver_names) if approver_names else "—"
-    supplier_issue = "Yes" if tpc.supplier_issue else "No"
 
     # App links (adjust base to your env or pull from settings)
     open_url = f"http://10.4.1.234/quality/tpc-requests/{tpc.pk}/edit/"
@@ -2069,10 +2052,6 @@ def _render_tpc_initiated_html(tpc) -> str:
               <tr style="background-color:#f0f4f8;">
                 <td style="padding:8px; font-weight:bold;">Process</td>
                 <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
-                <td style="padding:8px;">{supplier_issue}</td>
               </tr>
               <tr style="background-color:#f0f4f8;">
                 <td style="padding:8px; font-weight:bold;">Machines</td>
@@ -2204,8 +2183,6 @@ def _render_tpc_html(tpc) -> str:
     approver_names = [a.user.get_full_name() or a.user.username for a in tpc.approvals.all()]
     approvals_block = ", ".join(approver_names) if approver_names else "—"
 
-    supplier_issue = "Yes" if tpc.supplier_issue else "No"
-
     pdf_url = f"http://10.4.1.234/quality/tpc/{tpc.pk}/pdf/"
 
     return f"""
@@ -2255,10 +2232,6 @@ def _render_tpc_html(tpc) -> str:
                     <tr style="background-color:#f0f4f8;">
                     <td style="padding:8px; font-weight:bold;">Process</td>
                     <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
-                    </tr>
-                    <tr>
-                    <td style="padding:8px; font-weight:bold;">Supplier Issue</td>
-                    <td style="padding:8px;">{supplier_issue}</td>
                     </tr>
                     <tr style="background-color:#f0f4f8;">
                     <td style="padding:8px; font-weight:bold;">Machines</td>

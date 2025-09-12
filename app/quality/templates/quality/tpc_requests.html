@@ -26,7 +26,6 @@
           <th>Parts</th>
           <th>Desc of Deviation</th>
           <th>Process</th>
-          <th>Supplier<br>Issue</th>
           <th>Machines</th>
           <th>Expiration Date</th>
           <th>Approved?</th>
@@ -51,7 +50,6 @@
       data-part="{{ t.parts }}"
       data-reason="{{ t.reason }}"
       data-process="{{ t.process }}"
-      data-supplier-issue="{{ t.supplier_issue }}"
       data-machine-number="{{ t.machines }}"
       data-approved="{{ t.approved|yesno:'Yes,No' }}"
       data-approvals-got="{{ t.approvals_got }}"
@@ -66,7 +64,6 @@
       <td title="{{ t.parts }}">{{ t.parts|default:"—"|slice:":15" }}</td>
       <td title="{{ t.reason }}">{{ t.reason|slice:":15" }}</td>
       <td title="{{ t.process }}">{{ t.process|slice:":15" }}</td>
-      <td>{{ t.supplier_issue }}</td>
       <td title="{{ t.machines }}">{{ t.machines|default:"—"|slice:":15" }}</td>
       <td title="{{ t.expiration_date }}">{{ t.expiration_date|slice:":15" }}</td>
       <td>
@@ -206,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
     tr.dataset.part = t.parts;
     tr.dataset.reason = t.reason;
     tr.dataset.process = t.process;
-    tr.dataset.supplierIssue = t.supplier_issue;
     tr.dataset.machineNumber = t.machines;
     tr.dataset.approved = t.approved ? 'Yes' : 'No';
     tr.dataset.approvalsGot = t.approvals_got;
@@ -225,7 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
       <td title="${(t.parts ?? '').toString()}">${t.parts ? t15(t.parts) : '—'}</td>
       <td title="${(t.reason ?? '').toString()}">${t15(t.reason)}</td>
       <td title="${(t.process ?? '').toString()}">${t15(t.process)}</td>
-      <td>${t.supplier_issue}</td>
       <td title="${(t.machines ?? '').toString()}">${t.machines ? t15(t.machines) : '—'}</td>
       <td title="${(t.expiration_date ?? '').toString()}">${t15(t.expiration_date)}</td>
       <td>${statusHtml}</td>

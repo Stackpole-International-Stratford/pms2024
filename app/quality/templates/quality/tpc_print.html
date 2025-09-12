@@ -80,31 +80,41 @@
         </tr>
       </table>
 
-      <!-- Row 2: Process / Supplier Issue + Repeat / Parts / Machines -->
+      <!-- Row 2: Process / Feature / Parts / Machines -->
       <table class="g4 h-sm">
         <colgroup><col><col><col><col></colgroup>
         <tr>
-          <td><div class="cell"><div class="lbl">Process Initiating TPC</div><div class="val">{{ tpc.process|default:"—" }}</div></div></td>
           <td>
             <div class="cell">
-              <div class="lbl">Supplier Issue || Repeat Deviation</div>
+              <div class="lbl">Process Initiating TPC</div>
+              <div class="val">{{ tpc.process|default:"—" }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Feature as per process sheet</div>
+              <div class="val">{{ tpc.feature|default:"—" }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Part Number(s)</div>
               <div class="val">
-                {{ tpc.supplier_issue|yesno:"Yes,No" }} || {{ tpc.repeat_deviation|yesno:"Yes,No" }}
+                {% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}
               </div>
             </div>
           </td>
-          <td><div class="cell"><div class="lbl">Part Number(s)</div><div class="val">{% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}</div></div></td>
-          <td><div class="cell"><div class="lbl">Machine(s)</div><div class="val">{% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}</div></div></td>
+          <td>
+            <div class="cell">
+              <div class="lbl">Machine(s)</div>
+              <div class="val">
+                {% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}
+              </div>
+            </div>
+          </td>
         </tr>
       </table>
 
-      <!-- Row 3: Feature -->
-      <table class="g2 h-md">
-        <colgroup><col><col></colgroup>
-        <tr>
-          <td><div class="cell"><div class="lbl">Feature as per process sheet</div><div class="val">{{ tpc.feature|default:"—" }}</div></div></td>
-        </tr>
-      </table>
 
       <!-- Row 4: QE Risk Assessment -->
       <table class="g2 h-md">
@@ -189,18 +199,12 @@
         </tr>
       </table>
 
-      <!-- Row 2: Process / Supplier Issue + Repeat / Parts / Machines -->
+      <!-- Row 2: Process / Parts / Machines -->
       <table class="g4 h-sm">
         <colgroup><col><col><col><col></colgroup>
         <tr>
           <td><div class="cell"><div class="lbl">Process</div><div class="val">{{ tpc.process|default:"—" }}</div></div></td>
           <td>
-            <div class="cell">
-              <div class="lbl">Supplier Issue / Repeat Deviation</div>
-              <div class="val">
-                {{ tpc.supplier_issue|yesno:"Yes,No" }} / {{ tpc.repeat_deviation|yesno:"Yes,No" }}
-              </div>
-            </div>
           </td>
           <td><div class="cell"><div class="lbl">Parts</div><div class="val">{% if tpc.parts %}{{ tpc.parts|join:", " }}{% else %}—{% endif %}</div></div></td>
           <td><div class="cell"><div class="lbl">Machines</div><div class="val">{% if tpc.machines %}{{ tpc.machines|join:", " }}{% else %}—{% endif %}</div></div></td>

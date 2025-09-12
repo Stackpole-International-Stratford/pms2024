@@ -290,8 +290,6 @@ class TPCRequest(models.Model):
     parts            = models.JSONField(default=list)
     reason           = models.CharField(max_length=200)
     process          = models.CharField(max_length=120)
-    supplier_issue   = models.BooleanField(default=False)
-    repeat_deviation = models.BooleanField(default=False)
     machines         = models.JSONField(default=list)
     reason_note      = models.TextField(blank=True)
     feature          = models.CharField(max_length=120, blank=True)

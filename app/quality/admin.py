@@ -75,11 +75,11 @@ class TPCRequestAdmin(admin.ModelAdmin):
     # ── list view ──
     list_display = (
         "id", "date_requested", "issuer_name", "parts_display",
-        "reason_short", "process", "supplier_issue",
+        "reason_short", "process",
         "machines_display", "approved", "approved_by", "approved_at",
     )
     list_filter = (
-        "supplier_issue", "approved", "process",
+        "approved", "process",
         "issuer_name",  # removed: 'part' (not a field anymore)
         # keep 'feature' if it exists as a CharField; otherwise remove
         "feature",
@@ -98,7 +98,7 @@ class TPCRequestAdmin(admin.ModelAdmin):
     base_fields = (
         "date_requested", "issuer_name",
         # use the new field names here
-        "parts", "reason", "process", "supplier_issue",
+        "parts", "reason", "process",
         "machines", "reason_note", "feature", "current_process", "changed_to",
         "expiration_date",
     )
