@@ -20,6 +20,10 @@ RUN apk del .tmp
 RUN mkdir /app
 COPY ./app /app
 WORKDIR /app
+
+# collect static files at build time
+RUN python manage.py collectstatic --noinput
+
 COPY ./scripts /scripts
 RUN chmod +x /scripts/*
 

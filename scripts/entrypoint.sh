@@ -2,7 +2,8 @@
 
 set -e
 
-python manage.py collectstatic --noinput
+# Remove this to see if we can put it in Dockerfile instead. This being done at build time rather than runtime will make the deployment have less downtime
+# python manage.py collectstatic --noinput
 
 # uwsgi --socket :8000 --master --enable-threads --module pms.wsgi 
 
