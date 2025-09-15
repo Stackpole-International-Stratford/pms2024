@@ -9,8 +9,10 @@ COPY ./trusted-certs.pem /usr/local/share/ca-certificates/
 RUN cat /usr/local/share/ca-certificates/trusted-certs.pem >> /etc/ssl/certs/ca-certificates.crt
 
 COPY ./requirements.txt /requirements.txt
-RUN apk add --no-cache mariadb-connector-c openldap
-RUN apk add --update --no-cache --virtual .tmp gcc libc-dev linux-headers mariadb-connector-c-dev build-base openldap-dev python3-dev
+RUN apk add --no-cache mariadb-connector-c openldap pango cairo gdk-pixbuf libffi shared-mime-info fontconfig ttf-dejavu
+# Build the font cache manually because Alpine might skip the automatic step to refresh the list of fonts after installing ttf-dejavu. prevents segfaults from weasyprint/pango looking for fonts
+RUN fc-cache -f
+RUN apk add --update --no-cache --virtual .tmp gcc libc-dev linux-headers mariadb-connector-c-dev build-base openldap-dev python3-dev cairo-dev pango-dev gdk-pixbuf-dev libffi-dev
 RUN python -m pip install --upgrade pip
 RUN pip install -r /requirements.txt
 RUN apk del .tmp

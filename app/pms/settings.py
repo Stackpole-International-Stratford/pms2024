@@ -428,3 +428,8 @@ JAZZMIN_SETTINGS = {
     "login_logo": None,
     "login_logo_dark": None,
 }
+
+
+FLASK_EMAILER_URL = 'http://10.4.1.234:5005/send-email'
+# settings.py
+TPC_PAGE_SIZE = 100  # control initial & "load more" size here

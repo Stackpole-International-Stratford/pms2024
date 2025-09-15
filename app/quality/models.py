@@ -3,6 +3,11 @@ from plant.models.setupfor_models import Part  # Importing the Part model
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from plant.models.setupfor_models import Asset
+from django.conf import settings
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.db.models import JSONField
+
 
 class SupervisorAuthorization(models.Model):
     supervisor_id = models.CharField(max_length=256)
@@ -266,3 +271,110 @@ class ScrapSubmission(models.Model):
             f"{self.operation_name}/{self.category_name} "
             f"(qty {self.quantity})"
         )
+    
+
+
+
+
+
+# ==========================================================================
+# ==========================================================================
+# ======================= TPC Requests =====================================
+# ==========================================================================
+# ==========================================================================
+
+
+class TPCRequest(models.Model):
+    date_requested   = models.DateTimeField()
+    issuer_name      = models.CharField(max_length=120)
+    parts            = models.JSONField(default=list)
+    reason           = models.CharField(max_length=200)
+    process          = models.CharField(max_length=120)
+    machines         = models.JSONField(default=list)
+    reason_note      = models.TextField(blank=True)
+    feature          = models.CharField(max_length=120, blank=True)
+    current_process  = models.TextField(blank=True)
+    changed_to       = models.TextField(blank=True)
+    expiration_date  = models.DateTimeField()
+
+    # NEW FIELD (optional)
+    qe_risk_assessment = models.TextField(blank=True)
+
+    # approvals
+    approved         = models.BooleanField(default=False)
+    approved_by      = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_tpc'
+    )
+    approved_at      = models.DateTimeField(null=True, blank=True)
+
+    # NEW: soft-delete flag
+    rejected         = models.BooleanField(default=False, db_index=True)
+
+    class Meta:
+        ordering = ["-date_requested"]
+
+    def __str__(self):
+        return f"TPC #{self.pk} – {self.issuer_name} on {self.date_requested}"
+
+    # ------- added back below -------
+
+    def approver_queryset(self):
+        return User.objects.filter(is_active=True, groups__name="tpc_approvers").distinct()
+
+    def approvals_count(self):
+        return self.approvals.count()
+
+    def required_approvals_count(self):
+        return self.approver_queryset().count()
+
+    def has_user_approved(self, user):
+        return self.approvals.filter(user=user).exists()
+
+    def approve(self, user):
+        if self.rejected:
+            raise PermissionError("This TPC has been rejected and cannot be approved.")
+        if not user.groups.filter(name="tpc_approvers").exists():
+            raise PermissionError("User is not allowed to approve TPCs.")
+
+        # create (idempotent) approval record
+        from .models import TPCApproval  # local import to avoid circulars if needed
+        TPCApproval.objects.get_or_create(tpc=self, user=user)
+
+        if self.approvals_count() >= self.required_approvals_count() and self.required_approvals_count() > 0:
+            self.approved = True
+            self.approved_by = user
+            self.approved_at = timezone.now()
+            self.save(update_fields=["approved", "approved_by", "approved_at"])
+
+
+
+class TPCApproval(models.Model):
+    tpc = models.ForeignKey(TPCRequest, related_name="approvals", on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    approved_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ("tpc", "user")  # one approval per user per TPC
+
+    def __str__(self):
+        return f"Approval: TPC #{self.tpc_id} by {self.user}"
+
+
+# models.py
+class VerbalApproval(models.Model):
+    tpc = models.ForeignKey(TPCRequest, related_name="verbal_approvals", on_delete=models.CASCADE)
+    issuer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  # who logged it
+    issuer_username = models.CharField(max_length=150, db_index=True)  # NEW: denormalized username
+
+    approver_name = models.CharField(max_length=200)
+    approver_phone = models.CharField(max_length=50)
+    approver_response = models.TextField()
+    approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"VerbalApproval for TPC #{self.tpc_id} by {self.approver_name}"
+

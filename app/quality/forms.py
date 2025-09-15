@@ -1,6 +1,11 @@
 # quality/forms.py
 from django import forms
 from .models import Feat, QualityPDFDocument, RedRabbitType
+from plant.models.setupfor_models import Part, Asset
+from .models import TPCRequest
+from .models import RedRabbitType
+from .models import QualityPDFDocument
+
 from plant.models.setupfor_models import Part
 from django.contrib import admin
 from .models import ScrapSystemOperation, Program
@@ -13,9 +18,6 @@ class FeatForm(forms.ModelForm):
         fields = ['part', 'name', 'order', 'alarm']  # Include the alarm field
 
 
-from django import forms
-from .models import QualityPDFDocument
-from plant.models.setupfor_models import Part
 
 class PDFUploadForm(forms.ModelForm):
     associated_parts = forms.ModelMultipleChoiceField(
@@ -34,10 +36,6 @@ class PDFUploadForm(forms.ModelForm):
 
 
 
-
-from django import forms
-from .models import RedRabbitType
-from plant.models.setupfor_models import Part
 
 class RedRabbitTypeForm(forms.ModelForm):
     class Meta:

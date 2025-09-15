@@ -1,0 +1,45 @@
+{% extends "parent.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Verbal Approval for TPC #{{ tpc.pk }}</h3>
+
+  {% if form_error %}
+  <div class="alert alert-danger">{{ form_error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label" for="id_approver_name">Approver Name (who you called)</label>
+        <input type="text" id="id_approver_name" name="approver_name" class="form-control" required>
+
+        <!-- Reference list (non-clickable) -->
+        <div class="mt-2 small text-muted">
+            <div>One of...</div>
+            <div><strong>First try Barb Zaba (Quality Manager)</strong> 647-968-5702</div>
+            <div><strong>Secondly try, Pawel Mlynarski (Engineering Manager)</strong> 519-755-7285</div>
+            <div><strong>Finally try, Dave Milne (Production Manager)</strong> 226-921-5208</div>
+        </div>
+        </div>
+
+    <div class="mb-3">
+      <label class="form-label">Phone Number (who you called)</label>
+      <input type="text" name="approver_phone" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Response / Conditions</label>
+      <textarea name="approver_response" rows="3" class="form-control" required></textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Approved?</label>
+      <select name="approved" class="form-select" required>
+        <option value="">Select...</option>
+        <option value="true">Yes</option>
+        <option value="">No</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-warning">Submit Verbal Approval</button>
+    <a href="{% url 'tpc_request_list' %}" class="btn btn-outline-dark">Cancel</a>
+  </form>
+</div>
+{% endblock %}
