@@ -103,3 +103,14 @@ class PayCodeGroupAdmin(admin.ModelAdmin):
     def mark_unscheduled(self, request, queryset):
         updated = queryset.update(is_scheduled=False)
         self.message_user(request, f"Updated {updated} row(s) to Unscheduled.")
+
+
+
+# NEW: admin for the shift-rotation mapping table
+@admin.register(ShiftRotationMap)
+class ShiftRotationMapAdmin(admin.ModelAdmin):
+    list_display  = ("rotation_text", "shift")
+    list_editable = ("shift",)
+    search_fields = ("rotation_text", "shift")
+    list_filter   = ("shift",)
+    ordering      = ("rotation_text",)
