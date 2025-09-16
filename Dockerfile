@@ -21,6 +21,8 @@ RUN mkdir /app
 COPY ./app /app
 WORKDIR /app
 
+RUN pip uninstall -y zopfli
+RUN pip uninstall -y Brotli
 # collect static files at build time
 RUN python manage.py collectstatic --noinput
 
