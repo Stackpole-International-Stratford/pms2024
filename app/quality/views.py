@@ -23,6 +23,21 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_http_methods
+import requests
+from django.conf import settings
+from django.views.decorators.http import require_GET
+from plant.models.email_models import EmailCampaign
+from .models import *
+from django.db.models import Exists, OuterRef
+from django.core import serializers
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.html import strip_tags
+from django.db import transaction
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden, Http404
+from django.shortcuts import redirect, render
+from .models import TPCRequest
 from django.urls import reverse
 
 
@@ -1560,3 +1575,909 @@ def get_categories(request):
         return JsonResponse({'results': list(cats)})
     except ScrapSystemOperation.DoesNotExist:
         return JsonResponse({'results': []})
+    
+
+
+
+
+
+
+
+
+
+
+
+# =====================================================================
+# =====================================================================
+# ============================ TPCs  ==================================
+# =====================================================================
+# =====================================================================
+
+
+# ----- unchanged helper -----
+def _fmt_dt(dt):
+    """
+    Return a consistent string for datetimes or dates.
+    - If dt is timezone-aware: convert to local time and format 'YYYY-MM-DD HH:MM'
+    - If dt is naive datetime: make aware (current TZ) then format
+    - If dt is a date: format 'YYYY-MM-DD'
+    - If anything else: str(dt)
+    """
+    if dt is None:
+        return "—"
+
+    try:
+        # datetimes
+        if hasattr(dt, "tzinfo"):
+            # datetime-like
+            if timezone.is_naive(dt):
+                try:
+                    dt = timezone.make_aware(dt)
+                except Exception:
+                    # Fall back to str
+                    return getattr(dt, "strftime", lambda *_: str(dt))("%Y-%m-%d %H:%M")
+            try:
+                return timezone.localtime(dt).strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                return getattr(dt, "strftime", lambda *_: str(dt))("%Y-%m-%d %H:%M")
+
+        # dates
+        return getattr(dt, "strftime", lambda *_: str(dt))("%Y-%m-%d")
+    except Exception:
+        return str(dt)
+
+
+# -------------------------------------------------------------------
+# LIST PAGE (first page rendered server-side) —
+# -------------------------------------------------------------------
+@login_required(login_url="/login/")
+def tpc_request(request):
+    """
+    Render the TPC list page with the first page of rows.
+    Adds has_more_first_page so the frontend can decide whether to show the Load More button immediately.
+    """
+    page_size = settings.TPC_PAGE_SIZE
+    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+
+    base_qs = (
+        TPCRequest.objects
+        .filter(rejected=False)
+        .order_by("-date_requested")
+        .annotate(
+            user_has_approved=Exists(
+                TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
+            )
+        )
+        .prefetch_related("approvals", "verbal_approvals")
+    )
+
+    # Fetch one extra to detect "has more"
+    window = list(base_qs[: page_size + 1])
+    first_page = window[:page_size]
+    has_more_first_page = len(window) > page_size
+
+    rows = []
+    build_abs = request.build_absolute_uri
+
+    for t in first_page:
+        has_verbal = t.verbal_approvals.all().exists()
+        pdf_url = build_abs(f"/quality/tpc/{t.pk}/pdf/") if (t.approved or has_verbal) else None
+
+        rows.append({
+            "pk": t.pk,
+            "date_requested": _fmt_dt(t.date_requested),
+            "issuer_name": t.issuer_name,
+            "parts": ", ".join(t.parts) if t.parts else "—",
+            "reason": t.reason,
+            "process": t.process,
+            "machines": ", ".join(t.machines) if t.machines else "—",
+            "expiration_date": _fmt_dt(t.expiration_date),
+            "approved": t.approved,
+            "has_verbal": has_verbal,
+            "approvals_got": t.approvals.count(),
+            "approvals_req": t.required_approvals_count(),
+            "approvers": ", ".join(
+                (a.user.get_full_name() or a.user.username) for a in t.approvals.all()
+            ) or "—",
+            "user_has_approved": t.user_has_approved,
+            "pdf_url": pdf_url,
+            "qe_risk_assessment": t.qe_risk_assessment or "—",
+        })
+
+    return render(request, "quality/tpc_requests.html", {
+        "rows": rows,                       # strings/primitives only (safe for data-attrs)
+        "is_tpc_approver": is_tpc_approver,
+        "tpc_page_size": page_size,
+        "initial_count": len(rows),
+        "has_more_first_page": has_more_first_page,
+    })
+
+
+# -------------------------------------------------------------------
+# LOAD MORE API
+# -------------------------------------------------------------------
+@login_required(login_url="/login/")
+def tpc_request_load_more(request):
+    """
+    Returns JSON payload with next page of TPC rows.
+    Uses the same row shape as the initial page for consistent client code.
+    """
+    try:
+        offset = int(request.GET.get("offset", 0))
+    except (TypeError, ValueError):
+        offset = 0
+
+    page_size = settings.TPC_PAGE_SIZE
+    is_tpc_approver = request.user.groups.filter(name="tpc_approvers").exists()
+
+    # Slice one extra to determine "has_more"
+    tpc_qs = (
+        TPCRequest.objects
+        .filter(rejected=False)
+        .order_by("-date_requested")
+        .annotate(
+            user_has_approved=Exists(
+                TPCApproval.objects.filter(tpc=OuterRef("pk"), user=request.user)
+            )
+        )
+        .prefetch_related("approvals", "verbal_approvals")[offset : offset + page_size + 1]
+    )
+
+    tpcs = list(tpc_qs[:page_size])
+    has_more = len(tpc_qs) > page_size
+
+    build_abs = request.build_absolute_uri
+    rows = []
+    for t in tpcs:
+        has_verbal = t.verbal_approvals.all().exists()
+        pdf_url = build_abs(f"/quality/tpc/{t.pk}/pdf/") if (t.approved or has_verbal) else None
+
+        rows.append({
+            "pk": t.pk,
+            "date_requested": _fmt_dt(t.date_requested),
+            "issuer_name": t.issuer_name,
+            "parts": ", ".join(t.parts) if t.parts else "—",
+            "reason": t.reason,
+            "process": t.process,
+            "machines": ", ".join(t.machines) if t.machines else "—",
+            "expiration_date": _fmt_dt(t.expiration_date),
+            "approved": t.approved,
+            "has_verbal": has_verbal,
+            "approvals_got": t.approvals.count(),
+            "approvals_req": t.required_approvals_count(),
+            "approvers": ", ".join(
+                (a.user.get_full_name() or a.user.username) for a in t.approvals.all()
+            ) or "—",
+            "user_has_approved": t.user_has_approved,
+            "pdf_url": pdf_url,
+            "qe_risk_assessment": t.qe_risk_assessment or "—",
+        })
+
+    return JsonResponse({
+        "rows": rows,
+        "has_more": has_more,
+        "is_tpc_approver": is_tpc_approver,   # frontend uses this for approve+reject visibility
+    })
+
+
+# -------------------------------------------------------------------
+# CREATE
+# -------------------------------------------------------------------
+@login_required(login_url='/login/')
+def tpc_request_create(request):
+    if request.method == "POST":
+        print("---- TPC Request Create POST ----")
+        print("POST data:", request.POST)
+
+        # Parse posted values (QE Risk Assessment is OPTIONAL)
+        issuer_name          = request.POST.get("issuer_name", "").strip()
+        parts                = request.POST.getlist("parts")
+        reason               = request.POST.get("reason", "").strip()
+        process              = request.POST.get("process", "").strip()
+        machines             = request.POST.getlist("machines")
+        reason_note          = request.POST.get("reason_note", "").strip()
+        feature              = request.POST.get("feature", "").strip()
+        expiration_date_str  = request.POST.get("expiration_date", "").strip()
+        current_process      = request.POST.get("current_process", "").strip()
+        changed_to           = request.POST.get("changed_to", "").strip()
+        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # optional
+
+        print("Parsed values:")
+        print("  issuer_name:", issuer_name)
+        print("  parts:", parts)
+        print("  reason:", reason)
+        print("  process:", process)
+        print("  machines:", machines)
+        print("  reason_note:", reason_note)
+        print("  feature:", feature)
+        print("  expiration_date_str:", expiration_date_str)
+        print("  current_process:", current_process)
+        print("  changed_to:", changed_to)
+        print("  qe_risk_assessment:", qe_risk_assessment)
+
+        # Validation
+        missing = []
+        if not issuer_name:        missing.append("Issuer name")
+        if not parts:              missing.append("At least one part")
+        if not reason:             missing.append("Reason")
+        if not process:            missing.append("Process")
+        if not machines:           missing.append("At least one machine")
+        if not expiration_date_str:missing.append("Expiration date")
+        if not current_process:    missing.append("Current process")
+        if not changed_to:         missing.append("Changed to")
+
+        if missing:
+            print("Missing fields:", missing)
+            return render(request, "quality/tpc_request_form.html", {
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+            })
+
+        # Parse datetime-local input (YYYY-MM-DDTHH:MM)
+        try:
+            expiration_dt = timezone.datetime.fromisoformat(expiration_date_str)
+            if timezone.is_naive(expiration_dt):
+                expiration_dt = timezone.make_aware(expiration_dt)
+            print("Parsed expiration_dt:", expiration_dt)
+        except Exception as e:
+            print("Expiration date parse error:", e)
+            return render(request, "quality/tpc_request_form.html", {
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+            })
+
+        # Create TPCRequest
+        try:
+            tpc = TPCRequest.objects.create(
+                date_requested=timezone.now(),
+                issuer_name=issuer_name,
+                parts=parts,                      # JSON list
+                reason=reason,
+                process=process,
+                machines=machines,                # JSON list
+                reason_note=reason_note,
+                feature=feature,
+                expiration_date=expiration_dt,
+                current_process=current_process,
+                changed_to=changed_to,
+                qe_risk_assessment=qe_risk_assessment,  # optional
+            )
+            print("Created TPC with PK:", tpc.pk)
+        except Exception as e:
+            print("Error creating TPCRequest:", e)
+            raise
+        else:
+            # Fire “TPC Request Initiated” after commit
+            try:
+                transaction.on_commit(lambda: send_tpc_initiated_email(tpc.pk))
+            except Exception as e:
+                print(f"[ERROR] Could not queue 'TPC Request Initiated' email: {e}")
+
+        return redirect("tpc_request_list")
+
+    # GET: render form
+    print("---- TPC Request Create GET ----")
+    return render(request, "quality/tpc_request_form.html", {
+        "issuer_default": request.user.get_full_name() or request.user.username,
+        "parts_qs": Part.objects.all().order_by("part_number"),
+        "machines_qs": Asset.objects.all().order_by("asset_number"),
+    })
+
+
+# -------------------------------------------------------------------
+# EDIT
+# -------------------------------------------------------------------
+@login_required(login_url='/login/')
+def tpc_request_edit(request, pk):
+    tpc = get_object_or_404(
+        TPCRequest.objects.select_related("approved_by").prefetch_related("approvals__user"),
+        pk=pk
+    )
+
+    if request.method == "POST":
+        print("---- TPC Request Edit POST ----")
+        print("POST data:", request.POST)
+
+        # Parse posted values (QE Risk Assessment remains OPTIONAL)
+        issuer_name          = request.POST.get("issuer_name", "").strip()
+        parts                = request.POST.getlist("parts")
+        reason               = request.POST.get("reason", "").strip()
+        process              = request.POST.get("process", "").strip()
+        machines             = request.POST.getlist("machines")
+        reason_note          = request.POST.get("reason_note", "").strip()
+        feature              = request.POST.get("feature", "").strip()
+        expiration_date_str  = request.POST.get("expiration_date", "").strip()
+        current_process      = request.POST.get("current_process", "").strip()
+        changed_to           = request.POST.get("changed_to", "").strip()
+        qe_risk_assessment   = request.POST.get("qe_risk_assessment", "").strip()  # optional
+
+        print("Parsed values:")
+        print("  issuer_name:", issuer_name)
+        print("  parts:", parts)
+        print("  reason:", reason)
+        print("  process:", process)
+        print("  machines:", machines)
+        print("  reason_note:", reason_note)
+        print("  feature:", feature)
+        print("  expiration_date_str:", expiration_date_str)
+        print("  current_process:", current_process)
+        print("  changed_to:", changed_to)
+        print("  qe_risk_assessment:", qe_risk_assessment)
+
+        # Validation
+        missing = []
+        if not issuer_name:        missing.append("Issuer name")
+        if not parts:              missing.append("At least one part")
+        if not reason:             missing.append("Reason")
+        if not process:            missing.append("Process")
+        if not machines:           missing.append("At least one machine")
+        if not expiration_date_str:missing.append("Expiration date")
+        if not current_process:    missing.append("Current process")
+        if not changed_to:         missing.append("Changed to")
+
+        if missing:
+            print("Missing fields:", missing)
+            return render(request, "quality/tpc_edit.html", {
+                "tpc": tpc,  # re-show existing DB values if parsing fails
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+                "form_error": "Please fill all required fields."
+            })
+
+        # Parse datetime-local input (YYYY-MM-DDTHH:MM)
+        try:
+            expiration_dt = timezone.datetime.fromisoformat(expiration_date_str)
+            if timezone.is_naive(expiration_dt):
+                expiration_dt = timezone.make_aware(expiration_dt)
+        except Exception as e:
+            print("Expiration date parse error:", e)
+            return render(request, "quality/tpc_edit.html", {
+                "tpc": tpc,
+                "issuer_default": issuer_name or (request.user.get_full_name() or request.user.username),
+                "parts_qs": Part.objects.all().order_by("part_number"),
+                "machines_qs": Asset.objects.all().order_by("asset_number"),
+                "form_error": "Invalid expiration date."
+            })
+
+        # Update
+        try:
+            tpc.issuer_name         = issuer_name
+            tpc.parts               = parts
+            tpc.reason              = reason
+            tpc.process             = process
+            tpc.machines            = machines
+            tpc.reason_note         = reason_note
+            tpc.feature             = feature
+            tpc.expiration_date     = expiration_dt
+            tpc.current_process     = current_process
+            tpc.changed_to          = changed_to
+            tpc.qe_risk_assessment  = qe_risk_assessment  # optional
+            tpc.save()
+            print("Updated TPC with PK:", tpc.pk)
+        except Exception as e:
+            print("Error updating TPCRequest:", e)
+            raise
+
+        return redirect("tpc_request_list")
+
+    # GET: render edit form prepopulated
+    print("---- TPC Request Edit GET ----")
+    return render(request, "quality/tpc_edit.html", {
+        "tpc": tpc,
+        "issuer_default": tpc.issuer_name or (request.user.get_full_name() or request.user.username),
+        "parts_qs": Part.objects.all().order_by("part_number"),
+        "machines_qs": Asset.objects.all().order_by("asset_number"),
+    })
+
+
+@login_required(login_url='/login/')
+def tpc_request_approve(request, pk):
+    """POST-only endpoint to record *this user's* approval toward the group consensus."""
+    if request.method != "POST":
+        return redirect("tpc_request_list")
+
+    if not request.user.groups.filter(name="tpc_approvers").exists():
+        return redirect("tpc_request_list")
+
+    tpc = get_object_or_404(TPCRequest, pk=pk)
+
+    if tpc.approved:
+        return redirect("tpc_request_list")
+
+    if tpc.has_user_approved(request.user):
+        return redirect("tpc_request_list")
+
+    try:
+        tpc.approve(request.user)
+        tpc.refresh_from_db()
+    except PermissionError:
+        return redirect("tpc_request_list")
+
+    # inside tpc_request_approve, where you already have:
+    if tpc.approved:
+        # fire the email AFTER the DB commit
+        send_tpc_broadcast_email(tpc.pk)
+
+    return redirect("tpc_request_list")
+
+
+
+def _render_tpc_initiated_html(tpc) -> str:
+    def join_list(val):
+        return ", ".join(val) if val else "—"
+
+    local_exp = timezone.localtime(tpc.expiration_date) if timezone.is_aware(tpc.expiration_date) else tpc.expiration_date
+    approver_names = [a.user.get_full_name() or a.user.username for a in tpc.approvals.all()]
+    approvals_block = ", ".join(approver_names) if approver_names else "—"
+
+    # App links (adjust base to your env or pull from settings)
+    open_url = f"http://10.4.1.234/quality/tpc-requests/{tpc.pk}/edit/"
+
+    return f"""
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
+      <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+
+        <!-- Banner -->
+        <div style="background-color:#ffd84d; text-align:center; padding:10px;">
+          <a href="{open_url}" target="_blank" style="font-weight:bold; color:#004085; text-decoration:none; font-size:15px;">
+            🔔 TPC #{tpc.pk} created — approval required (Open in app)
+          </a>
+        </div>
+
+        <!-- Header -->
+        <div style="background-color:#000; color:#fff; padding:16px 20px; text-align:center;">
+          <h2 style="margin:0; font-size:22px;">Temporary Process Change</h2>
+          <div style="font-size:26px; font-weight:700; margin-top:5px;">TPC #{tpc.pk}</div>
+          <p style="margin:6px 0 0; font-size:14px; opacity:0.85;">
+            Issued by {tpc.issuer_name or '—'} &middot; {tpc.date_requested}
+          </p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:20px;">
+          <p style="margin-top:0; font-size:15px;">
+            A new Temporary Process Change request has been initiated and now requires approval from the TPC approvers group.
+          </p>
+
+          <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <tbody>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
+                <td style="padding:8px;">{tpc.pk}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Date Requested</td>
+                <td style="padding:8px;">{tpc.date_requested}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Parts</td>
+                <td style="padding:8px;">{join_list(tpc.parts)}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Reason</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Process</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Machines</td>
+                <td style="padding:8px;">{join_list(tpc.machines)}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Feature</td>
+                <td style="padding:8px;">{tpc.feature or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Current Process</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Changed To</td>
+                <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Expiration</td>
+                <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px; font-weight:bold;">Approvals (so far)</td>
+                <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
+              </tr>
+              <tr style="background-color:#f0f4f8;">
+                <td style="padding:8px; font-weight:bold;">Status</td>
+                <td style="padding:8px;">Pending approvals</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p style="margin-top:20px; font-size:13px; color:#666;">
+            This message was sent automatically when the TPC was created. Approvers can open the TPC in the app to review and approve.
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+
+
+def send_tpc_initiated_email(tpc_pk: int) -> None:
+    """
+    Broadcast “TPC Request Initiated” when a TPC is created.
+    Uses EmailCampaign named exactly 'TPC Request Initiated'.
+    """
+    from .models import TPCRequest  # keep imports local
+
+    print(f"[DEBUG] Preparing INITIATED broadcast email for TPC #{tpc_pk}")
+
+    try:
+        tpc = (
+            TPCRequest.objects
+            .select_related("approved_by")
+            .prefetch_related("approvals__user")
+            .get(pk=tpc_pk)
+        )
+    except TPCRequest.DoesNotExist:
+        print(f"[ERROR] TPC #{tpc_pk} does not exist.")
+        return
+
+    # Load campaign + recipients
+    try:
+        campaign = (
+            EmailCampaign.objects
+            .filter(name="TPC Request Initiated")
+            .prefetch_related("recipients")
+            .first()
+        )
+    except Exception as e:
+        print(f"[ERROR] Could not fetch EmailCampaign: {e}")
+        return
+
+    if not campaign:
+        print("[ERROR] Campaign 'TPC Request Initiated' not found.")
+        return
+
+    recips_emails = [r.email for r in campaign.recipients.all()]
+    if not recips_emails:
+        print("[ERROR] No recipients in 'TPC Request Initiated' campaign.")
+        return
+
+    print(f"[DEBUG] Found {len(recips_emails)} recipient emails for INITIATED: {recips_emails}")
+
+    subject = f"TPC #{tpc.pk} initiated – {tpc.issuer_name} – {tpc.date_requested:%Y-%m-%d} (approval required)"
+    html_body = _render_tpc_initiated_html(tpc)
+    text_body = strip_tags(html_body)
+
+    print(f"[DEBUG] INITIATED subject: {subject}")
+    print(f"[DEBUG] INITIATED HTML length: {len(html_body)}")
+    print(f"[DEBUG] INITIATED Text length: {len(text_body)}")
+
+    payload = {
+        "subject": subject,
+        "html": html_body,
+        "recipients": recips_emails,  # matches your Flask emailer contract
+        "text": text_body,
+    }
+
+    url = getattr(settings, "FLASK_EMAILER_URL", None)
+    if not url:
+        print("[ERROR] FLASK_EMAILER_URL not configured in settings.")
+        return
+
+    print(f"[DEBUG] Sending INITIATED POST to {url}")
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"[DEBUG] INITIATED HTTP status: {resp.status_code}")
+        print(f"[DEBUG] INITIATED response: {resp.text}")
+        if resp.status_code >= 400:
+            print(f"[ERROR] INITIATED emailer returned error: {resp.status_code} {resp.text}")
+        else:
+            print(f"[SUCCESS] INITIATED email for TPC #{tpc.pk} sent to {len(recips_emails)} recipients.")
+    except Exception as e:
+        print(f"[ERROR] Exception sending INITIATED email: {e}")
+
+
+
+
+def _render_tpc_html(tpc) -> str:
+    def join_list(val):
+        if not val:
+            return "—"
+        return ", ".join(val)
+
+    local_exp = timezone.localtime(tpc.expiration_date) if timezone.is_aware(tpc.expiration_date) else tpc.expiration_date
+    approved_at_local = timezone.localtime(tpc.approved_at) if tpc.approved_at else None
+
+    approver_names = [a.user.get_full_name() or a.user.username for a in tpc.approvals.all()]
+    approvals_block = ", ".join(approver_names) if approver_names else "—"
+
+    pdf_url = f"http://10.4.1.234/quality/tpc/{tpc.pk}/pdf/"
+
+    return f"""
+        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; background-color:#f7f9fc; padding:20px;">
+        <div style="max-width:700px; margin:0 auto; background-color:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+            
+            <!-- PDF Link Banner -->
+            <div style="background-color:#ffd84d; text-align:center; padding:10px;">
+                <a href="{pdf_url}" target="_blank" style="font-weight:bold; color:#004085; text-decoration:none; font-size:15px;">
+                📄 View TPC #{tpc.pk} PDF
+                </a>
+            </div>
+
+            <!-- Header -->
+            <div style="background-color:#000000; color:#fff; padding:16px 20px; text-align:center;">
+                <h2 style="margin:0; font-size:22px;">Temporary Process Change</h2>
+                <div style="font-size:26px; font-weight:700; margin-top:5px;">TPC #{tpc.pk}</div>
+                <p style="margin:6px 0 0; font-size:14px; opacity:0.85;">
+                    Issued by {tpc.issuer_name or '—'} &middot; {tpc.date_requested}
+                </p>
+            </div>
+            
+            <!-- Body -->
+            <div style="padding:20px;">
+                <p style="margin-top:0; font-size:15px;">
+                    The following Temporary Process Change request has received all required approvals and is now official.
+                </p>
+
+                <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <tbody>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; width:200px; font-weight:bold;">ID</td>
+                    <td style="padding:8px;">{tpc.pk}</td>
+                    </tr>
+                    <tr>
+                    <td style="padding:8px; font-weight:bold;">Date Requested</td>
+                    <td style="padding:8px;">{tpc.date_requested}</td>
+                    </tr>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Parts</td>
+                    <td style="padding:8px;">{join_list(tpc.parts)}</td>
+                    </tr>
+                    <tr>
+                    <td style="padding:8px; font-weight:bold;">Reason</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.reason or '—'}</td>
+                    </tr>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Process</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.process or '—'}</td>
+                    </tr>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Machines</td>
+                    <td style="padding:8px;">{join_list(tpc.machines)}</td>
+                    </tr>
+                    <tr>
+                    <td style="padding:8px; font-weight:bold;">Feature</td>
+                    <td style="padding:8px;">{tpc.feature or '—'}</td>
+                    </tr>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Current Process</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.current_process or '—'}</td>
+                    </tr>
+                    <tr>
+                    <td style="padding:8px; font-weight:bold;">Changed To</td>
+                    <td style="padding:8px; white-space:pre-wrap;">{tpc.changed_to or '—'}</td>
+                    </tr>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Expiration</td>
+                    <td style="padding:8px;">{local_exp:%Y-%m-%d %H:%M %Z}</td>
+                    </tr>
+                    <tr>
+                    <td style="padding:8px; font-weight:bold;">Approvals</td>
+                    <td style="padding:8px;">{tpc.approvals.count()}/{tpc.required_approvals_count()} – {approvals_block}</td>
+                    </tr>
+                    <tr style="background-color:#f0f4f8;">
+                    <td style="padding:8px; font-weight:bold;">Approved By (Last)</td>
+                    <td style="padding:8px;">{(tpc.approved_by.get_full_name() if tpc.approved_by else None) or (tpc.approved_by.username if tpc.approved_by else '—')}</td>
+                    </tr>
+                    <tr>
+                    <td style="padding:8px; font-weight:bold;">Approved At</td>
+                    <td style="padding:8px;">{approved_at_local.strftime('%Y-%m-%d %H:%M %Z') if approved_at_local else '—'}</td>
+                    </tr>
+                </tbody>
+                </table>
+
+                <p style="margin-top:20px; font-size:13px; color:#666;">
+                    This message was sent automatically after all required approvers confirmed the TPC.
+                </p>
+            </div>
+        </div>
+        </div>
+        """
+
+
+
+def send_tpc_broadcast_email(tpc_pk: int) -> None:
+    """
+    Fetch recipients from the 'TPC Approved Email' campaign and send the email via Flask.
+    Prints detailed debug info at every step.
+    """
+    from .models import TPCRequest  # avoid circular import
+    print(f"[DEBUG] Preparing broadcast email for TPC #{tpc_pk}")
+
+    try:
+        tpc = (
+            TPCRequest.objects
+            .select_related("approved_by")
+            .prefetch_related("approvals__user")
+            .get(pk=tpc_pk)
+        )
+    except TPCRequest.DoesNotExist:
+        print(f"[ERROR] TPC #{tpc_pk} does not exist.")
+        return
+
+    # 1) Load campaign + recipients
+    try:
+        campaign = (
+            EmailCampaign.objects
+            .filter(name="TPC Approved Email")
+            .prefetch_related("recipients")
+            .first()
+        )
+    except Exception as e:
+        print(f"[ERROR] Could not fetch EmailCampaign: {e}")
+        return
+
+    if not campaign:
+        print("[ERROR] Campaign 'TPC Approved Email' not found.")
+        return
+
+    # Flask expects a list of strings for 'recipients'
+    recips_emails = [r.email for r in campaign.recipients.all()]
+    if not recips_emails:
+        print("[ERROR] No recipients in 'TPC Approved Email' campaign.")
+        return
+
+    print(f"[DEBUG] Found {len(recips_emails)} recipient emails: {recips_emails}")
+
+    # 2) Build content
+    subject = f"TPC #{tpc.pk} fully approved – {tpc.issuer_name} – {tpc.date_requested:%Y-%m-%d}"
+    html_body = _render_tpc_html(tpc)
+    # text is optional for your Flask service; keep it if it accepts, otherwise drop it.
+    text_body = strip_tags(html_body)
+
+    print(f"[DEBUG] Email subject: {subject}")
+    print(f"[DEBUG] HTML body length: {len(html_body)} chars")
+    print(f"[DEBUG] Text body length: {len(text_body)} chars")
+
+    # 3) Payload per Flask error: needs 'html' and 'recipients'
+    payload = {
+        "subject": subject,
+        "html": html_body,
+        "recipients": recips_emails,   # <-- key change from 'to' -> 'recipients'
+        "text": text_body,             # keep if your service allows; harmless if ignored
+    }
+
+    print("[DEBUG] Payload JSON to be sent:")
+    print(payload)
+
+    # 4) Send
+    url = getattr(settings, "FLASK_EMAILER_URL", None)
+    if not url:
+        print("[ERROR] FLASK_EMAILER_URL not configured in settings.")
+        return
+
+    print(f"[DEBUG] Sending POST to {url}")
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        print(f"[DEBUG] HTTP status: {resp.status_code}")
+        print(f"[DEBUG] Response body: {resp.text}")
+
+        if resp.status_code >= 400:
+            print(f"[ERROR] Flask emailer returned error: {resp.status_code} {resp.text}")
+        else:
+            print(f"[SUCCESS] Broadcast email for TPC #{tpc.pk} sent to {len(recips_emails)} recipients.")
+    except Exception as e:
+        print(f"[ERROR] Exception while sending broadcast email: {e}")
+
+
+
+# quality/views.py
+
+# (optional) remove the top-level import to keep it lazy:
+# from weasyprint import HTML
+
+
+
+@login_required(login_url='/login/')
+def tpc_request_pdf(request, pk):
+    """
+    Generate a PDF for a TPC.
+    - If fully approved (official), render the official PDF.
+    - Else, if at least one verbal approval exists, render the verbal PDF.
+    - Else, forbid access.
+    """
+    # Lazy import so the whole site doesn't crash if libs are missing
+    from weasyprint import HTML
+
+    tpc = (
+        TPCRequest.objects
+        .select_related("approved_by")
+        .prefetch_related("approvals__user", "verbal_approvals")
+        .filter(pk=pk)
+        .first()
+    )
+    if not tpc:
+        raise Http404("TPC not found")
+
+    # Official PDF
+    if tpc.approved:
+        html = render_to_string("quality/tpc_print.html", {"tpc": tpc}, request=request)
+        filename = f"tpc-{tpc.pk}.pdf"
+
+    else:
+        # Verbal PDF fallback (if any verbal approval exists)
+        verbal = tpc.verbal_approvals.order_by("-created_at").first()
+        if not verbal:
+            return HttpResponseForbidden("This TPC is not approved yet.")
+        html = render_to_string(
+            "quality/tpc_print_verbal.html",
+            {"tpc": tpc, "verbal": verbal},
+            request=request
+        )
+        filename = f"tpc-{tpc.pk}-verbal.pdf"
+
+    pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'inline; filename="{filename}"'
+    return resp
+
+
+@login_required(login_url='/login/')
+def tpc_request_verbal(request, pk):
+    tpc = get_object_or_404(TPCRequest, pk=pk)
+
+    if request.method == "POST":
+        approver_name = request.POST.get("approver_name", "").strip()
+        approver_phone = request.POST.get("approver_phone", "").strip()
+        approver_response = request.POST.get("approver_response", "").strip()
+        approved = bool(request.POST.get("approved"))
+
+        if not approver_name or not approver_phone or not approver_response:
+            return render(request, "quality/tpc_verbal_form.html", {
+                "tpc": tpc,
+                "form_error": "All fields are required."
+            })
+
+        VerbalApproval.objects.create(
+            tpc=tpc,
+            issuer=request.user,
+            issuer_username=request.user.get_username(),  # NEW
+            approver_name=approver_name,
+            approver_phone=approver_phone,
+            approver_response=approver_response,
+            approved=approved,
+        )
+
+        return redirect("tpc_request_list")
+
+    return render(request, "quality/tpc_verbal_form.html", {"tpc": tpc})
+
+
+
+
+@login_required(login_url='/login/')
+def tpc_request_reject(request, pk):
+    """
+    Soft-reject a TPC: mark rejected=True.
+    Only members of 'tpc_approvers'. Not allowed once approved.
+    """
+    if request.method != "POST":
+        return redirect("tpc_request_list")
+
+    if not request.user.groups.filter(name="tpc_approvers").exists():
+        return HttpResponseForbidden("You do not have permission to reject TPCs.")
+
+    tpc = get_object_or_404(TPCRequest, pk=pk, rejected=False)
+
+    if tpc.approved:
+        # Optional: message framework if you use it
+        return redirect("tpc_request_list")
+
+    tpc.rejected = True
+    tpc.save(update_fields=["rejected"])
+    return redirect("tpc_request_list")
+
+

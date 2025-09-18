@@ -48,7 +48,7 @@ Part Records
             <td>{{ part.part_number }}</td>
             <td>
                 <a href="{% url 'edit_part' part.id %}" class="btn btn-sm btn-dark">Edit</a>
-                <a href="{% url 'delete_part' part.id %}" class="btn btn-sm btn-warning">Delete</a>
+                <!-- <a href="{% url 'delete_part' part.id %}" class="btn btn-sm btn-warning">Delete</a> -->
             </td>
         </tr>
         {% endfor %}

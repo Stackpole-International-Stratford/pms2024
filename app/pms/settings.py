@@ -432,3 +432,6 @@ JAZZMIN_SETTINGS = {
 
 LITMUS_API_URL = "http://corp-ctr.stackpole.ca/Litmus_test/api/WorkOrder"
 LITMUS_API_KEY = "YrnsRjqlwH19szC3yGNby200N1ilugH75ec5ambb"
+FLASK_EMAILER_URL = 'http://10.4.1.234:5005/send-email'
+# settings.py
+TPC_PAGE_SIZE = 100  # control initial & "load more" size here

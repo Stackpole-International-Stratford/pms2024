@@ -10,7 +10,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 # IMPORTANT: import both models
-from ..models.absentee_models import AbsenteeReport, PayCodeGroup
+from ..models.absentee_models import *
 
 
 def _norm_code(val) -> str:
@@ -36,18 +36,30 @@ def _norm_code(val) -> str:
     return s.upper()
 
 
+
+def _norm_code(val) -> str:
+    if val is None:
+        return ""
+    try:
+        if pd.isna(val):
+            return ""
+    except Exception:
+        pass
+    s = str(val).strip()
+    if not s:
+        return ""
+    return " ".join(s.split()).upper()
+
+
 @login_required(login_url='/login/')
 def absentee_forms(request):
     """
-    - Only users in 'hr_managers' can access.
-    - On every request, compute the last 5 distinct upload-DATES (not minutes).
-    - On POST with 'delete_time', delete all AbsenteeReport rows whose uploaded_at
-      falls within that chosen DAY (UTC-converted).
-    - On POST with an Excel file, bulk-insert new rows and stamp each row’s uploaded_at
-      with the user’s chosen date (in UTC).
-    - NEW: While uploading, set AbsenteeReport.pay_group and AbsenteeReport.is_scheduled
-      from PayCodeGroup when there's a matching pay_code (case-insensitive, trimmed).
-      If no match, leave both fields NULL/blank.
+    HR managers only.
+    - The 'Recent Uploads' list shows only dates uploaded by the current user.
+    - Deletes remove only this user's rows for the selected date (no cross-user deletes).
+    - Upload stamps each inserted row with uploaded_at (UTC midnight of chosen local date) and uploaded_by=username.
+    - Pay Code → (pay_group, is_scheduled) via PayCodeGroup (normalized, case-insensitive).
+    - Shift Rotation Description → shift via ShiftRotationMap (normalized, case-insensitive).
     """
     # ----- Guard: group membership -----
     if not request.user.groups.filter(name="hr_managers").exists():
@@ -57,10 +69,12 @@ def absentee_forms(request):
         )
 
     context = {}
+    current_user = request.user.get_username()
 
-    # ----- Last 5 distinct upload DAYS -----
+    # ----- Last 5 distinct upload DAYS (only this user's uploads) -----
     recent_days = (
         AbsenteeReport.objects
+        .filter(uploaded_by=current_user)
         .annotate(trunc_day=TruncDate('uploaded_at'))
         .values_list('trunc_day', flat=True)
         .order_by('-trunc_day')
@@ -73,7 +87,6 @@ def absentee_forms(request):
 
     # ---------- Helpers ----------
     def to_clean_str(v) -> str:
-        """Return a trimmed string; treat None/NaN/<NA> as empty string."""
         try:
             if pd.isna(v):
                 return ""
@@ -83,7 +96,6 @@ def absentee_forms(request):
         return str(v).strip()
 
     def parse_local_midnight_to_utc(day_iso: str):
-        """Parse 'YYYY-MM-DD' at local midnight; return (start_utc, end_utc, local_midnight_dt)."""
         dt_naive = datetime.fromisoformat(day_iso)  # 00:00 local, naive
         local_tz = timezone.get_current_timezone()
         dt_local_midnight = timezone.make_aware(dt_naive, local_tz)
@@ -91,41 +103,55 @@ def absentee_forms(request):
         end_utc = start_utc + timedelta(days=1)
         return start_utc, end_utc, dt_local_midnight
 
+    def refresh_recent_days():
+        return (
+            AbsenteeReport.objects
+            .filter(uploaded_by=current_user)
+            .annotate(trunc_day=TruncDate('uploaded_at'))
+            .values_list('trunc_day', flat=True)
+            .order_by('-trunc_day')
+            .distinct()[:5]
+        )
+
     # ---------- POST ----------
     if request.method == "POST":
-        # 3a) Delete a whole day's uploads
+
+        # 1) Delete this user's uploads for a whole day
         if 'delete_time' in request.POST:
             raw_day_iso = (request.POST.get('delete_time') or "").strip()
             try:
                 start_utc, end_utc, dt_local_midnight = parse_local_midnight_to_utc(raw_day_iso)
-                deleted_count, _ = AbsenteeReport.objects.filter(
-                    uploaded_at__gte=start_utc,
-                    uploaded_at__lt=end_utc
-                ).delete()
-                context['success'] = (
-                    f"Deleted {deleted_count} record(s) from upload date "
-                    f"{dt_local_midnight.strftime('%Y-%m-%d')}."
+                deleted_count, _ = (
+                    AbsenteeReport.objects
+                    .filter(
+                        uploaded_at__gte=start_utc,
+                        uploaded_at__lt=end_utc,
+                        uploaded_by=current_user,   # << constrain to current user
+                    )
+                    .delete()
                 )
+                if deleted_count:
+                    context['success'] = (
+                        f"Deleted {deleted_count} record(s) you uploaded on "
+                        f"{dt_local_midnight.strftime('%Y-%m-%d')}."
+                    )
+                else:
+                    context['info'] = (
+                        f"No records found for you on {dt_local_midnight.strftime('%Y-%m-%d')}."
+                    )
             except Exception:
                 context['error'] = "Invalid upload-date selected for deletion."
 
-            # refresh last_uploads
-            context['last_uploads'] = (
-                AbsenteeReport.objects
-                .annotate(trunc_day=TruncDate('uploaded_at'))
-                .values_list('trunc_day', flat=True)
-                .order_by('-trunc_day')
-                .distinct()[:5]
-            )
+            context['last_uploads'] = refresh_recent_days()
             return render(request, "plant/absentee.html", context)
 
-        # 3b) New Excel upload
+        # 2) New Excel upload
         excel_file = request.FILES.get("excel_file")
         if not excel_file:
             context["error"] = "No file was uploaded."
             return render(request, "plant/absentee.html", context)
 
-        # 3b.1) Read Excel
+        # 2a) Read Excel → DataFrame
         try:
             df = pd.read_excel(excel_file)
         except Exception as e:
@@ -133,10 +159,10 @@ def absentee_forms(request):
             context["error"] = "Could not read the uploaded file. Make sure it’s a valid .xls/.xlsx."
             return render(request, "plant/absentee.html", context)
 
-        # 3b.1a) Normalize headers
+        # Normalize headers
         df.columns = [str(c).strip() for c in df.columns]
 
-        # 3b.1b) Pre-clean text columns to GUARANTEE strings (no .strip() on floats)
+        # Pre-clean text columns so we can safely .strip()
         TEXT_COLS = [
             "Employee Name", "Job", "Pay Code", "Pay Category",
             "Pay Group Name", "Shift Rotation Description"
@@ -145,13 +171,13 @@ def absentee_forms(request):
             if col in df.columns:
                 df[col] = df[col].apply(to_clean_str)
 
-        # 3b.1c) Hours → numeric (bad/missing -> 0)
+        # Hours → numeric (bad/missing -> 0)
         if "Hours" in df.columns:
             df["Hours"] = pd.to_numeric(df["Hours"], errors="coerce").fillna(0)
         else:
             df["Hours"] = 0
 
-        # 3b.2) Parse chosen upload date (stamp as UTC)
+        # 2b) Parse chosen upload date (stamp as UTC)
         raw_date_str = (request.POST.get("upload_date") or "").strip()
         try:
             dt_naive = datetime.fromisoformat(raw_date_str)
@@ -161,28 +187,34 @@ def absentee_forms(request):
         except Exception:
             chosen_upload_utc = timezone.now()
 
-        # NEW: Build an in-memory mapping for pay code → (group_name, is_scheduled)
-        # This supports managers changing the mapping over time without code changes.
+        # 2c) Build in-memory mapping dicts (normalized keys)
         code_map = {
             _norm_code(code): (grp, is_sched)
             for code, grp, is_sched in PayCodeGroup.objects.values_list(
                 "pay_code", "group_name", "is_scheduled"
             )
         }
+        shift_map = {
+            _norm_code(rotation_text): shift
+            for rotation_text, shift in ShiftRotationMap.objects.values_list("rotation_text", "shift")
+        }
 
-        # 3b.3) Build model instances safely
+        # Capture uploader username once
+        uploader_username = current_user
+
+        # 2d) Build model instances
         objs_to_create = []
         for _, row in df.iterrows():
-            # Pay Date can be Excel serial, datetime, or string; coerce robustly
             pay_dt = pd.to_datetime(row.get("Pay Date"), errors="coerce")
             if pd.isna(pay_dt):
-                # Skip rows that don't have a valid date
                 continue
             pay_date = pay_dt.date()
 
             raw_code = to_clean_str(row.get("Pay Code"))
-            norm_code = _norm_code(raw_code)
-            mapping = code_map.get(norm_code)  # None if not found
+            code_mapping = code_map.get(_norm_code(raw_code))
+
+            raw_rotation = to_clean_str(row.get("Shift Rotation Description"))
+            mapped_shift = shift_map.get(_norm_code(raw_rotation))
 
             report = AbsenteeReport(
                 employee_name=              to_clean_str(row.get("Employee Name")),
@@ -192,35 +224,29 @@ def absentee_forms(request):
                 pay_category=               to_clean_str(row.get("Pay Category")),
                 hours=                      float(row.get("Hours", 0)) if not pd.isna(row.get("Hours", 0)) else 0.0,
                 pay_group_name=             to_clean_str(row.get("Pay Group Name")),
-                shift_rotation_description= to_clean_str(row.get("Shift Rotation Description")),
+                shift_rotation_description= raw_rotation,
                 uploaded_at=                chosen_upload_utc,
+                uploaded_by=                uploader_username,   # << stamp uploader
 
-                # NEW: only set when mapping exists; else leave NULL
-                pay_group=                  mapping[0] if mapping else None,
-                is_scheduled=               mapping[1] if mapping else None,
+                pay_group=                  code_mapping[0] if code_mapping else None,
+                is_scheduled=               code_mapping[1] if code_mapping else None,
+                shift=                      mapped_shift if mapped_shift else None,
             )
             objs_to_create.append(report)
 
-        # 3b.4) Bulk insert atomically
+        # 2e) Bulk insert atomically
         if objs_to_create:
             with transaction.atomic():
                 AbsenteeReport.objects.bulk_create(objs_to_create, ignore_conflicts=False)
             local_tz = timezone.get_current_timezone()
             context["success"] = (
-                f"Inserted {len(objs_to_create)} row(s) into AbsenteeReport "
+                f"Inserted {len(objs_to_create)} row(s) "
                 f"with upload date {chosen_upload_utc.astimezone(local_tz).strftime('%Y-%m-%d')}."
             )
         else:
             context["error"] = "No valid rows found to insert."
 
-        # 3b.5) Refresh last_uploads
-        context['last_uploads'] = (
-            AbsenteeReport.objects
-            .annotate(trunc_day=TruncDate('uploaded_at'))
-            .values_list('trunc_day', flat=True)
-            .order_by('-trunc_day')
-            .distinct()[:5]
-        )
+        context['last_uploads'] = refresh_recent_days()
         return render(request, "plant/absentee.html", context)
 
     # ---------- GET ----------

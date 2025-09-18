@@ -63,6 +63,24 @@ urlpatterns = [
     path('scrap-entry/get-operations/', get_operations, name='get_operations'),
     path('scrap-entry/get-categories/', get_categories, name='get_categories'),
 
+    
+
+
+    path("tpc-requests/", tpc_request, name="tpc_request_list"),
+
+    path("tpc-requests/new/", tpc_request_create, name="tpc_request_new"),
+    path("tpc-requests/<int:pk>/approve/", tpc_request_approve, name="tpc_approve"),
+    path('tpc-requests/load-more/', tpc_request_load_more, name='tpc_request_load_more'),
+
+    path("tpc/<int:pk>/pdf/", tpc_request_pdf, name="tpc_request_pdf"),
+    path("tpc-requests/<int:pk>/edit/", tpc_request_edit, name="tpc_request_edit"),
+
+
+    path("tpc-requests/<int:pk>/edit/", tpc_request_edit, name="tpc_request_edit"),
+
+    path("tpc-requests/<int:pk>/verbal/", tpc_request_verbal, name="tpc_verbal"),
+
+    path("tpc-requests/<int:pk>/reject/", tpc_request_reject, name="tpc_reject"),
 
 
 ]
