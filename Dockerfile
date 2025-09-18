@@ -21,6 +21,9 @@ RUN mkdir /app
 COPY ./app /app
 WORKDIR /app
 
+# These 2 packages are automagically installed as dependencies for weasyprint (pdf lib).... but they compress and cause massive un-needed slowdown of build process
+RUN pip uninstall -y zopfli Brotli
+
 # collect static files at build time
 RUN python manage.py collectstatic --noinput
 
