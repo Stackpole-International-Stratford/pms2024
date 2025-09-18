@@ -82,5 +82,6 @@ urlpatterns = [
 
     path("tpc-requests/<int:pk>/reject/", tpc_request_reject, name="tpc_reject"),
 
+    path('fanuc/visualize/', fanuc_visualize, name='fanuc_visualize'),
 
 ]

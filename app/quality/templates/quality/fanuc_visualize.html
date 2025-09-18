@@ -1,0 +1,78 @@
+{# quality/templates/quality/fanuc_visualize.html #}
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Fanuc data visualizer</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 20px; }
+    .error { color: red; font-weight: bold; }
+    .packet { border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 6px; }
+    .pkt-header { display:flex; gap:20px; align-items:center; margin-bottom:8px; }
+    .bytes { display: flex; flex-wrap: wrap; gap:4px; }
+    .byte { display:inline-block; padding:6px 8px; border-radius:4px; background:#f4f4f4; font-family:monospace; font-size:13px; cursor:default; border:1px solid #e0e0e0; }
+    .byte[data-field] { color: #fff; font-weight:600; }
+    .legend { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0 20px 0; }
+    .legend-item { display:flex; align-items:center; gap:8px; font-size:14px; }
+    .legend-color { width:18px; height:12px; border-radius:3px; display:inline-block; vertical-align:middle; border:1px solid #666; }
+    .field-details { margin-left: 8px; font-size:13px; color:#333; }
+    .field-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .field-box { padding:8px; border-radius:6px; background:#fafafa; border:1px solid #eee; min-width:160px; }
+    .muted { color:#666; font-size:13px; }
+    .small { font-size:12px; color:#444; }
+    .byte:hover { transform: translateY(-2px); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+  </style>
+</head>
+<body>
+  <h1>Fanuc data visualizer</h1>
+
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% else %}
+    <p class="muted">Showing {{ packets|length }} packets. Bytes are colored by field. Hover bytes for field info.</p>
+
+    <div class="legend">
+      {% for item in legend %}
+        <div class="legend-item">
+          <span class="legend-color" style="background: {{ item.color }};"></span>
+          <strong>{{ item.name }}</strong>
+          <span class="small">({{ item.start }}..{{ item.end }})</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% for p in packets %}
+      <div class="packet">
+        <div class="pkt-header">
+          <div><strong>Packet #{{ p.idx }}</strong></div>
+          <div class="small">length: {{ p.length }} bytes</div>
+          <div class="small">raw: <code>{{ p.raw }}</code></div>
+        </div>
+
+        <div class="bytes" data-pkt="{{ p.idx }}">
+          {% for b in p.bytes %}
+            <span class="byte"
+                  title="byte {{ b.index }}{% if b.field %} — {{ b.field }}{% endif %}"
+                  data-byte="{{ b.index }}"
+                  {% if b.field %} data-field="{{ b.field }}" style="background: {{ b.color }}"{% endif %}>
+              {{ b.hex }}
+            </span>
+          {% endfor %}
+        </div>
+
+        <div class="field-grid">
+          {% for f in p.fields %}
+            <div class="field-box" style="border-left:4px solid {{ f.color }};">
+              <div><strong>{{ f.name }}</strong> <span class="small">({{ f.start }}..{{ f.end }})</span></div>
+              <div class="muted">hex: <code>{{ f.hex|default:"" }}</code></div>
+              <div class="muted">int: {% if f.int is not None %}{{ f.int }}{% else %}<em>n/a</em>{% endif %}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    {% endfor %}
+
+  {% endif %}
+</body>
+</html>

@@ -2470,3 +2470,128 @@ def tpc_request_reject(request, pk):
     return redirect("tpc_request_list")
 
 
+# quality/views.py (append)
+# quality/views.py  (replace the previous fanuc_visualize)
+import re
+from pathlib import Path
+from django.shortcuts import render
+from collections import OrderedDict
+
+def fanuc_visualize(request):
+    """
+    Read fanuc.txt (same directory as views.py),
+    extract Data: <hex> lines, split into bytes, map byte ranges => named fields,
+    and pass nicely shaped context so template needs NO custom filters.
+    """
+
+    # --- Configure which byte ranges map to named fields ---
+    # (start, end) are inclusive, 0-based byte indexes.
+    FIELD_MAP = OrderedDict([
+        ((0, 3), "preamble"),           # bytes 0..3
+        ((4, 4), "msg_type"),           # byte 4
+        ((5, 7), "address"),            # bytes 5..7
+        ((8, 8), "sub_type"),           # byte 8
+        ((16, 19), "function_code"),    # example: bytes 16..19
+        ((20, 23), "value1"),
+        ((24, 27), "value2"),
+    ])
+
+    # Colors to cycle through for fields (customize as you like)
+    PALETTE = ["#fde725", "#7ad151", "#22a884", "#2a788e", "#3e4a89", "#440154", "#f46d43", "#66c2a5"]
+
+    # fanuc.txt location: same folder as this file
+    base = Path(__file__).resolve().parent
+    fanuc_path = base / "fanuc.txt"
+
+    if not fanuc_path.exists():
+        return render(request, "quality/fanuc_visualize.html", {
+            "error": f"fanuc.txt not found at {fanuc_path}"
+        })
+
+    txt = fanuc_path.read_text(encoding="utf-8", errors="replace")
+
+    # capture lines like: "    Data: a0a0a0a0000121..."
+    data_re = re.compile(r'^\s*Data:\s*([0-9A-Fa-f]+)\s*$', re.MULTILINE)
+    matches = data_re.findall(txt)
+
+    # prepare color_map and legend (list of fields with start/end/color)
+    field_names = list(FIELD_MAP.values())
+    color_map = {}
+    for i, name in enumerate(field_names):
+        color_map[name] = PALETTE[i % len(PALETTE)]
+
+    legend = []
+    for (start, end), name in FIELD_MAP.items():
+        legend.append({
+            "name": name,
+            "start": start,
+            "end": end,
+            "color": color_map.get(name),
+        })
+
+    packets = []
+    max_bytes = 0
+
+    for pkt_index, hx in enumerate(matches, start=1):
+        hexstr = hx.lower()
+        # pad odd length just in case
+        if len(hexstr) % 2:
+            hexstr = "0" + hexstr
+        bytes_list = [hexstr[i:i+2] for i in range(0, len(hexstr), 2)]
+        max_bytes = max(max_bytes, len(bytes_list))
+
+        # per-byte list: index, hex, assigned field name, color
+        byte_infos = []
+        for bidx, b in enumerate(bytes_list):
+            assigned_field = None
+            for (start, end), fname in FIELD_MAP.items():
+                if start <= bidx <= end:
+                    assigned_field = fname
+                    break
+            byte_infos.append({
+                "index": bidx,
+                "hex": b,
+                "field": assigned_field,
+                "color": color_map.get(assigned_field) if assigned_field else None
+            })
+
+        # produce fields_list (ordered by FIELD_MAP) with hex and integer values (big-endian)
+        fields_list = []
+        for (start, end), fname in FIELD_MAP.items():
+            if start < len(bytes_list):
+                slice_bytes = bytes_list[start:min(end+1, len(bytes_list))]
+                field_hex = "".join(slice_bytes)
+                if field_hex:
+                    try:
+                        field_int = int(field_hex, 16)
+                    except ValueError:
+                        field_int = None
+                else:
+                    field_int = None
+            else:
+                field_hex = ""
+                field_int = None
+
+            fields_list.append({
+                "name": fname,
+                "start": start,
+                "end": end,
+                "hex": field_hex,
+                "int": field_int,
+                "color": color_map.get(fname),
+            })
+
+        packets.append({
+            "idx": pkt_index,
+            "raw": hexstr,
+            "bytes": byte_infos,
+            "length": len(bytes_list),
+            "fields": fields_list,   # list usable in template without any dict-key gymnastics
+        })
+
+    context = {
+        "packets": packets,
+        "legend": legend,
+        "max_bytes": max_bytes,
+    }
+    return render(request, "quality/fanuc_visualize.html", context)
